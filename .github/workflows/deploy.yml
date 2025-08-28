@@ -1,0 +1,39 @@
+name: Deploy to EC2 (nohup)
+
+on:
+  push:
+    branches: [ "main" ]   # main 브랜치에 push 시 실행
+
+jobs:
+  deploy:
+    runs-on: self-hosted   # EC2에 설치된 Runner에서 실행
+
+    defaults:
+      run:
+        working-directory: /home/ec2-user/saas   # 항상 이 경로에서 실행
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          path: /home/ec2-user/saas   # 코드도 ~/saas 에 덮어쓰기
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build JAR
+        run: ./gradlew clean build -x test
+
+      - name: Stop old process (nohup or Docker leftover)
+        run: |
+          pkill -f 'java -jar' || true
+          docker rm -f saas-dentix || true
+
+      - name: Run new process (nohup)
+        run: |
+          nohup java -jar build/libs/*.jar \
+            --spring.profiles.active=dev \
+            > app.log 2>&1 &
