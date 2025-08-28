@@ -6,17 +6,11 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted   # EC2에 설치된 Runner에서 실행
-
-    defaults:
-      run:
-        working-directory: /home/ec2-user/saas   # 항상 이 경로에서 실행
+    runs-on: self-hosted
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
-        with:
-          path: /home/ec2-user/saas   # 코드도 ~/saas 에 덮어쓰기
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -27,12 +21,10 @@ jobs:
       - name: Build JAR
         run: ./gradlew clean build -x test
 
-      - name: Stop old process (nohup or Docker leftover)
-        run: |
-          pkill -f 'java -jar' || true
-          docker rm -f saas-dentix || true
+      - name: Stop old process
+        run: pkill -f 'java -jar' || true
 
-      - name: Run new process (nohup)
+      - name: Run new process
         run: |
           nohup java -jar build/libs/*.jar \
             --spring.profiles.active=dev \
