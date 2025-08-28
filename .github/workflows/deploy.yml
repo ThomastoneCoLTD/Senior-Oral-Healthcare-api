@@ -18,9 +18,13 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Give gradlew permission   # ✅ 권한 추가
+        run: chmod +x gradlew
+        working-directory: api_server
+
       - name: Build JAR
         run: ./gradlew clean build -x test
-        working-directory: api_server   # ✅ gradlew 위치 지정
+        working-directory: api_server
 
       - name: Stop old process
         run: pkill -f 'java -jar' || true
