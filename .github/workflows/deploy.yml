@@ -2,7 +2,7 @@ name: Deploy to EC2 (nohup)
 
 on:
   push:
-    branches: [ "main" ]   # main 브랜치에 push 시 실행
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -20,12 +20,13 @@ jobs:
 
       - name: Build JAR
         run: ./gradlew clean build -x test
+        working-directory: api_server   # ✅ gradlew 위치 지정
 
       - name: Stop old process
         run: pkill -f 'java -jar' || true
 
       - name: Run new process
         run: |
-          nohup java -jar build/libs/*.jar \
+          nohup java -jar api_server/build/libs/*.jar \
             --spring.profiles.active=dev \
             > app.log 2>&1 &
