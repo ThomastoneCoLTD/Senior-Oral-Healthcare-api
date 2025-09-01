@@ -23,7 +23,7 @@ jobs:
         working-directory: api_server
 
       - name: Build JAR
-        run: ./gradlew clean build -x test
+        run: ./gradlew clean build -x test -x asciidoctor
         working-directory: api_server
 
       - name: Stop old process
