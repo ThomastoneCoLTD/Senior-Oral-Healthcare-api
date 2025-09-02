@@ -3,7 +3,7 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:mysql://db-mysql-saas-dev.cfq0uo8ms95m.ap-southeast-1.rds.amazonaws.com:3306/db-mysql-saas-dev
+    url: jdbc:mysql://db-mysql-saas-dev.cfq0uo8ms95m.ap-southeast-1.rds.amazonaws.com:3306/thomastone
     username: thomastone
     password: dPqkd0923!
     driver-class-name: com.mysql.cj.jdbc.Driver
