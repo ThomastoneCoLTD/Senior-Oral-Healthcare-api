@@ -61,9 +61,16 @@ public class OrganizationController {
 
     //기관 삭제
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        organizationService.delete(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<String> softDelete(@PathVariable Long id) {
+        organizationService.softDelete(id);
+        return ResponseEntity.ok("삭제되었습니다.");
+    }
+
+    //기관 삭제
+    @DeleteMapping("/{id}/hard")
+    public ResponseEntity<String> hardDelete(@PathVariable Long id) {
+        organizationService.hardDelete(id);
+        return ResponseEntity.ok("삭제되었습니다.");
     }
 }
 

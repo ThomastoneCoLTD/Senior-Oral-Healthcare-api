@@ -113,14 +113,23 @@ public class OrganizationService {
 
     }
 
-    /**
-     * 기관 삭제 (soft delete)
-     */
-    public void delete(Long id) {
+    //기관 삭제
+    // Soft Delete (플래그만 세움)
+    @Transactional
+    public void softDelete(Long id) {
         Organization org = organizationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 기관입니다."));
-        org.deleteOrganization(); // soft delete 처리
+        org.deleteOrganization();
         organizationRepository.save(org);
+    }
+
+    // Hard Delete (DB에서 실제 삭제)
+    @Transactional
+    public void hardDelete(Long id) {
+        if (!organizationRepository.existsById(id)) {
+            throw new IllegalArgumentException("존재하지 않는 기관입니다.");
+        }
+        organizationRepository.deleteById(id);
     }
 
     private OrganizationResponse toResponse(Organization org) {

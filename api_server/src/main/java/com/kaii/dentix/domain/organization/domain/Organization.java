@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "organization")
+@SQLDelete(sql = "UPDATE organization SET deleted = NOW() WHERE organization_id = ?")
 @Where(clause = "deleted_at IS NULL")
 public class Organization extends TimeEntity {
     @Id
