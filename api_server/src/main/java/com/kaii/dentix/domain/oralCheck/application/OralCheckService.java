@@ -137,7 +137,16 @@ public class OralCheckService {
         } else {
             // 분석 결과 상태가 '성공'일 경우
             if (oralCheck.getOralCheckAnalysisState() == OralCheckAnalysisState.SUCCESS) {
-                return new DataResponse<>(200, SUCCESS_MSG, new OralCheckPhotoDto(oralCheck.getOralCheckId()));
+                return new DataResponse<>(
+                        200,
+                        SUCCESS_MSG,
+                        OralCheckPhotoDto.builder()
+                                .oralCheckId(oralCheck.getOralCheckId())
+                                .success(true)               // 성공 상태를 의미한다면 true
+                                .remainingResponses(0)       // 기본값 세팅
+                                .organizationId(null)        // 필요 시 값 넣기
+                                .build()
+                );
             } else {
                 // 분석 결과 상태가 '실패'일 경우
                 return new DataResponse<>(resultCode, "구강 촬영 인식에 실패했어요.\n가이드에 맞게 재촬영 부탁드려요.", null);
