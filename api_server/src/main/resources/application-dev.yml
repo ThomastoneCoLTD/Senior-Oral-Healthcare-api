@@ -3,9 +3,9 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:mysql://family-doctor-deploy.cgwxpd8pts2m.ap-northeast-2.rds.amazonaws.com:33001/dentix-saas-dev
-    username: kaii
-    password: kai!#0709
+    url: jdbc:mysql://db-mysql-saas-dev.cfq0uo8ms95m.ap-southeast-1.rds.amazonaws.com:3306/db-mysql-saas-dev
+    username: thomastone
+    password: dPqkd0923!
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.zaxxer.hikari.HikariDataSource
     hikari: # connection-timeout :  pool에서 connect 얻을 때 최대 대기시간이며, 기본 30초임
