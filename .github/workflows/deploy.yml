@@ -1,4 +1,4 @@
-name: Deploy to EC2 (nohup)
+name: Deploy to EC2 (systemd)
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Give gradlew permission   # ✅ 권한 추가
+      - name: Give gradlew permission
         run: chmod +x gradlew
         working-directory: api_server
 
@@ -26,11 +26,11 @@ jobs:
         run: ./gradlew clean build -x test -x asciidoctor
         working-directory: api_server
 
-      - name: Stop old process
-        run: pkill -f 'java -jar' || true
+      - name: Copy JAR to deploy directory
+        run: cp api_server/build/libs/*.jar /home/ec2-user/saas_dentix/app.jar
 
-      - name: Run new process
-        run: |
-          nohup java -jar api_server/build/libs/*.jar \
-            --spring.profiles.active=dev \
-            > app.log 2>&1 &
+      - name: Restart systemd service
+        run: sudo systemctl restart saas
+
+      - name: Check status
+        run: sudo systemctl status saas --no-pager
