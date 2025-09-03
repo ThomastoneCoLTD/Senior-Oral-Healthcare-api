@@ -9,7 +9,7 @@ import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementDto;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 //import com.kaii.dentix.domain.patient.dao.PatientRepository;
-import com.kaii.dentix.domain.patient.domain.Patient;
+//import com.kaii.dentix.domain.patient.domain.Patient;
 import com.kaii.dentix.domain.serviceAgreement.application.ServiceAgreementService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
@@ -86,36 +86,42 @@ public class UserLoginService {
      */
     @Transactional(rollbackFor = Exception.class)
     public UserVerifyDto userVerify(UserVerifyRequest request){
-        List<User> userList = userRepository.findByUserPhoneNumberOrUserName(request.getUserPhoneNumber(), request.getUserName());
+        // 1. 이름 & 전화번호 모두 일치하는 유저 조회
+        List<User> users = userRepository.findByUserPhoneNumberOrUserName(
+                request.getUserPhoneNumber(),
+                request.getUserName()
+        );
 
-        User user = userList.stream()
-                .filter(u -> u.getUserName().equals(request.getUserName()) && u.getUserPhoneNumber().equals(request.getUserPhoneNumber()))
-                .findAny().orElse(null);
+        // 1. 이름 + 전화번호 모두 일치 → 이미 가입
+        User exactUser = users.stream()
+                .filter(u -> u.getUserName().equals(request.getUserName())
+                        && u.getUserPhoneNumber().equals(request.getUserPhoneNumber()))
+                .findFirst()
+                .orElse(null);
 
-//        List<Patient> patientList = patientRepository.findByPatientPhoneNumberOrPatientName(request.getPatientPhoneNumber(), request.getPatientName());
-//
-//        Patient patient = patientList.stream()
-//                .filter(p -> p.getPatientName().equals(request.getPatientName()) && p.getPatientPhoneNumber().equals(request.getPatientPhoneNumber()))
-//                .findAny().orElse(null);
-
-        // 이미 가입된 사용자의 경우
-        if (user != null) throw new AlreadyDataException("이미 가입한 사용자입니다.");
-
-        if (user == null) {
-            Optional<User> isExistUserPhoneNumber = userList.stream()
-                    .filter(u -> u.getUserPhoneNumber().equals(request.getUserPhoneNumber()))
-                    .findAny();
-
-            if (isExistUserPhoneNumber.isPresent()){
-                Long userId = isExistUserPhoneNumber.get().getUserId();
-                if (userRepository.findByUserId(userId).isPresent()) throw new BadRequestApiException("이미 사용중인 번호에요.\n번호를 다시 확인해 주세요.");  // 동일한 연락처가 이미 가입되어 있는 경우
-
-                throw new UnauthorizedException("회원 정보가 일치하지 않아요.\n다시 확인해 주세요."); // 연락처 일치 && 실명 불일치
-            }
+        if (exactUser != null) {
+            throw new AlreadyDataException("이미 가입한 사용자입니다.");
         }
 
+        // 2. 전화번호만 일치 → 번호 중복
+        boolean phoneExists = users.stream()
+                .anyMatch(u -> u.getUserPhoneNumber().equals(request.getUserPhoneNumber()));
+
+        if (phoneExists) {
+            throw new BadRequestApiException("이미 사용중인 번호에요.\n번호를 다시 확인해 주세요.");
+        }
+
+        // 3. 이름만 일치 → 이름 중복 but 다른 번호
+        boolean nameExists = users.stream()
+                .anyMatch(u -> u.getUserName().equals(request.getUserName()));
+
+        if (nameExists) {
+            throw new UnauthorizedException("회원 정보가 일치하지 않아요.\n다시 확인해 주세요.");
+        }
+
+        // 4. 신규 사용자
         return UserVerifyDto.builder()
-                .userId(user != null ? user.getUserId() : null) // true : 인증된 사용자, false : 미인증 사용자
+                .userId(null) // 아직 가입 전
                 .build();
     }
 
