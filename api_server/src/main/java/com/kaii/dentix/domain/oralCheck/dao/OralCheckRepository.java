@@ -25,5 +25,5 @@ public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
     int nativeInsert(OralCheck oralCheck, Date created);
 
     long countByUserId(Long userId);
-    long countByUserIdAndOralCheckAnalysisState(OralCheckAnalysisState state);
+    long countByUserIdAndOralCheckAnalysisState(Long userId, OralCheckAnalysisState state);
 }
