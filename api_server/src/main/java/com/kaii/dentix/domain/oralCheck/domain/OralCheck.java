@@ -4,16 +4,14 @@ import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Where;
 import org.hibernate.type.SqlTypes;
 
 @Entity
 @Getter @Builder
+@Setter
 @AllArgsConstructor @NoArgsConstructor
 @Where(clause = "oralCheckAnalysisState = 'SUCCESS'")
 @Table(name = "oralCheck")

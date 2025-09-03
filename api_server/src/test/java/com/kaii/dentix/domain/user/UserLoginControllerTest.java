@@ -64,7 +64,8 @@ public class UserLoginControllerTest extends ControllerTest{
 
     private UserVerifyDto userVerifyDto(){
         return UserVerifyDto.builder()
-                .patientId(1L)
+                .userId(1L)
+//                .patientId(1L)
                 .build();
     }
 
@@ -72,7 +73,6 @@ public class UserLoginControllerTest extends ControllerTest{
         return UserSignUpDto.builder()
                 .accessToken("Access Token")
                 .refreshToken("Refresh Token")
-                .patientId(1L)
                 .userId(1L)
                 .userLoginIdentifier("detix123")
                 .userName("김덴티")
@@ -114,8 +114,8 @@ public class UserLoginControllerTest extends ControllerTest{
         given(userLoginService.userVerify(any(UserVerifyRequest.class))).willReturn(userVerifyDto());
 
         UserVerifyRequest userVerifyRequest = UserVerifyRequest.builder()
-                .patientPhoneNumber("01012345678")
-                .patientName("김덴티")
+                .userPhoneNumber("01012345678")
+                .userName("김덴티")
                 .build();
 
         // when
@@ -160,7 +160,7 @@ public class UserLoginControllerTest extends ControllerTest{
 
         String password = "password!";
         UserSignUpRequest userSignUpRequest = UserSignUpRequest.builder()
-                .patientId(1L)
+                .userId(1L)
                 .userServiceAgreementRequest(serviceAgreementList)
                 .userLoginIdentifier("dentix123")
                 .userName("김덴티")
@@ -168,10 +168,6 @@ public class UserLoginControllerTest extends ControllerTest{
                 .userGender(GenderType.W)
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("초록색")
-                .userDeviceModel("iPhone 14 Pro")
-                .userDeviceManufacturer("APPLE")
-                .userOsVersion("1.1.1")
-                .userDeviceToken("DeviceToken")
                 .build();
         given(passwordEncoder.encode(any(String.class))).willReturn(password);
 
@@ -179,8 +175,6 @@ public class UserLoginControllerTest extends ControllerTest{
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.post("/login/signUp")
                         .content(objectMapper.writeValueAsString(userSignUpRequest))
-                        .header("deviceType", "iOS")
-                        .header("appVersion", "1.1.1")
                         .contentType(MediaType.APPLICATION_JSON)
         );
 
@@ -192,18 +186,14 @@ public class UserLoginControllerTest extends ControllerTest{
                         getDocumentRequest(),
                         getDocumentResponse(),
                         requestFields(
-                                fieldWithPath("patientId").type(JsonFieldType.NUMBER).optional().description("사용자(환자) 고유 번호"),
+                                fieldWithPath("userId").type(JsonFieldType.NUMBER).optional().description("사용자(환자) 고유 번호"),
                                 fieldWithPath("userServiceAgreementRequest[]").type(JsonFieldType.ARRAY).description("사용자 서비스 동의 고유 번호"),
                                 fieldWithPath("userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
                                 fieldWithPath("userName").type(JsonFieldType.STRING).description("사용자 닉네임"),
                                 fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호"),
                                 fieldWithPath("userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("사용자 비밀번호 찾기 질문"),
-                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("사용자 비밀번호 찾기 답변"),
-                                fieldWithPath("userDeviceModel").type(JsonFieldType.STRING).optional().description("사용자 기기 모델"),
-                                fieldWithPath("userDeviceManufacturer").type(JsonFieldType.STRING).optional().description("사용자 기기 제조사"),
-                                fieldWithPath("userOsVersion").type(JsonFieldType.STRING).optional().description("사용자 기기 OS 버전"),
-                                fieldWithPath("userDeviceToken").type(JsonFieldType.STRING).optional().description("사용자 기기 푸시토큰")
+                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("사용자 비밀번호 찾기 답변")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
@@ -211,7 +201,6 @@ public class UserLoginControllerTest extends ControllerTest{
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
                                 fieldWithPath("response.accessToken").type(JsonFieldType.STRING).description("Access Token"),
                                 fieldWithPath("response.refreshToken").type(JsonFieldType.STRING).description("Refresh Token"),
-                                fieldWithPath("response.patientId").type(JsonFieldType.NUMBER).optional().description("환자 고유 번호"),
                                 fieldWithPath("response.userId").type(JsonFieldType.NUMBER).description("사용자 고유 번호"),
                                 fieldWithPath("response.userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
                                 fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 닉네임"),
@@ -272,10 +261,6 @@ public class UserLoginControllerTest extends ControllerTest{
         UserLoginRequest userLoginRequest = UserLoginRequest.builder()
                 .userLoginIdentifier("dentix123")
                 .userPassword(password)
-                .userDeviceModel("iPhone 14 Pro")
-                .userDeviceManufacturer("APPLE")
-                .userOsVersion("1.1.1")
-                .userDeviceToken("DeviceToken")
                 .build();
         given(passwordEncoder.encode(any(String.class))).willReturn(password);
 
@@ -284,8 +269,6 @@ public class UserLoginControllerTest extends ControllerTest{
                 RestDocumentationRequestBuilders.post("/login")
                         .content(objectMapper.writeValueAsString(userLoginRequest))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("deviceType", "iOS")
-                        .header("appVersion", "1.1.1")
                         .with(user("user").roles("USER"))
         );
 
@@ -298,11 +281,7 @@ public class UserLoginControllerTest extends ControllerTest{
                         getDocumentResponse(),
                         requestFields(
                                 fieldWithPath("userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
-                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호"),
-                                fieldWithPath("userDeviceModel").type(JsonFieldType.STRING).optional().description("사용자 기기 모델"),
-                                fieldWithPath("userDeviceManufacturer").type(JsonFieldType.STRING).optional().description("사용자 기기 제조사"),
-                                fieldWithPath("userOsVersion").type(JsonFieldType.STRING).optional().description("사용자 기기 OS 버전"),
-                                fieldWithPath("userDeviceToken").type(JsonFieldType.STRING).optional().description("사용자 기기 푸시토큰")
+                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),

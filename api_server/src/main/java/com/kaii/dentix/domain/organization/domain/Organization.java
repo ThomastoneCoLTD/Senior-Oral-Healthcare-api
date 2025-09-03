@@ -3,16 +3,14 @@ package com.kaii.dentix.domain.organization.domain;
 import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionPlan;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 @Entity
 @Getter
+@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor

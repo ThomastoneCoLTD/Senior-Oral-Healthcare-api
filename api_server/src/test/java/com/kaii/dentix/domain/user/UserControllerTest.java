@@ -129,10 +129,6 @@ public class UserControllerTest extends ControllerTest {
         given(userService.userAutoLogin(any(HttpServletRequest.class), any(UserAutoLoginRequest.class))).willReturn(userLoginDto());
 
         UserAutoLoginRequest userAutoLoginRequest = UserAutoLoginRequest.builder()
-                .userDeviceModel("iPhone 14 Pro")
-                .userDeviceManufacturer("APPLE")
-                .userOsVersion("1.1.1")
-                .userDeviceToken("DeviceToken")
                 .build();
 
         // when
@@ -140,8 +136,6 @@ public class UserControllerTest extends ControllerTest {
                 RestDocumentationRequestBuilders.put("/user/auto-login")
                         .content(objectMapper.writeValueAsString(userAutoLoginRequest))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header("deviceType", "iOS")
-                        .header("appVersion", "1.1.1")
                         .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
                         .with(user("user").roles("USER"))
         );
@@ -153,12 +147,7 @@ public class UserControllerTest extends ControllerTest {
                 .andDo(document("user/auto-login",
                         getDocumentRequest(),
                         getDocumentResponse(),
-                        requestFields(
-                                fieldWithPath("userDeviceModel").type(JsonFieldType.STRING).optional().description("사용자 기기 모델"),
-                                fieldWithPath("userDeviceManufacturer").type(JsonFieldType.STRING).optional().description("사용자 기기 제조사"),
-                                fieldWithPath("userOsVersion").type(JsonFieldType.STRING).optional().description("사용자 기기 OS 버전"),
-                                fieldWithPath("userDeviceToken").type(JsonFieldType.STRING).optional().description("사용자 기기 푸시토큰")
-                        ),
+
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),

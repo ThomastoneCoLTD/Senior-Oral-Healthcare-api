@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.controller.OralCheckController;
+import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.dto.*;
+import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.questionnaire.dto.OralStatusTypeDto;
 import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingDto;
 import com.kaii.dentix.domain.type.OralDateStatusType;
@@ -52,15 +54,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(OralCheckController.class)
 public class OralCheckControllerTest extends ControllerTest {
-
     private MockMvc mockMvc;
+    private OralCheck oralCheck;
+    private int remainingCount;
 
     @BeforeEach
-    void setUp(WebApplicationContext webApplicationContext, RestDocumentationContextProvider restDocumentation) {
+    void setUp(WebApplicationContext webApplicationContext,
+               RestDocumentationContextProvider restDocumentation) {
+
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .apply(documentationConfiguration(restDocumentation))
                 .build();
+
+        // 테스트용 Organization 엔티티
+        Organization organization = new Organization();
+        organization.setOrganizationId(100L);
+
+        // 테스트용 OralCheck 엔티티
+        oralCheck = new OralCheck();
+        oralCheck.setOralCheckId(1L);
+//        oralCheck.setOrganization(organization);
+
+        // 테스트용 남은 응답 수
+        remainingCount = 5;
     }
+
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -98,10 +116,20 @@ public class OralCheckControllerTest extends ControllerTest {
         // given
         MockMultipartFile file = new MockMultipartFile("file", "test1.jpg", MediaType.IMAGE_JPEG_VALUE, "hello file".getBytes());
 
-        DataResponse<OralCheckPhotoDto> response = new DataResponse<>(200, SUCCESS_MSG, new OralCheckPhotoDto(1L));
+        OralCheckPhotoDto dto = OralCheckPhotoDto.builder()
+                .organizationId(100L)
+                .success(true)
+                .remainingResponses(remainingCount)
+                .oralCheckId(oralCheck.getOralCheckId())
+                .build();
 
-        given(oralCheckService.oralCheckPhoto(any(HttpServletRequest.class), any(MultipartFile.class))).willReturn(response);
+        DataResponse<OralCheckPhotoDto> response =
+                new DataResponse<>(200, SUCCESS_MSG, dto);
 
+        given(oralCheckService.oralCheckPhoto(any(HttpServletRequest.class), any()))
+                .willReturn(response);
+
+        // when
         ResultActions result = mockMvc.perform(multipart("/oralCheck/photo")
                 .file(file)
                 .accept(MediaType.APPLICATION_JSON)
@@ -110,6 +138,7 @@ public class OralCheckControllerTest extends ControllerTest {
                 .with(user("user").roles("USER"))
         );
 
+        // then
         result.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -120,14 +149,17 @@ public class OralCheckControllerTest extends ControllerTest {
                                 partWithName("file").description("촬영 사진 파일")
                         ),
                         responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메시지"),
-                                fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
-                                fieldWithPath("response.oralCheckId").type(JsonFieldType.NUMBER).optional().description("구강검진 고유 번호")
+                                fieldWithPath("rt").description("결과 코드"),
+                                fieldWithPath("rtMsg").description("결과 메시지"),
+                                fieldWithPath("response").description("결과 데이터"),
+                                fieldWithPath("response.organizationId").description("기관 고유 번호"),
+                                fieldWithPath("response.success").description("분석 성공 여부"),
+                                fieldWithPath("response.remainingResponses").description("남은 응답 수"),
+                                fieldWithPath("response.oralCheckId").description("구강검진 고유 번호")
                         )
                 ));
 
-        verify(oralCheckService).oralCheckPhoto(any(HttpServletRequest.class), any(MultipartFile.class));
+        verify(oralCheckService).oralCheckPhoto(any(HttpServletRequest.class), any());
 
     }
 
