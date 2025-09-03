@@ -26,13 +26,21 @@ jobs:
         run: ./gradlew clean build -x test -x asciidoctor
         working-directory: api_server
 
-      - name: Copy JAR and rename to app.jar
+      - name: Remove old app.jar if exists
         run: |
-          rm -f /home/ec2-user/saas_dentix/app.jar
-          cp api_server/build/libs/*.jar /home/ec2-user/saas_dentix/app.jar
+          if [ -d /home/ec2-user/saas_dentix/app.jar ]; then
+            # 혹시 잘못 디렉터리로 만들어진 경우 삭제
+            rm -rf /home/ec2-user/saas_dentix/app.jar
+          elif [ -f /home/ec2-user/saas_dentix/app.jar ]; then
+            # 기존 파일이면 삭제
+            rm -f /home/ec2-user/saas_dentix/app.jar
+          fi
+
+      - name: Copy new JAR and rename to app.jar
+        run: cp api_server/build/libs/*.jar /home/ec2-user/saas_dentix/app.jar
 
       - name: Restart systemd service
         run: sudo systemctl restart saas
 
-      - name: Check status
+      - name: Check service status
         run: sudo systemctl status saas --no-pager
