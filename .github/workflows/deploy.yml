@@ -37,7 +37,7 @@ jobs:
           fi
 
       - name: Copy new JAR and rename to app.jar
-        run: cp api_server/build/libs/*.jar /home/ec2-user/saas_dentix/app.jar
+        run: cp api_server/build/libs/*.jar /home/ec2-user/saas_dentix/
 
       - name: Restart systemd service
         run: sudo systemctl restart saas
