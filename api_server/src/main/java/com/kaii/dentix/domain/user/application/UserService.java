@@ -3,8 +3,6 @@ package com.kaii.dentix.domain.user.application;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
-import com.kaii.dentix.domain.patient.dao.PatientRepository;
-import com.kaii.dentix.domain.patient.domain.Patient;
 import com.kaii.dentix.domain.serviceAgreement.dao.ServiceAgreementCustomRepository;
 import com.kaii.dentix.domain.serviceAgreement.dao.ServiceAgreementRepository;
 import com.kaii.dentix.domain.serviceAgreement.domain.ServiceAgreement;
@@ -57,7 +55,7 @@ public class UserService {
 
     private final ServiceAgreementRepository serviceAgreementRepository;
 
-    private final PatientRepository patientRepository;
+//    private final PatientRepository patientRepository;
 
     private final ServiceAgreementCustomRepository serviceAgreementCustomRepository;
 
