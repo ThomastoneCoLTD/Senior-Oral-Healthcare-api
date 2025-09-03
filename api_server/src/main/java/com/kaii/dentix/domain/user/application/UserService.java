@@ -215,23 +215,47 @@ public class UserService {
     /**
      *  사용자 회원정보 조회
      */
+//    public UserInfoDto userInfo(HttpServletRequest httpServletRequest){
+//        User user = this.getTokenUser(httpServletRequest);
+//
+//        // 사용자 서비스 '선택' 이용 동의 여부 조회
+//        List<UserServiceAgreeList> serviceAgreementList = serviceAgreementCustomRepository.findAllByNotRequiredServiceAgreement(user.getUserId());
+//
+//        String patientPhoneNumber = null;
+//
+//        if (user.getPatientId() != null){
+//            Patient patient = patientRepository.findById(user.getPatientId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 환자입니다."));
+//            patientPhoneNumber = patient.getPatientPhoneNumber();
+//        }
+//
+//        return UserInfoDto.builder()
+//                .userName(user.getUserName())
+//                .userLoginIdentifier(user.getUserLoginIdentifier())
+//                .patientPhoneNumber(patientPhoneNumber != null ? patientPhoneNumber : user.getIsVerify().equals(YnType.Y) ? "-" : null)
+//                .userServiceAgreeLists(serviceAgreementList)
+//                .userGender(user.getUserGender())
+//                .build();
+//    }
+    /**
+     *  사용자 회원정보 조회
+     */
     public UserInfoDto userInfo(HttpServletRequest httpServletRequest){
         User user = this.getTokenUser(httpServletRequest);
 
         // 사용자 서비스 '선택' 이용 동의 여부 조회
         List<UserServiceAgreeList> serviceAgreementList = serviceAgreementCustomRepository.findAllByNotRequiredServiceAgreement(user.getUserId());
 
-        String patientPhoneNumber = null;
-
-        if (user.getPatientId() != null){
-            Patient patient = patientRepository.findById(user.getPatientId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 환자입니다."));
-            patientPhoneNumber = patient.getPatientPhoneNumber();
-        }
+//        String patientPhoneNumber = null;
+//
+//        if (user.getPatientId() != null){
+//            Patient patient = patientRepository.findById(user.getPatientId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 환자입니다."));
+//            patientPhoneNumber = patient.getPatientPhoneNumber();
+//        }
 
         return UserInfoDto.builder()
                 .userName(user.getUserName())
                 .userLoginIdentifier(user.getUserLoginIdentifier())
-                .patientPhoneNumber(patientPhoneNumber != null ? patientPhoneNumber : user.getIsVerify().equals(YnType.Y) ? "-" : null)
+//                .patientPhoneNumber(patientPhoneNumber != null ? patientPhoneNumber : user.getIsVerify().equals(YnType.Y) ? "-" : null)
                 .userServiceAgreeLists(serviceAgreementList)
                 .userGender(user.getUserGender())
                 .build();
