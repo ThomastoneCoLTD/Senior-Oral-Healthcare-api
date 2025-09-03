@@ -1,6 +1,6 @@
 package com.kaii.dentix.domain.user.dao;
 
-import com.kaii.dentix.domain.patient.domain.Patient;
+//import com.kaii.dentix.domain.patient.domain.Patient;
 import com.kaii.dentix.domain.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
