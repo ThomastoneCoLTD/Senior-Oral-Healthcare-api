@@ -1,4 +1,4 @@
-name: Deploy to EC2 (systemd)
+name: Deploy to EC2 (nohup)
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted   # EC2에 설치된 runner에서 실행
+    runs-on: self-hosted
 
     steps:
       - name: Checkout source
@@ -18,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Give gradlew permission
+      - name: Give gradlew permission   # ✅ 권한 추가
         run: chmod +x gradlew
         working-directory: api_server
 
@@ -26,21 +26,11 @@ jobs:
         run: ./gradlew clean build -x test -x asciidoctor
         working-directory: api_server
 
-      - name: Remove old app.jar if exists
+      - name: Stop old process
+        run: pkill -f 'java -jar' || true
+
+      - name: Run new process
         run: |
-          if [ -d /home/ec2-user/saas_dentix/app.jar ]; then
-            # 혹시 잘못 디렉터리로 만들어진 경우 삭제
-            rm -rf /home/ec2-user/saas_dentix/app.jar
-          elif [ -f /home/ec2-user/saas_dentix/app.jar ]; then
-            # 기존 파일이면 삭제
-            rm -f /home/ec2-user/saas_dentix/app.jar
-          fi
-
-      - name: Copy new JAR and rename to app.jar
-        run: cp api_server/build/libs/*.jar /home/ec2-user/saas_dentix/
-
-      - name: Restart systemd service
-        run: sudo systemctl restart saas
-
-      - name: Check service status
-        run: sudo systemctl status saas --no-pager
+          nohup java -jar api_server/build/libs/*.jar \
+            --spring.profiles.active=dev \
+            > app.log 2>&1 &
