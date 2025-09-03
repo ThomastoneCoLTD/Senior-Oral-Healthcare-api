@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: self-hosted   # EC2에 설치된 runner에서 실행
 
     steps:
       - name: Checkout source
@@ -26,7 +26,7 @@ jobs:
         run: ./gradlew clean build -x test -x asciidoctor
         working-directory: api_server
 
-      - name: Copy JAR to deploy directory
+      - name: Copy JAR and rename to app.jar
         run: cp api_server/build/libs/*.jar /home/ec2-user/saas_dentix/app.jar
 
       - name: Restart systemd service
