@@ -9,6 +9,6 @@ import lombok.Getter;
 @AllArgsConstructor
 public class UserVerifyDto {
 
-    private Long patientId;
+    private Long userId;
 
 }

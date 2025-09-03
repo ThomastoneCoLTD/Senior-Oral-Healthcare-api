@@ -8,7 +8,7 @@ import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementDto;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.domain.patient.dao.PatientRepository;
+//import com.kaii.dentix.domain.patient.dao.PatientRepository;
 import com.kaii.dentix.domain.patient.domain.Patient;
 import com.kaii.dentix.domain.serviceAgreement.application.ServiceAgreementService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -36,7 +36,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserLoginService {
 
-    private final PatientRepository patientRepository;
+//    private final PatientRepository patientRepository;
 
     private final UserRepository userRepository;
 
@@ -86,31 +86,36 @@ public class UserLoginService {
      */
     @Transactional(rollbackFor = Exception.class)
     public UserVerifyDto userVerify(UserVerifyRequest request){
+        List<User> userList = userRepository.findByUserPhoneNumberOrUserName(request.getUserPhoneNumber(), request.getUserName());
 
-        List<Patient> patientList = patientRepository.findByPatientPhoneNumberOrPatientName(request.getPatientPhoneNumber(), request.getPatientName());
-
-        Patient patient = patientList.stream()
-                .filter(p -> p.getPatientName().equals(request.getPatientName()) && p.getPatientPhoneNumber().equals(request.getPatientPhoneNumber()))
+        User user = userList.stream()
+                .filter(u -> u.getUserName().equals(request.getUserName()) && u.getUserPhoneNumber().equals(request.getUserPhoneNumber()))
                 .findAny().orElse(null);
 
-        // 이미 가입된 사용자의 경우
-        if (patient != null && userRepository.findByPatientId(patient.getPatientId()).isPresent()) throw new AlreadyDataException("이미 가입한 사용자입니다.");
+//        List<Patient> patientList = patientRepository.findByPatientPhoneNumberOrPatientName(request.getPatientPhoneNumber(), request.getPatientName());
+//
+//        Patient patient = patientList.stream()
+//                .filter(p -> p.getPatientName().equals(request.getPatientName()) && p.getPatientPhoneNumber().equals(request.getPatientPhoneNumber()))
+//                .findAny().orElse(null);
 
-        if (patient == null) {
-            Optional<Patient> isExistPatientPhoneNumber = patientList.stream()
-                    .filter(p -> p.getPatientPhoneNumber().equals(request.getPatientPhoneNumber()))
+        // 이미 가입된 사용자의 경우
+        if (user != null) throw new AlreadyDataException("이미 가입한 사용자입니다.");
+
+        if (user == null) {
+            Optional<User> isExistUserPhoneNumber = userList.stream()
+                    .filter(u -> u.getUserPhoneNumber().equals(request.getUserPhoneNumber()))
                     .findAny();
 
-            if (isExistPatientPhoneNumber.isPresent()){
-                Long patientId = isExistPatientPhoneNumber.get().getPatientId();
-                if (userRepository.findByPatientId(patientId).isPresent()) throw new BadRequestApiException("이미 사용중인 번호에요.\n번호를 다시 확인해 주세요.");  // 동일한 연락처가 이미 가입되어 있는 경우
+            if (isExistUserPhoneNumber.isPresent()){
+                Long userId = isExistUserPhoneNumber.get().getUserId();
+                if (userRepository.findByUserId(userId).isPresent()) throw new BadRequestApiException("이미 사용중인 번호에요.\n번호를 다시 확인해 주세요.");  // 동일한 연락처가 이미 가입되어 있는 경우
 
                 throw new UnauthorizedException("회원 정보가 일치하지 않아요.\n다시 확인해 주세요."); // 연락처 일치 && 실명 불일치
             }
         }
 
         return UserVerifyDto.builder()
-                .patientId(patient != null ? patient.getPatientId() : null) // true : 인증된 사용자, false : 미인증 사용자
+                .userId(user != null ? user.getUserId() : null) // true : 인증된 사용자, false : 미인증 사용자
                 .build();
     }
 
@@ -121,9 +126,9 @@ public class UserLoginService {
     @Transactional
     public UserSignUpDto userSignUp(HttpServletRequest httpServletRequest, UserSignUpRequest request){
 
-        if (request.getPatientId() != null) { // 인증된 회원인 경우
-            patientRepository.findById(request.getPatientId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 회원입니다."));
-            if (userRepository.findByPatientId(request.getPatientId()).isPresent()) throw new AlreadyDataException("이미 가입한 사용자입니다.");
+        if (request.getUserId() != null) { // 인증된 회원인 경우
+            userRepository.findById(request.getUserId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 회원입니다."));
+            if (userRepository.findByUserId(request.getUserId()).isPresent()) throw new AlreadyDataException("이미 가입한 사용자입니다.");
         }
 
         // 아이디 중복 확인
@@ -139,8 +144,7 @@ public class UserLoginService {
                     .userPassword(passwordEncoder.encode(request.getUserPassword()))
                     .findPwdQuestionId(request.getFindPwdQuestionId())
                     .findPwdAnswer(request.getFindPwdAnswer())
-                    .patientId(request.getPatientId())
-                    .isVerify(request.getPatientId() == null ? YnType.N : YnType.Y)
+                    .isVerify(request.getUserId() == null ? YnType.N : YnType.Y)
                 .build());
 
         Long userId = user.getUserId();
@@ -159,7 +163,7 @@ public class UserLoginService {
         ));
 
         return UserSignUpDto.builder()
-                .patientId(request.getPatientId())
+//                .patientId(request.getUserId())
                 .userId(user.getUserId())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)

@@ -29,7 +29,8 @@ public class User extends TimeEntity {
 
     @Column(length = 100, nullable = false)
     private String userName;
-
+    @Column(length = 45, nullable = false)
+    private String userPhoneNumber;
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "enum")
     private GenderType userGender;

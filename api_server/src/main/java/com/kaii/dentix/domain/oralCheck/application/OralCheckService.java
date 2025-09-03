@@ -9,6 +9,8 @@ import com.kaii.dentix.domain.oralCheck.dto.*;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
 import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
 import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
+import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
@@ -74,6 +76,7 @@ public class OralCheckService {
     private final UserOralStatusRepository userOralStatusRepository;
 
     private final ObjectMapper objectMapper;
+    private final OrganizationRepository organizationRepository;
 
     @Value("${spring.profiles.active}")
     private String active;
@@ -155,6 +158,19 @@ public class OralCheckService {
 
     }
 
+    /**  기관별 플랜 최대 성공 응답수 */
+    @Transactional
+    public void checkPlanUsage(Long orgId, Long userId) {
+        Organization org = organizationRepository.findById(orgId)
+                .orElseThrow(() -> new IllegalArgumentException("기관이 존재하지 않습니다."));
+
+        long successCount = oralCheckRepository.countByUserId(userId); // 성공 건수만
+        int maxAllowed = org.getSubscriptionPlan().getMaxSuccessResponses();
+
+        if (successCount >= maxAllowed) {
+            throw new IllegalStateException("구독 플랜 사용량을 모두 소진했습니다.");
+        }
+    }
     /**
      * 4등분 점수 유형 계산
      *

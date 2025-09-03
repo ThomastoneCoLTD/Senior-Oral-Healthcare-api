@@ -47,7 +47,7 @@ public class UserSignUpRequest {
     @NotBlank(message = "답변은 필수입니다.")
     private String findPwdAnswer;
 
-    private Long patientId;
+    private Long userId;
 
 
 }

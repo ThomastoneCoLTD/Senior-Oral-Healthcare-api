@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.oralCheck.dao;
 
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
+import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -22,4 +23,7 @@ public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
         ":#{#oralCheck.oralCheckTotalRange}, :#{#oralCheck.oralCheckUpRightRange}, :#{#oralCheck.oralCheckUpLeftRange}, :#{#oralCheck.oralCheckDownRightRange}, :#{#oralCheck.oralCheckDownLeftRange}, " +
         ":#{#oralCheck.oralCheckUpRightScoreType.toString()}, :#{#oralCheck.oralCheckUpLeftScoreType.toString()}, :#{#oralCheck.oralCheckDownRightScoreType.toString()}, :#{#oralCheck.oralCheckDownLeftScoreType.toString()}, :created)", nativeQuery = true)
     int nativeInsert(OralCheck oralCheck, Date created);
+
+    long countByUserId(Long userId);
+    long countByUserIdAndOralCheckAnalysisState(OralCheckAnalysisState state);
 }
