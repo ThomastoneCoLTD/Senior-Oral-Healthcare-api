@@ -1,0 +1,98 @@
+@charset "UTF-8";
+
+.register_wrap {
+  padding: 64px 80px 50px;
+  margin: 155px 0;
+
+  h1 {
+    color: $text-black;
+    font-size: $font-header-m;
+    letter-spacing: -0.7px;
+    font-weight: 700;
+    margin-bottom: 48px;
+  }
+  label {
+    color: $text-grey;
+  }
+  .guide_text {
+    margin: 0 0 0 5px;
+    font-size: $font-size-s;
+    letter-spacing: -0.3px;
+    color: $text-grey;
+  }
+  .submit_btn {
+    font-size: $font-size-xl !important;
+    font-weight: 700;
+  }
+  .v-select {
+    width: 212px;
+  }
+  // text field 안 라벨 조정
+  .v-text-field--enclosed.v-input--dense:not(.v-text-field--solo).v-text-field--outlined .v-input__append-inner {
+    margin-top: 12px !important;
+  }
+  .v-btn {
+    @include border-radius(0);
+  }
+  .register_info_wrap {
+    margin-bottom: 115px;
+
+    .info_top_txt {
+      font-size: $font-size-l;
+      color: $text-grey-dark;
+      letter-spacing: -0.4px;
+    }
+    .info_box {
+      background-color: $table-bg-white;
+      color: $text-black;
+
+      dt {
+        font-size: $font-size-m;
+        letter-spacing: -0.35px;
+        width: 80px;
+      }
+      dd {
+        @extend .text_ellipsis;
+
+        font-size: $font-size-l;
+        font-weight: 700;
+        letter-spacing: -0.4px;
+        width: 480px;
+        margin-left: 70px;
+      }
+    }
+    .info_bottom_txt {
+      color: $text-grey-dark;
+      letter-spacing: -0.35px;
+      font-size: $font-size-m;
+      line-height: 20px;
+    }
+  }
+}
+
+.initial_setting_wrap {
+  padding: 80px 260px 96px;
+  margin: 142px 0;
+
+  h1 {
+    color: $text-black;
+    font-size: $font-header-xl;
+    letter-spacing: -0.7px;
+    font-weight: 700;
+    margin-bottom: 60px;
+    
+    span {
+      font-size: $font-header-s;
+    }
+  }
+  label {
+    color: $text-grey-dark;
+  }
+  .submit_btn {
+    font-size: $font-size-xl !important;
+    font-weight: 700;
+  }
+  .v-btn {
+    @include border-radius(0);
+  }
+}

@@ -1,0 +1,95 @@
+@charset "UTF-8";
+
+.search_list {
+
+  .search_row {
+    display: flex;
+    height: 48px;
+
+    p {
+      min-width: 100px;
+      align-self: center;
+      margin: 0;
+      font-size: 16px;
+    }
+    // text field 안 라벨 조정
+    .v-text-field--enclosed.v-input--dense:not(.v-text-field--solo).v-text-field--outlined .v-input__append-inner {
+      margin-top: 12px !important;
+    }
+  }
+  .submit_btn_row {
+    border-top: 1px solid $line-grey-light;
+
+    button {
+      width: 126px;
+      height: 44px;
+      font-size: $font-size-l;
+    }
+    .reset_btn {
+      @include border-radius(0);
+
+      background-color: #fff;
+      color: $text-grey-dark;
+      border: solid 1px $line-grey-light !important;
+      font-weight: 700;
+    }
+    .submit_btn {
+      @include border-radius(0);
+
+      background-color: $primary-blue-dark;
+      color: $text-white;
+      font-weight: 700;
+    }
+
+  }
+  // icon reset 이미지 불러오기
+  .icon.reset {
+    @include icon();
+    background-image: url("#{$asset-img-path}icon/ic-initialization-24-enabled.png");
+  }
+}
+
+.date_filter{
+
+  & > div > button {
+    position: relative;
+    width: 100px;
+    height: 48px;
+    font-size: $font-size-l;
+    color: #767a83;
+    background-color: #fcfcfc;
+    border: 1px solid #e1e2e6;
+  }
+  & > div > button:nth-child(3) ~ button {
+    width: 101px;
+  }
+  & > div > button.active:not(:disabled) {
+    z-index: 2;
+    font-weight: 700;
+    color: #1251fc;
+    border-color: #1251fc;
+    background-color: rgba(18, 81, 252, 0.06);
+  }
+  & > div >  button:disabled {
+    color: #b3b3b3;
+  }
+  & > div > button.active:disabled {
+    background-color: #e1e2e6;
+  }
+  & > div > button + button {
+    margin-left: -1px;
+  }
+  .mark {
+    display: inline-block;
+    width: 30px;
+    line-height: 48px;
+    text-align: center;
+  }
+  .v-input > .v-input__control {
+    height: 48px;
+
+    .v-input__slot {
+      margin-bottom: 0;
+    }
+  }
+}

@@ -1,0 +1,22 @@
+@charset "UTF-8";
+
+// 텍스트 숨김처리
+.blind {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+}
+// text ... 으로 숨김처리
+.text_ellipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+// CJK text 감싸기
+.word_break_wrap {
+  word-break: keep-all;
+  word-wrap: break-word;
+}

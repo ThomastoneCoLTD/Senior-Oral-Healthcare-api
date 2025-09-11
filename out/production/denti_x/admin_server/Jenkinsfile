@@ -1,0 +1,89 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs 'NodeJS-16.15.0'
+    }
+
+    environment {
+        SLACK_CHANNEL = "#ai-voucher-jenkins-deploy"
+        SLACK_SUCCESS_COLOR = "#2C953C";
+        SLACK_FAIL_COLOR = "#FF3232";
+        SSH_CONNECTION_CREDENTIAL_DEV = 'kaii-dep-ssh'
+        SSH_CONNECTION_CREDENTIAL_PROD = 'ai-voucher-ssh'
+    }
+
+    stages {
+
+        stage('Set Environment') {
+            post {
+                success {
+                    slackSend(channel: SLACK_CHANNEL, color: SLACK_SUCCESS_COLOR, message: "==================================================================\n배포 파이프라인이 시작되었습니다.\n${JOB_NAME}(${BUILD_NUMBER})\n${GIT_COMMIT_AUTHOR} - ${GIT_COMMIT_MESSAGE}\n${BUILD_URL}")
+                }
+            }
+            steps {
+                script {
+                    switch(BRANCH_NAME) {
+                        case 'dev' :
+                            env.SSH_CONNECTION = 'ec2-user@3.34.135.7'
+                            break
+                        case 'prod' :
+                            env.SSH_CONNECTION = 'ncloud@175.106.93.58'
+                            break
+                    }
+                    GIT_COMMIT_AUTHOR = sh(script: "git --no-pager show -s --format=%an ${GIT_COMMIT}", returnStdout: true).trim();
+                    GIT_COMMIT_MESSAGE = sh(script: "git --no-pager show -s --format=%B ${GIT_COMMIT}", returnStdout: true).trim();
+                }
+            }
+        }
+
+        stage('Install') {
+            steps {
+                sh "npm install"
+            }
+            post {
+                failure {
+                    slackSend(channel: SLACK_CHANNEL, color: SLACK_FAIL_COLOR, message: '배포에 실패하였습니다.\n==================================================================')
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh "npm run build:${BRANCH_NAME}"
+            }
+            post {
+                failure {
+                    slackSend(channel: SLACK_CHANNEL, color: SLACK_FAIL_COLOR, message: '배포에 실패하였습니다.\n==================================================================')
+                }
+            }
+        }
+
+        stage('Server Push') {
+            steps {
+                script {
+                    switch(BRANCH_NAME) {
+                        case 'dev' :
+                            sshagent (credentials: [SSH_CONNECTION_CREDENTIAL_DEV]) {
+                                sh "scp -o StrictHostKeyChecking=no -r dist/* ${SSH_CONNECTION}:/home/ec2-user/dentix-admin/dist"
+                            }
+                            break
+                        case 'prod' :
+                            sshagent (credentials: [SSH_CONNECTION_CREDENTIAL_PROD]) {
+                                sh "scp -o StrictHostKeyChecking=no -r dist/* ${SSH_CONNECTION}:/home1/ncloud/dentix-admin/dist"
+                            }
+                            break
+                    }
+                }
+            }
+            post {
+                success {
+                    slackSend(channel: SLACK_CHANNEL, color: SLACK_SUCCESS_COLOR, message: '배포에 성공하였습니다.\n==================================================================')
+                }
+                failure {
+                    slackSend(channel: SLACK_CHANNEL, color: SLACK_FAIL_COLOR, message: '배포에 실패하였습니다.\n==================================================================')
+                }
+            }
+        }
+    }
+}

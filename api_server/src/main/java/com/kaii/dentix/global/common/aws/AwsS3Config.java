@@ -14,7 +14,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 @Configuration
 public class AwsS3Config {
 //    private final S3Client s3;
-
+//
     @Value("${s3.storage.region}")
     private String region;
 

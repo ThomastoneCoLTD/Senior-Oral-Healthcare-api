@@ -1,0 +1,30 @@
+@charset "UTF-8";
+
+.toast_wrap {
+
+  .v-snack__content {
+    display: flex;
+    align-items: center;
+    padding: 14px 20px;
+
+    & > span {
+      color: #fff;
+      font-size: $font-size-l;
+      letter-spacing: -0.4px;
+    }
+  }
+  .icon {
+    @include icon(20px);
+    
+    margin-right: 8px;
+  }
+  .icon.success_icon {
+    background-image: url("#{$asset-img-path}icon/ic-success-20.png");
+  }
+  .v-snack__action > button {
+    color: $toast-btn-blue;
+  }
+  .v-btn {
+    font-size: $font-size-l;
+  }
+}

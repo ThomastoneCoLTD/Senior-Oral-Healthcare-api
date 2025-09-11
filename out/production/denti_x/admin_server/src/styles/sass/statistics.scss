@@ -1,0 +1,369 @@
+@charset "UTF-8";
+
+.statistics_wrap {
+
+  .tab_wrap {
+    height: 68px;
+    padding: 20px 0;
+    background-color: #ced0d9;
+    margin-left: 0;
+
+    & > div {
+      width: 1360px;
+    }
+    .tab_item {
+      width: 180px;
+      height: 44px;
+      background-color: #e1e3eb;
+      border: 1px solid #c0c2cc;
+      font-size: $font-size-l;
+      letter-spacing: -0.4px;
+      color: $text-grey-dark;
+      margin-top: 2px;
+      margin-bottom: 2px;
+    }
+    .tab_item.active {
+      height: 48px;
+      margin-bottom: 0;
+      margin-top: 0;
+      background-color: #edeef2;
+      color: $text-black;
+      font-weight: 700;
+      border: 0;
+    }
+  }
+  .statistics_inner_wrap {
+    padding-bottom: 50px;
+
+    .search_form_wrap {
+      padding: 0 30px 30px;
+
+      .search_form_header {
+        height: 64px;
+        font-weight: 700;
+
+        .form_title {
+          font-size: $font-size-xl;
+          color: $text-black;
+          font-weight: 700;
+          letter-spacing: -0.45px;
+        }
+        .icon.time {
+          @include icon(20px);
+
+          background-image: url("#{$asset-img-path}icon/ic-time-24-enabled.png");
+          background-size: 20px;
+          margin-right: 2px;
+        }
+        .time_info_text {
+          letter-spacing: -0.35px;
+          color: $text-grey;
+        }
+        .divider {
+          color: #ccc;
+          font-size: $font-size-s;
+        }
+        .time_text {
+          font-weight: 500;
+          letter-spacing: -0.35px;
+          color: $text-grey;
+        }
+        button {
+          padding: 0 5px;
+          color: #767676;
+          font-size: $font-size-l;
+          font-weight: 700;
+        }
+      }
+      .corps_select_box_wrap {
+        width: 198px;
+
+        .v-text-field--enclosed.v-input--dense:not(.v-text-field--solo).v-text-field--outlined .v-input__append-inner {
+          margin-top: 12px !important;
+        }
+      }
+      .date_filter_wrap {
+
+        .search_row {
+          width: 1150px;
+        }
+        .submit_btn {
+          @include border-radius(0);
+
+          margin-left: 38px;
+          width: 112px;
+          font-size: $font-size-l;
+          letter-spacing: -0.4px;
+          font-weight: 700;
+        }
+        // text field 안 라벨 조정
+        .v-text-field--enclosed.v-input--dense:not(.v-text-field--solo).v-text-field--outlined .v-input__append-inner {
+          margin-top: 12px !important;
+        }
+      }
+    }
+    .chart_card {
+
+      .chart_header {
+        padding: 30px 30px 0;
+        color: $text-black;
+
+        & > div:nth-child(1) {
+          font-size: $font-size-xl;
+          font-weight: 700;
+          letter-spacing: -0.45px;
+
+          .icon.status_list {
+            @include icon(34px);
+
+            background-image: url("#{$asset-img-path}icon/ic-list-status-34.png");
+            margin-right: 6px;
+          }
+        }
+        & > div:nth-child(2) {
+          margin-left: 40px;
+          font-size: $font-size-l;
+          letter-spacing: -0.4px;
+        }
+      }
+      .status_text {
+        letter-spacing: -0.4px;
+        font-weight: 700;
+
+        & > div {
+          font-size: $font-size-xxl;
+          color: $text-black-dark;
+        }
+        & > span:nth-child(2) {
+          font-size: $font-size-l;
+          color: $text-black;
+          margin-right: 5px;
+        }
+        & > span:nth-child(3) {
+          font-size: $font-size-l;
+          color: $text-blue;
+        }
+      }
+    }
+    .subscription_rate_chart_wrap {
+
+      .chart_wrap {
+        padding: 50px 120px;
+
+        .chart_box {
+          width: 280px;
+          z-index: 1;
+
+          .doughnut_chart_box {
+            width: 280px;
+            height: 280px;
+          }
+          & > div:nth-child(2) {
+            margin-top: 30px;
+            text-align: center;
+            font-size: $font-size-xxl;
+            color: $text-black;
+            letter-spacing: -0.5px;
+            font-weight: 700;
+          }
+        }
+        .chart_box.margin {
+          margin-left: 140px;
+        }
+      }
+    }
+    .status_summary_wrap {
+      padding: 24px 50px 0;
+    }
+    .oral_check_chart_wrap {
+
+      .status_summary_wrap {
+
+        .icon {
+          @include icon(48px);
+
+          background-size: 48px;
+        }
+        .icon.icon_health {
+          background-image: url("#{$asset-img-path}icon/ic-health-80.png");
+        }
+        .icon.icon_good {
+          background-image: url("#{$asset-img-path}icon/ic-good-80.png");
+        }
+        .icon.icon_attention {
+          background-image: url("#{$asset-img-path}icon/ic-attention-80.png");
+        }
+        .icon.icon_danger {
+          background-image: url("#{$asset-img-path}icon/ic-danger-80.png");
+        }
+        .icon.icon_norecord {
+          background-image: url("#{$asset-img-path}icon/ic-norecord-48.png");
+        }
+
+      }
+      .chart_wrap {
+        padding: 50px 50px;
+
+        .chart_box {
+          .horizontal_chart_box {
+            width: 360px;
+          }
+          .main_chart_box {
+            width: 798px;
+          }
+          & > div:nth-child(2) {
+            margin-top: 20px;
+            text-align: center;
+            font-size: $font-size-xxl;
+            color: $text-black;
+            letter-spacing: -0.5px;
+            font-weight: 700;
+          }
+        }
+
+        .vertical-divide {
+          display: inline-flex;
+          height: 240px;
+          width: 2px;
+          margin: 0 50px 0 40px;
+          background-color: #EDEEF2;
+        }
+      }
+    }
+    .oral_status_chart_wrap {
+
+      .status_summary_wrap {
+
+        .icon {
+          @include icon(48px);
+
+          background-size: 48px;
+        }
+        .icon.icon_A {
+          background-image: url("#{$asset-img-path}icon/ic-A-64.png");
+        }
+        .icon.icon_B {
+          background-image: url("#{$asset-img-path}icon/ic-B-64.png");
+        }
+        .icon.icon_C {
+          background-image: url("#{$asset-img-path}icon/ic-C-64.png");
+        }
+        .icon.icon_D {
+          background-image: url("#{$asset-img-path}icon/ic-D-64.png");
+        }
+        .icon.icon_E {
+          background-image: url("#{$asset-img-path}icon/ic-E-64.png");
+        }
+        .icon.icon_F {
+          background-image: url("#{$asset-img-path}icon/ic-F-64.png");
+        }
+        .icon.icon_G {
+          background-image: url("#{$asset-img-path}icon/ic-G-64.png");
+        }
+        .icon.icon_H {
+          background-image: url("#{$asset-img-path}icon/ic-H-64.png");
+        }
+        .icon.icon_I {
+          background-image: url("#{$asset-img-path}icon/ic-I-64.png");
+        }
+        .icon.icon_J {
+          background-image: url("#{$asset-img-path}icon/ic-J-64.png");
+        }
+        .icon.icon_K {
+          background-image: url("#{$asset-img-path}icon/ic-K-64.png");
+        }
+        .icon.icon_norecord {
+          background-image: url("#{$asset-img-path}icon/ic-norecord-48.png");
+        }
+
+      }
+      .chart_wrap {
+        padding: 50px 50px;
+
+        .chart_box {
+          .horizontal_chart_box {
+            width: 360px;
+            padding-top: 10px;
+          }
+          .main_chart_box {
+            width: 798px;
+          }
+          & > div:nth-child(2) {
+            margin-top: 20px;
+            text-align: center;
+            font-size: $font-size-xxl;
+            color: $text-black;
+            letter-spacing: -0.5px;
+            font-weight: 700;
+          }
+        }
+
+        .vertical-divide {
+          display: inline-flex;
+          height: 240px;
+          width: 2px;
+          margin: 0 50px 0 40px;
+          background-color: #EDEEF2;
+        }
+      }
+    }
+    .table_wrap {
+
+      .v-data-table {
+
+        .v-data-table__wrapper {
+
+          th:last-child > i {
+            display: inline-block !important;
+          }
+          th {
+            box-shadow: none;
+            text-align: center !important;
+            border-bottom: 2px solid $line-grey-light !important;
+            font-size: $font-size-l;
+            letter-spacing: 0.35px;
+            font-weight: 700;
+            color: $text-black;
+          }
+          td {
+            text-align: center !important;
+            font-size: $font-size-l !important;
+            color: #656e81;
+          }
+          & > table > tbody > tr:not(:last-child) > td:not(.v-data-table__mobile-row),
+          & > table > tbody > tr:not(:last-child) > td:last-child {
+            border-bottom: 0;
+          }
+        }
+      }
+    }
+    .teeth_status_img_wrap {
+
+      .status_text {
+        padding: 27px 50px 0;
+      }
+      .chart_wrap {
+        padding: 80px 40px 90px;
+
+        .chart_box {
+          width: 240px;
+
+          .teeth_box {
+            width: 240px;
+          }
+          & > div:nth-child(2) {
+            margin-top: 76px;
+            text-align: center;
+            font-size: $font-size-xxl;
+            color: $text-black;
+            letter-spacing: -0.5px;
+            font-weight: 700;
+          }
+        }
+        .chart_box.margin {
+          margin-left: 20px;
+        }
+      }
+    }
+  }
+}

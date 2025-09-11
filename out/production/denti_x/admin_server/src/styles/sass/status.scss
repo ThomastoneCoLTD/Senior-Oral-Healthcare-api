@@ -1,0 +1,606 @@
+@charset "UTF-8";
+
+.summary_wrap {
+
+  .user_info_wrap {
+    width: 100%;
+    max-width: 1360px;
+
+    p {
+      margin-bottom: 0;
+    }
+    div > p:nth-child(1) {
+      font-size: $font-header-xl;
+      color: $text-black;
+      font-weight: 700;
+      letter-spacing: -0.7px;
+    }
+    div > p:nth-child(2) {
+      font-size: $font-size-l;
+      font-weight: 700;
+      color: $text-black;
+      letter-spacing: -0.4px;
+    }
+    div > p:nth-child(3) {
+      font-size: $font-size-m;
+      color: $text-grey;
+      letter-spacing: -0.35px;
+    }
+  }
+  .card_title {
+    padding: 24px 36px 31px;
+
+    .icon.status_list {
+      @include icon(34px);
+
+      background-image: url("#{$asset-img-path}icon/ic-list-status-34.png");
+    }
+    & > span {
+      font-size: $font-size-xl;
+      letter-spacing: -0.45px;
+      font-weight: 700;
+      color: $text-black;
+    }
+  }
+  .card_status {
+
+    .icon {
+      @include icon(48px);
+
+      background-size: 48px;
+    }
+    .icon.icon_health {
+      background-image: url("#{$asset-img-path}icon/ic-health-80.png");
+    }
+    .icon.icon_good {
+      background-image: url("#{$asset-img-path}icon/ic-good-80.png");
+    }
+    .icon.icon_attention {
+      background-image: url("#{$asset-img-path}icon/ic-attention-80.png");
+    }
+    .icon.icon_danger {
+      background-image: url("#{$asset-img-path}icon/ic-danger-80.png");
+    }
+    p {
+      letter-spacing: -0.4px;
+      font-weight: 700;
+    }
+    div > p:nth-child(1) {
+      font-size: $font-size-xxl;
+      color: $text-black-dark;
+      margin-bottom: 4px;
+    }
+    div > p:nth-child(2) {
+      font-size: $font-size-l;
+      color: $text-black;
+      margin-bottom: 0;
+
+      span {
+        color: $primary-blue;
+      }
+    }
+  }
+  .user_chart_wrap {
+    padding: 85px 69px 50px 80px;
+
+    .doughnut_chart_box {
+      width: 256px;
+      height: 256px;
+      margin-right: 100px;
+    }
+    .bar_chart_wrap {
+
+      .chart_info > div:nth-child(1) {
+        color: #000;
+        font-size: $font-size-m;
+        font-weight: 700;
+      }
+      .rank_text {
+        color: #656e81;
+        font-size: $font-size-m;
+      }
+      .rank_text > span {
+        font-size: 42px;
+        color: #030d21;
+      }
+      .bar_chart_box {
+        margin-top: 12px;
+      }
+    }
+  }
+  .user_calendar_wrap {
+
+    .date_picker_wrap {
+      padding: 30px 30px 46px;
+      height: 34px;
+      width: 230px;
+
+      .v-input {
+        position: relative;
+
+        .v-input__control {
+          height: 34px;
+
+          .v-input__slot {
+            margin-bottom: 0;
+          }
+        }
+        input {
+          z-index: 1;
+          color: $text-grey-dark;
+          font-weight: 700;
+          font-size: $font-size-xl;
+        }
+        .icon {
+          @include icon(34px);
+
+          position: absolute;
+          top: 8px;
+          right: 25px;
+          margin-top: -5px;
+          margin-right: -5px;
+        }
+        .icon.select_menu_icon {
+          background-image: url("#{$asset-img-path}icon/ic-down-34-enabled.png");
+        }
+        &:hover {
+          .icon.select_menu_icon {
+            background-image: url("#{$asset-img-path}icon/ic-down-34-hover.png");
+          }
+        }
+      }
+    }
+    .calendar_wrap {
+
+      .theme--light.v-calendar-weekly {
+        border: 0;
+      }
+      .theme--light.v-calendar-weekly .v-calendar-weekly__head-weekday.primary--text {
+        color: $text-grey-dark !important;
+      }
+      .theme--light.v-calendar-weekly .v-calendar-weekly__head-weekday {
+        width: 80px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: $font-size-l;
+        color: $text-grey-dark;
+        border: 0;
+      }
+      .theme--light.v-calendar-weekly .v-calendar-weekly__day {
+        border: 0;
+        width: 80px;
+        height: 48px;
+      }
+      .v-calendar-weekly__day-label {
+        cursor: default;
+        pointer-events: none;
+      }
+      .v-calendar-weekly__day-label .v-btn {
+        font-size: $font-size-l;
+        color: $text-grey-dark;
+        pointer-events: none;
+      }
+      .v-btn:not(.v-btn--outlined).primary {
+        color: #fff !important;
+        //border: 3px solid #96b8ff !important;
+      }
+      .theme--light.v-calendar-weekly .v-calendar-weekly__head-weekday.v-outside,
+      .theme--light.v-calendar-weekly .v-calendar-weekly__day.v-outside {
+        background-color: #fff;
+      }
+      .theme--light.v-calendar-weekly .v-calendar-weekly__day.v-outside .v-calendar-weekly__day-label button {
+        color: $line-grey-light;
+      }
+      .theme--light.v-calendar-events .v-event-more {
+        @include border-radius(50%);
+
+        background-color: transparent;
+        position: absolute;
+        border: 2px solid #95b8ff;
+        width: 40px;
+        height: 40px !important;
+        font-size: 0;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+    }
+  }
+  .table_wrap {
+
+    .v-data-table {
+
+      .v-data-table__wrapper {
+
+        th:last-child > i {
+          display: inline-block !important;
+        }
+        th {
+          box-shadow: none;
+          text-align: center !important;
+          border-bottom: 3px solid $line-grey-light !important;
+          font-size: $font-size-l;
+          letter-spacing: -0.35px;
+          font-weight: 700;
+          color: $text-black;
+        }
+        thead > tr > th:nth-child(1) {
+          width: 40%;
+        }
+        thead > tr > th:nth-child(2) {
+          width: 20%;
+        }
+        thead > tr > th:nth-child(3) {
+          width: 40%;
+        }
+        td {
+          text-align: center !important;
+          font-size: $font-size-l !important;
+          color: #656e81;
+        }
+        & > table > tbody > tr:not(:last-child) > td:not(.v-data-table__mobile-row),
+        & > table > tbody > tr:not(:last-child) > td:last-child {
+          border-bottom: 0;
+        }
+      }
+    }
+  }
+}
+.calendar_popup_wrap {
+
+  background-color: rgba(0, 0, 0, 0.7);
+  padding-bottom: 40px;
+  min-width: 1120px;
+  overflow-x: auto;
+
+  .toolbar {
+    padding: 0 20px;
+
+    .v-toolbar__content {
+      justify-content: space-between;
+      width: 100%;
+      padding: 4px 0;
+    }
+    & > button {
+      padding: 0 20px;
+    }
+    button, a {
+      color: $text-white;
+      font-size: $font-size-l;
+      font-weight: 700;
+      height: 100%;
+
+      .icon {
+        @include icon(34px);
+      }
+      .icon.back {
+        background-image: url("#{$asset-img-path}icon/ic-back-34-enabled.png");
+      }
+      .icon.newwindow {
+        background-image: url("#{$asset-img-path}icon/ic-newwindow-34-enabled.png");
+      }
+      .icon.pdf {
+        background-image: url("#{$asset-img-path}icon/ic-pdf-34-white-enabled.png");
+      }
+    }
+  }
+  .date_picker_box {
+    color: $text-white;
+    font-weight: 700;
+    font-size: $font-size-l;
+
+    & > span {
+      color: #ccc;
+      padding-left: 8px;
+      font-size: $font-size-s;
+    }
+    .v-input {
+      position: relative;
+      align-items: center;
+      width: 200px;
+
+      .v-input__control {
+        height: 34px;
+
+        .v-input__slot {
+          padding-left: 8px;
+        }
+      }
+      input {
+        z-index: 1;
+        color: $text-white;
+        font-weight: 700;
+        font-size: $font-size-l;
+        padding: 0 !important;
+      }
+      .icon {
+        @include icon(34px);
+
+        position: absolute;
+        top: 2px;
+        right: 10px;
+      }
+      .icon.select_menu_icon {
+        background-image: url("#{$asset-img-path}icon/ic-down-34-white-enabled.png");
+      }
+    }
+  }
+  .report_wrap {
+    margin: 40px 0;
+
+    h1 {
+      padding: 40px 40px 30px;
+      font-size: 36px;
+      color: $text-black;
+      letter-spacing: -0.9px;
+      text-align: center;
+      position: relative;
+
+      & > span {
+        display: inline-block;
+        font-size: $font-size-l;
+        color: $text-grey-dark;
+        letter-spacing: -0.4px;
+        position: absolute;
+        right: 40px;
+        text-align: right;
+      }
+    }
+    .upper_report_wrap {
+      height: 400px;
+      margin: 0 100px 40px;
+
+      .summary_img_box {
+        position: relative;
+        margin-right: 140px;
+
+        .img_text_box {
+          @extend .word_break_wrap;
+
+          position: absolute;
+          top: 32px;
+          left: 16px;
+
+          & > div:nth-child(1) {
+            font-size: $font-header-m;
+            color: $text-black-dark;
+            letter-spacing: -0.96px;
+            font-weight: 700;
+          }
+          & > div:nth-child(2) {
+            font-size: $font-size-l;
+            color: $text-black-dark;
+            letter-spacing: -0.32px;
+            margin-top: 25px;
+            .icon.recent {
+              @include icon(20px);
+              background-image: url("#{$asset-img-path}icon/ic-recent-20.png");
+              margin-right: 3px;
+            }
+          }
+          & > div:nth-child(3) {
+            font-size: $font-size-l;
+            color: #8a92a1;
+            letter-spacing: -0.32px;
+            margin-left: 23px;
+          }
+        }
+      }
+      .summary_chart_box {
+        width: 100%;
+        padding-top: 32px;
+        .bar_chart_wrap {
+
+          .chart_info > div:nth-child(1) {
+            color: #000;
+            font-size: $font-header-m;
+            font-weight: 700;
+          }
+          .rank_text {
+            color: #656e81;
+            font-size: $font-size-m;
+          }
+          .rank_text > span {
+            font-size: $font-header-m;
+            color: #030d21;
+          }
+          .bar_chart_box {
+            margin-top: 110px;
+          }
+        }
+      }
+    }
+    .teeth_status_wrap {
+      margin: 0 50px;
+
+      .teeth_status_box {
+        padding: 30px 0 20px;
+        width: 320px;
+        background-color: #f5f7fa;
+
+        .status_text_wrap {
+
+          & > div:nth-child(1) {
+            padding-left: 20px;
+
+            .status_text {
+              letter-spacing: -0.4px;
+              font-weight: 700;
+              & > div {
+                font-size: $font-size-xxl;
+                color: $text-black-dark;
+              }
+              & > span:nth-child(2) {
+                font-size: $font-size-l;
+                color: $text-black;
+                margin-right: 5px;
+              }
+              & > span:nth-child(3) {
+                font-size: $font-size-l;
+                color: #656e81;
+              }
+            }
+          }
+          & > div:nth-child(2) {
+            margin-top: 20px;
+            padding-left: 30px;
+            color: #707070;
+          }
+          .icon {
+            @include icon(48px);
+
+            background-size: 48px;
+          }
+          .icon.icon_health {
+            background-image: url("#{$asset-img-path}icon/ic-health-80.png");
+          }
+          .icon.icon_good {
+            background-image: url("#{$asset-img-path}icon/ic-good-80.png");
+          }
+          .icon.icon_attention {
+            background-image: url("#{$asset-img-path}icon/ic-attention-80.png");
+          }
+          .icon.icon_danger {
+            background-image: url("#{$asset-img-path}icon/ic-danger-80.png");
+          }
+          .icon.icon_norecord {
+            background-image: url("#{$asset-img-path}icon/ic-norecord-48.png");
+          }
+        }
+        .status_img_wrap {
+          margin-top: 30px;
+          padding: 35px 20px;
+
+          & > span {
+            font-size: $font-size-l;
+            color: #8a92a1;
+          }
+        }
+      }
+      .teeth_status_box.margin {
+        margin-left: 30px;
+      }
+      .intro_box {
+
+        .bar {
+          height: 2px;
+        }
+        .color_box {
+          @include icon(8px);
+
+          margin-right: 14px;
+        }
+        .color_box.blue {
+          background-color: #A9D0FC !important;
+        }
+        .color_box.green {
+          background-color: #D6FCCF !important;
+        }
+        .color_box.yellow {
+          background-color: #FFFFC3 !important;
+        }
+        .color_box.red {
+          background-color: #FDC9C4 !important;
+        }
+        & > ul .icon {
+          @include icon(24px);
+
+          margin-right: 6px;
+        }
+        & > ul {
+          font-weight: 300;
+          color: $text-black-dark;
+
+          .bar {
+            margin: 6px 0 8px;
+          }
+        }
+        & > ul:nth-child(1){
+          width: 145px;
+
+          .bar {
+            background-color: #A9D0FC;
+          }
+          .icon.tooth {
+            background-image: url("#{$asset-img-path}icon/ic-tooth-health.png");
+          }
+        }
+        & > ul:nth-child(2){
+          width: 219px;
+
+          .bar {
+            background-color: #29cc9e;
+          }
+          .icon.tooth {
+            background-image: url("#{$asset-img-path}icon/ic-tooth-good.png");
+          }
+        }
+        & > ul:nth-child(3){
+          width: 270px;
+
+          .bar {
+            background-color: #FFFFC3;
+          }
+          .icon.tooth {
+            background-image: url("#{$asset-img-path}icon/ic-tooth-attention.png");
+          }
+        }
+        & > ul:nth-child(4){
+          width: 386px;
+
+          .bar {
+            background-color: #FDC9C4;
+          }
+          .icon.tooth {
+            background-image: url("#{$asset-img-path}icon/ic-tooth-danger.png");
+          }
+        }
+        .intro_text_down {
+          display: flex;
+          align-items: center;
+        }
+      }
+    }
+    .down_report_wrap {
+      padding: 20px 50px 20px;
+
+      & > h2 {
+        font-weight: 700;
+        font-size: $font-size-xl;
+        letter-spacing: -0.4px;
+
+        .icon.education {
+          @include icon(24px);
+
+          background-image: url("#{$asset-img-path}icon/ic-education-24.png");
+        }
+      }
+      .line_bar_chart_wrap {
+        padding: 0;
+
+        .chart_box {
+          margin: 0;
+          width: 1020px;
+
+          .bar_chart_box {
+            padding: 0;
+            margin: 13px 0 0;
+            width: 1020px;
+          }
+        }
+      }
+    }
+  }
+}
+.calendar_popup_page_wrap {
+  background-color: #fff;
+  
+  .toolbar {
+    background-color: $table-bg !important;
+  }
+  .v-sheet.v-card:not(.v-sheet--outlined) {
+    box-shadow: none;
+  }
+}

@@ -1,0 +1,76 @@
+@charset "UTF-8";
+
+.popup_wrap {
+
+  .icon {
+    @include icon(20px);
+    margin-top: -2px;
+  }
+  .v-toolbar__title {
+    font-size: $font-size-l;
+    color: $text-black;
+    letter-spacing: -0.4px;
+    font-weight: 700;
+  }
+  .icon.confirm_icon {
+    background-image: url("#{$asset-img-path}icon/ic-confirm-20.png");
+  }
+  .icon.error_icon {
+    background-image: url("#{$asset-img-path}icon/ic-error-20.png");
+  }
+  .icon.info_icon {
+    background-image: url("#{$asset-img-path}icon/ic-info-20.png");
+  }
+  .icon.success_icon {
+    background-image: url("#{$asset-img-path}icon/ic-success-20.png");
+  }
+  .theme--light.v-sheet {
+    border-bottom: 1px solid $table-bg-lighter;
+  }
+  .text_box {
+    font-size: $font-size-m;
+  }
+  .v-btn {
+    @include border-radius(0);
+
+    font-size: $font-size-l;
+    font-weight: 700;
+  }
+  .deletion_info {
+
+    p {
+      font-size: $font-size-xl;
+      font-weight: 800;
+      letter-spacing: -0.45px;
+      color: $text-black;
+    }
+    div {
+      width: 360px;
+      border: 1px solid $line-border-grey;
+      padding: 32px 20px;
+      letter-spacing: -0.35px;
+      font-weight: 700;
+    }
+  }
+  .deletion_input_wrap {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    p {
+      font-size: $font-size-m;
+      font-weight: 700;
+      letter-spacing: -0.35px;
+      color: $text-black;
+      margin: 0;
+    }
+    & > div {
+      width: 264px;
+      height: 48px;
+    }
+    .v-input {
+      height: 48px;
+    }
+  }
+}

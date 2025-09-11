@@ -1,0 +1,18 @@
+@charset "UTF-8";
+
+// mixin
+
+// border radius
+@mixin border-radius($radius) {
+  -webkit-border-radius: $radius;
+  -moz-border-radius: $radius;
+  -ms-border-radius: $radius;
+  border-radius: $radius;
+}
+
+// icon 사이즈 설정 mixin
+@mixin icon( $size: 24px ) {
+  width: $size;
+  height: $size;
+  display: inline-block;
+}

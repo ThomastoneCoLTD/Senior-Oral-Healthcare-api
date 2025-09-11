@@ -1,0 +1,253 @@
+@charset "UTF-8";
+
+.table_list_wrap {
+
+  .table_list_bar {
+    height: 76px;
+
+    .table_list_bar_text {
+      letter-spacing: -0.45px;
+      font-size: $font-size-xl;
+      font-weight: 700;
+      color: $text-black;
+
+      span {
+        color: $text-blue;
+      }
+    }
+    .select_wrap {
+      width: 165px;
+      height: 36px;
+
+      .v-text-field--enclosed.v-input--dense:not(.v-text-field--solo).v-text-field--outlined .v-input__append-inner {
+        margin-top: 8px;
+      }
+    }
+  }
+  .table_wrap {
+
+    table {
+      padding: 0 28px;
+      table-layout: fixed;
+    }
+    th {
+      font-size: $font-size-s !important;
+      font-weight: 700;
+    }
+    td {
+      display: table-cell;
+      font-size: $font-size-s !important;
+    }
+  }
+  .theme--light.v-data-table > .v-data-table__wrapper > table > thead > tr:last-child > th {
+    font-size: $font-size-s;
+    background-color: $table-header;
+  }
+  .theme--light.v-pagination .v-pagination__item {
+    background-color: #fff;
+    box-shadow: none;
+  }
+  .theme--light.v-pagination .v-pagination__item--active {
+    color: $text-blue;
+    background-color: #fff !important;
+    box-shadow: none;
+  }
+  .v-data-table--fixed-header > .v-data-table__wrapper {
+    max-height: 768px;
+  }
+}
+
+.table_list_wrap_user {
+
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th,
+  .v-data-table > .v-data-table__wrapper > table > tbody > tr > td {
+    text-align: center !important;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(1) {
+    width: 60px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(2) {
+    width: 90px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(3) {
+    width: 90px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(4) {
+    width: 80px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(5) {
+    width: 120px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(6) {
+    width: 100px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(7) {
+    width: 120px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(8) {
+    width: 100px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(9) {
+    width: 100px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(10) {
+    width: 90px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(11) {
+    width: 80px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(12) {
+    width: 80px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(13) {
+    width: 80px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > tbody > .v-data-table__empty-wrapper > td:nth-child(1) {
+    text-align: center !important;
+  }
+  .table_wrap {
+
+    button {
+      height: 35px;
+      border: 1px solid $line-grey-light;
+      color: $text-black;
+      font-weight: 700;
+
+      &:hover {
+        background-color: $btn-hover-blue;
+      }
+    }
+    .delete_btn {
+      width: 70px;
+    }
+    .reset_btn {
+      width: 110px;
+    }
+  }
+}
+
+.table_list_wrap_patient {
+
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th,
+  .v-data-table > .v-data-table__wrapper > table > tbody > tr > td {
+    text-align: center !important;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(1) {
+    width: 100px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(2) {
+    width: 100px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(3) {
+    width: 150px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(4) {
+    width: 140px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(5) {
+    width: 140px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(6) {
+    width: 120px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > tbody > .v-data-table__empty-wrapper > td:nth-child(1) {
+    text-align: center !important;
+  }
+  .table_wrap {
+
+    button {
+      height: 35px;
+      border: 1px solid $line-grey-light;
+      color: $text-black;
+      font-weight: 700;
+
+      &:hover {
+        background-color: $btn-hover-blue;
+      }
+    }
+    .delete_btn {
+      width: 70px;
+    }
+    .reset_btn {
+      width: 110px;
+    }
+  }
+}
+
+.table_list_wrap_admin {
+
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th,
+  .v-data-table > .v-data-table__wrapper > table > tbody > tr > td {
+    text-align: center !important;
+  }
+  margin-bottom: 88px;
+
+  .register_admin_link {
+    @include border-radius(22px);
+
+    width: 138px;
+    height: 44px;
+    background-color: $table-bg-white;
+    color: $primary-blue-dark;
+    display: inline-block;
+    text-align: center;
+    line-height: 44px;
+    font-weight: 700;
+    font-size: $font-size-m;
+    letter-spacing: -0.35px;
+
+    &:hover {
+      background-color: $table-header;
+    }
+    .v-icon {
+      color: inherit;
+      margin-bottom: 3px;
+    }
+  }
+  .v-data-table--fixed-header > .v-data-table__wrapper {
+    max-height: 480px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(1) {
+    width: 72px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(2) {
+    width: 152px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(3) {
+    width: 190px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(4) {
+    width: 397px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(5) {
+    width: 272px;
+  }
+  .v-data-table > .v-data-table__wrapper > table > thead > tr > th:nth-child(6) {
+    width: 217px;
+  }
+  .table_wrap {
+
+    button {
+      height: 35px;
+      border: 1px solid $line-grey-light;
+      color: $text-black;
+      font-weight: 700;
+      
+      &:hover {
+        background-color: $btn-hover-blue;
+      }
+    }
+    .delete_btn {
+      width: 70px;
+    }
+    .reset_btn {
+      width: 110px;
+    }
+  }
+}
+
+.list_header {
+  max-width: 1360px;
+  width: 100%;
+  margin-top: 90px;
+}

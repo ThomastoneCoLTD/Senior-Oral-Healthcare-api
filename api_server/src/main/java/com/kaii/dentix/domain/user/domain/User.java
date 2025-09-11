@@ -49,7 +49,7 @@ public class User extends TimeEntity {
     @Temporal(TemporalType.TIMESTAMP)
     public Date userLastLoginDate;
 
-    private Long patientId;
+//    private Long patientId;
 
     @Setter
     @Enumerated(EnumType.STRING)
@@ -57,7 +57,7 @@ public class User extends TimeEntity {
     private YnType isVerify;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organization_id")
+    @JoinColumn(name = "organizationId")
     private Organization organization;
 
     /**

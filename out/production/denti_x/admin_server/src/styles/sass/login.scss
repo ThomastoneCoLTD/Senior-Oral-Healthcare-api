@@ -1,0 +1,98 @@
+@charset "UTF-8";
+
+.login_wrap {
+  background: url("#{$asset-img-path}login/login_bg.png") center center no-repeat;
+  background-size: cover;
+  justify-content: center;
+
+  .login_container {
+    display: flex;
+    flex: 1 1 100%;
+    max-width: 900px;
+    height: 600px;
+
+    & > div {
+      flex-basis: 0;
+      flex-grow: 1;
+    }
+    .login_bg_wrap {
+      background: #fff url("#{$asset-img-path}login/login_img.png");
+      background-size: cover;
+      width: 100%;
+      max-width: 400px;
+      height: 100%;
+      position: relative;
+
+      .bg_text {
+        position: absolute;
+        left: 40px;
+        top: 190px;
+        font-size: 36px;
+        line-height: 46px;
+        color: #d8dae0;
+        margin: 0;
+      }
+      .bg_logo {
+        position: absolute;
+        left: 40px;
+        bottom: 40px;
+        width: 136px;
+        height: 40px;
+        background: url("#{$asset-img-path}common/logo.png");
+        margin: 0;
+      }
+    }
+    .login_form_wrap {
+      background-color: #fff;
+      flex-basis: 0;
+      flex-grow: 1;
+      min-width: 500px;
+      padding: 0 60px;
+      height: 100%;
+
+      h3 {
+        margin-top: 69px;
+        margin-bottom: 60px;
+        text-align: center;
+        line-height: 32px;
+        font-size: $font-size-xl;
+        color: #777a83;
+        letter-spacing: -0.36px;
+
+        b {
+          margin-top: 8px;
+          display: block;
+          font-size: 40px;
+          font-weight: 700;
+          color: #040b21;
+        }
+      }
+      form {
+        position: relative;
+
+        .error_msg {
+          position: absolute;
+          top: 200px;
+          left: 0;
+          font-weight: 700;
+        }
+        // text field 안 라벨 조정
+        .v-text-field--enclosed.v-input--dense:not(.v-text-field--solo).v-text-field--outlined .v-input__append-inner {
+          margin-top: 12px !important;
+        }
+      }
+      .v-btn {
+        @include border-radius(0);
+      }
+      .theme--light.v-btn.v-btn--disabled.v-btn--has-bg {
+        background-color: #e1e2e6 !important;
+        color: $text-grey-light !important;
+      }
+      .submit_btn {
+        font-size: $font-size-xl;
+        font-weight: 700;
+        letter-spacing: -0.45px;
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 package com.kaii.dentix.domain.admin.domain;
 
+import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
@@ -42,7 +43,9 @@ public class Admin extends TimeEntity {
 
     private String adminRefreshToken;
 
-//    private String organization;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organizationId", nullable = false)
+    private Organization organization;
 
 //    private Integer idlePeriod;
 

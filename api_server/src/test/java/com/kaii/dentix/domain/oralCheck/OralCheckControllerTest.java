@@ -126,8 +126,11 @@ public class OralCheckControllerTest extends ControllerTest {
         DataResponse<OralCheckPhotoDto> response =
                 new DataResponse<>(200, SUCCESS_MSG, dto);
 
-        given(oralCheckService.oralCheckPhoto(any(HttpServletRequest.class), any()))
-                .willReturn(response);
+        given(oralCheckService.oralCheckPhoto(
+                any(HttpServletRequest.class),
+                any(MultipartFile.class),
+                any(String.class)
+        )).willReturn(response);
 
         // when
         ResultActions result = mockMvc.perform(multipart("/oralCheck/photo")
@@ -159,7 +162,9 @@ public class OralCheckControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(oralCheckService).oralCheckPhoto(any(HttpServletRequest.class), any());
+        verify(oralCheckService).oralCheckPhoto( any(HttpServletRequest.class),
+                any(MultipartFile.class),
+                any(String.class));
 
     }
 

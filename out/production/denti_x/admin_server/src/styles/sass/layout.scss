@@ -1,0 +1,111 @@
+@charset "UTF-8";
+
+.main_wrap {
+  background-color: $main-bg;
+}
+
+.logo_link {
+  display: flex;
+}
+
+.tab_wrap {
+  margin-left: 104px;
+  transition: 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
+  white-space: nowrap;
+  width: 100%;
+
+  .tab_item {
+    font-size: $font-size-l;
+    font-weight: 700;
+    width: 132px;
+    position: relative;
+    text-align: center;
+    opacity: 0.6;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+  .tab_item.active {
+    opacity: 1;
+  }
+  .register_user_link {
+    @include border-radius(18px);
+
+    width: 144px;
+    height: 36px;
+    background-color: $text-blue;
+    text-align: center;
+    line-height: 36px;
+    font-weight: 700;
+    font-size: $font-size-l;
+
+    &:hover {
+      background-color: #3e73ff;
+    }
+    .v-icon {
+      color: inherit;
+    }
+  }
+  .user_menu_wrap {
+    position: relative;
+
+    .menu_btn {
+      width: 80px;
+      height: 36px;
+      font-size: $font-size-m;
+      font-weight: 700;
+      text-align: center;
+      line-height: 36px;
+
+      span {
+        width: 54px;
+      }
+    }
+  }
+}
+
+.container__wrap {
+  width: 1360px !important;
+}
+
+// 차트 밑에 분기 선
+.chart_divider {
+  background-color: #f8f7fa;
+  height: 4px;
+}
+
+// 데이터 없을 시 나올 컨텐츠 스타일
+.no_data_wrap {
+  text-align: center;
+  min-height: 400px;
+
+  .icon.no_files {
+    @include icon(80px);
+
+    background-image: url("#{$asset-img-path}icon/ic-noresults-80.png");
+  }
+  .text_box {
+    color: $text-grey;
+    font-size: $font-size-l;
+    letter-spacing: -0.4px;
+    font-weight: 700;
+  }
+}
+
+.footer {
+
+  .company_txt {
+    letter-spacing: -0.32px;
+    font-size: $font-size-l;
+  }
+  .footer_sub_txt {
+    letter-spacing: -0.28px;
+    font-size: $font-size-m;
+    opacity: 0.5;
+  }
+}
+
+.menu_list a {
+  color: $text-black !important;
+}

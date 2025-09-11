@@ -30,14 +30,24 @@ public class OralCheckController {
     /**
      * 구강검진 사진 촬영
      */
-    @PostMapping(value = "/photo", name = "구강검진 사진 촬영")
-    public DataResponse<OralCheckPhotoDto> oralCheckPhoto(HttpServletRequest httpServletRequest, @RequestParam MultipartFile file) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InterruptedException {
-        if (file.isEmpty() || StringUtils.isBlank(file.getContentType())) throw new FormValidationException("파일을 업로드해 주세요.");
-        if (!file.getContentType().equals(MediaType.IMAGE_PNG_VALUE) && !file.getContentType().equals(MediaType.IMAGE_JPEG_VALUE)) throw new FormValidationException("png, jpg 형식만 업로드 가능합니다.");
-
-        DataResponse<OralCheckPhotoDto> response = oralCheckService.oralCheckPhoto(httpServletRequest, file);
-        return response;
+    // 촬영
+    @PostMapping("/photo")
+    public DataResponse<OralCheckPhotoDto> oralCheckPhoto(
+            HttpServletRequest request,
+            @RequestParam("file") MultipartFile file
+    ) throws Exception {
+        return oralCheckService.oralCheckPhoto(request, file, "촬영");
     }
+
+    // 업로드
+    @PostMapping("/upload")
+    public DataResponse<OralCheckPhotoDto> oralCheckUpload(
+            HttpServletRequest request,
+            @RequestParam("file") MultipartFile file
+    ) throws Exception {
+        return oralCheckService.oralCheckPhoto(request, file, "업로드");
+    }
+
 
     /**
      *  구강검진 결과

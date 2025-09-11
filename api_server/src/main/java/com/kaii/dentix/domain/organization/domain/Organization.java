@@ -1,5 +1,6 @@
 package com.kaii.dentix.domain.organization.domain;
 
+import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionPlan;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
@@ -8,6 +9,9 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -29,12 +33,16 @@ public class Organization extends TimeEntity {
     @JoinColumn(name = "subscription_plan_id", nullable = false)
     private SubscriptionPlan subscriptionPlan;
 
+    @Version
     @Column(name = "success_count", nullable = false)
     private Integer successCount; // 성공 응답 수
 
     @Column(name = "usage_reset_date")
     private LocalDateTime usageResetDate; // 리셋 예정일
 
+    // ✅ 1:N 관계 (Organization → Admin)
+    @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Admin> admins = new ArrayList<>();
 
     @Column(name = "deleted")
     private LocalDateTime deleted;

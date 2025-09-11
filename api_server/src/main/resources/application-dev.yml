@@ -75,11 +75,12 @@ aiModel:
     questionnaire: 'ai-backend-gpu.kai-i.com/denti/api/questionnaire'
 s3:
   storage:
-    bucketName: thomastone-saas
-    region: ap-northeast-2
+    bucketName: denti-dev
+    region: ap-southeast-1
 
   folderPath:
-    oralCheck: 'https://thomastone-saas.s3.ap-northeast-2.amazonaws.com/test/'
+#    oralCheck: 'https://denti-dev.s3.ap-southeast-1.amazonaws.com/test/'
+    oralCheck: test/
 cloud:
   aws:
     credentials:

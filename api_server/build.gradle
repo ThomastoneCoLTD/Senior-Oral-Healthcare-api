@@ -3,30 +3,29 @@ plugins {
     id 'org.springframework.boot' version '3.1.0'
     id 'io.spring.dependency-management' version '1.1.0'
     id 'org.asciidoctor.jvm.convert' version '3.3.2'
-//    id 'com.ewerk.gradle.plugins.querydsl-apt:5.0.0:jakarta' version '1.0.10'
 }
 
 group = 'com.kaii'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    sourceCompatibility = '17'
+    toolchain { languageVersion = JavaLanguageVersion.of(17) }
 }
 
 configurations {
-    compileOnly {
-        extendsFrom annotationProcessor
-    }
+    compileOnly { extendsFrom annotationProcessor }
     asciidoctorExtensions
 }
 
-repositories {
-    mavenCentral()
-}
+repositories { mavenCentral() }
 
 ext {
-    snippetsDir = file('build/generated-snippets')
-    docsDir = file('build/resources/main/static/docs')
+    snippetsDir = file("$buildDir/generated-snippets")
+}
+
+test {
+    useJUnitPlatform()
+    outputs.dir snippetsDir
 }
 
 asciidoctor {
@@ -36,107 +35,68 @@ asciidoctor {
     dependsOn test
 }
 
-asciidoctor.doFirst {
-    delete docsDir
-}
-
-test {
-    useJUnitPlatform()
-}
-
-task copyDocument(type: Copy) {
-    dependsOn asciidoctor
-    from file("${asciidoctor.outputDir}")
-    into file(docsDir)
-}
-
+/** 🔑 문서는 processResources에 연결하지 말고 bootJar에만 포함 */
 bootJar {
-    dependsOn copyDocument
+    dependsOn tasks.named('asciidoctor')
+    from("$buildDir/docs/asciidoc") { into "static/docs" }
 }
 
-
-// querydsl 설정
+/** QueryDSL */
 def querydslDir = "$buildDir/generated/querydsl"
 sourceSets {
-    main.java.srcDirs += [ querydslDir ]
+    main {
+        java { srcDirs += [ querydslDir ] }
+    }
 }
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
 }
-clean.doLast {
-    file(querydslDir).deleteDir()
-}
+clean.doLast { file(querydslDir).deleteDir() }
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    implementation 'commons-codec:commons-codec:1.15'
-    // validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
 
-    // lombok
+    implementation 'commons-codec:commons-codec:1.15'
+    implementation 'org.apache.logging.log4j:log4j-api'
+    implementation 'org.apache.logging.log4j:log4j-to-slf4j'
+    implementation 'io.jsonwebtoken:jjwt:0.9.1'
+    implementation 'javax.xml.bind:jaxb-api:2.3.1'
+    implementation 'org.json:json:20180813'
+    implementation 'org.modelmapper:modelmapper:3.1.1'
+    implementation 'org.springframework.security:spring-security-rsa:1.0.11.RELEASE'
+
+    /** AWS SDK */
+    implementation 'software.amazon.awssdk:s3:2.25.46'
+    implementation 'software.amazon.awssdk:sts:2.25.46'
+    implementation 'software.amazon.awssdk:auth:2.25.32'
+    implementation 'software.amazon.awssdk:regions:2.25.32'
+    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.772'
+    /** MySQL: runtimeOnly만 남기고 중복 제거 */
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    /** Lombok */
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 
-    // log4j
-    implementation 'org.apache.logging.log4j:log4j-api'
-    implementation 'org.apache.logging.log4j:log4j-to-slf4j'
-
-    // aop
-    implementation 'org.springframework.boot:spring-boot-starter-aop'
-
-    // actuator
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-    // cloud-config
-    implementation 'org.springframework.security:spring-security-rsa:1.0.11.RELEASE'
-//    implementation group: 'org.springframework.cloud', name: 'spring-cloud-config-client', version: '4.0.3'
-
-    // spring jpa
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-
-    // jdbc
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-
-    // querydsl
+    /** QueryDSL (Jakarta) */
     implementation "com.querydsl:querydsl-jpa:5.0.0:jakarta"
     annotationProcessor "com.querydsl:querydsl-apt:5.0.0:jakarta"
     annotationProcessor "jakarta.annotation:jakarta.annotation-api"
     annotationProcessor "jakarta.persistence:jakarta.persistence-api:3.1.0"
-    // mysql
-    runtimeOnly("com.mysql:mysql-connector-j")
-    implementation 'mysql:mysql-connector-java:8.0.33'
-    // jwt
-    implementation 'io.jsonwebtoken:jjwt:0.9.1'
 
-    // security
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-
-    // jdk 11 이상 xml bind
-    implementation group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.1'
-
-    // spring rest docs
-    testImplementation('junit:junit:4.13')
+    /** Test & REST Docs */
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
     testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
-
-    // json
-    implementation group: 'org.json', name: 'json', version: '20180813'
-
-    // s3
-    implementation 'software.amazon.awssdk:s3:2.25.46'
-    implementation 'software.amazon.awssdk:sts:2.25.46'
-    implementation 'software.amazon.awssdk:auth:2.25.32'
-    implementation 'software.amazon.awssdk:regions:2.25.32'
-
-    // modelmapper
-    implementation group: 'org.modelmapper', name: 'modelmapper', version: '3.1.1'
-    implementation 'software.amazon.awssdk:s3:2.25.46'
-    // cache
-    implementation 'org.springframework.boot:spring-boot-starter-cache'
-    implementation 'com.github.ben-manes.caffeine:caffeine'
-
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/denti_x.iml" filepath="$PROJECT_DIR$/.idea/denti_x.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/dentix.main.iml" filepath="$PROJECT_DIR$/.idea/modules/dentix.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/dentix.test.iml" filepath="$PROJECT_DIR$/.idea/modules/dentix.test.iml" />
+    </modules>
+  </component>
+</project>

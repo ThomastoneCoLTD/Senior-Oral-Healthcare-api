@@ -1,0 +1,33 @@
+@charset "UTF-8";
+
+* {
+  box-sizing: border-box;
+}
+html {
+  min-width: 1360px;
+  overflow: auto !important;
+}
+a {
+  text-decoration: none;
+}
+ul {
+  list-style-type: none;
+  padding: 0 !important;
+}
+// 스크롤 수정
+::-webkit-scrollbar {
+  width: 4px;
+  max-height: 140px;
+}
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @include border-radius(3px);
+  
+  background-color: $line-grey-light;
+}
+::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+}

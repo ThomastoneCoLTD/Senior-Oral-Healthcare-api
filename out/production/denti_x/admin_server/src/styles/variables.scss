@@ -1,0 +1,23 @@
+@charset "UTF-8";
+/*******************************************************************
+// 위치 : src/styles/sass/variables.scss
+// 설명 : 프로젝트 전체에 적용되는 변수에 대해 정의함
+// 주의 : 컴포넌트 갯수 만큼 실행되기 때문에 변수에 대해서만 정의해야합니다. (실제 CSS에 대한 적용은 _index.scss에 작성)
+// 이 파일은 vue.config.js에 설정되면 됨
+********************************************************************/
+
+// vuetify를 사용할 경우 vuetify의 일부 변수를 사용할 수 있음
+@import "~vuetify/src/styles/styles.sass";
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+//@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard-dynamic-subset.css');
+// Vuetify Globals
+// Vuetify에 자동으로 오버라이드 됨
+// /////////////////////////////////////////////
+
+$body-font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+$border-radius-root: 6px;
+$font-size-root: 14px;
+$input-letter-spacing: -0.4px;
+$input-label-height: 24px;
+$input-label-letter-spacing: -0.4px;
+$snackbar-bottom: 40px;
