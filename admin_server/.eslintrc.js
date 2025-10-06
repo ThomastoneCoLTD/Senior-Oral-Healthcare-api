@@ -7,7 +7,7 @@ module.exports = {
     'plugin:vue/base', // eslint plugin vue 설정 (base < essential < strongly-recommended < recommended)
     'eslint:recommended', // eslint rules 강도
     'plugin:prettier/recommended', // prettier
-    '@vue/prettier',
+    // '@vue/prettier',
   ],
   parserOptions: {
     parser: 'babel-eslint',

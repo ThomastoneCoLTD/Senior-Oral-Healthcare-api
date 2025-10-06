@@ -75,14 +75,18 @@ public class JwtTokenUtil {
     // JWT 토큰 인증정보 조회
     public UsernamePasswordAuthenticationToken getAuthentication(String token, TokenType tokenType) {
         Claims claims = this.getClaims(token, tokenType);
-        List<String> roles = new ArrayList<>();
-        roles.add(claims.get("roles", String.class));
+        String role = claims.get("roles", String.class);
+        Long userId = Long.parseLong(claims.getSubject());
 
-        Collection<? extends GrantedAuthority> getAuthorities = roles.stream()
-            .map(SimpleGrantedAuthority::new)
-            .collect(Collectors.toList());
+        Collection<? extends GrantedAuthority> authorities =
+                Collections.singletonList(new SimpleGrantedAuthority(role));
 
-        return new UsernamePasswordAuthenticationToken(claims, "", getAuthorities);
+        // ✅ principal을 Claims 대신 UserDetails 로 세팅
+        org.springframework.security.core.userdetails.User principal =
+                new org.springframework.security.core.userdetails.User(
+                        String.valueOf(userId), "", authorities);
+
+        return new UsernamePasswordAuthenticationToken(principal, "", authorities);
     }
 
     // Request의 Header에서 access token 값을 가져옵니다. "Authorization" : "access token 값"

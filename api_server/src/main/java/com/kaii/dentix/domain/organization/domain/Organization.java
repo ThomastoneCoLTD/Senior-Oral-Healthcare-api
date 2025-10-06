@@ -33,6 +33,9 @@ public class Organization extends TimeEntity {
     @JoinColumn(name = "subscription_plan_id", nullable = false)
     private SubscriptionPlan subscriptionPlan;
 
+    @Column(name = "subscription_start_date")
+    private LocalDateTime subscriptionStartDate;
+
     @Version
     @Column(name = "success_count", nullable = false)
     private Integer successCount; // 성공 응답 수

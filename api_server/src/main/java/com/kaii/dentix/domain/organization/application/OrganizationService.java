@@ -1,11 +1,14 @@
 package com.kaii.dentix.domain.organization.application;
 
+import com.amazonaws.services.kms.model.NotFoundException;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.dto.OrganizationRequest;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
+import com.kaii.dentix.domain.subscriptionPlan.dao.SubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscriptionPlan.dao.SubscriptionPlanRepository;
+import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionPlan;
 import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
@@ -18,6 +21,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.kaii.dentix.domain.organization.domain.QOrganization.organization;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -25,23 +30,25 @@ public class OrganizationService {
 
     private final OrganizationRepository organizationRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
-
+    private final SubscriptionHistoryRepository subscriptionHistoryRepository;
+//    private final SubscriptionPlanRepository subscriptionPlanRepository;
     //기관등록
     public OrganizationResponse createOrganization(OrganizationRequest request) {
-        //기관명 중복체크
+        // ✅ 기관명 중복 체크
         if (organizationRepository.existsByOrganizationName(request.getOrganizationName())) {
             throw new AlreadyDataException("이미 존재하는 기관명입니다.");
         }
 
-        // 구독 플랜 조회
-        SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 구독 플랜입니다."));
-
-        // 구독 플랜 ID 유효성 체크 (필요 시)
+        // ✅ 구독 플랜 유효성 체크
         if (request.getSubscriptionPlanId() == null) {
             throw new BadRequestApiException("구독 플랜을 선택해 주세요.");
         }
-        // usage_reset_date 계산
+
+        // ✅ 구독 플랜 조회
+        SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 구독 플랜입니다."));
+
+        // ✅ usage_reset_date 계산 (플랜 주기별 리셋일)
         LocalDateTime resetDate = null;
         if ("monthly".equalsIgnoreCase(plan.getPlanCycle())) {
             resetDate = LocalDateTime.now().plusMonths(1);
@@ -49,29 +56,48 @@ public class OrganizationService {
             resetDate = LocalDateTime.now().plusYears(1);
         }
 
-        // 기관 엔티티 생성
+        // ✅ 기관 엔티티 생성
         Organization organization = Organization.builder()
                 .organizationName(request.getOrganizationName())
                 .subscriptionPlan(plan)
                 .usageResetDate(resetDate)
-                .successCount(0) // 초기값
+                .subscriptionStartDate(LocalDateTime.now()) // ✅ 구독 시작일 추가
+                .successCount(0)
                 .build();
 
+        // ✅ 저장
         Organization savedOrganization = organizationRepository.save(organization);
-        // 응답 DTO 반환
+        // ✅ 구독 이력 등록
+        SubscriptionHistory history = SubscriptionHistory.builder()
+                .organization(savedOrganization)
+                .subscriptionPlan(plan)
+                .startDate(LocalDateTime.now())
+                .endDate(null) // 현재 활성 구독
+                .build();
+
+        subscriptionHistoryRepository.save(history);
+
+        // ✅ 응답 DTO 반환
         return OrganizationResponse.builder()
-                .organizationId(organization.getOrganizationId())
-                .organizationName(organization.getOrganizationName())
+                .organizationId(savedOrganization.getOrganizationId())
+                .organizationName(savedOrganization.getOrganizationName())
                 .subscriptionPlanId(savedOrganization.getSubscriptionPlan().getId())
                 .subscriptionPlanName(savedOrganization.getSubscriptionPlan().getPlanName())
+                .subscriptionStartDate(savedOrganization.getSubscriptionStartDate())
                 .usageResetDate(savedOrganization.getUsageResetDate())
-                .successCount(organization.getSuccessCount())
+                .successCount(savedOrganization.getSuccessCount())
                 .build();
     }
     //기관 상세 조회
+    //기관 상세 조회
     @Transactional
     public OrganizationResponse getOrganizationById(Long id) {
-        Organization organization = organizationRepository.findById(id).orElseThrow(()-> new IllegalArgumentException("존재하지 않는 기관입니다"));
+        Organization organization = organizationRepository.findByIdWithPlan(id)
+                .orElseThrow(() -> new RuntimeException("기관을 찾을 수 없습니다."));
+
+        // ✅ Lazy 로딩 방지 (사실 필요 없음)
+        organization.getSubscriptionPlan().getPlanName();
+
         return toResponse(organization);
     }
 
@@ -141,4 +167,54 @@ public class OrganizationService {
                 .successCount(org.getSuccessCount())
                 .build();
     }
+
+    public OrganizationResponse changeSubscriptionPlan(Long organizationId, Long newPlanId) {
+        // ✅ 기관 조회 (fetch join으로 subscriptionPlan까지 미리 로딩)
+        Organization organization = organizationRepository.findByIdWithPlan(organizationId)
+                .orElseThrow(() -> new RuntimeException("기관을 찾을 수 없습니다."));
+
+        // ✅ 새 구독 플랜 조회
+        SubscriptionPlan newPlan = subscriptionPlanRepository.findById(newPlanId)
+                .orElseThrow(() -> new RuntimeException("새 구독 플랜을 찾을 수 없습니다."));
+
+        // ✅ 현재 활성 구독 이력 종료
+        subscriptionHistoryRepository.findTopByOrganizationOrderByStartDateDesc(organization)
+                .ifPresent(history -> {
+                    if (history.getEndDate() == null) {
+                        history.setEndDate(LocalDateTime.now());
+                    }
+                });
+
+        // ✅ 새 구독 이력 추가
+        SubscriptionHistory newHistory = SubscriptionHistory.builder()
+                .organization(organization)
+                .subscriptionPlan(newPlan)
+                .startDate(LocalDateTime.now())
+                .endDate(null)
+                .build();
+        subscriptionHistoryRepository.save(newHistory);
+
+        // ✅ 기관의 구독 정보 갱신
+        organization.updateSubscriptionPlan(newPlan);
+
+        // ✅ 새 플랜 주기에 따라 리셋일 계산
+        LocalDateTime resetDate = null;
+        if ("monthly".equalsIgnoreCase(newPlan.getPlanCycle())) {
+            resetDate = LocalDateTime.now().plusMonths(1);
+        } else if ("yearly".equalsIgnoreCase(newPlan.getPlanCycle())) {
+            resetDate = LocalDateTime.now().plusYears(1);
+        }
+
+        organization.updateUsageResetDate(resetDate);
+        organizationRepository.save(organization);
+        return OrganizationResponse.builder()
+                .organizationId(organization.getOrganizationId())
+                .organizationName(organization.getOrganizationName())
+                .subscriptionPlanId(organization.getSubscriptionPlan() != null ? organization.getSubscriptionPlan().getId() : null)
+                .subscriptionPlanName(organization.getSubscriptionPlan() != null ? organization.getSubscriptionPlan().getPlanName() : null)
+                .successCount(organization.getSuccessCount())
+                .build();
+
+    }
+
 }

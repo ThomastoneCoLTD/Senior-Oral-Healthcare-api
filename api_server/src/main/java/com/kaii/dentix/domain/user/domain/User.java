@@ -1,5 +1,6 @@
 package com.kaii.dentix.domain.user.domain;
 
+import com.kaii.dentix.domain.AppService.domain.AppService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
@@ -8,6 +9,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Where;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 import java.util.Date;
 
@@ -43,11 +45,15 @@ public class User extends TimeEntity {
 
     private String userRefreshToken;
 
+    @Column
+    private Date birth;
+
     @Temporal(TemporalType.TIMESTAMP)
     public Date deleted;
 
     @Temporal(TemporalType.TIMESTAMP)
     public Date userLastLoginDate;
+
 
 //    private Long patientId;
 
@@ -59,6 +65,10 @@ public class User extends TimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizationId")
     private Organization organization;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "serviceId")
+    private AppService service;
 
     /**
      * RefreshToken, 최근 로그인 일자 업데이트

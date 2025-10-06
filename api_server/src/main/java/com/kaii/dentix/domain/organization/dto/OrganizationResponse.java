@@ -19,5 +19,6 @@ public class OrganizationResponse {
     private Long subscriptionPlanId;
     private String subscriptionPlanName;
     private LocalDateTime usageResetDate;
+    private LocalDateTime subscriptionStartDate;
     private Integer successCount;
 }

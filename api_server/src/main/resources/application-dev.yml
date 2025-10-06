@@ -71,8 +71,8 @@ server:
 #    secretKey: 'ABCDEFGHIJKLMNOPQRSTUVXYZ12345678'
 aiModel:
   apiUrl:
-    oralCheck: 'ai-backend-gpu.kai-i.com/denti/api/plaque_navy'
-    questionnaire: 'ai-backend-gpu.kai-i.com/denti/api/questionnaire'
+    oralCheck: 'https://ai-backend-gpu.kai-i.com/denti/api/plaque_navy'
+    questionnaire: 'https://ai-backend-gpu.kai-i.com/denti/api/questionnaire'
 s3:
   storage:
     bucketName: denti-dev

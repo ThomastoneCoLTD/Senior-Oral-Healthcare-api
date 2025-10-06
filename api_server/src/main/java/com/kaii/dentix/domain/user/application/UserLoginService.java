@@ -1,5 +1,7 @@
 package com.kaii.dentix.domain.user.application;
 
+import com.kaii.dentix.domain.AppService.dao.AppServiceRepository;
+import com.kaii.dentix.domain.AppService.domain.AppService;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
@@ -29,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 
 @Service
@@ -53,6 +54,7 @@ public class UserLoginService {
     private final ApplicationEventPublisher publisher;
 
     private final AdminRepository adminRepository;
+    private final AppServiceRepository appServiceRepository;
 
     /**
      * 사용자 서비스 이용동의 여부 확인 및 저장
@@ -142,7 +144,8 @@ public class UserLoginService {
 
         // 올바르지 않은 findPwdQuestionId 인 경우
         if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) throw new NotFoundDataException("존재하지 않는 질문입니다.");
-
+        AppService service = appServiceRepository.findById(request.getServiceId())
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 서비스입니다."));
         User user = userRepository.save(User.builder()
                     .userLoginIdentifier(request.getUserLoginIdentifier())
                     .userName(request.getUserName())
@@ -150,7 +153,10 @@ public class UserLoginService {
                     .userPassword(passwordEncoder.encode(request.getUserPassword()))
                     .findPwdQuestionId(request.getFindPwdQuestionId())
                     .findPwdAnswer(request.getFindPwdAnswer())
+                        .userPhoneNumber(request.getUserPhoneNumber())
+                        .birth(request.getBirth())
                     .isVerify(request.getUserId() == null ? YnType.N : YnType.Y)
+                .service(service)
                 .build());
 
         Long userId = user.getUserId();

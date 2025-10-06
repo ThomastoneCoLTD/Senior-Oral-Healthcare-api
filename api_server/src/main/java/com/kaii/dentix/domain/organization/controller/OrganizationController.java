@@ -72,6 +72,18 @@ public class OrganizationController {
         organizationService.hardDelete(id);
         return ResponseEntity.ok("삭제되었습니다.");
     }
+
+    /**
+     * 기관의 구독상품 변경
+     */
+    @PutMapping("/{organizationId}/subscription/{subscriptionPlanId}")
+    public DataResponse<OrganizationResponse> changeSubscriptionPlan(
+            @PathVariable Long organizationId,
+            @PathVariable Long subscriptionPlanId
+    ) {
+        OrganizationResponse response = organizationService.changeSubscriptionPlan(organizationId, subscriptionPlanId);
+        return new DataResponse<>(response);
+    }
 }
 
 

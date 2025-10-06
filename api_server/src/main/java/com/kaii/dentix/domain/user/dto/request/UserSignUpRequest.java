@@ -13,6 +13,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
 import java.util.List;
 
 @Getter @Builder
@@ -47,7 +48,10 @@ public class UserSignUpRequest {
     @NotBlank(message = "답변은 필수입니다.")
     private String findPwdAnswer;
 
+    private String userPhoneNumber;
+    private Date birth;
     private Long userId;
-
+    @NotNull(message = "서비스 ID는 필수값입니다.")
+    private Long serviceId;
 
 }

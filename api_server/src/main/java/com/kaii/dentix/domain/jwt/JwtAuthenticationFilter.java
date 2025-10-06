@@ -41,20 +41,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (!permitAll) {
             try {
-                // 헤더에서 JWT 를 받아옵니다.
                 String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
-
                 if (StringUtils.isBlank(accessToken)) throw new TokenExpiredException();
+
+                // ✅ Bearer 접두사 제거
+                if (accessToken.startsWith("Bearer ")) {
+                    accessToken = accessToken.substring(7);
+                }
+
                 if (jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken)) throw new TokenExpiredException();
                 if (jwtTokenUtil.isUnauthorized(accessToken, TokenType.AccessToken)) throw new TokenExpiredException();
 
-                // 토큰이 유효하면 토큰으로부터 유저 정보를 받아옵니다.
                 Authentication authentication = jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
-                if (authentication != null) { // 테스트 코드 대응
-                    // SecurityContext 에 Authentication 객체를 저장합니다.
+                if (authentication != null) {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    log.info("✅ SecurityContext 설정 완료: {}", authentication.getAuthorities());
                 }
             } catch (Exception e) {
+                log.warn("❌ JWT 인증 실패: {}", e.getMessage());
                 ErrorResponse.of(response, HttpStatus.FORBIDDEN, ResponseMessage.FORBIDDEN_MSG);
                 return;
             }

@@ -135,10 +135,12 @@ public class OralCheckService {
 
         //AI 분석 요청
         OralCheckAnalysisResponse analysisData;
+//        log.info(analysisData);
         try {
             analysisData = aiModelService.getPyDentalAiModel(file);
             log.info("uploadedUrl: {}", uploadedUrl);
         } catch (Exception e) {
+            log.info(e.getMessage());
             log.info("uploadedUrl: {}", uploadedUrl);
             if (active.equals("dev")) { // 개발 서버는 랜덤 테스트 데이터
                 log.warn("AI 모델 연동 실패 → 테스트 데이터 연동 (구강 촬영)");
@@ -621,7 +623,7 @@ public class OralCheckService {
         }
 
         // 5개 미만인 경우 미노출
-        if (oralCheckDailyChangeList.size() < 5) {
+        if (oralCheckDailyChangeList.isEmpty()) {
             oralCheckDailyChangeList = new ArrayList<>();
         }
 

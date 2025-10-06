@@ -1,5 +1,6 @@
 package com.kaii.dentix.domain.admin.dao.user;
 
+import com.kaii.dentix.domain.AppService.domain.QAppService;
 import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
 import com.kaii.dentix.domain.admin.dto.AdminUserSignUpCountDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
@@ -45,7 +46,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
     private final QQuestionnaire questionnaire = QQuestionnaire.questionnaire;
 
-
+    private final QAppService service = QAppService.appService;
     /**
      *  사용자 목록 조회
      */
@@ -60,9 +61,10 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                         Expressions.stringTemplate("group_concat({0})", userOralStatus.oralStatus.oralStatusType),
                         questionnaire.created.as("questionnaireDate"),
                         oralCheck.oralCheckResultTotalType, oralCheck.created.as("oralCheckDate"), user.isVerify,
-                        user.userPhoneNumber
+                        service.name
                 ))
                 .from(user)
+                .leftJoin(user.service, service)
                 .leftJoin(questionnaire).on(questionnaire.userId.eq(user.userId)
                         .and(questionnaire.created.eq(JPAExpressions.select(questionnaire.created.max())
                                 .from(questionnaire)

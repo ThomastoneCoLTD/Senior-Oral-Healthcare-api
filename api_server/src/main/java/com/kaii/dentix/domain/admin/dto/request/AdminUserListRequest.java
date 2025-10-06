@@ -30,4 +30,6 @@ public class AdminUserListRequest extends PageAndSizeRequest {
 
     private String endDate; // 기간 설정 종료일
 
+    private String serviceName;
+
 }

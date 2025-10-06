@@ -50,6 +50,39 @@ const routes = [
     ],
   },
   {
+    path: '/admin',
+    component: () => import('@/views/Main.vue'),
+    children: [
+      { path: '', component: () => import('@/views/admin/List') },
+      { path: 'register', component: () => import('@/views/admin/Register') },
+      { path: 'subscription', component: () => import('@/views/admin/Subscription') }, // ✅ 구독 페이지
+    ],
+  },
+  {
+    path: '/statistics',
+    component: () => import('@/views/Main.vue'),
+    children: [
+      {
+        path: '',
+        redirect: 'period',
+        component: () => import('@/views/statistics/Statistics'),
+        children: [
+          { path: 'period', component: () => import('@/views/statistics/PeriodStatistics') },
+          { path: 'usage', component: () => import('@/views/statistics/Usage') }, // ✅ 사용량 조회 페이지
+        ],
+      },
+    ],
+  },
+  {
+    path: '/admin',
+    component: () => import('@/views/Main.vue'),
+    children: [
+      { path: '', component: () => import('@/views/admin/List') },
+      { path: 'register', component: () => import('@/views/admin/Register') },
+      { path: 'organization-register', component: () => import('@/views/admin/OrganizationRegister') }, // ✅ 기관 등록 페이지
+    ],
+  },
+  {
     path: '/statistics',
     component: () => import('@/views/Main.vue'),
     children: [
