@@ -11,6 +11,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,7 +21,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtTokenUtil {
@@ -91,7 +92,19 @@ public class JwtTokenUtil {
 
     // Request의 Header에서 access token 값을 가져옵니다. "Authorization" : "access token 값"
     public String getAccessToken(HttpServletRequest request) {
-        return request.getHeader(HttpHeaders.AUTHORIZATION);
+        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (header == null || header.isBlank()) {
+            return null;
+        }
+
+        // 대소문자 구분 없이, 공백 유무도 유연하게 처리
+        if (header.toLowerCase().startsWith("bearer")) {
+            // "bearer" 이후 공백이 있으면 제거하고 나머지 반환
+            return header.substring(6).trim();
+        }
+
+        // 혹시 그냥 토큰만 들어온 경우도 대비
+        return header.trim();
     }
 
     // Request의 Header에서 refresh token 값을 가져옵니다. "refreshToken" : "refresh token 값"

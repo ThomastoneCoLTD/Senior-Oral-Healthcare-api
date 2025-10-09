@@ -99,8 +99,10 @@ public class OralCheckService {
             key = "@userService.getTokenUser(#p0).getUserId() + '_' + T(java.time.LocalDate).now()"
     )
     public DataResponse<OralCheckPhotoDto> oralCheckPhoto(HttpServletRequest httpServletRequest, MultipartFile file, String type) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InterruptedException {
+        log.info(httpServletRequest.getRequestURI());
+        log.info("httpServletRequest",httpServletRequest);
         User user = userService.getTokenUser(httpServletRequest);
-
+        log.info("user", user);
         Long orgId = (user.getOrganization() != null)
                 ? user.getOrganization().getOrganizationId()
                 : null;

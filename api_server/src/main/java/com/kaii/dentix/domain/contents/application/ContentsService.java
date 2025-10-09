@@ -15,6 +15,7 @@ import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ContentsService {
@@ -82,6 +83,7 @@ public class ContentsService {
     public ContentsListDto contentsList(HttpServletRequest httpServletRequest){
 
         User user = userService.getTokenUserNullable(httpServletRequest);
+        log.info("user", user);
         boolean isVerifiedUser = user != null && user.getIsVerify().equals(YnType.Y);
 
         // 카테고리 리스트 (인증된 사용자의 경우 사용자 맞춤 카테고리 추가)

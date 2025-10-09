@@ -26,6 +26,7 @@ import com.kaii.dentix.global.common.error.exception.*;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,7 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -81,6 +82,7 @@ public class UserService {
     public User getTokenUserNullable(HttpServletRequest servletRequest) {
 
         String token = jwtTokenUtil.getAccessToken(servletRequest);
+        log.info("Authorization header = {}", servletRequest.getHeader("Authorization"));
 
         if (StringUtils.isBlank(token)){ // 비로그인 사용자
             return null;
