@@ -8,6 +8,10 @@ import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminSignUpRequest;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
+import com.kaii.dentix.domain.organization.application.OrganizationService;
+import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
+import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
@@ -21,9 +25,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Optional;
 
@@ -40,6 +48,7 @@ public class AdminService {
     private final AdminCustomRepository adminCustomRepository;
 
     private final ModelMapper modelMapper;
+
 
     /**
      * 토큰에서 Admin 추출
@@ -78,6 +87,7 @@ public class AdminService {
                 .adminLoginIdentifier(request.getAdminLoginIdentifier())
                 .adminPhoneNumber(request.getAdminPhoneNumber())
                 .adminIsSuper(YnType.N)
+                .organization(null)
                 .build();
 
         adminRepository.save(admin);
@@ -154,5 +164,8 @@ public class AdminService {
                 .adminIsSuper(admin.getAdminIsSuper())
                 .build();
     }
+
+
+
 
 }

@@ -4,10 +4,7 @@ import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.Where;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -15,6 +12,7 @@ import java.util.Date;
 
 @Entity
 @Getter @Builder
+@Setter
 @AllArgsConstructor @NoArgsConstructor
 @Table(name = "admin")
 @Where(clause = "deleted IS NULL")
@@ -44,7 +42,7 @@ public class Admin extends TimeEntity {
     private String adminRefreshToken;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organizationId", nullable = false)
+    @JoinColumn(name = "organizationId", nullable = true)
     private Organization organization;
 
 //    private Integer idlePeriod;

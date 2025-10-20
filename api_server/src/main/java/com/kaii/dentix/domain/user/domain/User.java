@@ -1,20 +1,23 @@
 package com.kaii.dentix.domain.user.domain;
 
-import com.kaii.dentix.domain.AppService.domain.AppService;
+import com.kaii.dentix.domain.appService.domain.AppService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Where;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Getter @Builder
+@Setter
 @AllArgsConstructor @NoArgsConstructor
 @Table(name = "user")
 @Where(clause = "deleted IS NULL")
@@ -66,9 +69,10 @@ public class User extends TimeEntity {
     @JoinColumn(name = "organizationId")
     private Organization organization;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "serviceId")
-    private AppService service;
+//    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+//    private List<UserToAppService> userToAppServices;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserToAppService> userToAppServices = new ArrayList<>();
 
     /**
      * RefreshToken, 최근 로그인 일자 업데이트

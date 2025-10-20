@@ -8,5 +8,6 @@ import lombok.*;
 @Builder
 public class OrganizationRequest {
     private String organizationName;
+    private String organizationPhoneNumber;
     private Long subscriptionPlanId;
 }

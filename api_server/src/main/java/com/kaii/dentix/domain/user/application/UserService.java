@@ -1,20 +1,18 @@
 package com.kaii.dentix.domain.user.application;
 
+import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
+import com.kaii.dentix.domain.appService.domain.AppService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.serviceAgreement.dao.ServiceAgreementCustomRepository;
 import com.kaii.dentix.domain.serviceAgreement.dao.ServiceAgreementRepository;
 import com.kaii.dentix.domain.serviceAgreement.domain.ServiceAgreement;
-import com.kaii.dentix.domain.type.DeviceType;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.user.dto.UserInfoDto;
-import com.kaii.dentix.domain.user.dto.UserInfoModifyDto;
-import com.kaii.dentix.domain.user.dto.UserInfoModifyQnADto;
-import com.kaii.dentix.domain.user.dto.UserLoginDto;
+import com.kaii.dentix.domain.user.dto.*;
 import com.kaii.dentix.domain.user.dto.request.*;
 import com.kaii.dentix.domain.user.event.UserModifyDeviceInfoEvent;
 import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepository;
@@ -22,13 +20,14 @@ import com.kaii.dentix.domain.userServiceAgreement.domain.UserServiceAgreement;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreeList;
 import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
+import com.kaii.dentix.domain.userToAppService.dao.UserToAppServiceRepository;
+import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
 import com.kaii.dentix.global.common.error.exception.*;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -59,7 +58,8 @@ public class UserService {
 //    private final PatientRepository patientRepository;
 
     private final ServiceAgreementCustomRepository serviceAgreementCustomRepository;
-
+    private final AppServiceRepository appServiceRepository;
+    private final UserToAppServiceRepository userToAppServiceRepository;
 
     /**
      * 토큰에서 User 추출
@@ -239,25 +239,30 @@ public class UserService {
     /**
      *  사용자 회원정보 조회
      */
-    public UserInfoDto userInfo(HttpServletRequest httpServletRequest){
-        User user = this.getTokenUser(httpServletRequest);
+    @Transactional(readOnly = true)
+    public UserInfoDto userInfo(HttpServletRequest request) {
+        // ✅ JWT에서 사용자 정보 가져오기
+        User user = this.getTokenUser(request);
 
-        // 사용자 서비스 '선택' 이용 동의 여부 조회
-        List<UserServiceAgreeList> serviceAgreementList = serviceAgreementCustomRepository.findAllByNotRequiredServiceAgreement(user.getUserId());
+        // ✅ User + UserToAppService + AppService fetch join 조회
+        User fullUser = userRepository.findByUserIdWithServices(user.getUserId())
+                .orElseThrow(() -> new NotFoundDataException("사용자를 찾을 수 없습니다."));
 
-//        String patientPhoneNumber = null;
-//
-//        if (user.getPatientId() != null){
-//            Patient patient = patientRepository.findById(user.getPatientId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 환자입니다."));
-//            patientPhoneNumber = patient.getPatientPhoneNumber();
-//        }
+        // ✅ 사용자와 연결된 서비스 목록 매핑
+        List<UserInfoDto.ServiceInfo> services = userToAppServiceRepository.findByUser(fullUser).stream()
+                .map(rel -> UserInfoDto.ServiceInfo.builder()
+                        .serviceId(rel.getAppService().getAppServiceId())
+                        .name(rel.getAppService().getName())
+                        .serviceType(rel.getAppService().getServiceType().name())
+                        .build())
+                .toList();
 
+        // ✅ 최종 DTO 반환
         return UserInfoDto.builder()
-                .userName(user.getUserName())
-                .userLoginIdentifier(user.getUserLoginIdentifier())
-//                .patientPhoneNumber(patientPhoneNumber != null ? patientPhoneNumber : user.getIsVerify().equals(YnType.Y) ? "-" : null)
-                .userServiceAgreeLists(serviceAgreementList)
-                .userGender(user.getUserGender())
+                .userName(fullUser.getUserName())
+                .userLoginIdentifier(fullUser.getUserLoginIdentifier())
+                .userGender(fullUser.getUserGender())
+                .services(services)
                 .build();
     }
 
@@ -278,6 +283,53 @@ public class UserService {
         User user = this.getTokenUser(httpServletRequest);
         user.revoke();
     }
+    /**
+     * ✅ 사용자 서비스 변경
+     */
 
+    @Transactional
+    public UserServiceChangeDto changeUserService(HttpServletRequest httpServletRequest, UserServiceChangeRequest request) {
+        // ✅ JWT에서 로그인 사용자 가져오기
+        User user = this.getTokenUser(httpServletRequest);
+
+        // ✅ 변경(추가)할 서비스 조회
+        AppService appService = appServiceRepository.findById(request.getServiceId())
+                .orElseThrow(() -> new NotFoundDataException("해당 서비스가 존재하지 않습니다."));
+
+        // ✅ 현재 사용자와 연결된 모든 서비스 조회
+        List<UserToAppService> existingRelations = userToAppServiceRepository.findByUser(user);
+
+        // ✅ 이미 등록된 서비스인지 확인
+        boolean alreadyExists = existingRelations.stream()
+                .anyMatch(rel -> rel.getAppService().getAppServiceId().equals(appService.getAppServiceId()));
+
+        if (alreadyExists) {
+            throw new IllegalStateException("이미 해당 서비스를 사용 중입니다.");
+        }
+
+        // ✅ 새로운 서비스 연결 추가
+        UserToAppService newRelation = UserToAppService.builder()
+                .user(user)
+                .appService(appService)
+                .build();
+
+        userToAppServiceRepository.save(newRelation);
+
+        // ✅ 변경 후 모든 서비스 목록 조회
+        List<UserServiceChangeDto.ServiceInfo> services =
+                userToAppServiceRepository.findByUser(user).stream()
+                        .map(rel -> UserServiceChangeDto.ServiceInfo.builder()
+                                .serviceId(rel.getAppService().getAppServiceId())
+                                .serviceName(rel.getAppService().getName())
+                                .serviceType(rel.getAppService().getServiceType().name())
+                                .build())
+                        .toList();
+
+        // ✅ DTO 반환
+        return UserServiceChangeDto.builder()
+                .userName(user.getUserName())
+                .services(services)
+                .build();
+    }
 
 }

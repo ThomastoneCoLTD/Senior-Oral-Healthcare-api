@@ -17,6 +17,7 @@ import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +25,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/organizations")
@@ -36,6 +37,10 @@ public class OrganizationController {
     //기관 등록
     @PostMapping
     public ResponseEntity<OrganizationResponse> create(@RequestBody OrganizationRequest request) {
+        log.info("▶ 기관 등록 요청 body: name={}, phone={}, plan={}",
+                request.getOrganizationName(),
+                request.getOrganizationPhoneNumber(),
+                request.getSubscriptionPlanId());
         return ResponseEntity.ok(organizationService.createOrganization(request));
     }
 
@@ -84,6 +89,17 @@ public class OrganizationController {
         OrganizationResponse response = organizationService.changeSubscriptionPlan(organizationId, subscriptionPlanId);
         return new DataResponse<>(response);
     }
+
+    // 기관 가입정보 조회
+    @GetMapping("/check-duplicate")
+    public ResponseEntity<Boolean> checkDuplicate(
+            @RequestParam String organizationName,
+            @RequestParam String organizationPhoneNumber
+    ) {
+        boolean isDuplicate = organizationService.isDuplicate(organizationName, organizationPhoneNumber);
+        return ResponseEntity.ok(isDuplicate);
+    }
+
 }
 
 

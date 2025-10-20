@@ -121,15 +121,15 @@ public class QuestionnaireService {
 
         List<OralStatus> oralStatusList = oralStatusRepository.findAllByOralStatusTypeInOrderByOralStatusPriority(analysisData.getContentsType());
         List<String> oralStatusTypeList = oralStatusList.subList(0, Math.min(2, oralStatusList.size())) // 최대 2개
-            .stream().map(OralStatus::getOralStatusType).toList();
+                .stream().map(OralStatus::getOralStatusType).toList();
 
         Questionnaire questionnaire = questionnaireRepository.save(
-            new Questionnaire(
-                user.getUserId(),
-                questionnaireTemplate.getVersion(),
-                objectMapper.writeValueAsString(request),
-                oralStatusTypeList
-            )
+                new Questionnaire(
+                        user.getUserId(),
+                        questionnaireTemplate.getVersion(),
+                        objectMapper.writeValueAsString(request),
+                        oralStatusTypeList
+                )
         );
 
         return new QuestionnaireIdDto(questionnaire.getQuestionnaireId());

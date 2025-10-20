@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public class OrganizationResponse {
     private Long organizationId;
     private String organizationName;
+    private String organizationPhoneNumber;
     private Long subscriptionPlanId;
     private String subscriptionPlanName;
     private LocalDateTime usageResetDate;

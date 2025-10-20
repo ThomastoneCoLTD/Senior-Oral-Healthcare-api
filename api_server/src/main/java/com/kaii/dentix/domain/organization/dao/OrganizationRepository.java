@@ -17,7 +17,8 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     @Transactional
     @Query("UPDATE Organization o SET o.successCount = o.successCount + 1 WHERE o.organizationId = :orgId")
     void increaseSuccessCount(@Param("orgId") Long orgId);
-
+    boolean existsByOrganizationNameAndOrganizationPhoneNumber(String organizationName, String organizationPhoneNumber);
     @Query("SELECT o FROM Organization o JOIN FETCH o.subscriptionPlan WHERE o.organizationId = :organizationId")
     Optional<Organization> findByIdWithPlan(@Param("organizationId") Long organizationId);
+    boolean existsByOrganizationPhoneNumber(String organizationPhoneNumber);
 }

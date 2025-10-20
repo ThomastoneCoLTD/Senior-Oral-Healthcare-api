@@ -1,6 +1,11 @@
 package com.kaii.dentix.domain.subscriptionInfo.dto;
 
 import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Getter
@@ -8,16 +13,23 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SubscriptionInfoResponse {
+    private Long id;
+    private String organizationName;
+    private String planName;
+    private String planCycle;
+    private Long price;
 
-    private String organizationName;   // 기관명
-    private String planName;           // 구독 플랜명
-    private String planCycle;          // monthly / yearly
-    private Long price;                // 가격
-    private int maxSuccessResponses;   // 최대 응답 수
-    private int totalSuccessCount;     // 사용된 응답 수
-    private int remainingCount;        // 잔여 응답 수
-    private double usageRate;          // 사용률 (%)
-    private List<UserUsage> users;     // 사용자별 사용량
+    // 제공량 / 사용량 / 잔여량 / 사용률
+    private Integer maxSuccessResponses;
+    private Integer totalSuccessCount;
+    private Integer remainingCount;
+    private Double usageRate;
+    private Integer planSort;
+    // ✅ 구독 시작일 & 갱신일
+    private LocalDateTime subscriptionStartDate;
+    private LocalDateTime usageResetDate;
+
+    private List<UserUsage> users;
 
     @Getter
     @Builder
@@ -26,7 +38,6 @@ public class SubscriptionInfoResponse {
     public static class UserUsage {
         private Long userId;
         private String userName;
-        private String role;
-        private int successCount;
+        private Integer successCount;
     }
 }

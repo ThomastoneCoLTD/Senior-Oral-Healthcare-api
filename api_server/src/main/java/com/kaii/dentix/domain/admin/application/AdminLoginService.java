@@ -7,7 +7,6 @@ import com.kaii.dentix.domain.admin.dto.request.AdminLoginRequest;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.global.common.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;

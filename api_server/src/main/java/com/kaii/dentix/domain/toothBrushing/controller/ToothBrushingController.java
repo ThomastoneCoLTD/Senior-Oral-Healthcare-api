@@ -5,9 +5,7 @@ import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRegisterDto;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,6 +21,14 @@ public class ToothBrushingController {
     public DataResponse<ToothBrushingRegisterDto> toothBrushing(HttpServletRequest httpServletRequest){
         DataResponse<ToothBrushingRegisterDto> response = new DataResponse<>(toothBrushingService.toothBrushing(httpServletRequest));
         return response;
+    }
+
+    @GetMapping
+    public DataResponse<ToothBrushingRegisterDto> getToothBrushingByDate(
+            @RequestParam(required = false) String date,
+            HttpServletRequest request
+    ) {
+        return new DataResponse<>(toothBrushingService.getToothBrushingByDate(request, date));
     }
 
 }

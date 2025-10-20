@@ -36,7 +36,8 @@ public class Organization extends TimeEntity {
     @Column(name = "subscription_start_date")
     private LocalDateTime subscriptionStartDate;
 
-    @Version
+    @Column(length = 20, nullable = false, unique = true)
+    private String organizationPhoneNumber;
     @Column(name = "success_count", nullable = false)
     private Integer successCount; // 성공 응답 수
 
@@ -69,7 +70,9 @@ public class Organization extends TimeEntity {
     public void updateUsageResetDate(LocalDateTime usageResetDate) {
         this.usageResetDate = usageResetDate;
     }
-
+    public void updateSubscriptionStartDate(LocalDateTime date) {
+        this.subscriptionStartDate = date;
+    }
     @PrePersist
     public void prePersist() {
         if (this.successCount == null) {

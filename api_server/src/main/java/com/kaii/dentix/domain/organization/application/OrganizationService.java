@@ -1,6 +1,9 @@
 package com.kaii.dentix.domain.organization.application;
 
 import com.amazonaws.services.kms.model.NotFoundException;
+import com.kaii.dentix.domain.admin.dao.AdminRepository;
+import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.dto.OrganizationRequest;
@@ -27,18 +30,21 @@ import static com.kaii.dentix.domain.organization.domain.QOrganization.organizat
 @RequiredArgsConstructor
 @Transactional
 public class OrganizationService {
-
+    private final JwtTokenUtil jwtTokenUtil;
     private final OrganizationRepository organizationRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final SubscriptionHistoryRepository subscriptionHistoryRepository;
-//    private final SubscriptionPlanRepository subscriptionPlanRepository;
+    private final AdminRepository adminRepository;
+    //    private final SubscriptionPlanRepository subscriptionPlanRepository;
     //기관등록
     public OrganizationResponse createOrganization(OrganizationRequest request) {
         // ✅ 기관명 중복 체크
         if (organizationRepository.existsByOrganizationName(request.getOrganizationName())) {
             throw new AlreadyDataException("이미 존재하는 기관명입니다.");
         }
-
+        if (organizationRepository.existsByOrganizationPhoneNumber(request.getOrganizationPhoneNumber())) {
+            throw new AlreadyDataException("이미 등록된 전화번호입니다.");
+        }
         // ✅ 구독 플랜 유효성 체크
         if (request.getSubscriptionPlanId() == null) {
             throw new BadRequestApiException("구독 플랜을 선택해 주세요.");
@@ -61,12 +67,21 @@ public class OrganizationService {
                 .organizationName(request.getOrganizationName())
                 .subscriptionPlan(plan)
                 .usageResetDate(resetDate)
+                .organizationPhoneNumber(request.getOrganizationPhoneNumber())
                 .subscriptionStartDate(LocalDateTime.now()) // ✅ 구독 시작일 추가
                 .successCount(0)
                 .build();
 
         // ✅ 저장
         Organization savedOrganization = organizationRepository.save(organization);
+        Long adminId = jwtTokenUtil.getCurrentAdminId(); // 현재 로그인한 관리자 ID 가져오기
+
+        // ✅ 6. Admin 테이블 업데이트 (organizationId 세팅)
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
+
+        admin.setOrganization(savedOrganization);
+        adminRepository.save(admin);
         // ✅ 구독 이력 등록
         SubscriptionHistory history = SubscriptionHistory.builder()
                 .organization(savedOrganization)
@@ -83,12 +98,12 @@ public class OrganizationService {
                 .organizationName(savedOrganization.getOrganizationName())
                 .subscriptionPlanId(savedOrganization.getSubscriptionPlan().getId())
                 .subscriptionPlanName(savedOrganization.getSubscriptionPlan().getPlanName())
+                .organizationPhoneNumber(savedOrganization.getOrganizationPhoneNumber())
                 .subscriptionStartDate(savedOrganization.getSubscriptionStartDate())
                 .usageResetDate(savedOrganization.getUsageResetDate())
                 .successCount(savedOrganization.getSuccessCount())
                 .build();
     }
-    //기관 상세 조회
     //기관 상세 조회
     @Transactional
     public OrganizationResponse getOrganizationById(Long id) {
@@ -215,6 +230,11 @@ public class OrganizationService {
                 .successCount(organization.getSuccessCount())
                 .build();
 
+    }
+    public boolean isDuplicate(String organizationName, String organizationPhoneNumber) {
+        return organizationRepository.existsByOrganizationNameAndOrganizationPhoneNumber(
+                organizationName, organizationPhoneNumber
+        );
     }
 
 }

@@ -1,7 +1,7 @@
 package com.kaii.dentix.domain.user.application;
 
-import com.kaii.dentix.domain.AppService.dao.AppServiceRepository;
-import com.kaii.dentix.domain.AppService.domain.AppService;
+import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
+import com.kaii.dentix.domain.appService.domain.AppService;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
@@ -20,6 +20,8 @@ import com.kaii.dentix.domain.user.dto.request.*;
 import com.kaii.dentix.domain.user.event.UserModifyDeviceInfoEvent;
 import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepository;
 import com.kaii.dentix.domain.userServiceAgreement.domain.UserServiceAgreement;
+import com.kaii.dentix.domain.userToAppService.dao.UserToAppServiceRepository;
+import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
 import com.kaii.dentix.global.common.error.exception.*;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +42,7 @@ public class UserLoginService {
 //    private final PatientRepository patientRepository;
 
     private final UserRepository userRepository;
+    private final UserToAppServiceRepository userToAppServiceRepository;
 
     private final ServiceAgreementService serviceAgreementService;
 
@@ -132,50 +135,63 @@ public class UserLoginService {
      *  사용자 회원가입
      */
     @Transactional
-    public UserSignUpDto userSignUp(HttpServletRequest httpServletRequest, UserSignUpRequest request){
+    public UserSignUpDto userSignUp(HttpServletRequest httpServletRequest, UserSignUpRequest request) {
 
-        if (request.getUserId() != null) { // 인증된 회원인 경우
-            userRepository.findById(request.getUserId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 회원입니다."));
-            if (userRepository.findByUserId(request.getUserId()).isPresent()) throw new AlreadyDataException("이미 가입한 사용자입니다.");
-        }
+//        // ✅ 1. 인증된 회원인지 확인
+//        if (request.getUserId() != null) {
+//            userRepository.findById(request.getUserId())
+//                    .orElseThrow(() -> new NotFoundDataException("존재하지 않는 회원입니다."));
+//            if (userRepository.findByUserId(request.getUserId()).isPresent()) {
+//                throw new AlreadyDataException("이미 가입한 사용자입니다.");
+//            }
+//        }
 
-        // 아이디 중복 확인
+        // ✅ 2. 아이디 중복 확인
         this.loginIdCheck(request.getUserLoginIdentifier());
 
-        // 올바르지 않은 findPwdQuestionId 인 경우
-        if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) throw new NotFoundDataException("존재하지 않는 질문입니다.");
-        AppService service = appServiceRepository.findById(request.getServiceId())
-                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 서비스입니다."));
+        // ✅ 3. 비밀번호 찾기 질문 유효성 검사
+        if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
+            throw new NotFoundDataException("존재하지 않는 질문입니다.");
+        }
+
+        // ✅ 4. 사용자 정보 저장
         User user = userRepository.save(User.builder()
-                    .userLoginIdentifier(request.getUserLoginIdentifier())
-                    .userName(request.getUserName())
-                    .userGender(request.getUserGender())
-                    .userPassword(passwordEncoder.encode(request.getUserPassword()))
-                    .findPwdQuestionId(request.getFindPwdQuestionId())
-                    .findPwdAnswer(request.getFindPwdAnswer())
-                        .userPhoneNumber(request.getUserPhoneNumber())
-                        .birth(request.getBirth())
-                    .isVerify(request.getUserId() == null ? YnType.N : YnType.Y)
-                .service(service)
+                .userLoginIdentifier(request.getUserLoginIdentifier())
+                .userName(request.getUserName())
+                .userGender(request.getUserGender())
+                .userPassword(passwordEncoder.encode(request.getUserPassword()))
+                .findPwdQuestionId(request.getFindPwdQuestionId())
+                .findPwdAnswer(request.getFindPwdAnswer())
+                .userPhoneNumber(request.getUserPhoneNumber())
+                .isVerify(YnType.N)
                 .build());
 
-        Long userId = user.getUserId();
+        // ✅ 5. 서비스 정보 연결 (UserToAppService 생성)
+        List<AppService> appServices = appServiceRepository.findAllById(request.getAppServiceIds());
+        if (appServices.isEmpty()) {
+            throw new NotFoundDataException("선택한 서비스가 존재하지 않습니다.");
+        }
 
+        for (AppService appService : appServices) {
+            userToAppServiceRepository.save(UserToAppService.builder()
+                    .user(user)
+                    .appService(appService)
+                    .build());
+        }
+
+        // ✅ 6. 토큰 생성 및 로그인 처리
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
-
         user.updateLogin(refreshToken);
 
-        // 서비스 이용 동의
-        this.userServiceAgreeCheckAndSave(request.getUserServiceAgreementRequest(), userId);
+        // ✅ 7. 서비스 이용 약관 동의 저장
+        this.userServiceAgreeCheckAndSave(request.getUserServiceAgreementRequest(), user.getUserId());
 
-        publisher.publishEvent(new UserModifyDeviceInfoEvent(
-                user.getUserId(),
-                httpServletRequest
-        ));
+        // ✅ 8. 디바이스 정보 이벤트 발행
+        publisher.publishEvent(new UserModifyDeviceInfoEvent(user.getUserId(), httpServletRequest));
 
+        // ✅ 9. 최종 반환 DTO
         return UserSignUpDto.builder()
-//                .patientId(request.getUserId())
                 .userId(user.getUserId())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -184,9 +200,8 @@ public class UserLoginService {
                 .userGender(request.getUserGender())
                 .build();
     }
-
-    /**
-     *  아이디 중복 확인
+     /**
+      * 아이디 중복 확인
      */
     @Transactional(readOnly = true)
     public void loginIdCheck(String userLoginIdentifier){
@@ -201,32 +216,54 @@ public class UserLoginService {
      *  사용자 로그인
      */
     @Transactional
-    public UserLoginDto userLogin(HttpServletRequest httpServletRequest, UserLoginRequest request){
+    public UserLoginDto userLogin(HttpServletRequest httpServletRequest, UserLoginRequest request) {
 
+        // ✅ 사용자 조회
         User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
                 .orElseThrow(() -> new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다."));
 
-        if (!passwordEncoder.matches(request.getUserPassword(), user.getUserPassword())){
+        // ✅ 비밀번호 확인
+        if (!passwordEncoder.matches(request.getUserPassword(), user.getUserPassword())) {
             throw new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다.");
         }
 
+        // ✅ JWT 토큰 발급
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
 
+        // ✅ 로그인 갱신
         user.updateLogin(refreshToken);
 
+        // ✅ 디바이스 정보 이벤트 발행
         publisher.publishEvent(new UserModifyDeviceInfoEvent(
                 user.getUserId(),
                 httpServletRequest
         ));
+
+        // ✅ 사용자의 서비스 목록 조회 (UserService → AppService)
+        List<UserToAppService> mappings = userToAppServiceRepository.findByUser(user);
+
+        List<UserLoginDto.AppServiceInfo> userServices = mappings.stream()
+                .map(uta -> UserLoginDto.AppServiceInfo.builder()
+                        .serviceId(uta.getAppService().getAppServiceId())
+                        .name(uta.getAppService().getName())
+                        .serviceType(uta.getAppService().getServiceType())
+                        .build())
+                .toList();
+
+// ✅ 대표 서비스도 여전히 첫 번째로 유지
+        Long mainServiceId = userServices.isEmpty() ? null : userServices.get(0).getServiceId();
+        String mainServiceName = userServices.isEmpty() ? null : userServices.get(0).getName();
 
         return UserLoginDto.builder()
                 .userId(user.getUserId())
                 .userName(user.getUserName())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .serviceId(mainServiceId)
+                .name(mainServiceName)
+                .services(userServices) // ✅ 전체 서비스 리스트 명시적으로 추가
                 .build();
-
     }
 
     /**

@@ -1,11 +1,12 @@
 package com.kaii.dentix.domain.admin.dao.user;
 
-import com.kaii.dentix.domain.AppService.domain.QAppService;
+import com.kaii.dentix.domain.appService.domain.QAppService;
 import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
 import com.kaii.dentix.domain.admin.dto.AdminUserSignUpCountDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
 import com.kaii.dentix.domain.oralCheck.domain.QOralCheck;
+import com.kaii.dentix.domain.oralStatus.domain.QOralStatus;
 import com.kaii.dentix.domain.questionnaire.domain.QQuestionnaire;
 import com.kaii.dentix.domain.type.DatePeriodType;
 import com.kaii.dentix.domain.type.GenderType;
@@ -29,7 +30,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
-
+//import static com.kaii.dentix.domain.user.domain.Q
+import static com.kaii.dentix.domain.appService.domain.QAppService.appService;
+import static com.kaii.dentix.domain.userToAppService.domain.QUserToAppService.userToAppService;
 import java.util.*;
 
 @Repository
@@ -37,6 +40,7 @@ import java.util.*;
 public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
     private final JPAQueryFactory queryFactory;
+    private final QOralStatus oralStatus = QOralStatus.oralStatus;
 
     private final QUser user = QUser.user;
 
@@ -57,20 +61,30 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
         List<AdminUserInfoDto> result = queryFactory
                 .select(Projections.constructor(AdminUserInfoDto.class,
-                        user.userId, user.userLoginIdentifier, user.userName, user.userGender,
-                        Expressions.stringTemplate("group_concat({0})", userOralStatus.oralStatus.oralStatusType),
+                        user.userId,
+                        user.userLoginIdentifier,
+                        user.userName,
+                        user.userGender,
+                        // ✅ oralStatusTitle로 group_concat
+                        Expressions.stringTemplate("group_concat(DISTINCT {0})", oralStatus.oralStatusTitle),
                         questionnaire.created.as("questionnaireDate"),
-                        oralCheck.oralCheckResultTotalType, oralCheck.created.as("oralCheckDate"), user.isVerify,
-                        service.name
+                        oralCheck.oralCheckResultTotalType,
+                        oralCheck.created.as("oralCheckDate"),
+                        user.isVerify,
+                        // ✅ 서비스명도 group_concat으로
+                        Expressions.stringTemplate("group_concat(DISTINCT {0})", service.name)
                 ))
                 .from(user)
-                .leftJoin(user.service, service)
+                .leftJoin(userToAppService).on(userToAppService.user.eq(user))
+                .leftJoin(userToAppService.appService, appService)
                 .leftJoin(questionnaire).on(questionnaire.userId.eq(user.userId)
                         .and(questionnaire.created.eq(JPAExpressions.select(questionnaire.created.max())
                                 .from(questionnaire)
                                 .where(questionnaire.userId.eq(user.userId))
                         )))
                 .leftJoin(userOralStatus).on(questionnaire.questionnaireId.eq(userOralStatus.questionnaire.questionnaireId))
+                // ✅ OralStatus 조인 추가
+                .leftJoin(userOralStatus.oralStatus, oralStatus)
                 .leftJoin(oralCheck).on(user.userId.eq(oralCheck.userId)
                         .and(oralCheck.created.eq(JPAExpressions.select(oralCheck.created.max())
                                 .from(oralCheck)
@@ -83,26 +97,12 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                 .limit(paging.getPageSize())
                 .fetch();
 
-        // fetchCount Deprecated 로 인해 count 쿼리 구현
-        Long total = Optional.ofNullable(queryFactory
+        Long totalCount = Optional.ofNullable(queryFactory
                 .select(user.countDistinct())
                 .from(user)
-                .leftJoin(questionnaire).on(questionnaire.userId.eq(user.userId)
-                        .and(questionnaire.created.eq(JPAExpressions.select(questionnaire.created.max())
-                                .from(questionnaire)
-                                .where(questionnaire.userId.eq(user.userId))
-                        )))
-                .leftJoin(userOralStatus).on(questionnaire.questionnaireId.eq(userOralStatus.questionnaire.questionnaireId))
-                .leftJoin(oralCheck).on(user.userId.eq(oralCheck.userId)
-                        .and(oralCheck.created.eq(JPAExpressions.select(oralCheck.created.max())
-                                .from(oralCheck)
-                                .where(oralCheck.userId.eq(user.userId))
-                        )))
-//                .leftJoin(patient).on(user.patientId.eq(patient.patientId))
-                .where(whereSearch(request))
                 .fetchOne()).orElse(0L);
 
-        return new PageImpl<>(result, paging, total);
+        return new PageImpl<>(result, paging, totalCount);
 
     }
 
@@ -120,8 +120,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
         // 구강 상태
         booleanBuilder.and(whereOralCheckResult(request.getOralCheckResultTotalType()));
-
-        // 문진표 유형
+// 문진표 유형 (oralStatusType)
         if (request.getOralStatus() != null) {
             booleanBuilder.and(userOralStatus.oralStatus.oralStatusType.eq(request.getOralStatus()));
         }

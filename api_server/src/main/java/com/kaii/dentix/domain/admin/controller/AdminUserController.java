@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.admin.controller;
 
 import com.kaii.dentix.domain.admin.application.AdminUserService;
+import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
 import com.kaii.dentix.domain.admin.dto.AdminUserListDto;
 import com.kaii.dentix.domain.admin.dto.AdminUserModifyInfoDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;

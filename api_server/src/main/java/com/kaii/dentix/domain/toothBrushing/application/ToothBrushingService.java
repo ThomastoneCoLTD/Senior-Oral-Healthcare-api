@@ -68,4 +68,46 @@ public class ToothBrushingService {
                 .build();
     }
 
+
+
+    @Transactional(readOnly = true)
+    public ToothBrushingRegisterDto getToothBrushingByDate(HttpServletRequest request, String dateString) {
+        User user = userService.getTokenUser(request);
+
+        Calendar calendar = Calendar.getInstance();
+        Date date;
+        try {
+            if (dateString == null || dateString.isEmpty()) {
+                date = calendar.getTime();
+            } else {
+                date = DateFormatUtil.stringToDate("yyyy-MM-dd", dateString);
+            }
+        } catch (Exception e) {
+            date = calendar.getTime();
+        }
+
+        // ✅ dto가 아니라 date 사용
+        List<ToothBrushing> toothBrushingList =
+                toothBrushingRepository.findByUserIdAndCreatedStartingWithOrderByCreated(
+                        user.getUserId(),
+                        DateFormatUtil.dateToString("yyyy-MM-dd", date)
+                );
+
+        Long timeInterval = 0L;
+        if (!toothBrushingList.isEmpty()) {
+            Date lastCreated = toothBrushingList.get(toothBrushingList.size() - 1).getCreated();
+            long diff = (calendar.getTime().getTime() - lastCreated.getTime()) / 1000;
+            timeInterval = diff;
+        }
+
+        return ToothBrushingRegisterDto.builder()
+                .toothBrushingList(
+                        toothBrushingList.stream()
+                                .map(t -> new ToothBrushingDto(t.getToothBrushingId(), t.getCreated()))
+                                .toList()
+                )
+                .timeInterval(timeInterval)
+                .build();
+    }
+
 }

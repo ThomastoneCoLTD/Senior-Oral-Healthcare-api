@@ -4,12 +4,16 @@ import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.dto.*;
 import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminSignUpRequest;
+import com.kaii.dentix.domain.organization.application.OrganizationService;
+import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
+import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminController {
 
     private final AdminService adminService;
-
+    private final OrganizationService organizationService;
     /**
      *  관리자 등록
      */
@@ -73,5 +77,14 @@ public class AdminController {
         DataResponse<AdminAutoLoginDto> response = new DataResponse<>(adminService.adminAutoLogin(httpServletRequest));
         return response;
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<OrganizationResponse> update(
+            @PathVariable Long id,
+            @RequestBody OrganizationUpdateRequest request) {
+        return ResponseEntity.ok(organizationService.update(id, request));
+    }
+
+
 
 }

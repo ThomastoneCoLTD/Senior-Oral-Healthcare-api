@@ -15,13 +15,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.stream.Collectors;
-@Slf4j
+//@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtTokenUtil {
@@ -150,4 +152,15 @@ public class JwtTokenUtil {
                 return true;
         }
     }
+
+    public Long getCurrentAdminId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalStateException("인증된 관리자가 없습니다.");
+        }
+        String adminId = authentication.getName(); // JWT의 subject가 adminId
+        return Long.parseLong(adminId);
+    }
+
+
 }

@@ -49,9 +49,9 @@ public class UserSignUpRequest {
     private String findPwdAnswer;
 
     private String userPhoneNumber;
-    private Date birth;
-    private Long userId;
-    @NotNull(message = "서비스 ID는 필수값입니다.")
-    private Long serviceId;
+//    private Date birth;
+//    private Long userId;
+    @NotNull(message = "서비스 선택 필수입니다.")
+    private List<Long> appServiceIds;
 
 }

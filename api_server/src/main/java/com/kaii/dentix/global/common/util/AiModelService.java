@@ -1,5 +1,6 @@
 package com.kaii.dentix.global.common.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
 import com.kaii.dentix.domain.questionnaire.dto.response.QuestionnaireAnalysisResponse;
 import lombok.SneakyThrows;

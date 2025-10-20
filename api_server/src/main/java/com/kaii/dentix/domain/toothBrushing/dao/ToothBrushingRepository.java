@@ -1,11 +1,13 @@
 package com.kaii.dentix.domain.toothBrushing.dao;
 
 import com.kaii.dentix.domain.toothBrushing.domain.ToothBrushing;
+import com.kaii.dentix.domain.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -20,4 +22,6 @@ public interface ToothBrushingRepository extends JpaRepository<ToothBrushing, Lo
     @Transactional
     @Query(value = "INSERT INTO toothBrushing (userId, created) VALUES (:userId, :created)", nativeQuery = true)
     int nativeInsert(Long userId, Date created);
+    List<ToothBrushing> findByUserIdAndCreatedStartingWithOrderByCreated(Long userId, String createdPrefix);
+//    List<ToothBrushing> findAllByUserIdAndBrushingDate(Long userId, LocalDate brushingDate);
 }

@@ -1,10 +1,7 @@
 package com.kaii.dentix.domain.user.controller;
 
 import com.kaii.dentix.domain.user.application.UserService;
-import com.kaii.dentix.domain.user.dto.UserInfoDto;
-import com.kaii.dentix.domain.user.dto.UserInfoModifyDto;
-import com.kaii.dentix.domain.user.dto.UserInfoModifyQnADto;
-import com.kaii.dentix.domain.user.dto.UserLoginDto;
+import com.kaii.dentix.domain.user.dto.*;
 import com.kaii.dentix.domain.user.dto.request.*;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
 import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
@@ -13,7 +10,10 @@ import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -84,6 +84,11 @@ public class UserController {
         DataResponse<UserInfoDto> response = new DataResponse<>(userService.userInfo(httpServletRequest));
         return response;
     }
+    @GetMapping("/info")
+    public DataResponse<UserInfoDto> getUserInfo(HttpServletRequest httpServletRequest) {
+        UserInfoDto dto = userService.userInfo(httpServletRequest);
+        return new DataResponse<>(dto);
+    }
 
     /**
      *  사용자 로그아웃
@@ -101,6 +106,19 @@ public class UserController {
     public SuccessResponse userRevoke(HttpServletRequest httpServletRequest){
         userService.userRevoke(httpServletRequest);
         return new SuccessResponse();
+    }
+    // ✅ 서비스 변경 API
+    @PostMapping("/service/change")
+    public ResponseEntity<?> changeUserService(
+            HttpServletRequest request,
+            @RequestBody UserServiceChangeRequest body
+    ) {
+        UserServiceChangeDto response = userService.changeUserService(request, body);
+        return ResponseEntity.ok(Map.of(
+                "rt", 200,
+                "rtMsg", "서비스 변경 완료",
+                "response", response
+        ));
     }
 
 }
