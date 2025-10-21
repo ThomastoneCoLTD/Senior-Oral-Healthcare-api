@@ -81,6 +81,7 @@ dependencies {
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.772'
     implementation 'software.amazon.awssdk:cloudwatch:2.25.27'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'software.amazon.awssdk:cloudwatch:2.25.64'
     /** MySQL: runtimeOnly만 남기고 중복 제거 */
     runtimeOnly 'com.mysql:mysql-connector-j'
 

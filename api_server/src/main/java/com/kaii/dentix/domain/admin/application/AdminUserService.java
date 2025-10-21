@@ -6,6 +6,7 @@ import com.kaii.dentix.domain.admin.dto.AdminUserListDto;
 import com.kaii.dentix.domain.admin.dto.AdminUserModifyInfoDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserModifyRequest;
+import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -13,11 +14,14 @@ import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.dto.PagingDTO;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.ModelAttribute;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +33,7 @@ public class AdminUserService {
 
     private final ModelMapper modelMapper;
     private final UserLoginService userLoginService;
+    private JwtTokenUtil jwtTokenUtil;
 
     /**
      *  사용자 인증
@@ -93,4 +98,22 @@ public class AdminUserService {
                 .build();
     }
 
+//    public ResponseEntity<AdminUserListDto> getUsersByOrganization(
+//            @ModelAttribute AdminUserListRequest request,
+//            HttpServletRequest httpRequest
+//    ) {
+//        // ✅ 1. JWT에서 기관 ID 추출
+//        Long organizationId = jwtTokenUtil.getOrganizationIdFromAccessToken(httpRequest);
+//        if (organizationId == null) {
+//            throw new NotFoundDataException("기관 정보가 없습니다. 관리자 토큰을 확인해주세요.");
+//        }
+//
+//        // ✅ 2. 요청 객체에 기관 ID 주입
+//        request.setOrganizationId(organizationId);
+
+        // ✅ 3. 기존 서비스 그대로 호출 (페이징 + 검색 포함)
+//        AdminUserListDto result = adminUserService.userList(request);
+
+//        return ResponseEntity.ok(result);
+//    }
 }

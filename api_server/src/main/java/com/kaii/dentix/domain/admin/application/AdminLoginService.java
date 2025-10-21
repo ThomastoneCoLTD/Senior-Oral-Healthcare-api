@@ -55,6 +55,7 @@ public class AdminLoginService {
                 .refreshToken(refreshToken)
                 .adminName(admin.getAdminName())
                 .adminIsSuper(admin.getAdminIsSuper())
+                .organizationId(admin.getOrganization() != null ? admin.getOrganization().getOrganizationId() : null)
                 .build();
 
     }

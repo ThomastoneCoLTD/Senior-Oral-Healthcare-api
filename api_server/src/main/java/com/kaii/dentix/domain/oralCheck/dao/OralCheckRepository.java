@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.oralCheck.dao;
 
 import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -37,5 +38,9 @@ public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
 
 
     long countSuccessByOrganization(@Param("organizationId") Long organizationId);
+
+    @Query("SELECT new com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount(o.oralCheckResultTotalType, COUNT(o)) " +
+            "FROM OralCheck o WHERE o.user.organization.organizationId = :organizationId GROUP BY o.oralCheckResultTotalType")
+    List<OralCheckResultTypeCount> countByOrganization(@Param("organizationId") Long organizationId);
 
 }

@@ -52,8 +52,7 @@ jwt:
   refreshTokenKey: "test-refresh-token"
   secret: "jwt"
   expiration: 86400000
----
-spring:
+
   servlet:
     multipart:
       max-file-size: 50MB
@@ -84,7 +83,7 @@ s3:
     region: ap-southeast-1
 
   folderPath:
-#    oralCheck: 'https://denti-dev.s3.ap-southeast-1.amazonaws.com/test/'
+    #    oralCheck: 'https://denti-dev.s3.ap-southeast-1.amazonaws.com/test/'
     oralCheck: test/
 
 aws:

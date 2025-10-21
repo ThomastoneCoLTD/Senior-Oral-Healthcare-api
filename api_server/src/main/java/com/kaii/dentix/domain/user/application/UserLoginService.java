@@ -7,6 +7,8 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
+import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementDto;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
@@ -59,6 +61,7 @@ public class UserLoginService {
     private final AdminRepository adminRepository;
     private final AppServiceRepository appServiceRepository;
 
+    private final OrganizationRepository organizationRepository;
     /**
      * 사용자 서비스 이용동의 여부 확인 및 저장
      */
@@ -153,7 +156,8 @@ public class UserLoginService {
         if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
             throw new NotFoundDataException("존재하지 않는 질문입니다.");
         }
-
+        Organization organization = organizationRepository.findById(request.getOrganizationId())
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 기관입니다."));
         // ✅ 4. 사용자 정보 저장
         User user = userRepository.save(User.builder()
                 .userLoginIdentifier(request.getUserLoginIdentifier())
@@ -163,6 +167,7 @@ public class UserLoginService {
                 .findPwdQuestionId(request.getFindPwdQuestionId())
                 .findPwdAnswer(request.getFindPwdAnswer())
                 .userPhoneNumber(request.getUserPhoneNumber())
+                .organization(organization)
                 .isVerify(YnType.N)
                 .build());
 
@@ -198,6 +203,8 @@ public class UserLoginService {
                 .userLoginIdentifier(request.getUserLoginIdentifier())
                 .userName(request.getUserName())
                 .userGender(request.getUserGender())
+                .organizationId(request.getOrganizationId())
+                .organizationName(organization.getOrganizationName())
                 .build();
     }
      /**

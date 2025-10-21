@@ -2,11 +2,14 @@ package com.kaii.dentix.domain.admin.application;
 
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
+import com.kaii.dentix.domain.admin.dto.AdminUserListDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
 import com.kaii.dentix.domain.type.UserRole;
+import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
@@ -15,12 +18,15 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 
 public class AdminOrganizationService {
     private final JwtTokenUtil jwtTokenUtil;
     private final AdminRepository adminRepository;
+    private final UserRepository userRepository;
 
     public Admin getTokenAdmin(HttpServletRequest servletRequest) {
         String token = jwtTokenUtil.getAccessToken(servletRequest);
@@ -59,4 +65,6 @@ public class AdminOrganizationService {
                 .successCount(organization.getSuccessCount())
                 .build();
     }
+
+
 }

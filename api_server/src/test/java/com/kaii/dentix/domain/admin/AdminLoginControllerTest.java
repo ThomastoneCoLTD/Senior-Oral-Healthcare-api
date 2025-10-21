@@ -62,6 +62,7 @@ public class AdminLoginControllerTest extends ControllerTest {
                 .accessToken("AccessToken")
                 .refreshToken("RefreshToken")
                 .adminIsSuper(YnType.N)
+                .organizationId(10L)
                 .build();
     }
 

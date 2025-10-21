@@ -1,18 +1,30 @@
 package com.kaii.dentix.domain.admin.application;
 
+import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.dao.user.AdminUserCustomRepository;
+import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.*;
 import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
 import com.kaii.dentix.domain.admin.dto.statistic.*;
+import com.kaii.dentix.domain.jwt.JwtTokenUtil;
+import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckCustomRepository;
 import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
+import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
+import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
+import com.kaii.dentix.domain.user.application.UserService;
+import com.kaii.dentix.domain.user.dao.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -27,6 +39,14 @@ public class AdminStatisticService {
 
     private final QuestionnaireCustomRepository questionnaireCustomRepository;
 
+    private final JwtTokenUtil jwtTokenUtil;
+
+    private final AdminRepository adminRepository;
+
+    private final UserRepository userRepository;
+    private final OralCheckRepository oralCheckRepository;
+
+//    private final Admin admin;
     /**
      *  사용자 통계
      */
@@ -111,4 +131,140 @@ public class AdminStatisticService {
                 .allQuestionnaireResultTypeCount(allQuestionnaireResultTypeCount)
                 .build();
     }
+
+    /**
+     *  관리자 통계 조회
+     */
+    @Transactional(readOnly = true)
+    public AdminUserStatisticResponse getOrgStatistics(AdminStatisticRequest request, HttpServletRequest httpRequest) {
+
+        // ✅ 1️⃣ 현재 로그인 관리자 식별
+        Long adminId = jwtTokenUtil.getUserId(
+                jwtTokenUtil.getAccessToken(httpRequest),
+                TokenType.AccessToken
+        );
+
+        // ✅ 2️⃣ 관리자 → 소속 기관 ID 가져오기
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
+
+        if (admin.getOrganization() == null) {
+            throw new IllegalStateException("현재 관리자는 아직 기관에 소속되어 있지 않습니다.");
+        }
+
+        Long organizationId = admin.getOrganization().getOrganizationId();
+
+        // ✅ 3️⃣ request 에 기관ID 자동 주입
+        request.setOrganizationId(organizationId);
+
+//        log.info("📊 통계 요청 관리자={}, 기관ID={}", admin.getAdminName(), organizationId);
+
+        // ✅ 4️⃣ 통계 1. 전체 남녀 가입률
+        AdminUserSignUpCountDto userSignUpCount = adminUserCustomRepository.userSignUpCount(request);
+
+        // ✅ 5️⃣ 통계 2. 구강검진 통계
+        OralCheckResultTypeCount userOralCheckList = oralCheckCustomRepository.userOralCheckList(request);
+        int allUserOralCheckCount = oralCheckCustomRepository.allUserOralCheckCount(request);
+        int allOralCheckCount = userOralCheckList.getCountHealthy()
+                + userOralCheckList.getCountGood()
+                + userOralCheckList.getCountAttention()
+                + userOralCheckList.getCountDanger();
+
+        int oralCheckAverage = allUserOralCheckCount > 0
+                ? Math.round((float) allOralCheckCount / allUserOralCheckCount)
+                : 0;
+
+        OralCheckResultType averageState = oralCheckService.getState(userOralCheckList);
+
+        // ✅ 6️⃣ 통계 3. 문진표 통계
+        List<QuestionnaireStatisticDto> questionnaireList = questionnaireCustomRepository.questionnaireList(request);
+        int allQuestionnaireCount = questionnaireCustomRepository.allQuestionnaireCount(request);
+
+        AllQuestionnaireResultTypeCount allQuestionnaireResultTypeCount = calcQuestionnaireCount(questionnaireList, allQuestionnaireCount);
+
+        // ✅ 7️⃣ 응답 반환
+        return AdminUserStatisticResponse.builder()
+                .userSignUpCount(userSignUpCount)
+                .averageState(averageState)
+                .oralCheckCount(allOralCheckCount)
+                .oralCheckAverage(oralCheckAverage)
+                .oralCheckResultTypeCount(userOralCheckList)
+                .questionnaireAllCount(allQuestionnaireCount)
+                .allQuestionnaireResultTypeCount(allQuestionnaireResultTypeCount)
+                .build();
+    }
+
+    /**
+     * 문진표 유형별 count 계산
+     */
+    private AllQuestionnaireResultTypeCount calcQuestionnaireCount(List<QuestionnaireStatisticDto> list, int totalCount) {
+        if (totalCount == 0) return new AllQuestionnaireResultTypeCount();
+
+        int[] counts = new int[11]; // A~K (11개)
+        for (QuestionnaireStatisticDto dto : list) {
+            switch (dto.getQuestionnaireType()) {
+                case "A" -> counts[0]++;
+                case "B" -> counts[1]++;
+                case "C" -> counts[2]++;
+                case "D" -> counts[3]++;
+                case "E" -> counts[4]++;
+                case "F" -> counts[5]++;
+                case "G" -> counts[6]++;
+                case "H" -> counts[7]++;
+                case "I" -> counts[8]++;
+                case "J" -> counts[9]++;
+                case "K" -> counts[10]++;
+            }
+        }
+
+        return AllQuestionnaireResultTypeCount.builder()
+                .countA(counts[0]).countB(counts[1]).countC(counts[2]).countD(counts[3])
+                .countE(counts[4]).countF(counts[5]).countG(counts[6]).countH(counts[7])
+                .countI(counts[8]).countJ(counts[9]).countK(counts[10])
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AdminStatisticsOrgUserResponse getOrganizationUserStatistics(HttpServletRequest httpRequest) {
+
+        // 1️⃣ 로그인 관리자 식별
+        Long adminId = jwtTokenUtil.getUserId(
+                jwtTokenUtil.getAccessToken(httpRequest),
+                TokenType.AccessToken
+        );
+
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
+
+        if (admin.getOrganization() == null)
+            throw new IllegalStateException("관리자가 소속된 기관이 없습니다.");
+
+        Long orgId = admin.getOrganization().getOrganizationId();
+
+        // 2️⃣ 기관 내 사용자 통계 조회
+        long totalUsers = userRepository.countByOrganization_OrganizationId(orgId);
+        long maleUsers = userRepository.countByOrganization_OrganizationIdAndUserGender(orgId, GenderType.M);
+        long femaleUsers = userRepository.countByOrganization_OrganizationIdAndUserGender(orgId, GenderType.W);
+
+        // 3️⃣ 최근 가입자 (7일)
+        LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
+        Date oneWeekAgoDate = java.sql.Timestamp.valueOf(oneWeekAgo);
+
+        long newUsers = userRepository.countByOrganization_OrganizationIdAndCreatedAfter(orgId, oneWeekAgoDate);
+//        LocalDate oneWeekAgo = LocalDate.now().minusDays(7);
+//        long newUsers = userRepository.countByOrganization_OrganizationIdAndCreatedAfter(orgId, oneWeekAgo.atStartOfDay());
+
+        // 4️⃣ 전체 구강 상태별 사용자 (최근 검진 기준)
+        List<OralCheckResultTypeCount> oralStateCounts = oralCheckRepository.countByOrganization(orgId);
+
+        return AdminStatisticsOrgUserResponse.builder()
+                .organizationName(admin.getOrganization().getOrganizationName())
+                .totalUsers(totalUsers)
+                .maleUsers(maleUsers)
+                .femaleUsers(femaleUsers)
+                .newUsers(newUsers)
+                .oralCheckStats(oralStateCounts)
+                .build();
+    }
+
 }

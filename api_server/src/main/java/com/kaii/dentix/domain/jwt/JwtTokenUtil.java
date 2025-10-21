@@ -48,9 +48,30 @@ public class JwtTokenUtil {
     public String createToken(User user, TokenType tokenType) {
         return this.createToken(user.getUserId(), UserRole.ROLE_USER, tokenType);
     }
+//수정 전_오류나면 이거 살리기
+//    public String createToken(Admin admin, TokenType tokenType) {
+//        return this.createToken(admin.getAdminId(), UserRole.ROLE_ADMIN, tokenType);
+//    }
 
     public String createToken(Admin admin, TokenType tokenType) {
-        return this.createToken(admin.getAdminId(), UserRole.ROLE_ADMIN, tokenType);
+        String secretKey = tokenType.equals(TokenType.AccessToken) ? accessTokenKey : refreshTokenKey;
+
+        Claims claims = Jwts.claims().setSubject(String.valueOf(admin.getAdminId()));
+        claims.put("roles", UserRole.ROLE_ADMIN);
+        claims.put("adminIsSuper", admin.getAdminIsSuper().name());
+        // ✅ organizationId 추가 (없을 수도 있으므로 null-safe)
+        if (admin.getOrganization() != null) {
+            claims.put("organizationId", admin.getOrganization().getOrganizationId());
+        }
+
+        Date now = new Date();
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(new Date(now.getTime() + tokenType.getValidTime()))
+                .signWith(SignatureAlgorithm.HS256, secretKey)
+                .compact();
     }
 
     // JWT 토큰 인증정보 생성
@@ -68,7 +89,15 @@ public class JwtTokenUtil {
             .signWith(SignatureAlgorithm.HS256, secretKey) // 사용할 암호화 알고리즘과 signature 에 들어갈 secret 값 셋팅
             .compact();
     }
-
+    public Long getOrganizationIdFromAccessToken(HttpServletRequest request) {
+        String token = getAccessToken(request);
+        if (token == null) return null;
+        try {
+            return getClaims(token, TokenType.AccessToken).get("organizationId", Long.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
     public Claims getClaims(String token, TokenType tokenType) {
         String secretKey = tokenType.equals(TokenType.AccessToken) ? accessTokenKey : refreshTokenKey;
 
@@ -161,6 +190,18 @@ public class JwtTokenUtil {
         String adminId = authentication.getName(); // JWT의 subject가 adminId
         return Long.parseLong(adminId);
     }
+    public boolean isSuperAdmin(HttpServletRequest request) {
+        String token = getAccessToken(request);
+        if (token == null) return false;
+        try {
+            Claims claims = getClaims(token, TokenType.AccessToken);
+            String isSuper = claims.get("adminIsSuper", String.class);
+            return "Y".equalsIgnoreCase(isSuper);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
 
 
 }

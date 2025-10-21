@@ -54,4 +54,8 @@ public class UserSignUpRequest {
     @NotNull(message = "서비스 선택 필수입니다.")
     private List<Long> appServiceIds;
 
+    @NotNull(message = "기관 번호는 필수입니다.")
+    private Long organizationId;
+
+
 }

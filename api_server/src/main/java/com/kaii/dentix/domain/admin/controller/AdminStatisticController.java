@@ -4,6 +4,7 @@ import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.application.AdminStatisticService;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.admin.dto.AdminStatisticsOrgUserResponse;
 import com.kaii.dentix.domain.admin.dto.statistic.AdminUserStatisticResponse;
 import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
@@ -40,6 +41,18 @@ public class AdminStatisticController {
         return response;
     }
 
+    /**
+     *  기관별 사용자 통계
+     */
+    @GetMapping("/org")
+    public ResponseEntity<AdminUserStatisticResponse> getOrganizationStatistics(
+            AdminStatisticRequest request,  // ✅ 쿼리 파라미터(TODAY, WEEK1 등 필터 가능)
+            HttpServletRequest httpRequest
+    ) {
+        AdminUserStatisticResponse response = adminStatisticService.getOrgStatistics(request, httpRequest);
+        return ResponseEntity.ok(response);
+    }
+
     private final SubscriptionInfoService subscriptionInfoService;
     private final JwtTokenUtil jwtTokenUtil;
 
@@ -70,4 +83,12 @@ public class AdminStatisticController {
 
         return ResponseEntity.ok(response);
     }
+    @GetMapping("/org/users")
+    public ResponseEntity<AdminStatisticsOrgUserResponse> getOrganizationUserStatistics(
+            HttpServletRequest httpRequest
+    ) {
+        AdminStatisticsOrgUserResponse response = adminStatisticService.getOrganizationUserStatistics(httpRequest);
+        return ResponseEntity.ok(response);
+    }
+
 }

@@ -7,12 +7,14 @@ import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
 import com.kaii.dentix.domain.oralCheck.domain.QOralCheck;
 import com.kaii.dentix.domain.oralStatus.domain.QOralStatus;
+import com.kaii.dentix.domain.organization.domain.QOrganization;
 import com.kaii.dentix.domain.questionnaire.domain.QQuestionnaire;
 import com.kaii.dentix.domain.type.DatePeriodType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.domain.user.domain.QUser;
 import com.kaii.dentix.domain.userOralStatus.domain.QUserOralStatus;
+import com.kaii.dentix.domain.userToAppService.domain.QUserToAppService;
 import com.kaii.dentix.global.common.dto.PagingRequest;
 import com.kaii.dentix.global.common.util.DateFormatUtil;
 import com.querydsl.core.BooleanBuilder;
@@ -30,9 +32,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
-//import static com.kaii.dentix.domain.user.domain.Q
-import static com.kaii.dentix.domain.appService.domain.QAppService.appService;
-import static com.kaii.dentix.domain.userToAppService.domain.QUserToAppService.userToAppService;
 import java.util.*;
 
 @Repository
@@ -50,7 +49,11 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
     private final QQuestionnaire questionnaire = QQuestionnaire.questionnaire;
 
-    private final QAppService service = QAppService.appService;
+    private final QAppService appService = QAppService.appService;
+
+    private final QUserToAppService userToAppService = QUserToAppService.userToAppService;
+
+    private final QOrganization organization = QOrganization.organization;
     /**
      *  사용자 목록 조회
      */
@@ -58,6 +61,15 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
     public Page<AdminUserInfoDto> findAll(AdminUserListRequest request){
 
         Pageable paging = new PagingRequest(request.getPage(), request.getSize()).of();
+
+        // ✅ BooleanBuilder로 조건 누적 (Predicate에서는 .and() 불가능)
+        BooleanBuilder builder = new BooleanBuilder();
+        builder.and(whereSearch(request)); // 기존 검색 조건 추가
+
+        // ✅ organizationId 필터 추가 (관리자별 기관 제한)
+        if (request.getOrganizationId() != null) {
+            builder.and(user.organization.organizationId.eq(request.getOrganizationId()));
+        }
 
         List<AdminUserInfoDto> result = queryFactory
                 .select(Projections.constructor(AdminUserInfoDto.class,
@@ -72,9 +84,10 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                         oralCheck.created.as("oralCheckDate"),
                         user.isVerify,
                         // ✅ 서비스명도 group_concat으로
-                        Expressions.stringTemplate("group_concat(DISTINCT {0})", service.name)
+                        Expressions.stringTemplate("group_concat(DISTINCT {0})", appService.name)
                 ))
                 .from(user)
+                .leftJoin(user.organization, organization)
                 .leftJoin(userToAppService).on(userToAppService.user.eq(user))
                 .leftJoin(userToAppService.appService, appService)
                 .leftJoin(questionnaire).on(questionnaire.userId.eq(user.userId)
@@ -90,7 +103,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                                 .from(oralCheck)
                                 .where(oralCheck.userId.eq(user.userId))
                         )))
-                .where(whereSearch(request))
+                .where(builder)
                 .groupBy(user.userId, questionnaire.questionnaireId, oralCheck.oralCheckId)
                 .orderBy(user.created.desc())
                 .offset(paging.getOffset())
@@ -100,6 +113,8 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
         Long totalCount = Optional.ofNullable(queryFactory
                 .select(user.countDistinct())
                 .from(user)
+                .leftJoin(user.organization, organization)
+                .where(builder)
                 .fetchOne()).orElse(0L);
 
         return new PageImpl<>(result, paging, totalCount);

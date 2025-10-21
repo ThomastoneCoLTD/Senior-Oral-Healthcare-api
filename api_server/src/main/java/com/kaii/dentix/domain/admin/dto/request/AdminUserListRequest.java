@@ -14,6 +14,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class AdminUserListRequest extends PageAndSizeRequest {
 
+    private Long organizationId;
     private String userIdentifierOrName; // 검색어 (아이디 혹은 이름)
 
     private OralCheckResultType oralCheckResultTotalType; // 구강 상태

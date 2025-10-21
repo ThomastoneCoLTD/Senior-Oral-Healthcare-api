@@ -19,4 +19,7 @@ public class UserSignUpDto extends TokenDto{
 
     private GenderType userGender;
 
+    private Long organizationId;
+    private String organizationName;
+
 }
