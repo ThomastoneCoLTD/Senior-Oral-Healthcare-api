@@ -37,7 +37,7 @@ public class WebSecurityConfig {
             "/login/*", "/login",
             "/service-agreement",
             "/contents", "/contents/*",
-            "/password/*",
+            "/password/*","/organizations/check/*",
             "/admin/login",
             "/admin/account",
             "/admin/password","/admin/auto-login",

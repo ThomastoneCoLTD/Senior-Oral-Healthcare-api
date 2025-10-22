@@ -140,7 +140,7 @@ public class UserLoginService {
     @Transactional
     public UserSignUpDto userSignUp(HttpServletRequest httpServletRequest, UserSignUpRequest request) {
 
-//        // ✅ 1. 인증된 회원인지 확인
+//        //1. 인증된 회원인지 확인
 //        if (request.getUserId() != null) {
 //            userRepository.findById(request.getUserId())
 //                    .orElseThrow(() -> new NotFoundDataException("존재하지 않는 회원입니다."));
@@ -149,16 +149,16 @@ public class UserLoginService {
 //            }
 //        }
 
-        // ✅ 2. 아이디 중복 확인
+        //2. 아이디 중복 확인
         this.loginIdCheck(request.getUserLoginIdentifier());
 
-        // ✅ 3. 비밀번호 찾기 질문 유효성 검사
+        //3. 비밀번호 찾기 질문 유효성 검사
         if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
             throw new NotFoundDataException("존재하지 않는 질문입니다.");
         }
         Organization organization = organizationRepository.findById(request.getOrganizationId())
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 기관입니다."));
-        // ✅ 4. 사용자 정보 저장
+        //4. 사용자 정보 저장
         User user = userRepository.save(User.builder()
                 .userLoginIdentifier(request.getUserLoginIdentifier())
                 .userName(request.getUserName())
@@ -171,7 +171,7 @@ public class UserLoginService {
                 .isVerify(YnType.N)
                 .build());
 
-        // ✅ 5. 서비스 정보 연결 (UserToAppService 생성)
+        //5. 서비스 정보 연결 (UserToAppService 생성)
         List<AppService> appServices = appServiceRepository.findAllById(request.getAppServiceIds());
         if (appServices.isEmpty()) {
             throw new NotFoundDataException("선택한 서비스가 존재하지 않습니다.");
@@ -184,18 +184,18 @@ public class UserLoginService {
                     .build());
         }
 
-        // ✅ 6. 토큰 생성 및 로그인 처리
+        //6. 토큰 생성 및 로그인 처리
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
 
-        // ✅ 7. 서비스 이용 약관 동의 저장
+        //7. 서비스 이용 약관 동의 저장
         this.userServiceAgreeCheckAndSave(request.getUserServiceAgreementRequest(), user.getUserId());
 
-        // ✅ 8. 디바이스 정보 이벤트 발행
+        //8. 디바이스 정보 이벤트 발행
         publisher.publishEvent(new UserModifyDeviceInfoEvent(user.getUserId(), httpServletRequest));
 
-        // ✅ 9. 최종 반환 DTO
+        //9. 최종 반환 DTO
         return UserSignUpDto.builder()
                 .userId(user.getUserId())
                 .accessToken(accessToken)
@@ -225,29 +225,29 @@ public class UserLoginService {
     @Transactional
     public UserLoginDto userLogin(HttpServletRequest httpServletRequest, UserLoginRequest request) {
 
-        // ✅ 사용자 조회
+        //사용자 조회
         User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
                 .orElseThrow(() -> new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다."));
 
-        // ✅ 비밀번호 확인
+        //비밀번호 확인
         if (!passwordEncoder.matches(request.getUserPassword(), user.getUserPassword())) {
             throw new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다.");
         }
 
-        // ✅ JWT 토큰 발급
+        //JWT 토큰 발급
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
 
-        // ✅ 로그인 갱신
+        //로그인 갱신
         user.updateLogin(refreshToken);
 
-        // ✅ 디바이스 정보 이벤트 발행
+        //디바이스 정보 이벤트 발행
         publisher.publishEvent(new UserModifyDeviceInfoEvent(
                 user.getUserId(),
                 httpServletRequest
         ));
 
-        // ✅ 사용자의 서비스 목록 조회 (UserService → AppService)
+        //사용자의 서비스 목록 조회 (UserService → AppService)
         List<UserToAppService> mappings = userToAppServiceRepository.findByUser(user);
 
         List<UserLoginDto.AppServiceInfo> userServices = mappings.stream()
@@ -258,7 +258,7 @@ public class UserLoginService {
                         .build())
                 .toList();
 
-// ✅ 대표 서비스도 여전히 첫 번째로 유지
+        //대표 서비스도 여전히 첫 번째로 유지
         Long mainServiceId = userServices.isEmpty() ? null : userServices.get(0).getServiceId();
         String mainServiceName = userServices.isEmpty() ? null : userServices.get(0).getName();
 
@@ -269,7 +269,7 @@ public class UserLoginService {
                 .refreshToken(refreshToken)
                 .serviceId(mainServiceId)
                 .name(mainServiceName)
-                .services(userServices) // ✅ 전체 서비스 리스트 명시적으로 추가
+                .services(userServices) //전체 서비스 리스트 명시적으로 추가
                 .build();
     }
 

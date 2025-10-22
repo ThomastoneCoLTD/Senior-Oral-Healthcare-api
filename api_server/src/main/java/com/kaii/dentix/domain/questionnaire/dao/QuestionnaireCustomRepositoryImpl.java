@@ -42,15 +42,15 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
     public QuestionnaireAndStatusDto getLatestQuestionnaireAndHigherStatus(Long userId) {
 
         return queryFactory
-            .select(Projections.constructor(QuestionnaireAndStatusDto.class,
-                questionnaire.questionnaireId, questionnaire.created, oralStatus.oralStatusType, oralStatus.oralStatusTitle
-            ))
-            .from(questionnaire)
-            .join(userOralStatus).on(userOralStatus.questionnaire.questionnaireId.eq(questionnaire.questionnaireId))
-            .join(oralStatus).on(oralStatus.oralStatusType.eq(userOralStatus.oralStatus.oralStatusType))
-            .where(questionnaire.userId.eq(userId))
-            .orderBy(questionnaire.created.desc(), oralStatus.oralStatusPriority.asc())
-            .fetchFirst();
+                .select(Projections.constructor(QuestionnaireAndStatusDto.class,
+                        questionnaire.questionnaireId, questionnaire.created, oralStatus.oralStatusType, oralStatus.oralStatusTitle
+                ))
+                .from(questionnaire)
+                .join(userOralStatus).on(userOralStatus.questionnaire.questionnaireId.eq(questionnaire.questionnaireId))
+                .join(oralStatus).on(oralStatus.oralStatusType.eq(userOralStatus.oralStatus.oralStatusType))
+                .where(questionnaire.userId.eq(userId))
+                .orderBy(questionnaire.created.desc(), oralStatus.oralStatusPriority.asc())
+                .fetchFirst();
     }
 
     /**
@@ -59,7 +59,7 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
     @Override
     public List<QuestionnaireStatisticDto> questionnaireList(AdminStatisticRequest request) {
         return queryFactory.select(Projections.constructor(QuestionnaireStatisticDto.class,
-                user.userId, userOralStatus.oralStatus.oralStatusType
+                        user.userId, userOralStatus.oralStatus.oralStatusType
                 ))
                 .from(questionnaire)
                 .join(user).on(questionnaire.userId.eq(user.userId))

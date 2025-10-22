@@ -97,8 +97,11 @@ public class QuestionnaireService {
         questionnaireForm.put("form", form);
 
         QuestionnaireAnalysisResponse analysisData;
+//        log.info(analysisData.toString());
         try {
             analysisData = aiModelService.getQuestionnaireAiModel(questionnaireForm);
+                    log.info("data:{}",analysisData.toString());
+
         } catch (Exception e) {
             if (active.equals("dev")) { // 개발서버의 경우 테스트 데이터 연동
                 log.warn("AI 모델 연동 실패로 테스트 데이터 연동됨 (문진표 제출)");
@@ -114,6 +117,7 @@ public class QuestionnaireService {
                     typeList.add(chars[randomIndex]);
                 }
                 analysisData = new QuestionnaireAnalysisResponse(typeList);
+                log.info(analysisData.toString());
             } else {
                 throw new BadRequestApiException("AI 모델 연동에 실패했어요.\n관리자에게 문의해 주세요.");
             }
@@ -143,15 +147,15 @@ public class QuestionnaireService {
         Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId).orElseThrow(() -> new NotFoundDataException("문진표가 존재하지 않습니다."));
 
         List<OralStatusTypeInfoDto> oralStatusList = questionnaire.getUserOralStatusList().stream()
-            .map(userOralStatus -> {
-                OralStatus oralStatus = userOralStatus.getOralStatus();
-                return OralStatusTypeInfoDto.builder()
-                    .type(oralStatus.getOralStatusType())
-                    .title(oralStatus.getOralStatusTitle())
-                    .description(oralStatus.getOralStatusDescription())
-                    .subDescription(oralStatus.getOralStatusSubDescription())
-                    .build();
-            }).toList();
+                .map(userOralStatus -> {
+                    OralStatus oralStatus = userOralStatus.getOralStatus();
+                    return OralStatusTypeInfoDto.builder()
+                            .type(oralStatus.getOralStatusType())
+                            .title(oralStatus.getOralStatusTitle())
+                            .description(oralStatus.getOralStatusDescription())
+                            .subDescription(oralStatus.getOralStatusSubDescription())
+                            .build();
+                }).toList();
 
         List<ContentsCategoryDto> categories = contentsService.getCategoryList(null);
         List<ContentsDto> contents = contentsCustomRepository.getCustomizedContents(questionnaireId);
@@ -167,8 +171,8 @@ public class QuestionnaireService {
         questionnaireTemplate.forEach(template -> {
             // 값 존재 확인
             Integer[] values = form.stream().filter(o -> o.getKey().equals(template.getKey()))
-                .findAny().orElseThrow(() -> new FormValidationException(String.format("%s번 문항을 입력해 주세요.", template.getNumber())))
-                .getValue();
+                    .findAny().orElseThrow(() -> new FormValidationException(String.format("%s번 문항을 입력해 주세요.", template.getNumber())))
+                    .getValue();
 
             // 개수 확인
             if (template.getMinimum() != null && values.length < template.getMinimum()) {

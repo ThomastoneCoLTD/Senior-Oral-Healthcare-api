@@ -6,6 +6,7 @@ import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,7 +17,9 @@ import java.util.stream.Collectors;
 @Table(name = "questionnaire")
 public class Questionnaire extends TimeEntity {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long questionnaireId;
 
     @Column(nullable = false)
@@ -29,14 +32,27 @@ public class Questionnaire extends TimeEntity {
     private String form;
 
     @OneToMany(mappedBy = "questionnaire", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    List<UserOralStatus> userOralStatusList;
+    private List<UserOralStatus> userOralStatusList = new ArrayList<>();
 
+    /**
+     * ✅ 기존: oralStatusTypeList를 함께 저장하는 생성자
+     */
     public Questionnaire(Long userId, String questionnaireVersion, String form, List<String> oralStatusTypeList) {
         this.userId = userId;
         this.questionnaireVersion = questionnaireVersion;
         this.form = form;
-        userOralStatusList = oralStatusTypeList.stream()
-            .map(oralStatusType -> new UserOralStatus(this, new OralStatus(oralStatusType)))
-            .collect(Collectors.toList());
+        this.userOralStatusList = oralStatusTypeList.stream()
+                .map(oralStatusType -> new UserOralStatus(this, new OralStatus(oralStatusType)))
+                .collect(Collectors.toList());
     }
+
+    /**
+     * ✅ 추가: oralStatusTypeList 없이 기본 생성 (이번 Service 코드용)
+     */
+//    public Questionnaire(Long userId, String questionnaireVersion, String form) {
+//        this.userId = userId;
+//        this.questionnaireVersion = questionnaireVersion;
+//        this.form = form;
+//        this.userOralStatusList = new ArrayList<>();
+//    }
 }

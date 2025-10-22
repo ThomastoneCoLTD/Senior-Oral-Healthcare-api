@@ -21,7 +21,7 @@ public class UserOralStatus extends TimeEntity {
     private Questionnaire questionnaire;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "oralStatusType", nullable = false)
+    @JoinColumn(name = "oralStatusType")
     private OralStatus oralStatus;
 
     public UserOralStatus(Questionnaire questionnaire, OralStatus oralStatus) {

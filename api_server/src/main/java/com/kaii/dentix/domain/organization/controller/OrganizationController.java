@@ -99,7 +99,14 @@ public class OrganizationController {
         boolean isDuplicate = organizationService.isDuplicate(organizationName, organizationPhoneNumber);
         return ResponseEntity.ok(isDuplicate);
     }
-
+    /**
+     * 기관번호로 기관 정보 조회 (회원가입 시 기관 확인용)
+     */
+    @GetMapping("/check/{organizationId}")
+    public ResponseEntity<OrganizationResponse> getOrganizationById(@PathVariable Long organizationId) {
+        OrganizationResponse response = organizationService.getCheckOrganizationById(organizationId);
+        return ResponseEntity.ok(response);
+    }
 }
 
 

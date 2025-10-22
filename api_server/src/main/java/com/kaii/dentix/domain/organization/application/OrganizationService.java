@@ -236,5 +236,16 @@ public class OrganizationService {
                 organizationName, organizationPhoneNumber
         );
     }
+    public OrganizationResponse getCheckOrganizationById(Long organizationId) {
+        Organization organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new NotFoundException("기관 정보가 없습니다"));
 
+        return OrganizationResponse.builder()
+                .organizationId(organization.getOrganizationId())
+                .organizationName(organization.getOrganizationName())
+                .subscriptionPlanId(organization.getSubscriptionPlan() != null ? organization.getSubscriptionPlan().getId() : null)
+                .subscriptionPlanName(organization.getSubscriptionPlan() != null ? organization.getSubscriptionPlan().getPlanName() : null)
+                .successCount(organization.getSuccessCount())
+                .build();
+    }
 }
