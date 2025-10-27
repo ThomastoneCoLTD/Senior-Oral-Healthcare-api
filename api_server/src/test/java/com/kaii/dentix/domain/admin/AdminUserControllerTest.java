@@ -13,6 +13,7 @@ import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.global.common.dto.PagingDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -241,8 +242,10 @@ public class AdminUserControllerTest extends ControllerTest {
                 }})
                 .build();
 
-        given(adminUserService.userList(any(AdminUserListRequest.class))).willReturn(userList);
-
+        given(adminUserService.userList(
+                any(AdminUserListRequest.class),
+                any(HttpServletRequest.class)
+        )).willReturn(userList);
         // when
         ResultActions result = mockMvc.perform(
                 RestDocumentationRequestBuilders.get("/admin/user?page={page}&size={size}", 1, 10)
@@ -293,6 +296,6 @@ public class AdminUserControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(adminUserService).userList(any(AdminUserListRequest.class));
+        verify(adminUserService).userList(any(AdminUserListRequest.class),any(HttpServletRequest.class));
     }
 }

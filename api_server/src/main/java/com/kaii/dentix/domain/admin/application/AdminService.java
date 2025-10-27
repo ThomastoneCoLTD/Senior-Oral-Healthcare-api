@@ -2,10 +2,12 @@ package com.kaii.dentix.domain.admin.application;
 
 import com.kaii.dentix.domain.admin.dao.AdminCustomRepository;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
+import com.kaii.dentix.domain.admin.dao.user.AdminUserCustomRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.*;
 import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminSignUpRequest;
+import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
@@ -25,6 +27,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -45,24 +48,29 @@ public class AdminService {
 
     private final PasswordEncoder passwordEncoder;
 
-    private final AdminCustomRepository adminCustomRepository;
 
     private final ModelMapper modelMapper;
-
+private AdminService adminService;
+private AdminUserCustomRepository adminUserCustomRepository;
 
     /**
      * 토큰에서 Admin 추출
      */
+    @Transactional(readOnly = true)
     public Admin getTokenAdmin(HttpServletRequest servletRequest) {
         String token = jwtTokenUtil.getAccessToken(servletRequest);
+        UserRole role = jwtTokenUtil.getRoles(token, TokenType.AccessToken);
 
-        UserRole roles = jwtTokenUtil.getRoles(token, TokenType.AccessToken);
-        if (!roles.equals(UserRole.ROLE_ADMIN)) throw new UnauthorizedException();
+        // ✅ 관리자 또는 슈퍼관리자만 접근 가능
+        if (!(role == UserRole.ROLE_ADMIN || role == UserRole.ROLE_SUPER_ADMIN)) {
+            throw new UnauthorizedException("관리자 권한이 필요합니다.");
+        }
 
         Long adminId = jwtTokenUtil.getUserId(token, TokenType.AccessToken);
-        return adminRepository.findById(adminId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
-    }
 
+        return adminRepository.findByIdWithOrganizationAndPlan(adminId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
+    }
     /**
      *  관리자 등록
      */
@@ -135,7 +143,7 @@ public class AdminService {
      *  관리자 목록 조회
      */
     public AdminListDto adminList(PageAndSizeRequest request){
-        Page<AdminAccountDto> adminList = adminCustomRepository.findAllByNotSuper(request);
+        Page<AdminAccountDto> adminList = adminRepository.findAllByNotSuper(request);
 
         PagingDTO pagingDTO = modelMapper.map(adminList, PagingDTO.class);
 
@@ -165,6 +173,38 @@ public class AdminService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public AdminUserListDto userList(AdminUserListRequest request, HttpServletRequest servletRequest) {
+
+        // ✅ 현재 로그인한 관리자 정보 가져오기
+        Admin admin = adminService.getTokenAdmin(servletRequest);
+
+        // ✅ 권한 판단
+        boolean isSuperAdmin = admin.getAdminIsSuper() == YnType.Y;
+
+        Page<AdminUserInfoDto> userList;
+
+        // ✅ 슈퍼관리자면 전체 사용자 조회
+        if (isSuperAdmin) {
+            userList = adminUserCustomRepository.findAll(request); // 모든 기관 포함
+        }
+        // ✅ 일반관리자면 자신의 기관 사용자만 조회
+        else {
+            if (admin.getOrganization() == null) {
+                throw new BadRequestApiException("소속 기관이 없습니다.");
+            }
+            Long orgId = admin.getOrganization().getOrganizationId();
+            request.setOrganizationId(orgId);
+            userList = adminUserCustomRepository.findAll(request);
+        }
+
+        PagingDTO pagingDTO = modelMapper.map(userList, PagingDTO.class);
+
+        return AdminUserListDto.builder()
+                .paging(pagingDTO)
+                .userList(userList.getContent())
+                .build();
+    }
 
 
 

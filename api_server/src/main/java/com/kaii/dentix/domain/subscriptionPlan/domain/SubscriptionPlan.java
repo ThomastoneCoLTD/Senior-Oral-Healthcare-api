@@ -2,26 +2,25 @@ package com.kaii.dentix.domain.subscriptionPlan.domain;
 
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.Where;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 
 import java.time.LocalDateTime;
-
 @Entity
 @Getter
+@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "subscription_plan")
 @Where(clause = "deleted IS NULL")
 public class SubscriptionPlan extends TimeEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // 구독상품 플랜ID (PK)
+    @Column(name = "id") // ✅ DB 컬럼명과 명시적으로 일치시킴
+    private Long id; // PK
 
     @Column(name = "plan_name", length = 45, nullable = false)
     private String planName; // 구독상품 플랜명
@@ -41,7 +40,7 @@ public class SubscriptionPlan extends TimeEntity {
     @Column(name = "deleted")
     private LocalDateTime deleted;
 
-    /** Soft delete */
+    /** ✅ Soft delete */
     public void deletePlan() {
         this.deleted = LocalDateTime.now();
     }

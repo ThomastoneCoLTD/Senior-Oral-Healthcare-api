@@ -142,28 +142,86 @@ public class QuestionnaireService {
     /**
      * 문진표 결과 조회
      */
+//    @Transactional(readOnly = true)
+//    public QuestionnaireResultDto questionnaireResult(HttpServletRequest httpServletRequest, long questionnaireId) {
+//        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId).orElseThrow(() -> new NotFoundDataException("문진표가 존재하지 않습니다."));
+//
+//        List<OralStatusTypeInfoDto> oralStatusList = questionnaire.getUserOralStatusList().stream()
+//                .map(userOralStatus -> {
+//                    OralStatus oralStatus = userOralStatus.getOralStatus();
+//                    return OralStatusTypeInfoDto.builder()
+//                            .type(oralStatus.getOralStatusType())
+//                            .title(oralStatus.getOralStatusTitle())
+//                            .description(oralStatus.getOralStatusDescription())
+//                            .subDescription(oralStatus.getOralStatusSubDescription())
+//                            .build();
+//                }).toList();
+//
+//        List<ContentsCategoryDto> categories = contentsService.getCategoryList(null);
+//        List<ContentsDto> contents = contentsCustomRepository.getCustomizedContents(questionnaireId);
+//        contents = contents.subList(0, Math.min(contents.size(), 2)); // 최대 2개
+//
+//        return new QuestionnaireResultDto(questionnaire.getCreated(), oralStatusList, categories, contents);
+//    }
     @Transactional(readOnly = true)
-    public QuestionnaireResultDto questionnaireResult(HttpServletRequest httpServletRequest, long questionnaireId) {
-        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId).orElseThrow(() -> new NotFoundDataException("문진표가 존재하지 않습니다."));
+    public QuestionnaireResultDto questionnaireResult(HttpServletRequest request, long questionnaireId) {
+        Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
+                .orElseThrow(() -> new NotFoundDataException("문진표가 존재하지 않습니다."));
 
+        // ✅ 언어 감지 (헤더에서)
+        String lang = Optional.ofNullable(request.getHeader("Accept-Language"))
+                .map(l -> l.split(",")[0]) // "en-US,en;q=0.9" → "en"
+                .map(String::toLowerCase)
+                .orElse("ko");
+
+        // ✅ 언어별 OralStatus 변환
         List<OralStatusTypeInfoDto> oralStatusList = questionnaire.getUserOralStatusList().stream()
                 .map(userOralStatus -> {
                     OralStatus oralStatus = userOralStatus.getOralStatus();
+
+                    String title;
+                    String description;
+                    String subDescription;
+
+                    switch (lang) {
+                        case "en" -> {
+                            title = Optional.ofNullable(oralStatus.getOralStatusTitleEn()).orElse(oralStatus.getOralStatusTitle());
+                            description = Optional.ofNullable(oralStatus.getOralStatusDescriptionEn()).orElse(oralStatus.getOralStatusDescription());
+                            subDescription = Optional.ofNullable(oralStatus.getOralStatusSubDescriptionEn()).orElse(oralStatus.getOralStatusSubDescription());
+                        }
+                        case "vi" -> {
+                            title = Optional.ofNullable(oralStatus.getOralStatusTitleVi()).orElse(oralStatus.getOralStatusTitle());
+                            description = Optional.ofNullable(oralStatus.getOralStatusDescriptionVi()).orElse(oralStatus.getOralStatusDescription());
+                            subDescription = Optional.ofNullable(oralStatus.getOralStatusSubDescriptionVi()).orElse(oralStatus.getOralStatusSubDescription());
+                        }
+                        default -> {
+                            title = oralStatus.getOralStatusTitle();
+                            description = oralStatus.getOralStatusDescription();
+                            subDescription = oralStatus.getOralStatusSubDescription();
+                        }
+                    }
+
                     return OralStatusTypeInfoDto.builder()
                             .type(oralStatus.getOralStatusType())
-                            .title(oralStatus.getOralStatusTitle())
-                            .description(oralStatus.getOralStatusDescription())
-                            .subDescription(oralStatus.getOralStatusSubDescription())
+                            .title(title)
+                            .description(description)
+                            .subDescription(subDescription)
                             .build();
-                }).toList();
+                })
+                .toList();
 
+        // ✅ 카테고리 및 콘텐츠 (언어 필터는 필요 시 확장)
         List<ContentsCategoryDto> categories = contentsService.getCategoryList(null);
         List<ContentsDto> contents = contentsCustomRepository.getCustomizedContents(questionnaireId);
         contents = contents.subList(0, Math.min(contents.size(), 2)); // 최대 2개
 
-        return new QuestionnaireResultDto(questionnaire.getCreated(), oralStatusList, categories, contents);
+        return new QuestionnaireResultDto(
+                questionnaire.getCreated(),
+                oralStatusList,
+                categories,
+                contents
+        );
     }
-
     /**
      * 문진표 양식 기준으로 validation 진행
      */

@@ -1,21 +1,17 @@
 package com.kaii.dentix.domain.subscriptionInfo.controller;
 
 import com.kaii.dentix.domain.subscriptionInfo.application.SubscriptionInfoService;
+import com.kaii.dentix.domain.subscriptionInfo.application.SubscriptionService;
 import com.kaii.dentix.domain.subscriptionInfo.dto.SubscriptionInfoResponse;
-//import com.kaii.dentix.global.common.response.ApiResponse;
-import com.kaii.dentix.domain.subscriptionInfo.dto.SubscriptionUserUsageResponse;
-import com.kaii.dentix.domain.user.application.UserService;
+import com.kaii.dentix.domain.subscriptionInfo.dto.SubscriptionPlanUpdateRequest;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.global.common.response.DataResponse;
+import com.kaii.dentix.global.common.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -26,7 +22,7 @@ public class SubscriptionInfoController {
 
     private final SubscriptionInfoService subscriptionInfoService;
     private final UserRepository userRepository;
-
+private final SubscriptionService subscriptionPlanService;
     @GetMapping
     public DataResponse<SubscriptionInfoResponse> getSubscriptionInfo() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -62,7 +58,12 @@ public class SubscriptionInfoController {
             @PathVariable Long orgId) {
         return ResponseEntity.ok(subscriptionInfoService.getSubscriptionInfo(orgId));
     }
-
+    @PutMapping("/{id}")
+    public SuccessResponse updatePlan(@PathVariable Long id,
+                                      @RequestBody SubscriptionPlanUpdateRequest request) {
+        subscriptionPlanService.updatePlan(id, request);
+        return new SuccessResponse();
+    }
 //    @GetMapping("/users")
 //    public DataResponse<List<SubscriptionUserUsageResponse>> getSubscriptionUsers(
 //            @RequestParam(defaultValue = "ALL") String type

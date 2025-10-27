@@ -5,20 +5,36 @@ import com.kaii.dentix.domain.admin.dao.user.AdminUserCustomRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.*;
 import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
+import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
 import com.kaii.dentix.domain.admin.dto.statistic.*;
+import com.kaii.dentix.domain.admin.dto.superAdmin.SuperAdminUserStatisticResponse;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckCustomRepository;
 import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
+import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionResponse;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
+import com.kaii.dentix.domain.subscriptionInfo.dto.SubscriptionInfoResponse;
+import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.GenderType;
+import com.kaii.dentix.domain.type.UserRole;
+import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.global.common.dto.PagingDTO;
+import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
+import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
+import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,10 +58,10 @@ public class AdminStatisticService {
     private final JwtTokenUtil jwtTokenUtil;
 
     private final AdminRepository adminRepository;
-
+private final OrganizationRepository organizationRepository;
     private final UserRepository userRepository;
     private final OralCheckRepository oralCheckRepository;
-
+private final AdminService adminService;
 //    private final Admin admin;
     /**
      *  사용자 통계
@@ -266,5 +282,72 @@ public class AdminStatisticService {
                 .oralCheckStats(oralStateCounts)
                 .build();
     }
+
+    @Transactional(readOnly = true)
+    public SubscriptionInfoResponse getMySubscriptionInfo(Long organizationId) {
+        Organization org = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new NotFoundDataException("기관 정보를 찾을 수 없습니다."));
+
+        SubscriptionPlan plan = org.getSubscriptionPlan();
+        if (plan == null) {
+            throw new NotFoundDataException("기관의 구독 플랜 정보를 찾을 수 없습니다.");
+        }
+
+        // ✅ 실시간 계산 대신 Organization 엔티티 값 사용
+        int totalSuccessCount = org.getSuccessCount() != null ? org.getSuccessCount() : 0;
+        int max = plan.getMaxSuccessResponses();
+        int remaining = Math.max(0, max - totalSuccessCount);
+        double usageRate = org.getUsageRate() != null
+                ? org.getUsageRate()
+                : (max == 0 ? 0 : (double) totalSuccessCount / max * 100.0);
+
+        // ✅ 사용자별 successCount 필드 사용
+        List<User> users = userRepository.findByOrganization_OrganizationId(organizationId);
+        List<SubscriptionInfoResponse.UserUsage> userUsages = users.stream()
+                .map(u -> SubscriptionInfoResponse.UserUsage.builder()
+                        .userId(u.getUserId())
+                        .userName(u.getUserName())
+                        .successCount(u.getSuccessCount() != null ? u.getSuccessCount() : 0)
+                        .build())
+                .toList();
+
+        // ✅ 응답 DTO 구성
+        return SubscriptionInfoResponse.builder()
+                .organizationName(org.getOrganizationName())
+                .planName(plan.getPlanName())
+                .planCycle(plan.getPlanCycle())
+                .price(plan.getPrice())
+                .maxSuccessResponses(max)
+                .totalSuccessCount(totalSuccessCount)  // ✅ DB count 대신 Organization 값
+                .remainingCount(remaining)
+                .usageRate(Math.round(usageRate * 10) / 10.0)
+                .subscriptionStartDate(org.getSubscriptionStartDate())
+                .usageResetDate(org.getUsageResetDate())
+                .users(userUsages)
+                .build();
+    }
+//    @Transactional(readOnly = true)
+//    public List<OrganizationSubscriptionResponse> getSubscriptionUsage(Admin admin) {
+//        if (admin.getRoles() == UserRole.ROLE_SUPER_ADMIN) {
+//            // ✅ 모든 기관의 구독 정보 조회
+//            return organizationRepository.findAllWithSubscription()
+//                    .stream()
+//                    .map(OrganizationSubscriptionResponse::from)
+//                    .toList();
+//        } else {
+//            // ✅ 본인 기관만 조회
+//            Organization org = admin.getOrganization();
+//            return List.of(OrganizationSubscriptionResponse.from(org));
+//        }
+//    }
+@Transactional(readOnly = true)
+public List<SuperAdminUserStatisticResponse> getAllOrganizationUserStats(Admin admin) {
+    // ✅ 슈퍼관리자 권한 검증
+    if (admin.getAdminIsSuper() != YnType.Y) {
+        throw new BadRequestApiException("슈퍼관리자만 접근할 수 있습니다.");
+    }
+
+    return adminUserCustomRepository.getAllOrganizationUserStats();
+}
 
 }

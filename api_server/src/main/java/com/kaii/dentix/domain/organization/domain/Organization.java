@@ -22,6 +22,7 @@ import java.util.List;
 @SQLDelete(sql = "UPDATE organization SET deleted = NOW() WHERE organization_id = ?")
 @Where(clause = "deleted_at IS NULL")
 public class Organization extends TimeEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long organizationId;
@@ -38,11 +39,16 @@ public class Organization extends TimeEntity {
 
     @Column(length = 20, nullable = false, unique = true)
     private String organizationPhoneNumber;
+
     @Column(name = "success_count", nullable = false)
     private Integer successCount; // 성공 응답 수
 
     @Column(name = "usage_reset_date")
     private LocalDateTime usageResetDate; // 리셋 예정일
+
+    // ✅ 새로 추가 (사용률)
+    @Column(name = "usage_rate", nullable = false)
+    private Double usageRate = 0.0;
 
     // ✅ 1:N 관계 (Organization → Admin)
     @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -55,9 +61,11 @@ public class Organization extends TimeEntity {
     public void updateOrganizationName(String organizationName) {
         this.organizationName = organizationName;
     }
-    public void updateSubscriptionPlan(SubscriptionPlan plan){
+
+    public void updateSubscriptionPlan(SubscriptionPlan plan) {
         this.subscriptionPlan = plan;
     }
+
     //기관 삭제
     public void deleteOrganization() {
         this.deleted = LocalDateTime.now();
@@ -70,14 +78,23 @@ public class Organization extends TimeEntity {
     public void updateUsageResetDate(LocalDateTime usageResetDate) {
         this.usageResetDate = usageResetDate;
     }
+
     public void updateSubscriptionStartDate(LocalDateTime date) {
         this.subscriptionStartDate = date;
     }
+
+    // ✅ 새로 추가: 사용률 갱신 메서드
+    public void updateUsageRate(Double usageRate) {
+        this.usageRate = usageRate;
+    }
+
     @PrePersist
     public void prePersist() {
         if (this.successCount == null) {
             this.successCount = 0;
         }
+        if (this.usageRate == null) {
+            this.usageRate = 0.0;
+        }
     }
-
 }

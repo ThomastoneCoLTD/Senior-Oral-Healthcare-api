@@ -8,11 +8,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
+@Repository
 public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
 
     List<OralCheck> findAllByUserIdOrderByCreatedDesc(Long userId);
@@ -42,5 +45,21 @@ public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
     @Query("SELECT new com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount(o.oralCheckResultTotalType, COUNT(o)) " +
             "FROM OralCheck o WHERE o.user.organization.organizationId = :organizationId GROUP BY o.oralCheckResultTotalType")
     List<OralCheckResultTypeCount> countByOrganization(@Param("organizationId") Long organizationId);
+    @Query("""
+    SELECT COUNT(oc)
+    FROM OralCheck oc
+    WHERE oc.user.organization.organizationId = :organizationId
+      AND oc.oralCheckAnalysisState = :state
+""")
+    long countByOrganizationIdAndOralCheckAnalysisState(
+            @Param("organizationId") Long organizationId,
+            @Param("state") OralCheckAnalysisState state
+    );
 
+    @Query("SELECT COUNT(o) FROM OralCheck o " +
+            "WHERE o.user.organization.organizationId = :orgId " +
+            "AND o.oralCheckAnalysisState = 'SUCCESS' " +
+            "AND (:fromDate IS NULL OR o.created >= :fromDate)")
+    long countSuccessSince(@Param("orgId") Long organizationId,
+                           @Param("fromDate") LocalDateTime fromDate);
 }

@@ -31,7 +31,7 @@ public class Admin extends TimeEntity {
     private String adminPhoneNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "enum", nullable = false)
+    @Column(columnDefinition = "ENUM('Y','N') DEFAULT 'N'", nullable = false)
     private YnType adminIsSuper;
 
     @Temporal(TemporalType.TIMESTAMP)
@@ -44,7 +44,9 @@ public class Admin extends TimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizationId", nullable = true)
     private Organization organization;
-
+    public boolean isSuperAdmin() {
+        return this.adminIsSuper == YnType.Y;
+    }
 //    private Integer idlePeriod;
 
 //    private String planId;

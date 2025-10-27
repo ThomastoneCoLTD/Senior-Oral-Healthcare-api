@@ -7,10 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
-
-public interface OrganizationRepository extends JpaRepository<Organization, Long> {
+@Repository
+public interface OrganizationRepository extends JpaRepository<Organization, Long>,OrganizationRepositoryCustom {
     Optional<Organization> findByOrganizationId(Long organizationId);
     boolean existsByOrganizationName(String name);
     @Modifying
@@ -21,4 +23,12 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     @Query("SELECT o FROM Organization o JOIN FETCH o.subscriptionPlan WHERE o.organizationId = :organizationId")
     Optional<Organization> findByIdWithPlan(@Param("organizationId") Long organizationId);
     boolean existsByOrganizationPhoneNumber(String organizationPhoneNumber);
+    @Modifying
+    @Query("UPDATE Organization o SET o.successCount = :count WHERE o.organizationId = :orgId")
+    void updateSuccessCount(@Param("orgId") Long orgId, @Param("count") long count);
+
+    @Query("SELECT o FROM Organization o JOIN FETCH o.subscriptionPlan")
+    List<Organization> findAllWithSubscription();
+
+
 }

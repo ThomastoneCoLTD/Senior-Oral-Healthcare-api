@@ -9,10 +9,14 @@ import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.dto.OrganizationRequest;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
+import com.kaii.dentix.domain.subscriptionInfo.dao.SubscriptionUsageRepository;
+import com.kaii.dentix.domain.subscriptionInfo.domain.SubscriptionUsage;
 import com.kaii.dentix.domain.subscriptionPlan.dao.SubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscriptionPlan.dao.SubscriptionPlanRepository;
 import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import jakarta.transaction.Transactional;
@@ -35,70 +39,95 @@ public class OrganizationService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final SubscriptionHistoryRepository subscriptionHistoryRepository;
     private final AdminRepository adminRepository;
+    private final UserRepository userRepository;
+    private final SubscriptionUsageRepository subscriptionUsageRepository;
     //    private final SubscriptionPlanRepository subscriptionPlanRepository;
     //기관등록
+    @Transactional
     public OrganizationResponse createOrganization(OrganizationRequest request) {
-        // ✅ 기관명 중복 체크
+        // ✅ 1. 기관명/전화번호 중복 체크
         if (organizationRepository.existsByOrganizationName(request.getOrganizationName())) {
             throw new AlreadyDataException("이미 존재하는 기관명입니다.");
         }
         if (organizationRepository.existsByOrganizationPhoneNumber(request.getOrganizationPhoneNumber())) {
             throw new AlreadyDataException("이미 등록된 전화번호입니다.");
         }
-        // ✅ 구독 플랜 유효성 체크
+
+        // ✅ 2. 구독 플랜 유효성 검증
         if (request.getSubscriptionPlanId() == null) {
             throw new BadRequestApiException("구독 플랜을 선택해 주세요.");
         }
 
-        // ✅ 구독 플랜 조회
+        // ✅ 3. 구독 플랜 조회
         SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 구독 플랜입니다."));
 
-        // ✅ usage_reset_date 계산 (플랜 주기별 리셋일)
-        LocalDateTime resetDate = null;
-        if ("monthly".equalsIgnoreCase(plan.getPlanCycle())) {
-            resetDate = LocalDateTime.now().plusMonths(1);
-        } else if ("yearly".equalsIgnoreCase(plan.getPlanCycle())) {
-            resetDate = LocalDateTime.now().plusYears(1);
-        }
+        // ✅ 4. usage_reset_date 계산 (플랜 주기별)
+        LocalDateTime resetDate = switch (plan.getPlanCycle().toLowerCase()) {
+            case "monthly" -> LocalDateTime.now().plusMonths(1);
+            case "yearly" -> LocalDateTime.now().plusYears(1);
+            default -> throw new BadRequestApiException("지원하지 않는 구독 주기입니다.");
+        };
 
-        // ✅ 기관 엔티티 생성
+        // ✅ 5. 기관 생성
         Organization organization = Organization.builder()
                 .organizationName(request.getOrganizationName())
                 .subscriptionPlan(plan)
-                .usageResetDate(resetDate)
                 .organizationPhoneNumber(request.getOrganizationPhoneNumber())
-                .subscriptionStartDate(LocalDateTime.now()) // ✅ 구독 시작일 추가
+                .subscriptionStartDate(LocalDateTime.now())
+                .usageResetDate(resetDate)
                 .successCount(0)
                 .build();
 
-        // ✅ 저장
         Organization savedOrganization = organizationRepository.save(organization);
-        Long adminId = jwtTokenUtil.getCurrentAdminId(); // 현재 로그인한 관리자 ID 가져오기
 
-        // ✅ 6. Admin 테이블 업데이트 (organizationId 세팅)
+        // ✅ 6. 현재 로그인 관리자에게 기관 연결
+        Long adminId = jwtTokenUtil.getCurrentAdminId();
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
-
         admin.setOrganization(savedOrganization);
         adminRepository.save(admin);
-        // ✅ 구독 이력 등록
+
+        // ✅ 7. 구독 이력 저장
         SubscriptionHistory history = SubscriptionHistory.builder()
                 .organization(savedOrganization)
                 .subscriptionPlan(plan)
                 .startDate(LocalDateTime.now())
-                .endDate(null) // 현재 활성 구독
+                .endDate(null)
                 .build();
-
         subscriptionHistoryRepository.save(history);
 
-        // ✅ 응답 DTO 반환
+        // ✅ 8. 구독 사용 정보 중복 여부 확인
+        boolean existsUsage = subscriptionUsageRepository
+                .existsByOrganization_OrganizationIdAndActiveTrue(savedOrganization.getOrganizationId());
+
+        if (!existsUsage) {
+            // ✅ 9. 사용 정보 생성 (SubscriptionUsage)
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime periodEnd = "monthly".equalsIgnoreCase(plan.getPlanCycle())
+                    ? now.plusMonths(1)
+                    : now.plusYears(1);
+
+            SubscriptionUsage usage = SubscriptionUsage.builder()
+                    .organization(savedOrganization)
+                    .subscriptionPlan(plan)
+                    .periodStart(now)
+                    .periodEnd(periodEnd)
+                    .successCount(0)
+                    .active(true)
+                    .createdAt(now)
+                    .build();
+
+            subscriptionUsageRepository.save(usage);
+        }
+
+        // ✅ 10. 응답 DTO 반환
         return OrganizationResponse.builder()
                 .organizationId(savedOrganization.getOrganizationId())
                 .organizationName(savedOrganization.getOrganizationName())
-                .subscriptionPlanId(savedOrganization.getSubscriptionPlan().getId())
-                .subscriptionPlanName(savedOrganization.getSubscriptionPlan().getPlanName())
                 .organizationPhoneNumber(savedOrganization.getOrganizationPhoneNumber())
+                .subscriptionPlanId(plan.getId())
+                .subscriptionPlanName(plan.getPlanName())
                 .subscriptionStartDate(savedOrganization.getSubscriptionStartDate())
                 .usageResetDate(savedOrganization.getUsageResetDate())
                 .successCount(savedOrganization.getSuccessCount())
@@ -183,14 +212,16 @@ public class OrganizationService {
                 .build();
     }
 
+    @Transactional
     public OrganizationResponse changeSubscriptionPlan(Long organizationId, Long newPlanId) {
+
         // ✅ 기관 조회 (fetch join으로 subscriptionPlan까지 미리 로딩)
         Organization organization = organizationRepository.findByIdWithPlan(organizationId)
                 .orElseThrow(() -> new RuntimeException("기관을 찾을 수 없습니다."));
 
         // ✅ 새 구독 플랜 조회
         SubscriptionPlan newPlan = subscriptionPlanRepository.findById(newPlanId)
-                .orElseThrow(() -> new RuntimeException("새 구독 플랜을 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("새 구독 플xxxxxxxxxxxxxxxxxxx랜을 찾을 수 없습니다."));
 
         // ✅ 현재 활성 구독 이력 종료
         subscriptionHistoryRepository.findTopByOrganizationOrderByStartDateDesc(organization)
@@ -220,17 +251,40 @@ public class OrganizationService {
             resetDate = LocalDateTime.now().plusYears(1);
         }
 
+        // ✅ 리셋일, 구독시작일, 사용량 초기화
         organization.updateUsageResetDate(resetDate);
+        organization.updateSubscriptionStartDate(LocalDateTime.now());
+        organization.updateSuccessCount(0);
+        organization.updateUsageRate(0.0);
+
+        // ✅ (여기 추가) 기관 소속 사용자 응답수 초기화
+        List<User> users = userRepository.findAllByOrganization(organization);
+        for (User user : users) {
+            user.setSuccessCount(0);
+        }
+        userRepository.saveAll(users);
+
+        // ✅ 기관 저장
         organizationRepository.save(organization);
+
+        // ✅ 최신 정보 반환
         return OrganizationResponse.builder()
                 .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())
-                .subscriptionPlanId(organization.getSubscriptionPlan() != null ? organization.getSubscriptionPlan().getId() : null)
-                .subscriptionPlanName(organization.getSubscriptionPlan() != null ? organization.getSubscriptionPlan().getPlanName() : null)
+                .subscriptionPlanId(
+                        organization.getSubscriptionPlan() != null
+                                ? organization.getSubscriptionPlan().getId() : null
+                )
+                .subscriptionPlanName(
+                        organization.getSubscriptionPlan() != null
+                                ? organization.getSubscriptionPlan().getPlanName() : null
+                )
                 .successCount(organization.getSuccessCount())
+                .subscriptionStartDate(organization.getSubscriptionStartDate())
+                .usageResetDate(organization.getUsageResetDate())
                 .build();
-
     }
+
     public boolean isDuplicate(String organizationName, String organizationPhoneNumber) {
         return organizationRepository.existsByOrganizationNameAndOrganizationPhoneNumber(
                 organizationName, organizationPhoneNumber

@@ -3,7 +3,9 @@ package com.kaii.dentix.domain.user.controller;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dto.*;
 import com.kaii.dentix.domain.user.dto.request.*;
+import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepository;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
+import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreementResponse;
 import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
 import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,7 +24,6 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
-
     /**
      *  사용자 자동 로그인
      */
@@ -121,4 +123,17 @@ public class UserController {
         ));
     }
 
+    /**
+     * ✅ 사용자 서비스 동의 내역 조회
+     * @return 사용자가 가입한 서비스별 동의 현황
+     */
+    @GetMapping("/serviceAgreement")
+    public ResponseEntity<Map<String, Object>> getUserServiceAgreements(HttpServletRequest request) {
+        List<UserServiceAgreementResponse> response = userService.getUserServiceAgreements(request);
+        return ResponseEntity.ok(Map.of(
+                "rt", 200,
+                "rtMsg", "service agreement list 조회완료",
+                "response", response
+        ));
+    }
 }

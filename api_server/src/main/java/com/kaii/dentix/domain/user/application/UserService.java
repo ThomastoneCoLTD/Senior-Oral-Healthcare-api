@@ -19,6 +19,7 @@ import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepos
 import com.kaii.dentix.domain.userServiceAgreement.domain.UserServiceAgreement;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreeList;
+import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreementResponse;
 import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
 import com.kaii.dentix.domain.userToAppService.dao.UserToAppServiceRepository;
 import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
@@ -44,14 +45,13 @@ public class UserService {
     private final JwtTokenUtil jwtTokenUtil;
 
     private final ApplicationEventPublisher publisher;
-
+    private final UserServiceAgreementRepository userServiceAgreementRepository;
 //    private final UserDeviceTypeRepository userDeviceTypeRepository;
 
     private final PasswordEncoder passwordEncoder;
 
     private final FindPwdQuestionRepository findPwdQuestionRepository;
 
-    private final UserServiceAgreementRepository userServiceAgreementRepository;
 
     private final ServiceAgreementRepository serviceAgreementRepository;
 
@@ -331,5 +331,14 @@ public class UserService {
                 .services(services)
                 .build();
     }
+
+    @Transactional(readOnly = true)
+    public List<UserServiceAgreementResponse> getUserServiceAgreements(HttpServletRequest httpServletRequest) {
+        User user = this.getTokenUser(httpServletRequest);
+        Long currentUserId = user.getUserId();
+
+        return userServiceAgreementRepository.findAllByUserIdWithServiceName(currentUserId);
+    }
+
 
 }
