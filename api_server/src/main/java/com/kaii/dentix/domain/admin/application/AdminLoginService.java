@@ -6,6 +6,7 @@ import com.kaii.dentix.domain.admin.dto.AdminLoginDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminLoginRequest;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
+import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.global.common.util.SecurityUtil;
@@ -29,17 +30,18 @@ public class AdminLoginService {
      */
     @Transactional
     public AdminLoginDto adminLogin(AdminLoginRequest request){
-        Admin admin = adminRepository.findByAdminLoginIdentifier(request.getAdminLoginIdentifier()).orElseThrow(() -> new UnauthorizedException("입력하신 정보가 일치하지 않습니다. 다시 확인해주세요."));
+        Admin admin = adminRepository.findByAdminLoginIdentifier(request.getAdminLoginIdentifier())
+                .orElseThrow(() -> new UnauthorizedException("입력하신 정보가 일치하지 않습니다. 다시 확인해주세요."));
 
         YnType isFirstLogin = admin.getAdminLastLoginDate() == null ? YnType.Y : YnType.N;
 
         // 처음 로그인 시도인 경우
-        if (admin.getAdminPassword() == null || admin.getAdminPassword().isEmpty()){
+        if (admin.getAdminPassword() == null || admin.getAdminPassword().isEmpty()) {
             isFirstLogin = YnType.Y; // 비밀번호 초기화를 위해
             admin.updatePassword(passwordEncoder, SecurityUtil.defaultPassword);
         }
 
-        if (!passwordEncoder.matches(request.getAdminPassword(), admin.getAdminPassword())){
+        if (!passwordEncoder.matches(request.getAdminPassword(), admin.getAdminPassword())) {
             throw new UnauthorizedException("입력하신 정보가 일치하지 않습니다. 다시 확인해주세요.");
         }
 
@@ -48,6 +50,8 @@ public class AdminLoginService {
 
         admin.updateAdminLogin(refreshToken);
 
+        Organization organization = admin.getOrganization();
+
         return AdminLoginDto.builder()
                 .isFirstLogin(isFirstLogin)
                 .adminId(admin.getAdminId())
@@ -55,9 +59,9 @@ public class AdminLoginService {
                 .refreshToken(refreshToken)
                 .adminName(admin.getAdminName())
                 .adminIsSuper(admin.getAdminIsSuper())
-                .organizationId(admin.getOrganization() != null ? admin.getOrganization().getOrganizationId() : null)
+                .organizationId(organization != null ? organization.getOrganizationId() : null)
+                .organizationName(organization != null ? organization.getOrganizationName() : null) // ✅ 추가
                 .build();
-
     }
 
 }
