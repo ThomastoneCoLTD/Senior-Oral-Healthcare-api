@@ -71,11 +71,7 @@ public class WebSecurityConfig {
 public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
 
-    configuration.setAllowedOrigins(List.of(
-        "http://localhost:5173",          // 개발용
-        "http://localhost:5174",          // 다른 개발 포트
-        "https://denti.thomabio.com"      // ✅ 배포용 origin 추가
-    ));
+    configuration.setAllowedOrigins(List.of("https://denti.thomabio.com"));
 
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(List.of("*"));
