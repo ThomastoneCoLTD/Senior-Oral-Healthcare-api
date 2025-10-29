@@ -41,7 +41,7 @@ public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
     long countByUser_Id(Long userId);
 
     // ✅ 수정된 부분
-    long countByUser_IdAndOralCheckAnalysisState(Long userId, OralCheckAnalysisState state);
+    long countByUser_UserIdAndOralCheckAnalysisState(Long userId, OralCheckAnalysisState state);
 
     @Query("""
         SELECT COUNT(oc)
