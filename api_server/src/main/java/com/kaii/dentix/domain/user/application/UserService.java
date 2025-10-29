@@ -34,7 +34,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -288,34 +292,51 @@ public class UserService {
      */
 
     @Transactional
-    public UserServiceChangeDto changeUserService(HttpServletRequest httpServletRequest, UserServiceChangeRequest request) {
+    public UserServiceChangeDto updateUserServices(HttpServletRequest httpServletRequest, UserServiceUpdateRequest request) {
         // ✅ JWT에서 로그인 사용자 가져오기
         User user = this.getTokenUser(httpServletRequest);
 
-        // ✅ 변경(추가)할 서비스 조회
-        AppService appService = appServiceRepository.findById(request.getServiceId())
-                .orElseThrow(() -> new NotFoundDataException("해당 서비스가 존재하지 않습니다."));
+        // ✅ 현재 사용자 서비스 목록
+        List<UserToAppService> currentRelations = userToAppServiceRepository.findByUser(user);
 
-        // ✅ 현재 사용자와 연결된 모든 서비스 조회
-        List<UserToAppService> existingRelations = userToAppServiceRepository.findByUser(user);
+        // ✅ 요청에서 넘어온 서비스 목록 (체크된 서비스만)
+        Set<Long> newServiceIds = new HashSet<>(request.getServiceIds());
 
-        // ✅ 이미 등록된 서비스인지 확인
-        boolean alreadyExists = existingRelations.stream()
-                .anyMatch(rel -> rel.getAppService().getAppServiceId().equals(appService.getAppServiceId()));
+        // ✅ 현재 등록된 서비스 ID 목록
+        Set<Long> existingIds = currentRelations.stream()
+                .map(rel -> rel.getAppService().getAppServiceId())
+                .collect(Collectors.toSet());
 
-        if (alreadyExists) {
-            throw new IllegalStateException("이미 해당 서비스를 사용 중입니다.");
+        // ✅ 1) 추가할 서비스 = 새 목록 - 기존 목록
+        Set<Long> toAdd = newServiceIds.stream()
+                .filter(id -> !existingIds.contains(id))
+                .collect(Collectors.toSet());
+
+        // ✅ 2) 삭제할 서비스 = 기존 목록 - 새 목록
+        Set<Long> toRemove = existingIds.stream()
+                .filter(id -> !newServiceIds.contains(id))
+                .collect(Collectors.toSet());
+
+        // ✅ 삭제 처리
+        if (!toRemove.isEmpty()) {
+            userToAppServiceRepository.deleteAll(
+                    currentRelations.stream()
+                            .filter(rel -> toRemove.contains(rel.getAppService().getAppServiceId()))
+                            .toList()
+            );
         }
 
-        // ✅ 새로운 서비스 연결 추가
-        UserToAppService newRelation = UserToAppService.builder()
-                .user(user)
-                .appService(appService)
-                .build();
+        // ✅ 추가 처리
+        for (Long id : toAdd) {
+            AppService appService = appServiceRepository.findById(id)
+                    .orElseThrow(() -> new NotFoundDataException("존재하지 않는 서비스입니다."));
+            userToAppServiceRepository.save(UserToAppService.builder()
+                    .user(user)
+                    .appService(appService)
+                    .build());
+        }
 
-        userToAppServiceRepository.save(newRelation);
-
-        // ✅ 변경 후 모든 서비스 목록 조회
+        // ✅ 최신 목록 반환
         List<UserServiceChangeDto.ServiceInfo> services =
                 userToAppServiceRepository.findByUser(user).stream()
                         .map(rel -> UserServiceChangeDto.ServiceInfo.builder()
@@ -325,7 +346,6 @@ public class UserService {
                                 .build())
                         .toList();
 
-        // ✅ DTO 반환
         return UserServiceChangeDto.builder()
                 .userName(user.getUserName())
                 .services(services)

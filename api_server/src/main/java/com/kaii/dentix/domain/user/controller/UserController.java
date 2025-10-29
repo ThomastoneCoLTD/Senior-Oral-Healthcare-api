@@ -109,22 +109,22 @@ public class UserController {
         userService.userRevoke(httpServletRequest);
         return new SuccessResponse();
     }
-    // ✅ 서비스 변경 API
-    @PostMapping("/service/change")
-    public ResponseEntity<?> changeUserService(
+    // 서비스 변경 API
+    @PostMapping("/service/update")
+    public ResponseEntity<?> updateUserServices(
             HttpServletRequest request,
-            @RequestBody UserServiceChangeRequest body
+            @RequestBody UserServiceUpdateRequest body
     ) {
-        UserServiceChangeDto response = userService.changeUserService(request, body);
+        UserServiceChangeDto response = userService.updateUserServices(request, body);
         return ResponseEntity.ok(Map.of(
                 "rt", 200,
-                "rtMsg", "서비스 변경 완료",
+                "rtMsg", "서비스 목록이 변경되었습니다.",
                 "response", response
         ));
     }
 
     /**
-     * ✅ 사용자 서비스 동의 내역 조회
+     * 사용자 서비스 동의 내역 조회
      * @return 사용자가 가입한 서비스별 동의 현황
      */
     @GetMapping("/serviceAgreement")
