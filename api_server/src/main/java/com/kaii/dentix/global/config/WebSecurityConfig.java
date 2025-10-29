@@ -67,23 +67,25 @@ public class WebSecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+   @Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
 
-        // 허용할 Origin
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-//        configuration.setAllowedOrigins(List.of("http://localhost:5174"));// React dev 서버
-        // 모든 Origin 허용하고 싶다면: configuration.addAllowedOriginPattern("*");
+    configuration.setAllowedOrigins(List.of(
+        "http://localhost:5173",          // 개발용
+        "http://localhost:5174",          // 다른 개발 포트
+        "https://denti.thomabio.com"      // ✅ 배포용 origin 추가
+    ));
 
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    configuration.setAllowedHeaders(List.of("*"));
+    configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
+}
+
 
 
 }
