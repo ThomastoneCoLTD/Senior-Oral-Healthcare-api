@@ -56,7 +56,7 @@ public class SubscriptionInfoService {
                 .map(u -> SubscriptionInfoResponse.UserUsage.builder()
                         .userId(u.getUserId())
                         .userName(u.getUserName())
-                        .successCount((int) oralCheckRepository.countByUser_IdAndOralCheckAnalysisState(
+                        .successCount((int) oralCheckRepository.countByUser_UserIdAndOralCheckAnalysisState(
                                 u.getUserId(), OralCheckAnalysisState.SUCCESS))
                         .build())
                 .toList();
