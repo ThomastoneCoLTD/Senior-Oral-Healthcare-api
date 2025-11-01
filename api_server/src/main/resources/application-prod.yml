@@ -59,6 +59,7 @@ jwt:
       max-request-size: 50MB
 
 server:
+  port: 80
   tomcat:
     connection-timeout: 10000ms
   forward-headers-strategy: native

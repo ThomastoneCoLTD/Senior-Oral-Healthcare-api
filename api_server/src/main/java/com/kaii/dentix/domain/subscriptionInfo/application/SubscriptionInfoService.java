@@ -40,28 +40,28 @@ public class SubscriptionInfoService {
             throw new NotFoundDataException("기관의 구독 플랜 정보를 찾을 수 없습니다.");
         }
 
-        // ✅ 기관 전체 사용량 (successCount 컬럼 활용)
+        //기관 전체 사용량 (successCount 컬럼 활용)
         int totalSuccessCount = org.getSuccessCount() != null ? org.getSuccessCount() : 0;
 
-        // ✅ 제공량 (플랜 제공량)
+        //제공량 (플랜 제공량)
         int max = plan.getMaxSuccessResponses();
 
-        // ✅ 잔여량 및 사용률 계산
+        //잔여량 및 사용률 계산
         int remaining = Math.max(0, max - totalSuccessCount);
         double usageRate = max == 0 ? 0 : (double) totalSuccessCount / max * 100.0;
 
-        // ✅ 사용자별 성공 응답 수
+        //사용자별 성공 응답 수
         List<User> users = userRepository.findByOrganization_OrganizationId(organizationId);
         List<SubscriptionInfoResponse.UserUsage> userUsages = users.stream()
                 .map(u -> SubscriptionInfoResponse.UserUsage.builder()
                         .userId(u.getUserId())
                         .userName(u.getUserName())
-                        .successCount((int) oralCheckRepository.countByUserIdAndOralCheckAnalysisState(
+                        .successCount((int) oralCheckRepository.countByUser_UserIdAndOralCheckAnalysisState(
                                 u.getUserId(), OralCheckAnalysisState.SUCCESS))
                         .build())
                 .toList();
 
-        // ✅ 최종 응답
+        //최종 응답
         return SubscriptionInfoResponse.builder()
                 .organizationName(org.getOrganizationName())
                 .planName(plan.getPlanName())
@@ -74,7 +74,7 @@ public class SubscriptionInfoService {
                 .remainingCount(remaining)
                 .usageRate(Math.round(usageRate * 10) / 10.0)
 
-                // ✅ 구독 시작일 & 갱신(리셋)일
+                //구독 시작일 & 갱신(리셋)일
                 .subscriptionStartDate(org.getSubscriptionStartDate())
                 .usageResetDate(org.getUsageResetDate())
 

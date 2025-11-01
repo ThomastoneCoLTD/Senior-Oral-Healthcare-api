@@ -16,7 +16,7 @@ public class CloudWatchConfig {
     @Value("${aws.secret-key:}")
     private String secretKey;
 
-    @Value("${aws.region:ap-northeast-2}")
+    @Value("${aws.region:ap-southeast-1}")
     private String region;
 
     @Bean

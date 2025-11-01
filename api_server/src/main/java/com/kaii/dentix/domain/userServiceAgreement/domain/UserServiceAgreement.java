@@ -7,7 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.checkerframework.checker.units.qual.C;
 
 import java.util.Date;
 
@@ -18,21 +17,19 @@ import java.util.Date;
 public class UserServiceAgreement extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_service_agree_id")
     private Long userServiceAgreeId;
 
-    @Column(nullable = false, name = "user_id")
+    @Column(nullable = false)
     private Long userId;
 
-    @Column(nullable = false, name = "service_agree_id")
+    @Column(nullable = false)
     private Long serviceAgreeId;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "enum", nullable = false, name = "is_user_service_agree")
+    @Column(columnDefinition = "enum", nullable = false)
     private YnType isUserServiceAgree;
 
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "user_service_agree_date")
     private Date userServiceAgreeDate;
 
     /**

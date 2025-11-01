@@ -25,7 +25,7 @@ import java.util.Objects;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    
+
     /**
      * 잘못된 요청
      * HttpStatus 400
@@ -48,6 +48,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     @ResponseStatus(HttpStatus.OK)
     public ErrorResponse UnauthorizedException(HttpServletRequest request, UnauthorizedException e) {
+        // ✅ 파일 다운로드 요청 중 예외 발생 시 JSON으로 응답하지 않음
+        if (request.getRequestURI().contains("/bulk-upload/template")) {
+            return null;
+        }
         log.info("error : ", e);
         return ErrorResponse.of(HttpStatus.UNAUTHORIZED, StringUtils.isNotBlank(e.getMessage()) ? e.getMessage() : ResponseMessage.UNAUTHORIZED_MSG);
     }

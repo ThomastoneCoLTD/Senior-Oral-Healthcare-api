@@ -84,7 +84,7 @@ dependencies {
     implementation 'software.amazon.awssdk:cloudwatch:2.25.64'
     /** MySQL: runtimeOnly만 남기고 중복 제거 */
     runtimeOnly 'com.mysql:mysql-connector-j'
-
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'
     /** Lombok */
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

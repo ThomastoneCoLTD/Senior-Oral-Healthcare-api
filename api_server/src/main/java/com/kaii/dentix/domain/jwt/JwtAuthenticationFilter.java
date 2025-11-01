@@ -37,7 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             requestURI = requestURI.substring(projectName.length());
         }
 
-        final String uri = requestURI; // ✅ 람다에서 사용할 불변 변수
+        final String uri = requestURI;
 
         boolean permitAll = Arrays.stream(EXCLUDE_URLS)
                 .anyMatch(url ->
@@ -45,6 +45,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 ? uri.startsWith(url.substring(0, url.length() - 1))
                                 : uri.equals(url)
                 );
+
+        // ✅ 엑셀 양식 다운로드는 JWT 인증 예외
+        if (uri.startsWith("/admin/user/bulk-upload/template")) {
+            permitAll = true;
+        }
 
         log.info("[JWT Filter] requestURI={}, permitAll={}", requestURI, permitAll);
 
@@ -56,12 +61,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     throw new TokenExpiredException();
                 }
 
-                // ✅ Bearer 접두사 제거
                 if (accessToken.startsWith("Bearer ")) {
                     accessToken = accessToken.substring(7);
                 }
 
-                // ✅ 토큰 검증
                 if (jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken)) {
                     throw new TokenExpiredException();
                 }
@@ -70,7 +73,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     throw new TokenExpiredException();
                 }
 
-                // ✅ SecurityContext 설정
                 Authentication authentication = jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
                 if (authentication != null) {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -84,7 +86,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // ✅ JWT 검증 통과 또는 예외 URL이면 다음 필터로
         filterChain.doFilter(request, response);
     }
 }

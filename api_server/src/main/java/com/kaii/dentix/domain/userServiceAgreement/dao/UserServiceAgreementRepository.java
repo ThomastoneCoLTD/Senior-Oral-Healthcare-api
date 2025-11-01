@@ -22,4 +22,10 @@ public interface UserServiceAgreementRepository extends JpaRepository<UserServic
             "JOIN ServiceAgreement s ON usa.serviceAgreeId = s.serviceAgreeId " +
             "WHERE usa.userId = :userId")
     List<UserServiceAgreementResponse> findAllByUserIdWithServiceName(@Param("userId") Long userId);
+
+    void deleteByUserId(Long userId);
+
+
 }
+
+

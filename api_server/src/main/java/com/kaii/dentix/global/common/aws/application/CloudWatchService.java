@@ -1,4 +1,4 @@
-package com.kaii.dentix.global.common.aws;
+package com.kaii.dentix.global.common.aws.application;
 
 import com.kaii.dentix.global.common.aws.dto.MetricPoint;
 import com.kaii.dentix.global.common.aws.dto.ResourceMetric;

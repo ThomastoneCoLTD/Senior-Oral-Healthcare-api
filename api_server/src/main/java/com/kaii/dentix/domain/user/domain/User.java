@@ -47,8 +47,8 @@ public class User extends TimeEntity {
     private String findPwdAnswer;
 
     private String userRefreshToken;
-    @Column(nullable = false)
-    private Integer successCount;
+    @Column(nullable = true)
+    private Integer successCount = 0;
     @Column
     private Date birth;
 
