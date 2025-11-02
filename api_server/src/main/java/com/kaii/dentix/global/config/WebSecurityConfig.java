@@ -55,47 +55,33 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
 
-        http.httpBasic(AbstractHttpConfigurer::disable)
+        http.httpBasic(AbstractHttpConfigurer::disable) // rest api 만을 고려하여 기본 설정은 해제하겠습니다.
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // ✅ 공개(permitAll) URL들
+                .csrf(AbstractHttpConfigurer::disable) // csrf 보안 토큰 disable 처리
+                .sessionManagement((sessionManagement) -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 토큰 기반 인증이므로 세션 역시 사용하지 않습니다.
+                .authorizeHttpRequests((authorizeHttpRequests) -> authorizeHttpRequests // 권한 설정
                         .requestMatchers(EXCLUDE_URLS).permitAll()
-                        // ✅ 엑셀 다운로드는 별도로 명시 허용 (필요시 ADMIN 전용으로 변경)
-                        .requestMatchers("/admin/user/bulk-upload/template").permitAll()
-                        // ✅ 그 외 admin/** 는 관리자만
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        // ✅ 나머지는 USER 또는 ADMIN 권한 허용
                         .anyRequest().hasAnyRole("USER", "ADMIN")
                 )
-                // ✅ JWT 필터 추가
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil), UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+   @Bean
+public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
 
-        // 허용할 Origin
-        configuration.setAllowedOrigins(List.of(
-                "https://denti.thomabio.com",
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://52.221.193.113:8080"
-        ));
+    configuration.setAllowedOrigins(List.of("https://denti.thomabio.com"));
 
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    configuration.setAllowedHeaders(List.of("*"));
+    configuration.setAllowCredentials(true);
 
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
+}
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
 
 
 }
