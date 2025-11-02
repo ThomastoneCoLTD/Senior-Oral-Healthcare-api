@@ -24,8 +24,8 @@ spring:
         useServerPrepStmts: true
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 500MB
+      max-request-size: 500MB
       enabled: true
   mvc:
     view:
@@ -55,8 +55,8 @@ jwt:
 
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: 500MB
+      max-request-size: 500MB
 
 server:
   tomcat:

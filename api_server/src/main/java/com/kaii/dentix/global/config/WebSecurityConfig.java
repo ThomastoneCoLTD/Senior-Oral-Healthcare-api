@@ -67,20 +67,23 @@ public class WebSecurityConfig {
         return http.build();
     }
 
-   @Bean
-public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration configuration = new CorsConfiguration();
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
 
-    configuration.setAllowedOrigins(List.of("https://denti.thomabio.com"));
+        // ✅ 실제 프론트 도메인
+        configuration.setAllowedOriginPatterns(List.of("https://denti.thomabio.com"));
 
-    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    configuration.setAllowedHeaders(List.of("*"));
-    configuration.setAllowCredentials(true);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("*")); // ✅ 응답 헤더 노출 허용 (프론트에서 읽을 수 있게)
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // ✅ preflight 캐싱 1시간 유지
 
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", configuration);
-    return source;
-}
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 
 
 

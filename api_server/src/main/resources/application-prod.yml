@@ -24,8 +24,8 @@ spring:
         useServerPrepStmts: true
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 500MB
+      max-request-size: 500MB
       enabled: true
   mvc:
     view:
@@ -55,21 +55,23 @@ jwt:
 
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: 500MB
+      max-request-size: 500MB
 
 server:
   port: 80
   tomcat:
-    connection-timeout: 10000ms
+    connection-timeout: 120000ms  # 요청 대기 시간 (기본 20000ms = 20초)
+    keep-alive-timeout: 120000ms  # KeepAlive 연결 유지 시간
+    max-swallow-size: 500MB
+    max-http-form-post-size: 500MB
   forward-headers-strategy: native
   servlet:
     encoding:
       charset: UTF-8
       force: true
     session:
-      timeout: 10000ms
-
+      timeout: 60m
 #aws:
 #  account:
 #    accessKey: 'AKIAXXXXXXXXXXXXXXXX'
