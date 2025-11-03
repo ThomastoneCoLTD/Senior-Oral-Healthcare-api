@@ -32,16 +32,20 @@ public class WebSecurityConfig {
 //    private final UserDeviceTypeService userDeviceTypeService;
 
     public static String[] EXCLUDE_URLS = {
-            "/actuator/health", // health check
-            "/docs/*", // restdocs
-            "/login/*", "/login",
+            "/actuator/health",
+            "/docs/*",
+            "/login", "/login/*",
             "/service-agreement",
             "/contents", "/contents/*",
-            "/password/*","/organizations/check/*",
-            "/admin/login",
-            "/admin/account",
-            "/admin/password","/admin/auto-login",
+            "/password/*",
+            "/organizations/check/*",
 
+            // ✅ 관리자 등록 및 기관 등록은 JWT 예외로 허용
+            "/admin/login",
+            "/admin/register", "/admin/register/*",
+            "/admin/account", "/admin/account/*",
+            "/admin/password",
+            "/admin/auto-login"
     };
 
     /**
@@ -71,14 +75,22 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ 실제 프론트 도메인
-        configuration.setAllowedOriginPatterns(List.of("https://denti.thomabio.com"));
+        // ✅ 정확히 프론트 도메인 명시
+        configuration.setAllowedOriginPatterns(List.of("https://denti.thomabio.com",
+                "http://localhost:5173"));
 
+        // ✅ 모든 주요 메서드 허용
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("*")); // ✅ 응답 헤더 노출 허용 (프론트에서 읽을 수 있게)
+
+        // ✅ 중요: Content-Type 명시적으로 추가
+        configuration.setAllowedHeaders(List.of(
+                "Content-Type", "Authorization", "X-Requested-With",
+                "Accept", "Origin"
+        ));
+
+        configuration.setExposedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L); // ✅ preflight 캐싱 1시간 유지
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

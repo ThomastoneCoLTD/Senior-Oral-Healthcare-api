@@ -53,14 +53,12 @@ jwt:
   secret: "jwt"
   expiration: 86400000
 
-  servlet:
-    multipart:
-      max-file-size: 500MB
-      max-request-size: 500MB
-
 server:
   tomcat:
-    connection-timeout: 10000ms
+    connection-timeout: 120000ms  # 요청 대기 시간 (기본 20000ms = 20초)
+    keep-alive-timeout: 120000ms  # KeepAlive 연결 유지 시간
+    max-swallow-size: 500MB
+    max-http-form-post-size: 500MB
   forward-headers-strategy: native
   servlet:
     encoding:
@@ -68,6 +66,10 @@ server:
       force: true
     session:
       timeout: 10000ms
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
 
 #aws:
 #  account:

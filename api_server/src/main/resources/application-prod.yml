@@ -53,11 +53,6 @@ jwt:
   secret: "jwt"
   expiration: 86400000
 
-  servlet:
-    multipart:
-      max-file-size: 500MB
-      max-request-size: 500MB
-
 server:
   port: 80
   tomcat:

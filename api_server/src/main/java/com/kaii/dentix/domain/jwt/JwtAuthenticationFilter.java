@@ -31,7 +31,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String projectName = "/dentix";
+        // ✅ 실제 요청 경로 추출
+        String projectName = "/dentix"; // nginx나 프록시 하위 경로 대응
         String requestURI = request.getRequestURI();
         if (requestURI.startsWith(projectName)) {
             requestURI = requestURI.substring(projectName.length());
@@ -39,14 +40,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String uri = requestURI;
 
+        // ✅ JWT 인증이 필요 없는 URL 매칭
         boolean permitAll = Arrays.stream(EXCLUDE_URLS)
-                .anyMatch(url ->
-                        url.endsWith("*")
-                                ? uri.startsWith(url.substring(0, url.length() - 1))
-                                : uri.equals(url)
-                );
+                .anyMatch(url -> {
+                    String normalizedUrl = url.replace("*", "");
+                    return uri.startsWith(normalizedUrl);
+                });
 
-        // ✅ 엑셀 양식 다운로드는 JWT 인증 예외
+        // ✅ 추가 예외 케이스 (엑셀 템플릿 다운로드 등)
         if (uri.startsWith("/admin/user/bulk-upload/template")) {
             permitAll = true;
         }
@@ -55,6 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (!permitAll) {
             try {
+                // ✅ Authorization 헤더에서 토큰 추출
                 String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
 
                 if (StringUtils.isBlank(accessToken)) {
@@ -65,6 +67,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     accessToken = accessToken.substring(7);
                 }
 
+                // ✅ 만료 / 비인가 토큰 검증
                 if (jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken)) {
                     throw new TokenExpiredException();
                 }
@@ -73,6 +76,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     throw new TokenExpiredException();
                 }
 
+                // ✅ SecurityContext 등록
                 Authentication authentication = jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
                 if (authentication != null) {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -86,6 +90,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
+        // ✅ 예외 경로면 JWT 검사 건너뛰고 다음 필터로
         filterChain.doFilter(request, response);
     }
 }
