@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.questionnaire.dto;
 import lombok.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Getter @Setter @Builder
 @AllArgsConstructor @NoArgsConstructor
