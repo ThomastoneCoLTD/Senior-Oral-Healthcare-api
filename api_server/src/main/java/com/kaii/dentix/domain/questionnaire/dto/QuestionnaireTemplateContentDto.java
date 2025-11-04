@@ -11,5 +11,7 @@ public class QuestionnaireTemplateContentDto {
 
     private int sort;
     private int id;
-    private String text;
+
+    // ✅ 문자열 → 다국어 Map으로 변경
+    private Map<String, String> text;
 }
