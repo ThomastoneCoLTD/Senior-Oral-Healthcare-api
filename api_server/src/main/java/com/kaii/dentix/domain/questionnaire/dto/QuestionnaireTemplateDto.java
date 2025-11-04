@@ -8,12 +8,16 @@ import java.util.List;
 @AllArgsConstructor @NoArgsConstructor
 public class QuestionnaireTemplateDto {
 
-    private int sort;
+  private int sort;
     private String key;
     private String number;
-    private String title;
-    private String description;
+
+    // ✅ 다국어 대응: 문자열 대신 Map으로 변경
+    private Map<String, String> title;
+    private Map<String, String> description;
+
     private Integer minimum;
     private Integer maximum;
+
     private List<QuestionnaireTemplateContentDto> contents;
 }
