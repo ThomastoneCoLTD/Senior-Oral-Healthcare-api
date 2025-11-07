@@ -1,7 +1,7 @@
 package com.kaii.dentix.domain.organization.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

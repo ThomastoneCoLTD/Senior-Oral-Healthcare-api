@@ -1,14 +1,12 @@
 package com.kaii.dentix.domain.admin.controller;
 
 import com.kaii.dentix.domain.organization.application.OrganizationService;
-import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
-import com.kaii.dentix.domain.subscriptionInfo.application.SubscriptionInfoService;
-import com.kaii.dentix.domain.subscriptionInfo.application.SubscriptionService;
-import com.kaii.dentix.domain.subscriptionInfo.dto.SubscriptionInfoResponse;
+import com.kaii.dentix.domain.subscription.application.SubscriptionInfoService;
+import com.kaii.dentix.domain.subscription.application.SubscriptionService;
+import com.kaii.dentix.domain.subscription.dto.SubscriptionInfoResponse;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.global.common.response.DataResponse;
-import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

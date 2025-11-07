@@ -2,7 +2,7 @@ package com.kaii.dentix.domain.organization.application;
 
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

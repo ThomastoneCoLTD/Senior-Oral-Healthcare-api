@@ -8,9 +8,12 @@ import com.kaii.dentix.domain.admin.dto.AdminSignUpDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminSignUpRequest;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
+import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.dto.OrganizationRequest;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.subscription.dto.SubscriptionInfoResponse;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
@@ -107,6 +110,54 @@ public class OrganizationController {
         OrganizationResponse response = organizationService.getCheckOrganizationById(organizationId);
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * ✅ GET /api/organization/{id}/subscription/status
+     * 기관별 구독상품 및 사용률, 남은 응답 수, 초과 여부 포함
+     */
+    @GetMapping("/{id}/subscription/status")
+    public ResponseEntity<SubscriptionStatusResponse> getOrganizationSubscriptionStatus(@PathVariable Long id) {
+        Organization organization = organizationService.getOrganizationWithPlan(id);
+        SubscriptionPlan plan = organization.getSubscriptionPlan();
+
+        // 계산
+        int maxResponses = plan.getMaxSuccessResponses();
+        int successCount = organization.getSuccessCount() != null ? organization.getSuccessCount() : 0;
+        int remaining = organization.getRemainingResponses() != null ? organization.getRemainingResponses() : 0;
+        double usageRate = (maxResponses > 0) ? (double) successCount / maxResponses * 100 : 0.0;
+        boolean overused = remaining <= 0;
+
+        SubscriptionStatusResponse response = new SubscriptionStatusResponse(
+                organization.getOrganizationId(),
+                organization.getOrganizationName(),
+                plan.getPlanName(),
+                plan.getPlanCycle(),
+                plan.getPrice(),
+                plan.getMaxSuccessResponses(),
+                successCount,
+                remaining,
+                usageRate,
+                overused
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * ✅ 응답 DTO (Subscription + Usage 상태 통합)
+     */
+    record SubscriptionStatusResponse(
+            Long organizationId,
+            String organizationName,
+            String planName,
+            String planCycle,
+            Long planPrice,
+            Integer planQuota,
+            Integer usedCount,
+            Integer remainingCount,
+            Double usageRate,
+            Boolean overused
+    ) {}
 }
 
 

@@ -30,5 +30,14 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     @Query("SELECT o FROM Organization o JOIN FETCH o.subscriptionPlan")
     List<Organization> findAllWithSubscription();
 
-
+    /**
+     * ✅ 기관 ID로 Organization + SubscriptionPlan을 함께 조회 (Fetch Join)
+     * - Lazy 로딩 방지
+     * - Soft Delete 필터 적용 (deleted IS NULL)
+     */
+    @Query("SELECT o FROM Organization o " +
+            "JOIN FETCH o.subscriptionPlan p " +
+            "WHERE o.organizationId = :orgId " +
+            "AND o.deleted IS NULL")
+    Optional<Organization> findWithSubscriptionPlanById(@Param("orgId") Long orgId);
 }

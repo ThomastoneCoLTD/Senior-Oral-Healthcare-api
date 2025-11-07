@@ -3,17 +3,14 @@ package com.kaii.dentix.domain.admin.application;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.AdminOrganizationUsageResponse;
-import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
-import com.kaii.dentix.domain.admin.dto.AdminUserListDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
-import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
-import com.kaii.dentix.domain.subscriptionPlan.dao.SubscriptionPlanRepository;
-import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -27,7 +24,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

@@ -9,12 +9,12 @@ import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.dto.OrganizationRequest;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
-import com.kaii.dentix.domain.subscriptionInfo.dao.SubscriptionUsageRepository;
-import com.kaii.dentix.domain.subscriptionInfo.domain.SubscriptionUsage;
-import com.kaii.dentix.domain.subscriptionPlan.dao.SubscriptionHistoryRepository;
-import com.kaii.dentix.domain.subscriptionPlan.dao.SubscriptionPlanRepository;
-import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionHistory;
-import com.kaii.dentix.domain.subscriptionPlan.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.subscription.dto.SubscriptionResponseDto;
+import com.kaii.dentix.domain.subscription.dao.SubscriptionUsageRepository;
+import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
+import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
@@ -27,8 +27,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
-import static com.kaii.dentix.domain.organization.domain.QOrganization.organization;
 
 @Service
 @RequiredArgsConstructor
@@ -108,7 +106,7 @@ public class OrganizationService {
                     ? now.plusMonths(1)
                     : now.plusYears(1);
 
-            SubscriptionUsage usage = SubscriptionUsage.builder()
+            SubscriptionResponseDto.SubscriptionCycle usage = SubscriptionResponseDto.SubscriptionCycle.builder()
                     .organization(savedOrganization)
                     .subscriptionPlan(plan)
                     .periodStart(now)
@@ -252,10 +250,10 @@ public class OrganizationService {
         }
 
         // ✅ 리셋일, 구독시작일, 사용량 초기화
-        organization.updateUsageResetDate(resetDate);
-        organization.updateSubscriptionStartDate(LocalDateTime.now());
-        organization.updateSuccessCount(0);
-        organization.updateUsageRate(0.0);
+//        organization.updateUsageResetDate(resetDate);
+//        organization.updateSubscriptionStartDate(LocalDateTime.now());
+//        organization.updateSuccessCount(0);
+//        organization.updateUsageRate(0.0);
 
         // ✅ (여기 추가) 기관 소속 사용자 응답수 초기화
         List<User> users = userRepository.findAllByOrganization(organization);
@@ -301,5 +299,14 @@ public class OrganizationService {
                 .subscriptionPlanName(organization.getSubscriptionPlan() != null ? organization.getSubscriptionPlan().getPlanName() : null)
                 .successCount(organization.getSuccessCount())
                 .build();
+    }
+
+    /**
+     * ✅ 기관별 구독상품 조회
+     */
+    @Transactional
+    public Organization getOrganizationWithPlan(Long organizationId) {
+        return organizationRepository.findWithSubscriptionPlanById(organizationId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 기관을 찾을 수 없습니다."));
     }
 }
