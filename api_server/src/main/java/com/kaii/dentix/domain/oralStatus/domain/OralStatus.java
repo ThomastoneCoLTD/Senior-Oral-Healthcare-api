@@ -11,7 +11,7 @@ import lombok.*;
 @Getter @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "oralStatus")
+@Table(name = "oral_status")
 public class OralStatus extends TimeEntity {
 
     @Id

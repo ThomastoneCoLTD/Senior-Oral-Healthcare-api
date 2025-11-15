@@ -43,10 +43,23 @@ spring:
       format_sql: true
       ddl-auto: update
       naming:
-        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
       #use-new-id-generator-mappings: true # JPA 표준에 맞는 새로운 키 생성 전략을 사용함.
     properties:
       hibernate.connection.provider_disables_autocommit: true
+
+  mail:
+    host: smtp.sendgrid.net     # ✅ Workspace용 호스트
+    port: 587                      # STARTTLS
+    username: apikey
+    password: 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
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+      mail.debug: true
 jwt:
   accessTokenKey: "test-access-token"
   refreshTokenKey: "test-refresh-token"
@@ -69,6 +82,7 @@ server:
     multipart:
       max-file-size: 500MB
       max-request-size: 500MB
+
 
 
 #aws:

@@ -2,7 +2,10 @@ package com.kaii.dentix.domain.oralCheck.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kaii.dentix.domain.admin.application.AdminService;
+import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
+import com.kaii.dentix.domain.billing.application.BillingService;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.dto.*;
@@ -11,6 +14,7 @@ import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
 import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
@@ -83,7 +87,10 @@ public class OralCheckService {
 
     private final ObjectMapper objectMapper;
     private final OrganizationRepository organizationRepository;
+    private final BillingService billingService;
 
+    private final AdminService adminService;
+    private final OralCheckRepository oralcheckRepository;
     @Value("${spring.profiles.active}")
     private String active;
 
@@ -91,61 +98,52 @@ public class OralCheckService {
     private String folderPath;
 
     /**
-     *  구강검진 사진 촬영
+     * ✅ 구강검진 사진 촬영 + AI 분석 + 과금 처리
      */
     @Transactional
     @CacheEvict(
             value = "dashboard",
             key = "@userService.getTokenUser(#p0).getUserId() + '_' + T(java.time.LocalDate).now()"
     )
-    public DataResponse<OralCheckPhotoDto> oralCheckPhoto(HttpServletRequest httpServletRequest, MultipartFile file, String type) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InterruptedException {
-        log.info(httpServletRequest.getRequestURI());
-        log.info("httpServletRequest",httpServletRequest);
-        User user = userService.getTokenUser(httpServletRequest);
-        log.info("user", user);
-        Long orgId = (user.getOrganization() != null)
-                ? user.getOrganization().getOrganizationId()
-                : null;
+    public DataResponse<OralCheckPhotoDto> oralCheckPhoto(
+            HttpServletRequest request,
+            MultipartFile file,
+            String type
+    ) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InterruptedException {
 
-        //사전 체크: 기관 플랜 사용량 초과 여부
-        if (orgId != null) {
-            Organization org = organizationRepository.findById(orgId)
-                    .orElseThrow(() -> new IllegalArgumentException("기관이 존재하지 않습니다."));
+        log.info("요청 URI: {}", request.getRequestURI());
 
-            long successCount = org.getSuccessCount();
-            int maxAllowed = org.getSubscriptionPlan().getMaxSuccessResponses();
+        // ✅ 1. 사용자 인증 및 기관 확인
+        User user = userService.getTokenUser(request);
+        Organization organization = user.getOrganization();
 
-            if (successCount >= maxAllowed) {
-                return new DataResponse<>(
-                        410,
-                        "구독 플랜 사용량을 모두 소진했습니다. 관리자에게 문의하세요.",
-                        OralCheckPhotoDto.builder()
-                                .oralCheckId(null)
-                                .success(false)
-                                .remainingResponses(0)
-                                .organizationId(orgId)
-                                .build()
-                );
-            }
+        if (organization == null) {
+            throw new BadRequestApiException("기관 정보를 찾을 수 없습니다.");
         }
 
-        //파일 업로드
+        OrganizationSubscription subscription = organization.getOrganizationSubscription();
+        if (subscription == null) {
+            throw new BadRequestApiException("기관의 구독 정보가 없습니다.");
+        }
+
+        // ✅ 2. 파일 업로드
         String uploadedUrl = awss3Service.upload(file, folderPath, true);
         if (StringUtils.isBlank(uploadedUrl)) {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        //AI 분석 요청
+        // ✅ 3. AI 분석 요청
         OralCheckAnalysisResponse analysisData;
-//        log.info(analysisData);
         try {
             analysisData = aiModelService.getPyDentalAiModel(file);
-            log.info("uploadedUrl: {}", uploadedUrl);
+            log.info("업로드된 이미지 URL: {}", uploadedUrl);
         } catch (Exception e) {
-            log.info(e.getMessage());
+            log.error("AI 모델 연동 실패: {}", e.getMessage(), e);
             log.info("uploadedUrl: {}", uploadedUrl);
-            if (active.equals("dev")) { // 개발 서버는 랜덤 테스트 데이터
-                log.warn("AI 모델 연동 실패 → 테스트 데이터 연동 (구강 촬영)");
+
+            // ⚙️ 개발 서버 테스트용 임시 데이터
+            if (Objects.equals(active, "dev")) {
+                log.warn("AI 모델 연동 실패 → 테스트 데이터 사용");
                 Random random = new Random();
                 analysisData = new OralCheckAnalysisResponse(
                         new OralCheckAnalysisDivisionDto(
@@ -160,77 +158,52 @@ public class OralCheckService {
             }
         }
 
+        // ✅ 4. 분석 결과 저장
         OralCheck oralCheck;
         int resultCode = 500;
 
         switch (analysisData.getStatusCode()) {
-            case 200: // 성공
-                oralCheck = registAnalysisSuccessData(user.getUserId(), uploadedUrl, analysisData);
-                break;
-            case 402: case 403: case 404: // 잘못된 사진
+            case 200 -> oralCheck = registAnalysisSuccessData(user.getUserId(), uploadedUrl, analysisData);
+            case 402, 403, 404 -> {
                 oralCheck = registAnalysisFailedData(user.getUserId(), uploadedUrl, analysisData);
                 resultCode = 410;
-                break;
-            default: // 서버 에러
+            }
+            default -> {
                 oralCheck = registAnalysisFailedData(user.getUserId(), uploadedUrl, analysisData);
                 resultCode = 411;
-                break;
+            }
         }
 
-        //oralCheck가 null이면 바로 예외
         if (oralCheck == null) {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        //성공 케이스 처리
-        if (oralCheck.getOralCheckAnalysisState() == OralCheckAnalysisState.SUCCESS && orgId != null) {
-
-            //DB에서 successCount 안전하게 +1
-            organizationRepository.increaseSuccessCount(orgId);
-
-            //업데이트된 Organization 다시 조회
-            Organization org = organizationRepository.findById(orgId)
-                    .orElseThrow(() -> new IllegalArgumentException("기관이 존재하지 않습니다."));
-
-            int maxAllowed = org.getSubscriptionPlan().getMaxSuccessResponses();
-            int remaining = maxAllowed - org.getSuccessCount();
-
-            if (remaining < 0) {
-                remaining = 0;
-            }
-
-            return new DataResponse<>(
-                    200,
-                    SUCCESS_MSG,
-                    OralCheckPhotoDto.builder()
-                            .oralCheckId(oralCheck.getOralCheckId())
-                            .success(true)
-                            .remainingResponses(remaining)
-                            .organizationId(orgId)
-                            .build()
-            );
+        // ✅ 5. 사용량 / 과금 처리
+        if (subscription.isOverused()) {
+            // 💡 남은 사용량이 0 이하 → 과금
+            log.warn("기관 [{}] 사용량 초과 감지 → 자동 과금 생성", organization.getOrganizationId());
+            billingService.createOveruseBatchBilling(organization);
+        } else {
+            // 💡 정상 사용 → 사용량 차감
+            subscription.increaseSuccessCount();
         }
 
-        //실패 케이스 처리
+        // ✅ 6. 남은 응답 계산
+        int remaining = Math.max(subscription.getRemainingResponses(), 0);
+
+        // ✅ 7. 사용자 응답 반환
         return new DataResponse<>(
-                resultCode,
-                "구강 촬영 인식에 실패했어요.\n가이드에 맞게 재촬영 부탁드려요.",
-                null
+                200,
+                "AI 분석이 완료되었습니다.",
+                OralCheckPhotoDto.builder()
+                        .oralCheckId(oralCheck.getOralCheckId())
+                        .success(true)
+                        .remainingResponses(remaining)
+                        .organizationId(organization.getOrganizationId())
+                        .build()
         );
     }
 
-    /**  기관별 플랜 최대 성공 응답수 */
-    @Transactional
-    public void checkPlanUsage(Long orgId) {
-        Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new IllegalArgumentException("기관이 존재하지 않습니다."));
-
-        int maxAllowed = org.getSubscriptionPlan().getMaxSuccessResponses();
-
-        if (org.getSuccessCount() >= maxAllowed) {
-            throw new IllegalStateException("구독 플랜 사용량을 모두 소진했습니다.");
-        }
-    }
     /**
      * 4등분 점수 유형 계산
      *
@@ -294,13 +267,13 @@ public class OralCheckService {
     public OralCheck registAnalysisSuccessData(Long userId, String filePath, OralCheckAnalysisResponse resource) throws JsonProcessingException {
         OralCheckAnalysisDivisionDto tDivision = resource.getPlaqueStats();
 
-        Float upRightRange = Utils.getDeleteDecimalValue(tDivision.getTopRight(), 1); // 우상 비율
-        Float upLeftRange = Utils.getDeleteDecimalValue(tDivision.getTopLeft(), 1); // 좌상 비율
-        Float downRightRange = Utils.getDeleteDecimalValue(tDivision.getBtmRight(), 1); // 우하 비율
-        Float downLeftRange = Utils.getDeleteDecimalValue(tDivision.getBtmLeft(), 1); // 좌하 비율
+        Float upRightRange = Utils.getDeleteDecimalValue(tDivision.getTopRight(), 1);
+        Float upLeftRange = Utils.getDeleteDecimalValue(tDivision.getTopLeft(), 1);
+        Float downRightRange = Utils.getDeleteDecimalValue(tDivision.getBtmRight(), 1);
+        Float downLeftRange = Utils.getDeleteDecimalValue(tDivision.getBtmLeft(), 1);
 
         Float totalGroupRatio = (tDivision.getTopRight() + tDivision.getTopLeft() + tDivision.getBtmRight() + tDivision.getBtmLeft()) / 4;
-        Float totalRange = Utils.getDeleteDecimalValue(totalGroupRatio, 1); // 전체 비율
+        Float totalRange = Utils.getDeleteDecimalValue(totalGroupRatio, 1);
 
         // 점수 유형
         OralCheckResultType upRightScoreType = this.calcDivisionScoreType(upRightRange);
@@ -309,15 +282,14 @@ public class OralCheckService {
         OralCheckResultType downLeftScoreType = this.calcDivisionScoreType(downLeftRange);
         OralCheckResultType resultTotalType = this.calcDivisionScoreType(totalRange);
 
-        String resultJsonData = objectMapper.writeValueAsString(resource); // 분석 결과 JSON data 전체
+        String resultJsonData = objectMapper.writeValueAsString(resource);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저 없음"));
 
-        // insert 데이터 set
+        // ✅ 빌더 수정
         OralCheck insertData = OralCheck.builder()
-                .userId(userId)
-                .user(user)
+                .user(user) // ✅ userId 대신 user
                 .oralCheckPicturePath(filePath)
                 .oralCheckAnalysisState(OralCheckAnalysisState.SUCCESS)
                 .oralCheckTotalRange(totalRange)
@@ -341,12 +313,12 @@ public class OralCheckService {
      */
     @Transactional
     public OralCheck registAnalysisFailedData(Long userId, String filePath, OralCheckAnalysisResponse resource) throws JsonProcessingException {
-        String resultJsonData = objectMapper.writeValueAsString(resource); // 분석 결과 JSON data 전체
+        String resultJsonData = objectMapper.writeValueAsString(resource);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저 없음"));
-        // insert 데이터 set
+
         OralCheck insertData = OralCheck.builder()
-                .userId(userId)
+                .user(user) // ✅ userId → user
                 .oralCheckPicturePath(filePath)
                 .oralCheckAnalysisState(OralCheckAnalysisState.FAIL)
                 .oralCheckResultJsonData(resultJsonData)
@@ -354,7 +326,6 @@ public class OralCheckService {
 
         return oralCheckRepository.save(insertData);
     }
-
     /**
      *  구강 검진 결과
      */
@@ -362,12 +333,14 @@ public class OralCheckService {
     public OralCheckResultDto oralCheckResult(HttpServletRequest httpServletRequest, Long oralCheckId){
         User user = userService.getTokenUser(httpServletRequest);
 
-        OralCheck oralCheck = oralCheckRepository.findById(oralCheckId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강 검진입니다."));
-        if (!oralCheck.getUserId().equals(user.getUserId())) throw new BadRequestApiException("회원 정보와 구강 검진 정보가 일치하지 않습니다.");
+        OralCheck oralCheck = oralCheckRepository.findById(oralCheckId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강 검진입니다."));
 
-//        if (!oralCheck.getUserId().equals(user.getUserId())) throw new BadRequestApiException("회원 정보와 구강 검진 정보가 일치하지 않습니다.");
+        // ✅ userId → user.getUserId()
+        if (!oralCheck.getUser().getUserId().equals(user.getUserId())) {
+            throw new BadRequestApiException("회원 정보와 구강 검진 정보가 일치하지 않습니다.");
+        }
 
-        // 부위별 코멘트 리스트
         List<String> oralCheckCommentList = this.calcDivisionCommentType(oralCheck);
 
         return OralCheckResultDto.builder()
@@ -385,7 +358,6 @@ public class OralCheckService {
                 .oralCheckDownRightScoreType(oralCheck.getOralCheckDownRightScoreType())
                 .oralCheckCommentList(oralCheckCommentList)
                 .build();
-
     }
 
     /**
@@ -395,7 +367,7 @@ public class OralCheckService {
     public OralCheckDto oralCheck(HttpServletRequest httpServletRequest){
         User user = userService.getTokenUser(httpServletRequest);
 
-        List<OralCheck> oralCheckList = oralCheckRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
+        List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
         List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<UserOralStatus> userOralStatusList = userOralStatusRepository.findAllByQuestionnaireIn(questionnaireList);
@@ -576,7 +548,7 @@ public class OralCheckService {
     public DashboardDto dashboard(HttpServletRequest httpServletRequest) {
         User user = userService.getTokenUser(httpServletRequest);
 
-        List<OralCheck> oralCheckList = oralCheckRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
+        List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
 
         // 구강 촬영을 한 번이라도 하지 않으면 아무 데이터도 보이지 않음
         if (oralCheckList.size() == 0) {
@@ -668,5 +640,6 @@ public class OralCheckService {
 
         return OralCheckResultType.DANGER;
     }
+
 
 }

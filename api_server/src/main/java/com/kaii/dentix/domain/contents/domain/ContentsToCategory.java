@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor
-@Table(name = "contentsToCategory")
+@Table(name = "contents_to_category")
 public class ContentsToCategory extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,7 +22,8 @@ public class ContentsToCategory extends TimeEntity {
     @Column(nullable = false)
     private int contentsCategoryId;
 
-    @Column(nullable = false)
-    private int contentsId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contents_id") // ✅ FK 관계로 명시
+    private Contents contents;
 
 }

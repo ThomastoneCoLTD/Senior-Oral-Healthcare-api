@@ -96,7 +96,7 @@ public class ContentsService {
         if (isVerifiedUser) {
             Optional<Questionnaire> questionnaireOpt = questionnaireRepository.findTopByUserIdOrderByCreatedDesc(user.getUserId());
             if (questionnaireOpt.isPresent()) {
-                List<Integer> customizedContentsIdList = contentsCustomRepository.getCustomizedContentsIdList(questionnaireOpt.get().getQuestionnaireId());
+                List<Long> customizedContentsIdList = contentsCustomRepository.getCustomizedContentsIdList(questionnaireOpt.get().getQuestionnaireId());
                 customizedContentsIdList.forEach(id -> {
                     userContentsList.stream().filter(o -> o.getId() == id).findAny().ifPresent(contentsDto -> {
                         contentsDto.getCategoryIds().add(0, 0);
@@ -115,7 +115,7 @@ public class ContentsService {
     public ContentsCardListDto contentsCard(Long contentsId){
         Contents contents = contentsRepository.findById(contentsId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 콘텐츠입니다."));
 
-        List<ContentsCardDto> contentsCardList = contentsCardRepository.findAllByContentsId(contents.getContentsId()).stream()
+        List<ContentsCardDto> contentsCardList = contentsCardRepository.findAllByContents_ContentsId(contents.getContentsId()).stream()
                 .map(contentsList -> new ContentsCardDto(contentsList.getContentsCardNumber(), contentsList.getContentsCardPath()))
                 .collect(Collectors.toList());
 

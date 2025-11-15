@@ -12,7 +12,7 @@ import org.hibernate.annotations.DynamicInsert;
 import java.util.Date;
 
 @Entity
-@Table(name = "systemLog")
+@Table(name = "system_log")
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor

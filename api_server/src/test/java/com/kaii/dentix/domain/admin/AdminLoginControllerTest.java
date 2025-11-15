@@ -73,7 +73,7 @@ public class AdminLoginControllerTest extends ControllerTest {
     public void adminLogin() throws Exception{
 
         // given
-        given(adminLoginService.adminLogin(any(AdminLoginRequest.class))).willReturn(adminLoginDto());
+        given(adminLoginService.login(any(AdminLoginRequest.class))).willReturn(adminLoginDto());
 
         String password = "dentix2023!";
         AdminLoginRequest adminLoginRequest = AdminLoginRequest.builder()
@@ -113,7 +113,7 @@ public class AdminLoginControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(adminLoginService).adminLogin(any(AdminLoginRequest.class));
+        verify(adminLoginService).login(any(AdminLoginRequest.class));
 
     }
 

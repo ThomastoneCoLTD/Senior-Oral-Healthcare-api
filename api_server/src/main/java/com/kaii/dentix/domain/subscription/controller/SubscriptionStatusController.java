@@ -20,9 +20,9 @@ public class SubscriptionStatusController {
     /**
      * ✅ GET /api/subscription/{orgId}/status
      */
-    @GetMapping("/{orgId}/status")
-    public ResponseEntity<SubscriptionStatusResponse> getSubscriptionStatus(@PathVariable Long orgId) {
-        SubscriptionStatusResponse response = subscriptionStatusService.getSubscriptionStatus(orgId);
-        return ResponseEntity.ok(response);
-    }
+//    @GetMapping("/{orgId}/status")
+//    public ResponseEntity<SubscriptionStatusResponse> getSubscriptionStatus(@PathVariable Long orgId) {
+//        SubscriptionStatusResponse response = subscriptionStatusService.getSubscriptionStatus(orgId);
+//        return ResponseEntity.ok(response);
+//    }
 }

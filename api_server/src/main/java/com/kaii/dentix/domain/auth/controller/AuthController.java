@@ -37,7 +37,7 @@ public class AuthController {
                 adminReq.setAdminLoginIdentifier(loginRequest.getLoginId());
                 adminReq.setAdminPassword(loginRequest.getPassword());
 
-                AdminLoginDto adminDto = adminLoginService.adminLogin(adminReq);
+                AdminLoginDto adminDto = adminLoginService.login(adminReq);
                 return ResponseEntity.ok(adminDto);
 
             case "user":

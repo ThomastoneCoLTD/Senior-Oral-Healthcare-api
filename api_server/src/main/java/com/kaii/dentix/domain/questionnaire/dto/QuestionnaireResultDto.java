@@ -20,7 +20,7 @@ public class QuestionnaireResultDto {
 
     private List<OralStatusTypeInfoDto> oralStatusList;
 
-    private List<ContentsCategoryDto> categories;
+//    private List<ContentsCategoryDto> categories;
 
     private List<ContentsDto> contents;
 }

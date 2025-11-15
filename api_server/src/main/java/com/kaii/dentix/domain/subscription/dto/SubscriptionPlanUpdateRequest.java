@@ -9,6 +9,6 @@ public class SubscriptionPlanUpdateRequest {
     private String planName;
     private String planCycle; // monthly, yearly
     private Integer planSort;
-    private Long price;
+    private Double price;
     private Integer maxSuccessResponses;
 }

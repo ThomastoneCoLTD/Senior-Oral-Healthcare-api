@@ -10,11 +10,15 @@ import com.kaii.dentix.domain.oralCheck.dto.OralCheckAnalysisDivisionDto;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
 import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
 import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
+import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
 import com.kaii.dentix.domain.questionnaire.dto.*;
 import com.kaii.dentix.domain.questionnaire.dto.request.QuestionnaireSubmitRequest;
 import com.kaii.dentix.domain.questionnaire.dto.response.QuestionnaireAnalysisResponse;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.type.PlanName;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
@@ -54,17 +58,42 @@ public class QuestionnaireService {
     /**
      * 문진표 양식 조회
      */
-    public QuestionnaireTemplateJsonDto getQuestionnaireTemplate() throws IOException {
-        ClassPathResource classPathResource = new ClassPathResource("template/questionnaire.json");
-        if (!classPathResource.exists()) throw new BadRequestApiException("파일이 존재하지 않습니다.");
+    @Transactional(readOnly = true)
+    public QuestionnaireTemplateJsonDto getQuestionnaireTemplate(HttpServletRequest request) throws IOException {
+        // ✅ 1. 사용자 및 기관 조회
+        User user = userService.getTokenUser(request);
+        Organization organization = user.getOrganization();
 
-        // 서버 환경 대응
-        InputStream inputStream = classPathResource.getInputStream();
-        byte[] bytes = FileCopyUtils.copyToByteArray(inputStream);
+        if (organization == null || organization.getOrganizationSubscription() == null) {
+            throw new BadRequestApiException("기관 정보 또는 구독 정보가 없습니다.");
+        }
 
-        // spring 3버전 버그로 인해 List.class를 사용하면 가져다 쓸 때 java.util.LinkedHashMap cannot be cast to object 오류가 발생하여 TypeReference로 선언해야 함
-        return objectMapper.readValue(new String(bytes), new TypeReference<>(){});
+        OrganizationSubscription subscription = organization.getOrganizationSubscription();
+        SubscriptionPlan plan = subscription.getSubscriptionPlan();
+
+        if (plan == null || plan.getPlanName() == null) {
+            throw new BadRequestApiException("기관의 구독 플랜 정보가 없습니다.");
+        }
+
+        // ✅ 2. Small 플랜 차단
+        if (plan.getPlanName() == PlanName.SMALL) {
+            throw new BadRequestApiException("현재 구독 상품(Small)에서는 문진표 서비스를 이용할 수 없습니다.");
+        }
+
+        // ✅ 3. 템플릿 파일 로드
+        ClassPathResource resource = new ClassPathResource("template/questionnaire.json");
+        if (!resource.exists()) {
+            throw new BadRequestApiException("문진표 템플릿 파일이 존재하지 않습니다.");
+        }
+
+        try (InputStream inputStream = resource.getInputStream()) {
+            byte[] bytes = FileCopyUtils.copyToByteArray(inputStream);
+
+            // ✅ TypeReference 사용 (LinkedHashMap 캐스팅 문제 방지)
+            return objectMapper.readValue(new String(bytes), new TypeReference<>() {});
+        }
     }
+
 
     /**
      * 문진표 제출
@@ -73,7 +102,7 @@ public class QuestionnaireService {
     public QuestionnaireIdDto questionnaireSubmit(HttpServletRequest httpServletRequest, QuestionnaireSubmitRequest request) throws IOException {
         User user = userService.getTokenUser(httpServletRequest);
 
-        QuestionnaireTemplateJsonDto questionnaireTemplate = this.getQuestionnaireTemplate();
+        QuestionnaireTemplateJsonDto questionnaireTemplate = this.getQuestionnaireTemplate(httpServletRequest);
         this.questionnaireValidate(questionnaireTemplate.getTemplate(), request.getForm());
 
         // AI 서버로 문진표 전달 후, AI 분석 결과 받아옴
@@ -211,14 +240,14 @@ public class QuestionnaireService {
                 .toList();
 
         // ✅ 카테고리 및 콘텐츠 (언어 필터는 필요 시 확장)
-        List<ContentsCategoryDto> categories = contentsService.getCategoryList(null);
+//        List<ContentsCategoryDto> categories = contentsService.getCategoryList(null);
         List<ContentsDto> contents = contentsCustomRepository.getCustomizedContents(questionnaireId);
         contents = contents.subList(0, Math.min(contents.size(), 2)); // 최대 2개
 
         return new QuestionnaireResultDto(
                 questionnaire.getCreated(),
                 oralStatusList,
-                categories,
+//                categories,
                 contents
         );
     }

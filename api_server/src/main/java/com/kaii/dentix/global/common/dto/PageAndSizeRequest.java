@@ -10,8 +10,8 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor @NoArgsConstructor
 public class PageAndSizeRequest {
 
-    private int page; // 요청 페이지
+    private Integer page; // 요청 페이지
 
-    private int size; // 한 페이지 당 보여질 개수
+    private Integer size; // 한 페이지 당 보여질 개수
 
 }

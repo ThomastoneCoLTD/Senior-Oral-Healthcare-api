@@ -23,7 +23,7 @@ import java.util.List;
 public class Contents extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int contentsId;
+    private Long contentsId;
 
     @Column(nullable = false)
     private int contentsSort;
@@ -43,12 +43,11 @@ public class Contents extends TimeEntity {
 
     private String contentsPath;
 
-    @OneToMany(fetch = FetchType.LAZY)
-    @JoinColumn(name = "contentsId")
+    @OneToMany(mappedBy = "contents", fetch = FetchType.LAZY)
     private List<ContentsToCategory> contentsToCategories;
 
     @OneToMany(fetch = FetchType.LAZY)
-    @JoinColumn(name = "contentsId")
+    @JoinColumn(name = "contents_id")
     private List<ContentsCard> contentsCards;
 
     @Temporal(TemporalType.TIMESTAMP)

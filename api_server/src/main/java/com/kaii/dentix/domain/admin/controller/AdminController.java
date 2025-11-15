@@ -1,5 +1,6 @@
 package com.kaii.dentix.domain.admin.controller;
 
+import com.kaii.dentix.domain.admin.application.AdminLoginService;
 import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.dto.*;
 import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminController {
 
     private final AdminService adminService;
+    private final AdminLoginService adminLoginService;
     private final OrganizationService organizationService;
     /**
      *  관리자 등록
@@ -41,7 +43,13 @@ public class AdminController {
         adminService.adminModifyPassword(httpServletRequest, request);
         return new SuccessResponse();
     }
-
+//    @PutMapping(value = "/reset-password", name = "관리자 비밀번호 재설정")
+//    public SuccessResponse adminResetPassword(
+//            @Valid @RequestBody AdminResetPasswordRequest request) {
+//
+//        adminService.adminResetPassword(request);
+//        return new SuccessResponse();
+//    }
     /**
      *  관리자 삭제
      */
@@ -77,13 +85,13 @@ public class AdminController {
         DataResponse<AdminAutoLoginDto> response = new DataResponse<>(adminService.adminAutoLogin(httpServletRequest));
         return response;
     }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<OrganizationResponse> update(
-            @PathVariable Long id,
-            @RequestBody OrganizationUpdateRequest request) {
-        return ResponseEntity.ok(organizationService.update(id, request));
-    }
+//
+//    @PutMapping("/{id}")
+//    public ResponseEntity<OrganizationResponse> update(
+//            @PathVariable Long id,
+//            @RequestBody OrganizationUpdateRequest request) {
+//        return ResponseEntity.ok(organizationService.update(id, request));
+//    }
 
 
 

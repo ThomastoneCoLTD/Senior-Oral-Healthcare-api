@@ -11,17 +11,23 @@ public class SubscriptionPlanResponse {
     private String planName;
     private String planCycle;
     private Integer planSort;
-    private Long price;
+    private Double price;
     private Integer maxSuccessResponses;
+    private Boolean customSurveyEnabled;
+    private Boolean reportExportEnabled;
+    private Integer overuseUnitPrice;
 
     public static SubscriptionPlanResponse from(SubscriptionPlan plan) {
         return SubscriptionPlanResponse.builder()
                 .id(plan.getId())
-                .planName(plan.getPlanName())
+                .planName(plan.getPlanName().name())
                 .planCycle(plan.getPlanCycle())
                 .planSort(plan.getPlanSort())
                 .price(plan.getPrice())
                 .maxSuccessResponses(plan.getMaxSuccessResponses())
+                .customSurveyEnabled(plan.getCustomSurveyEnabled())
+                .reportExportEnabled(plan.getReportExportEnabled())
+                .overuseUnitPrice(plan.getOveruseUnitPrice())
                 .build();
     }
 }

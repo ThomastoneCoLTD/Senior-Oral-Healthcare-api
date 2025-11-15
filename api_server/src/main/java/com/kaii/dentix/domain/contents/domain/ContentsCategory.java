@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor
-@Table(name = "contentsCategory")
+@Table(name = "contents_category")
 public class ContentsCategory extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

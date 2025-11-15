@@ -40,7 +40,7 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
         // transform 사용 시 JPQLTemplates.DEFAULT 필요
         return new JPAQueryFactory(JPQLTemplates.DEFAULT, entityManager)
             .from(contents)
-            .leftJoin(contentsToCategory).on(contentsToCategory.contentsId.eq(contents.contentsId))
+            .leftJoin(contentsToCategory).on(contentsToCategory.contents.eq(contents))
             .orderBy(contents.contentsSort.asc())
             .distinct()
             .transform(groupBy(contents.contentsId).list(Projections.constructor(ContentsDto.class,
@@ -52,8 +52,7 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
      * 맞춤형 구강교육 아이디 목록 조회
      */
     @Override
-    public List<Integer> getCustomizedContentsIdList(Long questionnaireId) {
-
+    public List<Long> getCustomizedContentsIdList(Long questionnaireId) {
         return queryFactory
             .selectDistinct(contents.contentsId)
             .from(contents)
@@ -72,7 +71,7 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
         // transform 사용 시 JPQLTemplates.DEFAULT 필요
         return new JPAQueryFactory(JPQLTemplates.DEFAULT, entityManager)
             .from(contents)
-            .leftJoin(contentsToCategory).on(contentsToCategory.contentsId.eq(contents.contentsId))
+            .leftJoin(contentsToCategory).on(contentsToCategory.contents.eq(contents))
             .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
             .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
             .where(userOralStatus.questionnaire.questionnaireId.eq(questionnaireId))

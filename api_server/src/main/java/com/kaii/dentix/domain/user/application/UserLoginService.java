@@ -7,9 +7,11 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
+import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementDto;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 //import com.kaii.dentix.domain.patient.dao.PatientRepository;
@@ -25,21 +27,27 @@ import com.kaii.dentix.domain.userServiceAgreement.domain.UserServiceAgreement;
 import com.kaii.dentix.domain.userToAppService.dao.UserToAppServiceRepository;
 import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
 import com.kaii.dentix.global.common.error.exception.*;
+import com.kaii.dentix.global.common.response.SuccessResponse;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Date;
 import java.util.List;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserLoginService {
+public class  UserLoginService {
 
 //    private final PatientRepository patientRepository;
 
@@ -60,7 +68,6 @@ public class UserLoginService {
 
     private final AdminRepository adminRepository;
     private final AppServiceRepository appServiceRepository;
-
     private final OrganizationRepository organizationRepository;
     /**
      * 사용자 서비스 이용동의 여부 확인 및 저장
@@ -156,8 +163,10 @@ public class UserLoginService {
         if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
             throw new NotFoundDataException("존재하지 않는 질문입니다.");
         }
+//        // ✅ 1. 기관 전화번호로 조회
         Organization organization = organizationRepository.findById(request.getOrganizationId())
-                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 기관입니다."));
+                .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
+
         //4. 사용자 정보 저장
         User user = userRepository.save(User.builder()
                 .userLoginIdentifier(request.getUserLoginIdentifier())
@@ -193,7 +202,7 @@ public class UserLoginService {
         this.userServiceAgreeCheckAndSave(request.getUserServiceAgreementRequest(), user.getUserId());
 
         //8. 디바이스 정보 이벤트 발행
-        publisher.publishEvent(new UserModifyDeviceInfoEvent(user.getUserId(), httpServletRequest));
+//        publisher.publishEvent(new UserModifyDeviceInfoEvent(user.getUserId(), httpServletRequest));
 
         //9. 최종 반환 DTO
         return UserSignUpDto.builder()
@@ -203,7 +212,7 @@ public class UserLoginService {
                 .userLoginIdentifier(request.getUserLoginIdentifier())
                 .userName(request.getUserName())
                 .userGender(request.getUserGender())
-                .organizationId(request.getOrganizationId())
+                .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())
                 .build();
     }
@@ -234,6 +243,24 @@ public class UserLoginService {
             throw new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다.");
         }
 
+        //기관 및 구독 정보 추출
+
+        Organization organization = user.getOrganization();
+        log.info("organization:{}",organization);
+        SubscriptionPlan plan = null;
+        String planName = null;
+        Boolean customSurveyEnabled = false;
+
+        //문진표 서비스가 null인지 확인
+        if (organization != null && organization.getOrganizationSubscription() != null) {
+            plan = organization.getOrganizationSubscription().getSubscriptionPlan();
+
+            if (plan != null) {
+                planName = plan.getPlanName().name();
+                customSurveyEnabled = plan.getCustomSurveyEnabled();
+            }
+        }
+
         //JWT 토큰 발급
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
@@ -242,10 +269,10 @@ public class UserLoginService {
         user.updateLogin(refreshToken);
 
         //디바이스 정보 이벤트 발행
-        publisher.publishEvent(new UserModifyDeviceInfoEvent(
-                user.getUserId(),
-                httpServletRequest
-        ));
+//        publisher.publishEvent(new UserModifyDeviceInfoEvent(
+//                user.getUserId(),
+//                httpServletRequest
+//        ));
 
         //사용자의 서비스 목록 조회 (UserService → AppService)
         List<UserToAppService> mappings = userToAppServiceRepository.findByUser(user);
@@ -270,6 +297,10 @@ public class UserLoginService {
                 .serviceId(mainServiceId)
                 .name(mainServiceName)
                 .services(userServices) //전체 서비스 리스트 명시적으로 추가
+                .organizationId(organization != null ? organization.getOrganizationId() : null)
+                .organizationName(organization != null ? organization.getOrganizationName() : null)
+                .organizationPlanName(planName)
+                .organizationCustomSurveyEnabled(customSurveyEnabled)
                 .build();
     }
 
@@ -297,14 +328,21 @@ public class UserLoginService {
 
     }
 
+
+    @Transactional
+    public void userModifyPassword(UserModifyPasswordRequest request) {
+
+        // 1. 사용자 조회
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+
+        // 2. 새 비밀번호로 변경
+        user.setUserPassword(passwordEncoder.encode(request.getUserPassword()));
+        userRepository.save(user);
+    }
     /**
      *  사용자 비밀번호 재설정
      */
-    @Transactional
-    public void userModifyPassword(UserModifyPasswordRequest request){
-        User user = userRepository.findById(request.getUserId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 회원입니다."));
-        user.modifyUserPassword(passwordEncoder, request.getUserPassword());
-    }
 
     /**
      *  AccessToken 재발급

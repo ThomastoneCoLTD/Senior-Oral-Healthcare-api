@@ -57,7 +57,7 @@ public class OralCheckCustomRepositoryImpl implements OralCheckCustomRepository 
                         .sum()
                 ))
                 .from(oralCheck)
-                .join(user).on(oralCheck.userId.eq(user.userId))
+                .join(user).on(oralCheck.user.userId.eq(user.userId))
                 .where(
                         user.deleted.isNull(),
                         whereAllDatePeriod(request.getAllDatePeriod()),
@@ -76,7 +76,7 @@ public class OralCheckCustomRepositoryImpl implements OralCheckCustomRepository 
                         user.userId.countDistinct().intValue()
                 )
                 .from(oralCheck)
-                .join(user).on(oralCheck.userId.eq(user.userId))
+                .join(user).on(oralCheck.user.userId.eq(user.userId))
                 .where(
                         user.deleted.isNull(),
                         whereAllDatePeriod(request.getAllDatePeriod()),

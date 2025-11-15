@@ -8,10 +8,12 @@ import com.kaii.dentix.domain.admin.dto.*;
 import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminSignUpRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
+import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
 import com.kaii.dentix.domain.type.UserRole;
@@ -47,12 +49,12 @@ public class AdminService {
     private final JwtTokenUtil jwtTokenUtil;
 
     private final PasswordEncoder passwordEncoder;
-
+    private final FindPwdQuestionRepository findPwdQuestionRepository;
 
     private final ModelMapper modelMapper;
-private AdminService adminService;
-private AdminUserCustomRepository adminUserCustomRepository;
-
+    private AdminService adminService;
+    private AdminUserCustomRepository adminUserCustomRepository;
+    private final OrganizationRepository organizationRepository;
     /**
      * 토큰에서 Admin 추출
      */
@@ -71,40 +73,57 @@ private AdminUserCustomRepository adminUserCustomRepository;
         return adminRepository.findByIdWithOrganizationAndPlan(adminId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
     }
+
+    /**
+     * ✅ 로그인한 관리자의 기관 정보 조회
+     */
+    public Organization getMyOrganization(Admin admin) {
+        if (admin.getOrganization() == null) {
+            throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
+        }
+        return admin.getOrganization();
+    }
+
     /**
      *  관리자 등록
      */
     @Transactional
-    public AdminSignUpDto adminSignUp(AdminSignUpRequest request){
+    public AdminSignUpDto adminSignUp(AdminSignUpRequest request) {
 
+        //연락처 중복 확인
         Optional<Admin> existAdmin = adminRepository.findByAdminPhoneNumber(request.getAdminPhoneNumber());
-
-        if (existAdmin.isPresent()){
-            // 이미 가입된 사용자의 경우
-            if (existAdmin.get().getAdminName().equals(request.getAdminName())) throw new AlreadyDataException("이미 가입한 관리자입니다.");
-
-            // 연락처 중복 확인
+        if (existAdmin.isPresent()) {
+            if (existAdmin.get().getAdminName().equals(request.getAdminName()))
+                throw new AlreadyDataException("이미 가입한 관리자입니다.");
             throw new BadRequestApiException("이미 사용중인 번호에요. 번호를 다시 확인해 주세요.");
         }
 
-        // 아이디 중복 확인
-        if (adminRepository.findByAdminLoginIdentifier(request.getAdminLoginIdentifier()).isPresent()) throw new AlreadyDataException("이미 존재하는 아이디입니다.");
+        //아이디 중복 확인
+        if (adminRepository.findByAdminLoginIdentifier(request.getAdminLoginIdentifier()).isPresent())
+            throw new AlreadyDataException("이미 존재하는 아이디입니다.");
 
-        Admin admin = Admin.builder()
+        //비밀번호 찾기 질문 유효성 검사
+        if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
+            throw new NotFoundDataException("존재하지 않는 비밀번호 찾기 질문입니다.");
+        }
+
+        //관리자 저장
+        Admin admin = adminRepository.save(Admin.builder()
                 .adminName(request.getAdminName())
                 .adminLoginIdentifier(request.getAdminLoginIdentifier())
                 .adminPhoneNumber(request.getAdminPhoneNumber())
+                .adminPassword(passwordEncoder.encode(request.getAdminPassword())) // 입력된 비밀번호 저장
+                .findPwdQuestionId(request.getFindPwdQuestionId()) // 질문 ID
+                .findPwdAnswer(request.getFindPwdAnswer())         //질문 답변
                 .adminIsSuper(YnType.N)
                 .organization(null)
-                .build();
+                .build());
 
-        adminRepository.save(admin);
-
+        //응답 반환
         return AdminSignUpDto.builder()
                 .adminId(admin.getAdminId())
-                .adminPassword(SecurityUtil.defaultPassword)
+                .adminName(admin.getAdminName())
                 .build();
-
     }
 
     /**
@@ -117,6 +136,13 @@ private AdminUserCustomRepository adminUserCustomRepository;
         admin.updatePassword(passwordEncoder, request.getAdminPassword());
     }
 
+    @Transactional
+    public void adminResetPassword(AdminResetPasswordRequest request){
+        Admin admin = adminRepository.findById(request.getAdminId())
+                .orElseThrow(() -> new NotFoundDataException("관리자를 찾을 수 없습니다."));
+
+        admin.updatePassword(passwordEncoder, request.getNewPassword());
+    }
     /**
      *  관리자 삭제
      */

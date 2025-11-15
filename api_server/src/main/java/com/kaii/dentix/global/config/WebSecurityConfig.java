@@ -38,13 +38,11 @@ public class WebSecurityConfig {
             "/service-agreement",
             "/contents", "/contents/*",
             "/password/*",
-            "/organizations/check/*",
-
-            // ✅ 관리자 등록 및 기관 등록은 JWT 예외로 허용
+            "/organizations/check/**",
             "/admin/login",
             "/admin/register", "/admin/register/*",
             "/admin/account", "/admin/account/*",
-            "/admin/password",
+            "/admin/password","/admin/find-password",
             "/admin/auto-login"
     };
 
@@ -75,14 +73,16 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // ✅ 정확히 프론트 도메인 명시
-        configuration.setAllowedOriginPatterns(List.of("https://denti.thomabio.com",
-                "http://localhost:5173"));
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
+                "https://denti.thomabio.com"
+        ));
 
-        // ✅ 모든 주요 메서드 허용
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // ⚠ PATCH 반드시 추가해야 함!
+        configuration.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
 
-        // ✅ 중요: Content-Type 명시적으로 추가
         configuration.setAllowedHeaders(List.of(
                 "Content-Type", "Authorization", "X-Requested-With",
                 "Accept", "Origin"

@@ -45,7 +45,7 @@ public class UserScheduler {
         User user = userRepository.findByUserLoginIdentifier(loginIdentifier).orElse(null);
         if (user == null) return;
 
-        List<OralCheck> oralCheckList = oralCheckRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
+        List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
         List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<UserOralStatus> userOralStatusList = userOralStatusRepository.findAllByQuestionnaireIn(questionnaireList);
@@ -160,7 +160,7 @@ public class UserScheduler {
 
                 // insert 데이터 set
                 OralCheck oralCheck = OralCheck.builder()
-                    .userId(user.getUserId())
+                    .user(user)
                     .oralCheckPicturePath("testData")
                     .oralCheckAnalysisState(OralCheckAnalysisState.SUCCESS)
                     .oralCheckTotalRange(totalRange)

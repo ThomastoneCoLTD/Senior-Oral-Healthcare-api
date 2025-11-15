@@ -1,12 +1,12 @@
 package com.kaii.dentix.domain.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kaii.dentix.admin.dto.*;
 import com.kaii.dentix.common.ControllerTest;
-import com.kaii.dentix.domain.admin.application.AdminService;
-import com.kaii.dentix.domain.admin.controller.AdminController;
-import com.kaii.dentix.domain.admin.dto.*;
-import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
-import com.kaii.dentix.domain.admin.dto.request.AdminSignUpRequest;
+import com.kaii.dentix.admin.application.AdminService;
+import com.kaii.dentix.admin.controller.AdminController;
+import com.kaii.dentix.admin.dto.request.AdminModifyPasswordRequest;
+import com.kaii.dentix.admin.dto.request.AdminSignUpRequest;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import com.kaii.dentix.global.common.dto.PagingDTO;

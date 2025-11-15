@@ -10,7 +10,5 @@ import lombok.NoArgsConstructor;
 public class AdminSignUpDto {
 
     private Long adminId;
-
-    private String adminPassword;
-
+    private String adminName;
 }

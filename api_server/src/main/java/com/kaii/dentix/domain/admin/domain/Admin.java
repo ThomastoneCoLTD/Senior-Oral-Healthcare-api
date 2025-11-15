@@ -37,12 +37,19 @@ public class Admin extends TimeEntity {
     @Temporal(TemporalType.TIMESTAMP)
     private Date adminLastLoginDate;
 
+    @Column(nullable = false)
     private String adminPassword;
+
+    @Column(nullable = false)
+    private Long findPwdQuestionId;
+
+    @Column(length = 200)
+    private String findPwdAnswer;
 
     private String adminRefreshToken;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organizationId", nullable = true)
+    @JoinColumn(name = "organization_id", nullable = true)
     private Organization organization;
     public boolean isSuperAdmin() {
         return this.adminIsSuper == YnType.Y;

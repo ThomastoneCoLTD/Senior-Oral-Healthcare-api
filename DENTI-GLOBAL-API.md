@@ -791,7 +791,7 @@ public class AdminStatisticService {
 
 ---
 #### New Request
-**GET** `{{host}}/admin/organization/organization`
+**GET** `{{host}}/admin/organizationCopy/organizationCopy`
 ### Request Headers
 | Key | Value |
 |-----|--------|
@@ -799,7 +799,7 @@ public class AdminStatisticService {
 
 ---
 #### 기관정보조회_구독정보_super
-**GET** `localhost:8080/admin/organization/organization`
+**GET** `localhost:8080/admin/organizationCopy/organizationCopy`
 ### Request Headers
 | Key | Value |
 |-----|--------|
@@ -815,7 +815,7 @@ public class AdminStatisticService {
 
 ---
 #### 기관정보조회_구독정보_super
-**GET** `localhost:8080/admin/organization/my`
+**GET** `localhost:8080/admin/organizationCopy/my`
 ### Request Headers
 | Key | Value |
 |-----|--------|
@@ -1206,7 +1206,7 @@ public class AdminStatisticService {
 
 ---
 ### 구독상품변경
-**PUT** `localhost:8080/admin/subscriptions/organization/1/3`
+**PUT** `localhost:8080/admin/subscriptions/organizationCopy/1/3`
 ### Request Headers
 | Key | Value |
 |-----|--------|

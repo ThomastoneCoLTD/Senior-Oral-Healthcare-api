@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor
-@Table(name = "toothBrushing")
+@Table(name = "tooth_brushing")
 public class ToothBrushing extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

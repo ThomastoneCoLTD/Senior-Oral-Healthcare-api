@@ -1,27 +1,22 @@
 package com.kaii.dentix.global.common.dto;
-
-import lombok.AllArgsConstructor;
+import lombok.*;
 import org.springframework.data.domain.PageRequest;
 
+@Getter
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
 public class PagingRequest {
 
-    private int page;
-
-    private int size;
-
-    public void setPage(int page) {
-        this.page = page <= 0 ? 1 : page;
-    }
-
-    public void setSize(int size) {
-        int DEFAULT_SIZE = 10;
-        int MAX_SIZE = 50;
-        this.size = size > MAX_SIZE ? DEFAULT_SIZE : size;
-    }
+    private Integer page = 1;
+    private Integer size = 10;
 
     public PageRequest of() {
-        return PageRequest.of(page - 1, size);
-    }
 
+        int safePage = (page == null || page < 1) ? 1 : page;
+        int safeSize = (size == null || size < 1) ? 10 : size;
+
+        // 1-based → 0-based
+        return PageRequest.of(safePage - 1, safeSize);
+    }
 }

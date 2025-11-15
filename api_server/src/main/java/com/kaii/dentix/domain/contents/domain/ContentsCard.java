@@ -13,14 +13,16 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor
-@Table(name = "contentsCard")
+@Table(name = "contents_card")
 public class ContentsCard extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long contentsCardId;
+    private int contentsCardId;
 
-    @Column(nullable = false)
-    private int contentsId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "contents_id", nullable = false)
+    private Contents contents;
+
 
     @Column(nullable = false)
     private int contentsCardNumber;

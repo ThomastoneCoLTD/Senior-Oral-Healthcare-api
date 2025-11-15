@@ -10,10 +10,12 @@ import java.util.Optional;
 
 public interface SubscriptionHistoryRepository extends JpaRepository<SubscriptionHistory, Long> {
 
-    // 최신 구독 이력 조회
-    Optional<SubscriptionHistory> findTopByOrganizationOrderByStartDateDesc(Organization organization);
+    /** 특정 기관의 구독 이력 전체 */
+    List<SubscriptionHistory> findAllByOrganization_OrganizationId(Long organizationId);
+    /** 현재 활성화된 (endDate가 null인) 구독 이력 */
+    Optional<SubscriptionHistory> findByOrganization_OrganizationIdAndEndDateIsNull(Long organizationId);
+    /** ✅ 특정 기관의 구독 이력 전체 (최신순) */
     List<SubscriptionHistory> findAllByOrganization_OrganizationIdOrderByStartDateDesc(Long organizationId);
+    Optional<SubscriptionHistory> findTopByOrganizationOrderByStartDateDesc(Organization organization);
 
-    // 기관별 모든 구독 이력 조회
-    List<SubscriptionHistory> findAllByOrganizationOrderByStartDateDesc(Organization organization);
 }

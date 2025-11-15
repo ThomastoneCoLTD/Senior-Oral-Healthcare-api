@@ -7,6 +7,5 @@ import java.util.List;
 
 public interface ContentsCardRepository extends JpaRepository<ContentsCard, Integer> {
 
-    List<ContentsCard> findAllByContentsId(int contentsId);
-
+    List<ContentsCard> findAllByContents_ContentsId(Long contentsId);
 }

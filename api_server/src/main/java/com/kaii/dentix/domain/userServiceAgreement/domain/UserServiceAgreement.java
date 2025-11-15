@@ -13,7 +13,7 @@ import java.util.Date;
 @Entity
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor
-@Table(name = "userServiceAgreement")
+@Table(name = "user_service_agreement")
 public class UserServiceAgreement extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

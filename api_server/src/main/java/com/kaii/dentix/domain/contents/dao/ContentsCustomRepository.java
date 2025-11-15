@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface ContentsCustomRepository {
     List<ContentsDto> getContents();
-    List<Integer> getCustomizedContentsIdList(Long questionnaireId);
+    List<Long> getCustomizedContentsIdList(Long questionnaireId);
     List<ContentsDto> getCustomizedContents(Long questionnaireId);
 }
 

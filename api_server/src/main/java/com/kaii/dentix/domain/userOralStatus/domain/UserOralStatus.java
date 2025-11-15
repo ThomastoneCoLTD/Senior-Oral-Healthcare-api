@@ -10,7 +10,7 @@ import lombok.*;
 @Getter @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "userOralStatus")
+@Table(name = "user_oral_status")
 public class UserOralStatus extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

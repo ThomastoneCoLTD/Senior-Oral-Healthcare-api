@@ -54,27 +54,27 @@ public class AdminStatisticController {
     private final SubscriptionInfoService subscriptionInfoService;
 //    private final JwtTokenUtil jwtTokenUtil;
 
-    @GetMapping("/me")
-    public ResponseEntity<SubscriptionInfoResponse> getMySubscriptionInfo(HttpServletRequest request) {
-        // JWT에서 관리자(Admin) 정보 추출
-        Admin admin = adminService.getTokenAdmin(request);
-        if (admin == null || admin.getOrganization() == null) {
-            log.warn("⚠️ 관리자 또는 소속 기관이 존재하지 않습니다.");
-            return ResponseEntity.badRequest().build();
-        }
-
-        Long organizationId = admin.getOrganization().getOrganizationId();
-        log.info("📊 기관 사용량 요청 | adminId={}, organizationId={}, organizationName={}",
-                admin.getAdminId(), organizationId, admin.getOrganization().getOrganizationName());
-
-        // 서비스 호출
-        SubscriptionInfoResponse response = adminStatisticService.getMySubscriptionInfo(organizationId);
-
-        log.info("✅ 기관 사용량 응답 완료 | 기관={}, 총응답수={}, 사용률={}%",
-                response.getOrganizationName(), response.getTotalSuccessCount(), response.getUsageRate());
-
-        return ResponseEntity.ok(response);
-    }
+//    @GetMapping("/me")
+//    public ResponseEntity<SubscriptionInfoResponse> getMySubscriptionInfo(HttpServletRequest request) {
+//        // JWT에서 관리자(Admin) 정보 추출
+//        Admin admin = adminService.getTokenAdmin(request);
+//        if (admin == null || admin.getOrganization() == null) {
+//            log.warn("⚠️ 관리자 또는 소속 기관이 존재하지 않습니다.");
+//            return ResponseEntity.badRequest().build();
+//        }
+//
+//        Long organizationId = admin.getOrganization().getOrganizationId();
+//        log.info("📊 기관 사용량 요청 | adminId={}, organizationId={}, organizationName={}",
+//                admin.getAdminId(), organizationId, admin.getOrganization().getOrganizationName());
+//
+////        // 서비스 호출
+//        SubscriptionInfoResponse response = adminStatisticService.getMySubscriptionInfo(organizationId);
+////
+////        log.info("✅ 기관 사용량 응답 완료 | 기관={}, 총응답수={}, 사용률={}%",
+////                response.getOrganizationName(), response.getTotalSuccessCount(), response.getUsageRate());
+//
+//        return ResponseEntity.ok(response);
+//    }
 
     @GetMapping("/org/users")
     public ResponseEntity<AdminStatisticsOrgUserResponse> getOrganizationUserStatistics(

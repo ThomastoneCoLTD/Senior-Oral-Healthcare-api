@@ -7,6 +7,6 @@ import java.util.List;
 
 public interface ContentsToCategoryRepository extends JpaRepository<ContentsToCategory, Long> {
 
-    List<ContentsToCategory> findByContentsId(int contentsId);
+    List<ContentsToCategory> findByContents_ContentsId(Long contentsId);
 
 }

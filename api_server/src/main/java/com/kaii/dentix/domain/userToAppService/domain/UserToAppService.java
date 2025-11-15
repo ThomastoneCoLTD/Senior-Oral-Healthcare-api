@@ -9,7 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "userToAppService")
+@Table(name = "user_to_app_service")
 @Getter
 @Builder
 @NoArgsConstructor

@@ -15,13 +15,13 @@ import java.util.Map;
 public class OrganizationUsageController {
     private final OrganizationUsageService organizationUsageService;
 
-    @PostMapping("/{id}/success")
-    public ResponseEntity<Map<String, Object>> recordSuccess(@PathVariable Long id){
-        int remaining = organizationUsageService.recordSuccessAndGetRemaining(id);
-        Map<String, Object> response = new HashMap<>();
-        response.put("message","success response record success.");
-        response.put("remainingResponses",remaining);
-
-        return ResponseEntity.ok(response);
-    }
+//    @PostMapping("/{id}/success")
+//    public ResponseEntity<Map<String, Object>> recordSuccess(@PathVariable Long id){
+//        int remaining = organizationUsageService.recordSuccessAndGetRemaining(id);
+//        Map<String, Object> response = new HashMap<>();
+//        response.put("message","success response record success.");
+//        response.put("remainingResponses",remaining);
+//
+//        return ResponseEntity.ok(response);
+//    }
 }

@@ -1,5 +1,6 @@
 package com.kaii.dentix.domain.subscription.domain;
 
+import com.kaii.dentix.domain.type.PlanName;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,11 +20,12 @@ public class SubscriptionPlan extends TimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
+    @Column(name = "subscription_plan_id")
     private Long id; // PK
 
-    @Column(name = "plan_name", length = 45, nullable = false)
-    private String planName; // 구독상품 플랜명 (예: Small, Growth, Enterprise)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "plan_name", nullable = false, length = 50)
+    private PlanName planName;// 구독상품 플랜명 (예: Small, Growth, Enterprise)
 
     @Column(name = "plan_cycle", length = 20, nullable = false)
     private String planCycle; // monthly / yearly
@@ -32,7 +34,7 @@ public class SubscriptionPlan extends TimeEntity {
     private Integer planSort; // 정렬 순서
 
     @Column(nullable = false)
-    private Long price; // 구독상품 기본 가격
+    private Double price; // 구독상품 기본 가격
 
     @Column(name = "max_success_responses", nullable = false)
     private Integer maxSuccessResponses; // 기본 제공 성공 응답 횟수
@@ -48,10 +50,6 @@ public class SubscriptionPlan extends TimeEntity {
     @Column(name = "overuse_unit_price")
     private Integer overuseUnitPrice = 100; // 기본값 100원
 
-    /** AI 프리미엄 분석 (고정밀 모델 사용 가능 여부) */
-    @Column(name = "ai_premium_enabled")
-    private Boolean aiPremiumEnabled = false;
-
     /** 커스텀 설문 템플릿 생성 가능 여부 */
     @Column(name = "custom_survey_enabled")
     private Boolean customSurveyEnabled = false;
@@ -59,18 +57,6 @@ public class SubscriptionPlan extends TimeEntity {
     /** PDF 리포트 내보내기 기능 사용 가능 여부 */
     @Column(name = "report_export_enabled")
     private Boolean reportExportEnabled = false;
-
-    /** 다기관 관리 기능 가능 여부 (B2B 그룹용) */
-    @Column(name = "multi_org_enabled")
-    private Boolean multiOrgEnabled = false;
-
-    /** 외부 API 연동 허용 여부 (JWT, Webhook 등) */
-    @Column(name = "api_access_enabled")
-    private Boolean apiAccessEnabled = false;
-
-    /** 기관 전용 브랜딩(로고/도메인 커스텀) 가능 여부 */
-    @Column(name = "white_label_enabled")
-    private Boolean whiteLabelEnabled = false;
 
     /** 플랜 활성화 여부 (비활성화 시 신규 구독 불가) */
     @Column(name = "active", nullable = false)
@@ -93,22 +79,21 @@ public class SubscriptionPlan extends TimeEntity {
     /** 기능 사용 가능 여부 검사 */
     public boolean canUseFeature(FeatureType feature) {
         return switch (feature) {
-            case AI_PREMIUM -> Boolean.TRUE.equals(aiPremiumEnabled);
             case CUSTOM_SURVEY -> Boolean.TRUE.equals(customSurveyEnabled);
             case REPORT_EXPORT -> Boolean.TRUE.equals(reportExportEnabled);
-            case MULTI_ORG -> Boolean.TRUE.equals(multiOrgEnabled);
-            case API_ACCESS -> Boolean.TRUE.equals(apiAccessEnabled);
-            case WHITE_LABEL -> Boolean.TRUE.equals(whiteLabelEnabled);
         };
     }
 
     /** 기능 Enum */
     public enum FeatureType {
-        AI_PREMIUM,
         CUSTOM_SURVEY,
-        REPORT_EXPORT,
-        MULTI_ORG,
-        API_ACCESS,
-        WHITE_LABEL
+        REPORT_EXPORT
+    }
+
+    public boolean isYearly() {
+        return "yearly".equalsIgnoreCase(this.planCycle);
+    }
+    public boolean isMonthly() {
+        return "monthly".equalsIgnoreCase(this.planCycle);
     }
 }

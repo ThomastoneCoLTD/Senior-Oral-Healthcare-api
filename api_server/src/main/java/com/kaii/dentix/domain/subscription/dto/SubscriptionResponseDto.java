@@ -38,7 +38,7 @@ public class SubscriptionResponseDto {
         return SubscriptionResponseDto.builder()
                 .id(usage.getId())
                 .organizationName(usage.getOrganization().getOrganizationName())
-                .planName(plan.getPlanName())
+                .planName(plan.getPlanName().name())
                 .planCycle(plan.getPlanCycle())
                 .maxSuccessResponses(plan.getMaxSuccessResponses())
                 .successCount(usage.getSuccessCount())

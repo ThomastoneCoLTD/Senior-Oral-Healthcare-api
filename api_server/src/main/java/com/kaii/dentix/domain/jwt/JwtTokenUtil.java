@@ -202,6 +202,30 @@ public class JwtTokenUtil {
         }
     }
 
+    /**
+     * ✅ AccessToken에서 organizationId 추출
+     * (관리자, 사용자 공통)
+     */
+    public Long getOrganizationIdFromToken(HttpServletRequest request) {
+        String token = getAccessToken(request);
+        if (token == null) return null;
 
+        try {
+            Claims claims = getClaims(token, TokenType.AccessToken);
+            Object orgIdObj = claims.get("organizationId");
+            if (orgIdObj == null) return null;
+
+            // JSON 파싱 시 Integer로 들어오는 경우도 대비
+            if (orgIdObj instanceof Integer) {
+                return ((Integer) orgIdObj).longValue();
+            } else if (orgIdObj instanceof Long) {
+                return (Long) orgIdObj;
+            } else {
+                return Long.valueOf(orgIdObj.toString());
+            }
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
 }

@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,6 +38,11 @@ public class AdminUserController {
         return new SuccessResponse();
     }
 
+    @PutMapping(value = "/unverify", name = "사용자 인증 취소")
+    public SuccessResponse userUnverify(@RequestParam Long userId){
+        adminUserService.userUnverify(userId);
+        return new SuccessResponse();
+    }
     /**
      *  사용자 정보 조회
      */
@@ -67,12 +73,12 @@ public class AdminUserController {
     /**
      *  사용자 목록 조회
      */
-    /** ✅ 사용자 목록 조회 (슈퍼관리자: 전체 / 일반관리자: 자기 기관) */
-    @GetMapping(name = "사용자 목록 조회")
-    public DataResponse<AdminUserListDto> userList(AdminUserListRequest request, HttpServletRequest servletRequest) {
-        AdminUserListDto result = adminUserService.userList(request, servletRequest);
-        return new DataResponse<>(result);
+    @GetMapping("/user")
+    public ResponseEntity<DataResponse<AdminUserListDto>> userList(
+            @ModelAttribute AdminUserListRequest request,
+            HttpServletRequest servletRequest
+    ){
+        AdminUserListDto response = adminUserService.userList(request, servletRequest);
+        return ResponseEntity.ok(new DataResponse<>(200, "사용자 목록 조회 성공", response));
     }
-
-
 }

@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "appService")
+@Table(name = "app_service")
 @Getter
 @Setter
 @Builder
@@ -20,6 +20,6 @@ public class AppService extends TimeEntity {
     private String name; // 서비스 이름
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "serviceType", nullable = false, length = 50)
+    @Column(name = "app_service_type", nullable = false, length = 50)
     private ServiceType serviceType;
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="organization-register">
+  <div class="organizationCopy-register">
     <h1>기관 등록</h1>
     <form @submit.prevent="registerOrganization">
       <label>기관명</label>
@@ -35,17 +35,17 @@ export default {
   methods: {
     registerOrganization() {
       console.log("기관 등록 데이터:", this.org);
-      // TODO: API 연동 (src/apis/organization.js)
+      // TODO: API 연동 (src/apis/organizationCopy.js)
     },
   },
 };
 </script>
 
 <style scoped>
-.organization-register {
+.organizationCopy-register {
   padding: 20px;
 }
-.organization-register form {
+.organizationCopy-register form {
   display: flex;
   flex-direction: column;
   gap: 12px;

@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.admin.dto;
 
 import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionResponse;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dto.TokenDto;
 import lombok.AllArgsConstructor;
@@ -21,6 +22,7 @@ public class AdminLoginDto extends TokenDto {
     private YnType adminIsSuper;
     private Long organizationId;
     private String organizationName;
+    private OrganizationSubscriptionResponse organizationSubscription;
 
     public AdminLoginDto(Admin admin) {
         this.adminId = admin.getAdminId();

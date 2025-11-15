@@ -6,7 +6,7 @@ import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.controller.OralCheckController;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.dto.*;
-import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.domain.OrganizationCopy;
 import com.kaii.dentix.domain.questionnaire.dto.OralStatusTypeDto;
 import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingDto;
 import com.kaii.dentix.domain.type.OralDateStatusType;
@@ -67,8 +67,8 @@ public class OralCheckControllerTest extends ControllerTest {
                 .build();
 
         // 테스트용 Organization 엔티티
-        Organization organization = new Organization();
-        organization.setOrganizationId(100L);
+        OrganizationCopy organizationCopy = new OrganizationCopy();
+        organizationCopy.setOrganizationId(100L);
 
         // 테스트용 OralCheck 엔티티
         oralCheck = new OralCheck();

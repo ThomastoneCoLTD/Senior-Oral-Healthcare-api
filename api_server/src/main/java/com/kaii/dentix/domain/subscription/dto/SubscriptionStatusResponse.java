@@ -8,7 +8,7 @@ public record SubscriptionStatusResponse(
         String organizationName,
         String planName,
         String planCycle,
-        Long planPrice,
+        Integer planPrice,
         Integer planQuota,
         Integer usedCount,
         Integer remainingCount,

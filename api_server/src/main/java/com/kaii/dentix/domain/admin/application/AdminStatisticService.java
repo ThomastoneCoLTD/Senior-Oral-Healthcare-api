@@ -274,49 +274,49 @@ private final AdminService adminService;
                 .build();
     }
 
-    @Transactional(readOnly = true)
-    public SubscriptionInfoResponse getMySubscriptionInfo(Long organizationId) {
-        Organization org = organizationRepository.findById(organizationId)
-                .orElseThrow(() -> new NotFoundDataException("기관 정보를 찾을 수 없습니다."));
-
-        SubscriptionPlan plan = org.getSubscriptionPlan();
-        if (plan == null) {
-            throw new NotFoundDataException("기관의 구독 플랜 정보를 찾을 수 없습니다.");
-        }
-
-        // ✅ 실시간 계산 대신 Organization 엔티티 값 사용
-        int totalSuccessCount = org.getSuccessCount() != null ? org.getSuccessCount() : 0;
-        int max = plan.getMaxSuccessResponses();
-        int remaining = Math.max(0, max - totalSuccessCount);
-        double usageRate = org.getUsageRate() != null
-                ? org.getUsageRate()
-                : (max == 0 ? 0 : (double) totalSuccessCount / max * 100.0);
-
-        // ✅ 사용자별 successCount 필드 사용
-        List<User> users = userRepository.findByOrganization_OrganizationId(organizationId);
-        List<SubscriptionInfoResponse.UserUsage> userUsages = users.stream()
-                .map(u -> SubscriptionInfoResponse.UserUsage.builder()
-                        .userId(u.getUserId())
-                        .userName(u.getUserName())
-                        .successCount(u.getSuccessCount() != null ? u.getSuccessCount() : 0)
-                        .build())
-                .toList();
-
-        // ✅ 응답 DTO 구성
-        return SubscriptionInfoResponse.builder()
-                .organizationName(org.getOrganizationName())
-                .planName(plan.getPlanName())
-                .planCycle(plan.getPlanCycle())
-                .price(plan.getPrice())
-                .maxSuccessResponses(max)
-                .totalSuccessCount(totalSuccessCount)  // ✅ DB count 대신 Organization 값
-                .remainingCount(remaining)
-                .usageRate(Math.round(usageRate * 10) / 10.0)
-                .subscriptionStartDate(org.getSubscriptionStartDate())
-                .usageResetDate(org.getUsageResetDate())
-                .users(userUsages)
-                .build();
-    }
+//    @Transactional(readOnly = true)
+//    public SubscriptionInfoResponse getMySubscriptionInfo(Long organizationId) {
+//        Organization org = organizationRepository.findById(organizationId)
+//                .orElseThrow(() -> new NotFoundDataException("기관 정보를 찾을 수 없습니다."));
+//
+//        SubscriptionPlan plan = org.getSubscriptionPlan();
+//        if (plan == null) {
+//            throw new NotFoundDataException("기관의 구독 플랜 정보를 찾을 수 없습니다.");
+//        }
+//
+//        // ✅ 실시간 계산 대신 Organization 엔티티 값 사용
+//        int totalSuccessCount = org.getSuccessCount() != null ? org.getSuccessCount() : 0;
+//        int max = plan.getMaxSuccessResponses();
+//        int remaining = Math.max(0, max - totalSuccessCount);
+//        double usageRate = org.getUsageRate() != null
+//                ? org.getUsageRate()
+//                : (max == 0 ? 0 : (double) totalSuccessCount / max * 100.0);
+//
+//        // ✅ 사용자별 successCount 필드 사용
+//        List<User> users = userRepository.findByOrganization_OrganizationId(organizationId);
+//        List<SubscriptionInfoResponse.UserUsage> userUsages = users.stream()
+//                .map(u -> SubscriptionInfoResponse.UserUsage.builder()
+//                        .userId(u.getUserId())
+//                        .userName(u.getUserName())
+//                        .successCount(u.getSuccessCount() != null ? u.getSuccessCount() : 0)
+//                        .build())
+//                .toList();
+//
+//        // ✅ 응답 DTO 구성
+//        return SubscriptionInfoResponse.builder()
+//                .organizationName(org.getOrganizationName())
+//                .planName(plan.getPlanName())
+//                .planCycle(plan.getPlanCycle())
+//                .price(plan.getPrice())
+//                .maxSuccessResponses(max)
+//                .totalSuccessCount(totalSuccessCount)  // ✅ DB count 대신 Organization 값
+//                .remainingCount(remaining)
+//                .usageRate(Math.round(usageRate * 10) / 10.0)
+//                .subscriptionStartDate(org.getSubscriptionStartDate())
+//                .usageResetDate(org.getUsageResetDate())
+//                .users(userUsages)
+//                .build();
+//    }
 //    @Transactional(readOnly = true)
 //    public List<OrganizationSubscriptionResponse> getSubscriptionUsage(Admin admin) {
 //        if (admin.getRoles() == UserRole.ROLE_SUPER_ADMIN) {

@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor
-@Table(name = "serviceAgreement")
+@Table(name = "service_agreement")
 public class ServiceAgreement extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

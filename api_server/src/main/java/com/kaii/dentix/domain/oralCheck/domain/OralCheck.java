@@ -14,22 +14,23 @@ import org.hibernate.type.SqlTypes;
 @Getter @Builder
 @Setter
 @AllArgsConstructor @NoArgsConstructor
-@Where(clause = "oralCheckAnalysisState = 'SUCCESS'")
-@Table(name = "oralCheck")
+@Where(clause = "oral_check_analysis_state = 'SUCCESS'")
+@Table(name = "oral_check")
 public class OralCheck extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long oralCheckId;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "userId", insertable = false, updatable = false)
+    @JoinColumn(name = "user_id")
     private User user;
-    private Long userId;
+//    private Long userId;
 
     @Column(length = 200, nullable = false)
     private String oralCheckPicturePath; // 구강 검진 원본 사진 경로
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "enum")
+    @Column(columnDefinition = "enum", name = "oral_check_analysis_state")
     private OralCheckAnalysisState oralCheckAnalysisState; // 구강 검진 분석 상태
 
     private Float oralCheckTotalRange; // 구강 검진 전체 비율
