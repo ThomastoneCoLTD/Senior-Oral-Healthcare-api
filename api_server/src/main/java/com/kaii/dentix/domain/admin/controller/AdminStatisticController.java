@@ -84,11 +84,11 @@ public class AdminStatisticController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/all")
-    public ResponseEntity<List<SuperAdminUserStatisticResponse>> getAllOrganizationStats(HttpServletRequest request) {
-        Admin admin = adminService.getTokenAdmin(request);
-        List<SuperAdminUserStatisticResponse> response = adminStatisticService.getAllOrganizationUserStats(admin);
-        return ResponseEntity.ok(response);
-    }
+//    @GetMapping("/all")
+//    public ResponseEntity<List<SuperAdminUserStatisticResponse>> getAllOrganizationStats(HttpServletRequest request) {
+//        Admin admin = adminService.getTokenAdmin(request);
+//        List<SuperAdminUserStatisticResponse> response = adminStatisticService.getAllOrganizationUserStats(admin);
+//        return ResponseEntity.ok(response);
+//    }
 
 }

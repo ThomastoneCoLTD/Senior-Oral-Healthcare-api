@@ -52,4 +52,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT new com.kaii.dentix.domain.admin.dto.AdminUserInfoDto(u.userId, u.userName, o.organizationName, u.userLoginIdentifier, u.userGender, u.created) " +
             "FROM User u JOIN u.organization o WHERE o.organizationId = :orgId")
     Page<AdminUserInfoDto> findAllByOrganizationId(@Param("orgId") Long orgId, Pageable pageable);
+
+    long countByUserGender(GenderType gender);
+
+    long countByCreatedAfter(Date created);
+
 }

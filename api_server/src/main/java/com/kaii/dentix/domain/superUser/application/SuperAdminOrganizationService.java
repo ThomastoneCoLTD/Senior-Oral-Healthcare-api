@@ -1,5 +1,8 @@
 package com.kaii.dentix.domain.superUser.application;
 
+import com.kaii.dentix.domain.admin.dao.user.AdminUserCustomRepository;
+import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.admin.dto.superAdmin.SuperAdminUserStatisticResponse;
 import com.kaii.dentix.domain.billing.dao.BillingRepository;
 import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
@@ -13,7 +16,11 @@ import com.kaii.dentix.domain.superUser.dto.OrganizationDetailResponse;
 import com.kaii.dentix.domain.superUser.dto.OrganizationListResponse;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
+import com.kaii.dentix.domain.superUser.dto.SuperAdminAllUserStatisticsResponse;
 import com.kaii.dentix.domain.superUser.dto.SuperAdminBillingDto;
+import com.kaii.dentix.domain.type.GenderType;
+import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.response.DataResponse;
@@ -21,6 +28,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -35,7 +44,8 @@ public class SuperAdminOrganizationService {
     private final OralCheckRepository oralcheckRepository;
     private final SubscriptionService subscriptionService;
     private final OralCheckRepository oralCheckRepository;
-
+    private final UserRepository userRepository;
+    private final AdminUserCustomRepository adminUserCustomRepository;
     /** ✅ 1. 전체 기관 목록 조회 */
     @Transactional(readOnly = true)
     public List<OrganizationListResponse> getAllOrganizations() {
@@ -108,6 +118,39 @@ public class SuperAdminOrganizationService {
                 .topUsers(oralCheckRepository.findTopUsers(organizationId))
                 .recentUsages(oralCheckRepository.findRecentUsages(organizationId))
 
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public SuperAdminAllUserStatisticsResponse getSuperAdminTotalUserStatistics(Admin admin) {
+
+        // 🔒 슈퍼관리자 권한 체크
+        if (admin.getAdminIsSuper() != YnType.Y) {
+            throw new BadRequestApiException("슈퍼관리자만 접근할 수 있습니다.");
+        }
+
+        // 📌 기관별 사용자 통계 (기존 커스텀 쿼리)
+        List<SuperAdminUserStatisticResponse> orgStats =
+                adminUserCustomRepository.getAllOrganizationUserStats();
+
+        // 📌 전체 사용자 수
+        long totalUsers = userRepository.count();
+
+        long maleUsers = userRepository.countByUserGender(GenderType.M);
+        long femaleUsers = userRepository.countByUserGender(GenderType.W);
+
+        // 📌 최근 7일 신규 가입자
+        LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
+        Date oneWeekAgoDate = java.sql.Timestamp.valueOf(oneWeekAgo);
+
+        long newUsers = userRepository.countByCreatedAfter(oneWeekAgoDate);
+
+        return SuperAdminAllUserStatisticsResponse.builder()
+                .totalUsers(totalUsers)
+                .maleUsers(maleUsers)
+                .femaleUsers(femaleUsers)
+                .newUsers7Days(newUsers)
+                .organizationStats(orgStats)
                 .build();
     }
 }

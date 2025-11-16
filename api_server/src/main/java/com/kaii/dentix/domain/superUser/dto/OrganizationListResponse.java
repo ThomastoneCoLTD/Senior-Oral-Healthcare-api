@@ -9,6 +9,9 @@ public record OrganizationListResponse(
         String organizationName,
         String organizationPhoneNumber,
         String subscriptionPlanName,
+        Double price,
+        String startDate,
+        String endDate,
         Boolean active
 ) {
     public static OrganizationListResponse fromEntity(Organization o) {
@@ -17,6 +20,21 @@ public record OrganizationListResponse(
                 .organizationName(o.getOrganizationName())
                 .organizationPhoneNumber(o.getOrganizationPhoneNumber())
                 .subscriptionPlanName(o.getSubscriptionPlan() != null ? o.getSubscriptionPlan().getPlanName().name() : null)
+                .price(
+                        o.getSubscriptionPlan() != null
+                                ? o.getSubscriptionPlan().getPrice()
+                                : null
+                )
+                .startDate(
+                        o.getSubscriptionStartDate() != null
+                                ? o.getSubscriptionStartDate().toString()
+                                : null
+                )
+                .endDate(
+                        o.getSubscriptionEndDate() != null
+                                ? o.getSubscriptionEndDate().toString()
+                                : null
+                )
                 .active(o.getActive())
                 .build();
     }

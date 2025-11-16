@@ -18,6 +18,7 @@ import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
 import com.kaii.dentix.domain.subscription.dto.SubscriptionInfoResponse;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.superUser.dto.SuperAdminAllUserStatisticsResponse;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
@@ -332,13 +333,35 @@ private final AdminService adminService;
 //        }
 //    }
 @Transactional(readOnly = true)
-public List<SuperAdminUserStatisticResponse> getAllOrganizationUserStats(Admin admin) {
-    // ✅ 슈퍼관리자 권한 검증
+public SuperAdminAllUserStatisticsResponse getSuperAdminTotalStats(Admin admin) {
+
+    // 🔐 슈퍼관리자 권한 체크
     if (admin.getAdminIsSuper() != YnType.Y) {
         throw new BadRequestApiException("슈퍼관리자만 접근할 수 있습니다.");
     }
 
-    return adminUserCustomRepository.getAllOrganizationUserStats();
+    // 1️⃣ 기존 기관별 통계 재사용
+    List<SuperAdminUserStatisticResponse> orgStats =
+            adminUserCustomRepository.getAllOrganizationUserStats();
+
+    // 2️⃣ 전체 유저 통계 계산
+    long totalUsers = userRepository.count();
+    long maleUsers = userRepository.countByUserGender(GenderType.M);
+    long femaleUsers = userRepository.countByUserGender(GenderType.W);
+
+    LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+    Date weekAgoDate = java.sql.Timestamp.valueOf(weekAgo);
+
+    long newUsers = userRepository.countByCreatedAfter(weekAgoDate);
+
+    // 3️⃣ 하나로 묶어서 리턴
+    return SuperAdminAllUserStatisticsResponse.builder()
+            .totalUsers(totalUsers)
+            .maleUsers(maleUsers)
+            .femaleUsers(femaleUsers)
+            .newUsers7Days(newUsers)
+            .organizationStats(orgStats)
+            .build();
 }
 
 }

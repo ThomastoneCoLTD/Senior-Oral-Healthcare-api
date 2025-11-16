@@ -13,6 +13,7 @@ public record OrganizationDetailResponse(
         String organizationEmail,
         String organizationPhoneNumber,
         String subscriptionPlanName,
+        Double price,
         String startDate,
         String endDate,
         Boolean active
@@ -26,6 +27,11 @@ public record OrganizationDetailResponse(
                 .subscriptionPlanName(
                         o.getSubscriptionPlan() != null
                                 ? o.getSubscriptionPlan().getPlanName().name()
+                                : null
+                )
+                .price(
+                        o.getSubscriptionPlan() != null
+                                ? o.getSubscriptionPlan().getPrice()
                                 : null
                 )
                 .startDate(

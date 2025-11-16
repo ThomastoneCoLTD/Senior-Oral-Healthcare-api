@@ -1,18 +1,23 @@
 package com.kaii.dentix.domain.superUser.controller;
 
 import com.kaii.dentix.domain.admin.application.AdminService;
+import com.kaii.dentix.domain.admin.application.AdminStatisticService;
 import com.kaii.dentix.domain.admin.application.AdminUserService;
+import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
 import com.kaii.dentix.domain.billing.application.BillingService;
 import com.kaii.dentix.domain.billing.dto.BillingStatusHistoryResponse;
 import com.kaii.dentix.domain.billing.dto.BillingStatusUpdateRequest;
+import com.kaii.dentix.domain.jwt.JwtTokenUtil;
+import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
 import com.kaii.dentix.domain.superUser.dto.OrganizationDetailResponse;
 import com.kaii.dentix.domain.superUser.dto.OrganizationListResponse;
 import com.kaii.dentix.domain.superUser.application.SuperAdminOrganizationService;
+import com.kaii.dentix.domain.superUser.dto.SuperAdminAllUserStatisticsResponse;
 import com.kaii.dentix.global.common.dto.PagingRequest;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,6 +38,9 @@ public class SuperAdminOrganizationController {
     private final BillingService billingService;
     private final AdminService adminService;
     private final AdminUserService adminUserService;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final AdminRepository adminRepository;
+    private final AdminStatisticService adminStatisticService;
     private final OrganizationService organizationService;
 //    private final SuperAdminOrganizationService superAdminOrganizationService;
 
@@ -152,4 +160,16 @@ public class SuperAdminOrganizationController {
                 )
         );
     }
+
+    @GetMapping("/statistics")
+    public DataResponse<SuperAdminAllUserStatisticsResponse> getSuperAdminStatistics(
+            HttpServletRequest request
+    ) {
+        Admin admin = adminService.getTokenAdmin(request);
+
+        return new DataResponse<>(
+                adminStatisticService.getSuperAdminTotalStats(admin)
+        );
+    }
+
 }
