@@ -61,8 +61,8 @@ spring:
             enable: true
       mail.debug: true
 jwt:
-  accessTokenKey: "test-access-token"
-  refreshTokenKey: "test-refresh-token"
+  accessTokenKey: "j39sd9f39sd9f39sd9f39sd9f39sd9fs"
+  refreshTokenKey: "kx9d9d9kd9dk9d9dk9d9dk9d9dk9d9dk"
   secret: "jwt"
   expiration: 86400000
 

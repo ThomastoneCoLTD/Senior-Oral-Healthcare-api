@@ -613,6 +613,7 @@ public class OralCheckService {
             .toothBrushingAverage(Utils.getDeleteDecimalValue((float) toothBrushingTotalCount / toothBrushingDailyCountList.size(), 1))
             .oralStatus(latestQuestionnaire != null ? new OralStatusTypeDto(latestQuestionnaire.getOralStatusType(), latestQuestionnaire.getOralStatusTitle()) : null)
             .questionnaireCreated(latestQuestionnaire != null ? latestQuestionnaire.getQuestionnaireCreated() : null)
+            .oralCheckCreated(latestOralCheck.getCreated())
             .oralCheckResultTotalType(latestOralCheck.getOralCheckResultTotalType())
             .oralCheckUpRightScoreType(latestOralCheck.getOralCheckUpRightScoreType())
             .oralCheckUpLeftScoreType(latestOralCheck.getOralCheckUpLeftScoreType())

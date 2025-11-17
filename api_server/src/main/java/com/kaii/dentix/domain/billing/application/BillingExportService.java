@@ -43,7 +43,7 @@ public class BillingExportService {
             }
             orgId = organizationId;
         } else {
-            orgId = jwtTokenUtil.getOrganizationIdFromAccessToken(request);
+            orgId = jwtTokenUtil.getOrganizationIdFromToken(request);
         }
 
         Organization organization = organizationService.getOrganization(orgId);
