@@ -18,6 +18,7 @@ import com.kaii.dentix.domain.superUser.dto.OrganizationDetailResponse;
 import com.kaii.dentix.domain.superUser.dto.OrganizationListResponse;
 import com.kaii.dentix.domain.superUser.application.SuperAdminOrganizationService;
 import com.kaii.dentix.domain.superUser.dto.SuperAdminAllUserStatisticsResponse;
+import com.kaii.dentix.domain.superUser.dto.SuperAdminCurrentSubscriptionDto;
 import com.kaii.dentix.global.common.dto.PagingRequest;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,6 +43,7 @@ public class SuperAdminOrganizationController {
     private final AdminRepository adminRepository;
     private final AdminStatisticService adminStatisticService;
     private final OrganizationService organizationService;
+//    private final SuperAdminOrganizationService superAdminOrganizationService;
 //    private final SuperAdminOrganizationService superAdminOrganizationService;
 
     /** ✅ 1. 전체 기관 목록 조회 */
@@ -169,6 +171,18 @@ public class SuperAdminOrganizationController {
 
         return new DataResponse<>(
                 adminStatisticService.getSuperAdminTotalStats(admin)
+        );
+    }
+
+    @GetMapping("/{organizationId}/subscription/current")
+    public ResponseEntity<DataResponse<SuperAdminCurrentSubscriptionDto>> getCurrentSubscription(
+            @PathVariable Long organizationId) {
+
+        SuperAdminCurrentSubscriptionDto dto =
+                superAdminOrganizationService.getCurrentSubscription(organizationId);
+
+        return ResponseEntity.ok(
+                new DataResponse<>(200, "현재 구독상품 조회 성공", dto)
         );
     }
 

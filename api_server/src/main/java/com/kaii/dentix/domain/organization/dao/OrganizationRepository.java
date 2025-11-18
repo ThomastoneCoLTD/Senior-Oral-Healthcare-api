@@ -57,10 +57,16 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     boolean existsByOrganizationPhoneNumber(String organizationPhoneNumber);
     boolean existsByOrganizationEmail(String organizationEmail);
 
-    /** ✅ 기관 + 구독 정보까지 함께 조회 */
-    @EntityGraph(attributePaths = {"subscription", "subscription.subscriptionPlan"})
-    Optional<Organization> findByOrganizationId(Long organizationId);
+//    /** ✅ 기관 + 구독 정보까지 함께 조회 */
+//    @EntityGraph(attributePaths = {"subscription", "subscription.subscriptionPlan"})
+//    Optional<Organization> findByOrganizationId(Long organizationId);
 
     @Query("SELECT o FROM Organization o LEFT JOIN FETCH o.organizationSubscription")
     List<Organization> findAllWithSubscription();
+
+    @EntityGraph(attributePaths = {
+            "organizationSubscription",
+            "organizationSubscription.subscriptionPlan"
+    })
+    Optional<Organization> findByOrganizationId(Long organizationId);
 }

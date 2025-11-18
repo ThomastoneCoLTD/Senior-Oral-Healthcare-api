@@ -8,16 +8,16 @@ import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckUsageDto;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.subscription.application.SubscriptionService;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
-import com.kaii.dentix.domain.superUser.dto.OrganizationDetailResponse;
-import com.kaii.dentix.domain.superUser.dto.OrganizationListResponse;
+import com.kaii.dentix.domain.superUser.dto.*;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
-import com.kaii.dentix.domain.superUser.dto.SuperAdminAllUserStatisticsResponse;
-import com.kaii.dentix.domain.superUser.dto.SuperAdminBillingDto;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -46,6 +46,7 @@ public class SuperAdminOrganizationService {
     private final OralCheckRepository oralCheckRepository;
     private final UserRepository userRepository;
     private final AdminUserCustomRepository adminUserCustomRepository;
+    private final OrganizationRepository subscriptionRepository;
     /** ✅ 1. 전체 기관 목록 조회 */
     @Transactional(readOnly = true)
     public List<OrganizationListResponse> getAllOrganizations() {
@@ -151,6 +152,25 @@ public class SuperAdminOrganizationService {
                 .femaleUsers(femaleUsers)
                 .newUsers7Days(newUsers)
                 .organizationStats(orgStats)
+                .build();
+    }
+
+    public SuperAdminCurrentSubscriptionDto getCurrentSubscription(Long orgId) {
+
+        Organization org = organizationRepository.findByOrganizationId(orgId)
+                .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
+
+        if (org.getOrganizationSubscription() == null) {
+            throw new NotFoundDataException("현재 구독 상품이 없습니다.");
+        }
+
+        return SuperAdminCurrentSubscriptionDto.builder()
+                .organizationId(org.getOrganizationId())
+                .organizationName(org.getOrganizationName())
+                .subscriptionPlanId(org.getSubscriptionPlan().getId())
+                .subscriptionPlanName(org.getSubscriptionPlan().getPlanName().name())
+                .startDate(org.getOrganizationSubscription().getSubscriptionStartDate())
+                .endDate(org.getOrganizationSubscription().getSubscriptionEndDate())
                 .build();
     }
 }
