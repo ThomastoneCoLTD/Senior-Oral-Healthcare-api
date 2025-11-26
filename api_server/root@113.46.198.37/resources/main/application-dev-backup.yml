@@ -1,0 +1,92 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari: # connection-timeout :  pool에서 connect 얻을 때 최대 대기시간이며, 기본 30초임
+      poolName: SpringBootJPAHikariCP
+      minimum-idle: 3
+      maximum-pool-size: 20 # 최대 커넥션 풀 허용 개수
+      idle-timeout: 10000 # pool 에서 유휴 상태로 최대 유지시킬 수 있는 시간, minimum 이 maximum 보다 사이즈가 작을 때 동작함
+      max-lifetime: 60000 # 커넥션 최대 유지시간 55
+      connection-timeout: 10000
+      validation-timeout: 10000 #커넥션이 유효한지 검사할 때 대기 시간을 지정한다. 이 값초은 connectionTimeout보다 작아야 한다. 허용 가능한 최소 값은 250이다.
+      auto-commit: false # 커넥션 풀 auto commit 여부
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+      enabled: true
+  mvc:
+    view:
+      prefix: /WEB-INF/view/
+      suffix: .jsp
+  jpa:
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+    show-sql: true
+    generate-ddl: false
+    open-in-view: false
+    hibernate:
+      connection:
+        provider_class: org.hibernate.hikaricp.internal.HikariCPConnectionProvider
+      format_sql: true
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      #use-new-id-generator-mappings: true # JPA 표준에 맞는 새로운 키 생성 전략을 사용함.
+    properties:
+      hibernate.connection.provider_disables_autocommit: true
+jwt:
+  accessTokenKey: "test-access-token"
+  refreshTokenKey: "test-refresh-token"
+  secret: "jwt"
+  expiration: 86400000
+---
+spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+server:
+  forward-headers-strategy: native
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+#aws:
+#  account:
+#    accessKey: 'AKIAXXXXXXXXXXXXXXXX'
+#    secretKey: 'ABCDEFGHIJKLMNOPQRSTUVXYZ12345678'
+aiModel:
+  apiUrl:
+    oralCheck: 'ai-backend-gpu.kai-i.com/denti/api/plaque_navy'
+    questionnaire: 'ai-backend-gpu.kai-i.com/denti/api/questionnaire'
+s3:
+  storage:
+    bucketName: thomastone-saas
+    region:  ${AWS_REGION}
+
+  folderPath:
+    oralCheck: 'https://thomastone-saas.s3.ap-northeast-2.amazonaws.com/test/'
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
+
+#  accessKey: YOUR_AWS_ACCESS_KEY
+#  secretKey: YOUR_AWS_SECRET_KEY
+#  region: ap-northeast-2
+#    roleArn: arn:aws:s3:::thomastone-saas/test

@@ -51,8 +51,8 @@ spring:
   mail:
     host: smtp.sendgrid.net     # ✅ Workspace용 호스트
     port: 587                      # STARTTLS
-    username: apikey
-    password: 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
+#    username: apikey
+    password: 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
     properties:
       mail:
         smtp:

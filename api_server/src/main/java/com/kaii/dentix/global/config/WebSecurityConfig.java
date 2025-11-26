@@ -1,5 +1,6 @@
 package com.kaii.dentix.global.config;
 
+import com.amazonaws.HttpMethod;
 import com.kaii.dentix.domain.jwt.JwtAuthenticationFilter;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.global.common.filter.VersionCheckFilter;
@@ -57,18 +58,34 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
 
-        http.httpBasic(AbstractHttpConfigurer::disable) // rest api 만을 고려하여 기본 설정은 해제하겠습니다.
+        http.httpBasic(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable) // csrf 보안 토큰 disable 처리
-                .sessionManagement((sessionManagement) -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 토큰 기반 인증이므로 세션 역시 사용하지 않습니다.
-                .authorizeHttpRequests((authorizeHttpRequests) -> authorizeHttpRequests // 권한 설정
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // 허용 URL
                         .requestMatchers(EXCLUDE_URLS).permitAll()
-                        .anyRequest().hasAnyRole("USER", "ADMIN")
+
+                        // 1) 파일 다운로드: 관리자 + 슈퍼관리자만
+                        .requestMatchers("/admin/user/bulk-upload/template")
+                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // 2) Admin API 전체: 관리자 + 슈퍼관리자만
+                        .requestMatchers("/admin/**")
+                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+
+                        // 3) SuperAdmin API 전체: 슈퍼관리자만
+                        .requestMatchers("/superadmin/**")
+                        .hasRole("SUPER_ADMIN")
+
+                        // 4) 나머지 요청
+                        .anyRequest()
+                        .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil), UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
