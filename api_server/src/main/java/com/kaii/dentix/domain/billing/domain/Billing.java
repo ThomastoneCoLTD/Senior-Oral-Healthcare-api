@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.billing.domain;
 
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.BillingStatus;
 import com.kaii.dentix.domain.type.BillingType;
@@ -50,7 +51,7 @@ public class Billing extends TimeEntity {
 
     /** 결제 금액 */
     @Column(nullable = false)
-    private Double amount;
+    private Long amount;
 
     /** 청구일 */
     @Column(nullable = true)
@@ -62,7 +63,9 @@ public class Billing extends TimeEntity {
     /** 결제 트랜잭션 ID (PG사 reference 등) */
     @Column(length = 100)
     private String paymentRef;
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subscription_id")
+    private OrganizationSubscription subscription;
     /** 청구 주기 시작일 ~ 종료일 */
     private LocalDateTime periodStart;
     private LocalDateTime periodEnd;

@@ -50,6 +50,7 @@ public class OrganizationService {
     private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
     private final BillingRepository billingRepository;
     private final OrganizationHistoryRepository organizationHistoryRepository;
+    private final OrganizationSubscriptionService organizationSubscriptionService;
 //    private final OrganizationRepository organizationRepository;
     //    private final SubscriptionPlanRepository subscriptionPlanRepository;
     /**
@@ -95,13 +96,15 @@ public class OrganizationService {
                 .autoRenew(true)
                 .build();
 
-        subscription.initializeSubscription();  // ✅ 사용량/리셋일/상태 초기화
+        subscription.initializeSubscription();  //
         organizationSubscriptionRepository.save(subscription);
-
+        OrganizationSubscription activeSubscription =
+                organizationSubscriptionService.getActiveSubscription(organization);
         // ✅ 6️⃣ Billing (청구 내역) 생성 — 첫 달 혹은 첫 해 요금
         Billing billing = Billing.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
+                .subscription(activeSubscription)
                 .billingType(BillingType.REGULAR) // 정기 결제 유형
                 .billingStatus(BillingStatus.UNPAID) // 결제 대기
                 .amount(plan.getPrice())

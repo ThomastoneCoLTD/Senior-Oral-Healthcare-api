@@ -34,7 +34,7 @@ public class SubscriptionPlan extends TimeEntity {
     private Integer planSort; // 정렬 순서
 
     @Column(nullable = false)
-    private Double price; // 구독상품 기본 가격
+    private Long price; // 구독상품 기본 가격
 
     @Column(name = "max_success_responses", nullable = false)
     private Integer maxSuccessResponses; // 기본 제공 성공 응답 횟수

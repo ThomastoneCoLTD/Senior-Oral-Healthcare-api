@@ -14,7 +14,7 @@ public class SubscriptionInfoResponse {
     private String organizationName;
     private String planName;
     private String planCycle;
-    private Double price;
+    private Long price;
 
     // 제공량 / 사용량 / 잔여량 / 사용률
     private Integer maxSuccessResponses;

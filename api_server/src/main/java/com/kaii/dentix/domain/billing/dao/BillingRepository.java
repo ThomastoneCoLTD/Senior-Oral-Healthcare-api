@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.billing.dao;
 
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.type.BillingStatus;
 import com.kaii.dentix.domain.type.BillingType;
 import org.springframework.data.domain.Page;
@@ -75,16 +76,22 @@ public interface BillingRepository extends JpaRepository<Billing, Long> {
 //    List<Billing> findAllByOrganizationOrderByCreatedDesc(Organization organization);
 
     @Query("""
-SELECT b
-FROM Billing b
-LEFT JOIN FETCH b.subscriptionPlan
-WHERE b.organization.organizationId = :orgId
-AND (:status = 'ALL' OR b.billingStatus = :statusEnum)
-""")
+    SELECT b
+    FROM Billing b
+    LEFT JOIN FETCH b.subscriptionPlan
+    WHERE b.organization.organizationId = :orgId
+    AND (:status = 'ALL' OR b.billingStatus = :statusEnum)
+    """)
     Page<Billing> findByOrganizationWithStatusAndPlan(
             @Param("orgId") Long orgId,
             @Param("status") String status,
             @Param("statusEnum") BillingStatus statusEnum,
             Pageable pageable
     );
+
+    List<Billing> findBySubscriptionAndBillingTypeIn(
+            OrganizationSubscription subscription,
+            List<BillingType> types
+    );
+
 }

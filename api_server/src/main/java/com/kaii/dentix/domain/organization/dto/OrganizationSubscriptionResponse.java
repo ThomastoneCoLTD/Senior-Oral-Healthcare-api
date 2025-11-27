@@ -31,7 +31,7 @@ public class OrganizationSubscriptionResponse {
     private Long subscriptionPlanId;
     private String subscriptionPlanName;
     private String planCycle;           // monthly / yearly
-    private Double price;               // 구독 요금
+    private Long price;               // 구독 요금
     private int maxSuccessResponses;    // 기본 제공량 (최대 응답수)
 
     /** ✅ 사용 현황 */

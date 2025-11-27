@@ -18,8 +18,9 @@ public class BillingResponse {
     private String subscriptionPlanName;
     private String billingType;
     private String billingStatus;
-    private Double amount;
+    private Long amount;
     private LocalDateTime billedAt;
+    private Date created;
     private LocalDateTime paidAt;
     private LocalDateTime periodStart;
     private LocalDateTime periodEnd;
@@ -33,6 +34,7 @@ public class BillingResponse {
                 .billingStatus(b.getBillingStatus().name())
                 .amount(b.getAmount())
                 .billedAt(b.getBilledAt())
+                .created(b.getCreated())
                 .paidAt(b.getPaidAt())
                 .periodStart(b.getPeriodStart())
                 .periodEnd(b.getPeriodEnd())

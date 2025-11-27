@@ -19,7 +19,7 @@ public class BillingDetailResponse {
     private String planName;
     private String billingType;
     private String billingStatus;
-    private Double amount;
+    private Long amount;
     private LocalDateTime billedAt;
     private LocalDateTime paidAt;
     private LocalDateTime periodStart;
