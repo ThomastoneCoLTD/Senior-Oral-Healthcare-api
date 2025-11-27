@@ -2,6 +2,7 @@ package com.kaii.dentix.domain.organizationSubscriptionHistory.application;
 
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.billing.dto.BillingListResponse;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
@@ -58,4 +59,44 @@ public class OrganizationSubscriptionHistoryService {
                         .build())
                 .toList();
     }
+
+//    @Transactional
+//    public BillingListResponse getBillingsForAdmin(Admin admin) {
+//
+//        Organization organization = adminOrganizationService.getMyOrganization(admin);
+//        if (organization == null) {
+//            throw new IllegalArgumentException("관리자가 소속된 기관을 찾을 수 없습니다.");
+//        }
+//
+//        List<Billing> billings = billingRepository
+//                .findAllByOrganizationOrderByCreatedDesc(organization);
+//
+//        List<BillingResponse> dtoList = billings.stream()
+//                .map(BillingResponse::from)
+//                .toList();
+//
+//        // ⭐ 기관의 현재 구독 정보 가져오기
+//        OrganizationSubscription subscription =
+//                organizationSubscriptionService.getLatestSubscription(organization);
+//
+//        LocalDateTime start = subscription.getSubscriptionStartDate();
+//        LocalDateTime end = subscription.getSubscriptionEndDate();
+//
+//        // ⭐ 구독 기간 내 초과요금 합산
+//        Long total = billings.stream()
+//                .filter(b -> b.getBillingType() == BillingType.OVERUSE)
+//                .filter(b -> {
+//                    LocalDateTime billDate = b.getBilledAt();
+//                    return (billDate.isEqual(start) || billDate.isAfter(start)) &&
+//                            (billDate.isEqual(end) || billDate.isBefore(end));
+//                })
+//                .map(Billing::getAmount)
+//                .mapToLong(Long::longValue)
+//                .sum();
+//
+//        return BillingListResponse.builder()
+//                .billings(dtoList)
+//                .totalAmount(total)
+//                .build();
+//    }
 }

@@ -20,7 +20,7 @@ public class SubscriptionPlanService {
         this.subscriptionPlanRepository = subscriptionPlanRepository;
     }
     @Transactional
-    public SubscriptionPlan createPlan(String name, String cycle, Integer sort, Double price, Integer maxSuccessResponses, Boolean customSurveyEnabled, Boolean reportExportEnabled, Integer overuseUnitPrice) {
+    public SubscriptionPlan createPlan(String name, String cycle, Integer sort, Long price, Integer maxSuccessResponses, Boolean customSurveyEnabled, Boolean reportExportEnabled, Integer overuseUnitPrice) {
         if(subscriptionPlanRepository.existsByPlanName(name)){
             throw new AlreadyDataException("이미 존재하는 구독 플랜명입니다.");
         }

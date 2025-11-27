@@ -31,7 +31,7 @@ public class OrganizationResponse {
     private Integer successCount;
     private Integer remainingResponses;
     private Double usageRate;
-    private Double price;
+    private Long price;
     private Boolean reportExportEnabled;
     private Boolean customSurveyEnabled;
     private Integer overuseUnitPrice;

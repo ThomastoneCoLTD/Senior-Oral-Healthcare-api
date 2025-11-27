@@ -11,7 +11,7 @@ public class SubscriptionPlanResponse {
     private String planName;
     private String planCycle;
     private Integer planSort;
-    private Double price;
+    private Long price;
     private Integer maxSuccessResponses;
     private Boolean customSurveyEnabled;
     private Boolean reportExportEnabled;

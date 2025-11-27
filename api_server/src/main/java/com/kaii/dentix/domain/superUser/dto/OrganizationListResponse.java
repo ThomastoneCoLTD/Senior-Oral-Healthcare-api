@@ -9,7 +9,7 @@ public record OrganizationListResponse(
         String organizationName,
         String organizationPhoneNumber,
         String subscriptionPlanName,
-        Double price,
+        Long price,
         String startDate,
         String endDate,
         Boolean active

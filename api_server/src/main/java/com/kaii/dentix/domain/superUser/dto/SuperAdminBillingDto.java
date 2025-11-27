@@ -16,7 +16,7 @@ public class SuperAdminBillingDto {
     private String subscriptionPlanName;
     private String billingType;
     private String billingStatus;
-    private Double amount;
+    private Long amount;
     private LocalDateTime billedAt;
     private LocalDateTime paidAt;
     private String paymentRef;

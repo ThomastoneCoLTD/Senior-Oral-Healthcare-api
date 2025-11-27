@@ -17,7 +17,7 @@ public class OrganizationSubscriptionHistoryResponse {
     private Long historyId;
     private String subscriptionPlanName;
     private String planCycle;
-    private Double price;
+    private Long price;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private String reason;

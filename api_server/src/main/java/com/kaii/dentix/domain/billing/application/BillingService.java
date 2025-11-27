@@ -9,10 +9,13 @@ import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.billing.domain.BillingStatusHistory;
 import com.kaii.dentix.domain.billing.dto.*;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
+import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
+import com.kaii.dentix.domain.subscription.application.SubscriptionService;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.BillingStatus;
 import com.kaii.dentix.domain.type.BillingType;
@@ -33,10 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.ZoneId;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -49,6 +50,8 @@ public class BillingService {
     private final EmailService emailService;
     private final AdminService adminService;
     private final BillingHistoryRepository billingHistoryRepository;
+    private final OrganizationSubscriptionService organizationSubscriptionService;
+    private final OrganizationSubscriptionRepository oraganizationSubscriptionRepository;
     /**
      * ✅ 미결제(PENDING) 상태의 청구 내역 전체 조회
      */
@@ -112,12 +115,15 @@ public class BillingService {
         // ✅ 요청 시각
         LocalDateTime now = LocalDateTime.now();
         // ✅ 1건 기준으로 과금
-        double amount = unitPrice;
+        long amount = unitPrice;
+        OrganizationSubscription activeSubscription =
+                organizationSubscriptionService.getActiveSubscription(organization);
 
         Billing billing = Billing.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
                 .amount(amount)
+                .subscription(activeSubscription)
                 .description("AI 구강 분석 초과 1건 요금")
                 .billingStatus(BillingStatus.UNPAID)
                 .billingType(BillingType.OVERUSE_BATCH)
@@ -177,21 +183,129 @@ public class BillingService {
      * ✅ 기관 관리자 본인 기관의 모든 빌링 내역 조회
      */
     @Transactional
-    public List<BillingResponse> getBillingsForAdmin(Admin admin) {
-        // 1️⃣ 관리자 계정으로 소속 기관 정보 조회
+    public BillingListResponse getBillingsForAdmin(Admin admin) {
+
         Organization organization = adminOrganizationService.getMyOrganization(admin);
         if (organization == null) {
             throw new IllegalArgumentException("관리자가 소속된 기관을 찾을 수 없습니다.");
         }
 
-        // 2️⃣ 해당 기관의 Billing 전체 내역 (최신순) 조회
+        // 1️⃣ 기관 Billing 전체 조회
         List<Billing> billings = billingRepository
                 .findAllByOrganizationOrderByCreatedDesc(organization);
 
-        // 3️⃣ Entity → DTO 변환 후 반환
-        return billings.stream()
+        List<BillingResponse> dtoList = billings.stream()
                 .map(BillingResponse::from)
                 .toList();
+
+        // 2️⃣ 활성 구독상품 조회
+        OrganizationSubscription active =
+                organizationSubscriptionService.getActiveSubscription(organization);
+        if (active == null) {
+            throw new IllegalStateException("현재 활성 구독상품이 없습니다.");
+        }
+
+        LocalDateTime start = active.getSubscriptionStartDate();
+        LocalDateTime end = active.getSubscriptionEndDate();
+
+        // 3️⃣ ⭐ 구독기간 내 생성(created)된 초과요금만 합산
+        Long total = billings.stream()
+                // ⭕ 초과요금만 포함
+                .filter(b -> b.getBillingType() == BillingType.OVERUSE
+                        || b.getBillingType() == BillingType.OVERUSE_BATCH)
+
+                // ⭕ created(Date) 기준으로 기간 필터링
+                .filter(b -> {
+                    if (b.getCreated() == null) return false;
+
+                    // Date → LocalDateTime(KST) 변환
+                    LocalDateTime createdAt = LocalDateTime.ofInstant(
+                            b.getCreated().toInstant(),
+                            ZoneId.of("Asia/Seoul")
+                    );
+
+                    return (createdAt.isEqual(start) || createdAt.isAfter(start)) &&
+                            (createdAt.isEqual(end) || createdAt.isBefore(end));
+                })
+
+                // ⭕ 금액 합산
+                .map(Billing::getAmount)
+                .filter(Objects::nonNull)
+                .mapToLong(Long::longValue)
+                .sum();
+
+        return BillingListResponse.builder()
+                .billings(dtoList)
+                .totalAmount(total)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubscriptionOveruseResponse> getOveruseBySubscription(Admin admin) {
+
+        Organization org = adminOrganizationService.getMyOrganization(admin);
+        if (org == null) {
+            throw new IllegalArgumentException("소속 기관 없음");
+        }
+
+        // 1) 이 기관의 모든 구독 정보 불러오기 (최신순)
+        List<OrganizationSubscription> subscriptions =
+                oraganizationSubscriptionRepository.findAllByOrganizationOrderBySubscriptionStartDateDesc(org);
+
+        List<SubscriptionOveruseResponse> results = new ArrayList<>();
+
+        for (OrganizationSubscription s : subscriptions) {
+
+            LocalDateTime start = s.getSubscriptionStartDate();
+            LocalDateTime end = s.getSubscriptionEndDate();
+
+            // 2) 이 구독기간 동안 발생한 "초과요금 Billing"만 조회
+            List<Billing> overuse = billingRepository
+                    .findBySubscriptionAndBillingTypeIn(
+                            s,
+                            List.of(BillingType.OVERUSE, BillingType.OVERUSE_BATCH)
+                    );
+
+            // 3) created/billedAt 기반 기간 필터링
+            List<Billing> filtered = overuse.stream()
+                    .filter(b -> {
+                        LocalDateTime date = b.getBilledAt();
+
+                        if (date == null && b.getCreated() != null) {
+                            date = LocalDateTime.ofInstant(
+                                    b.getCreated().toInstant(),
+                                    ZoneId.of("Asia/Seoul")
+                            );
+                        }
+
+                        if (date == null) return false;
+
+                        return (date.isEqual(start) || date.isAfter(start)) &&
+                                (date.isEqual(end) || date.isBefore(end));
+                    })
+                    .toList();
+
+            // 4) 금액 합계
+            Long total = filtered.stream()
+                    .map(Billing::getAmount)
+                    .filter(Objects::nonNull)
+                    .mapToLong(Long::longValue)
+                    .sum();
+
+            // 5) Response DTO 생성
+            results.add(
+                    SubscriptionOveruseResponse.builder()
+                            .subscriptionId(s.getId())
+                            .planName(s.getSubscriptionPlan().getPlanName().name())
+                            .periodStart(start)
+                            .periodEnd(end)
+                            .totalAmount(total)
+                            .overuseList(filtered.stream().map(BillingResponse::from).toList())
+                            .build()
+            );
+        }
+
+        return results;
     }
 
     /**

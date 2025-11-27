@@ -1,5 +1,6 @@
 package com.kaii.dentix.domain.organization.dao;
 
+import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.type.SubscriptionStatus;
@@ -43,4 +44,18 @@ public interface OrganizationSubscriptionRepository extends JpaRepository<Organi
         List<OrganizationSubscription> list = findActiveAllByOrgId(orgId);
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
+
+    @Query("""
+        SELECT s FROM OrganizationSubscription s
+        WHERE s.organization = :organization
+        AND :now BETWEEN s.subscriptionStartDate AND s.subscriptionEndDate
+        ORDER BY s.subscriptionEndDate DESC
+        """)
+    Optional<OrganizationSubscription> findActiveSubscription(
+            @Param("organization") Organization organization,
+            @Param("now") LocalDateTime now
+    );
+    List<OrganizationSubscription> findAllByOrganizationOrderBySubscriptionStartDateDesc(
+            Organization organization
+    );
 }

@@ -13,7 +13,7 @@ public record OrganizationDetailResponse(
         String organizationEmail,
         String organizationPhoneNumber,
         String subscriptionPlanName,
-        Double price,
+        Long price,
         String startDate,
         String endDate,
         Boolean active

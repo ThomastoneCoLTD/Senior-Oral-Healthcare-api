@@ -1,18 +1,18 @@
 package com.kaii.dentix.domain.admin.controller;
 
 import com.kaii.dentix.domain.admin.application.AdminService;
+import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.billing.application.BillingExportService;
 import com.kaii.dentix.domain.billing.application.BillingService;
-import com.kaii.dentix.domain.billing.dto.BillingDetailResponse;
-import com.kaii.dentix.domain.billing.dto.BillingDto;
-import com.kaii.dentix.domain.billing.dto.BillingResponse;
+import com.kaii.dentix.domain.billing.dto.*;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
+import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +20,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
@@ -41,6 +42,7 @@ public class AdminBillingController {
     private final AdminService adminService;
     private final OrganizationService organizationService;
     private final JwtTokenUtil jwtTokenUtil;
+    private final AdminRepository adminRepository;
     /**
      * ✅ 미납 청구 목록 조회
      */
@@ -80,10 +82,11 @@ public class AdminBillingController {
 
     /** ✅ 관리자 본인 기관의 빌링 내역 조회 */
     @GetMapping("/my-organization")
-    public ResponseEntity<List<BillingResponse>> getMyOrganizationBillings(HttpServletRequest request) {
+    public ResponseEntity<?> getMyOrganizationBillings(HttpServletRequest request) {
         Admin admin = adminService.getTokenAdmin(request);
-        List<BillingResponse> responses = billingService.getBillingsForAdmin(admin);
-        return ResponseEntity.ok(responses);
+        BillingListResponse response = billingService.getBillingsForAdmin(admin);
+//        List<BillingResponse> responses = billingService.getBillingsForAdmin(admin);
+        return ResponseEntity.ok(new DataResponse<>(200, "OK", response));
     }
 
     /**
@@ -109,7 +112,13 @@ public class AdminBillingController {
         out.writeTo(response.getOutputStream());
         out.close();
     }
-
+    @GetMapping("/overuse/by-subscription")
+    public ResponseEntity<?> getOveruseBySubscription(HttpServletRequest request) {
+        Admin admin = adminService.getTokenAdmin(request);
+        List<SubscriptionOveruseResponse> list =
+                billingService.getOveruseBySubscription(admin);
+        return ResponseEntity.ok(new DataResponse<>(200, "OK", list));
+    }
 
 //    /** ✅ 내 기관의 Billing 내역 조회 */
 //    @GetMapping("/my")
