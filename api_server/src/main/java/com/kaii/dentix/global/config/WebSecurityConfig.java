@@ -35,6 +35,8 @@ public class WebSecurityConfig {
             "/actuator/health",
             "/docs/*",
             "/login", "/login/*",
+            "/user", "/user/*",
+            "/password", "/password/*",
             "/service-agreement",
             "/contents", "/contents/*",
             "/password/*",
