@@ -48,7 +48,7 @@ public class Organization extends TimeEntity {
     @Column(length = 500)
     private String description;
 
-    @Column(nullable = false)
+    @Column
     private Boolean active = true;
 
     @Column(name = "subscription_start_date")

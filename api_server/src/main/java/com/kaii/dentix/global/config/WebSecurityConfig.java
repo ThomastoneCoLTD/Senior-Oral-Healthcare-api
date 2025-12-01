@@ -68,21 +68,16 @@ public class WebSecurityConfig {
                         // 허용 URL
                         .requestMatchers(EXCLUDE_URLS).permitAll()
 
-                        // 1) 파일 다운로드: 관리자 + 슈퍼관리자만
-                        .requestMatchers("/admin/user/bulk-upload/template")
-                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        // 🔥 파일 다운로드는 브라우저에서 직접 URL로 접근하므로 permitAll
+                        .requestMatchers("/admin/user/bulk-upload/template").permitAll()
 
-                        // 2) Admin API 전체: 관리자 + 슈퍼관리자만
-                        .requestMatchers("/admin/**")
-                        .hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        // Admin API 전체: 인증 필요
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
-                        // 3) SuperAdmin API 전체: 슈퍼관리자만
-                        .requestMatchers("/superadmin/**")
-                        .hasRole("SUPER_ADMIN")
+                        // SuperAdmin API 전체
+                        .requestMatchers("/superadmin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
-                        // 4) 나머지 요청
-                        .anyRequest()
-                        .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
+                        .anyRequest().hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil), UsernamePasswordAuthenticationFilter.class);
 

@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.billing.dto;
 
 import com.kaii.dentix.domain.billing.domain.Billing;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -12,6 +13,7 @@ import java.util.Date;
  */
 @Getter
 @Builder
+@AllArgsConstructor
 public class BillingResponse {
 
     private Long billingId;

@@ -52,6 +52,8 @@ public class BillingService {
     private final BillingHistoryRepository billingHistoryRepository;
     private final OrganizationSubscriptionService organizationSubscriptionService;
     private final OrganizationSubscriptionRepository oraganizationSubscriptionRepository;
+    private final BillingRepository billRepository;
+
     /**
      * ✅ 미결제(PENDING) 상태의 청구 내역 전체 조회
      */
@@ -182,64 +184,86 @@ public class BillingService {
     /**
      * ✅ 기관 관리자 본인 기관의 모든 빌링 내역 조회
      */
-    @Transactional
+//    @Transactional
+//    public BillingListResponse getBillingsForAdmin(Admin admin) {
+//
+//        Organization organization = adminOrganizationService.getMyOrganization(admin);
+//        if (organization == null) {
+//            throw new IllegalArgumentException("관리자가 소속된 기관을 찾을 수 없습니다.");
+//        }
+//
+//        // 1️⃣ 기관 Billing 전체 조회
+//        List<Billing> billings = billingRepository
+//                .findAllByOrganizationOrderByCreatedDesc(organization);
+//
+//        List<BillingResponse> dtoList = billings.stream()
+//                .map(BillingResponse::from)
+//                .toList();
+//
+//        // 2️⃣ 활성 구독상품 조회
+//        OrganizationSubscription active =
+//                organizationSubscriptionService.getActiveSubscription(organization);
+//        if (active == null) {
+//            throw new IllegalStateException("현재 활성 구독상품이 없습니다.");
+//        }
+//
+//        LocalDateTime start = active.getSubscriptionStartDate();
+//        LocalDateTime end = active.getSubscriptionEndDate();
+//
+//        // 3️⃣ ⭐ 구독기간 내 생성(created)된 초과요금만 합산
+//        Long total = billings.stream()
+//                // ⭕ 초과요금만 포함
+//                .filter(b -> b.getBillingType() == BillingType.OVERUSE
+//                        || b.getBillingType() == BillingType.OVERUSE_BATCH)
+//
+//                // ⭕ created(Date) 기준으로 기간 필터링
+//                .filter(b -> {
+//                    if (b.getCreated() == null) return false;
+//
+//                    // Date → LocalDateTime(KST) 변환
+//                    LocalDateTime createdAt = LocalDateTime.ofInstant(
+//                            b.getCreated().toInstant(),
+//                            ZoneId.of("Asia/Seoul")
+//                    );
+//
+//                    return (createdAt.isEqual(start) || createdAt.isAfter(start)) &&
+//                            (createdAt.isEqual(end) || createdAt.isBefore(end));
+//                })
+//
+//                // ⭕ 금액 합산
+//                .map(Billing::getAmount)
+//                .filter(Objects::nonNull)
+//                .mapToLong(Long::longValue)
+//                .sum();
+//
+//        return BillingListResponse.builder()
+//                .billings(dtoList)
+//                .totalAmount(total)
+//                .build();
+//    }
+
     public BillingListResponse getBillingsForAdmin(Admin admin) {
 
-        Organization organization = adminOrganizationService.getMyOrganization(admin);
-        if (organization == null) {
-            throw new IllegalArgumentException("관리자가 소속된 기관을 찾을 수 없습니다.");
+        Organization org = admin.getOrganization();
+        if (org == null) {
+            throw new IllegalArgumentException("관리자가 기관에 소속되어 있지 않습니다.");
         }
 
-        // 1️⃣ 기관 Billing 전체 조회
-        List<Billing> billings = billingRepository
-                .findAllByOrganizationOrderByCreatedDesc(organization);
+        List<Billing> billings = billingRepository.findByOrganizationAndBillingTypeIn(
+                org,
+                List.of(BillingType.MONTHLY, BillingType.SUBSCRIPTION, BillingType.REGULAR)
+        );
 
-        List<BillingResponse> dtoList = billings.stream()
-                .map(BillingResponse::from)
+        List<BillingSummaryResponse> summaryList = billings.stream()
+                .map(BillingSummaryResponse::from)
                 .toList();
 
-        // 2️⃣ 활성 구독상품 조회
-        OrganizationSubscription active =
-                organizationSubscriptionService.getActiveSubscription(organization);
-        if (active == null) {
-            throw new IllegalStateException("현재 활성 구독상품이 없습니다.");
-        }
-
-        LocalDateTime start = active.getSubscriptionStartDate();
-        LocalDateTime end = active.getSubscriptionEndDate();
-
-        // 3️⃣ ⭐ 구독기간 내 생성(created)된 초과요금만 합산
-        Long total = billings.stream()
-                // ⭕ 초과요금만 포함
-                .filter(b -> b.getBillingType() == BillingType.OVERUSE
-                        || b.getBillingType() == BillingType.OVERUSE_BATCH)
-
-                // ⭕ created(Date) 기준으로 기간 필터링
-                .filter(b -> {
-                    if (b.getCreated() == null) return false;
-
-                    // Date → LocalDateTime(KST) 변환
-                    LocalDateTime createdAt = LocalDateTime.ofInstant(
-                            b.getCreated().toInstant(),
-                            ZoneId.of("Asia/Seoul")
-                    );
-
-                    return (createdAt.isEqual(start) || createdAt.isAfter(start)) &&
-                            (createdAt.isEqual(end) || createdAt.isBefore(end));
-                })
-
-                // ⭕ 금액 합산
-                .map(Billing::getAmount)
-                .filter(Objects::nonNull)
-                .mapToLong(Long::longValue)
-                .sum();
-
-        return BillingListResponse.builder()
-                .billings(dtoList)
-                .totalAmount(total)
-                .build();
+        return new BillingListResponse(
+                org.getOrganizationId(),
+                org.getOrganizationName(),
+                summaryList
+        );
     }
-
     @Transactional(readOnly = true)
     public List<SubscriptionOveruseResponse> getOveruseBySubscription(Admin admin) {
 
@@ -424,59 +448,57 @@ public class BillingService {
         return response;
     }
 
-}
-    /**
-     * ✅ 초과 과금 생성
-     */
-//    public Billing createOveruseBilling(Long organizationId) {
-//        Organization org = organizationRepository.findById(organizationId)
-//                .orElseThrow(() -> new IllegalArgumentException("기관이 존재하지 않습니다."));
-//
-//        var sub = org.getSubscription();
-//        var plan = sub.getSubscriptionPlan();
-//
-//        // 초과 사용량 계산
-//        int overused = Math.max(0, sub.getSuccessCount() - plan.getMaxSuccessResponses());
-//        if (overused <= 0) return null; // 초과 사용 없으면 청구 안 함
-//
-//        double unitPrice = plan.getOveruseUnitPrice() != null ? plan.getOveruseUnitPrice() : 10.0;
-//        double amount = overused * unitPrice;
-//
-//        Billing billing = Billing.builder()
-//                .organization(org)
-//                .subscriptionPlan(plan)
-//                .billingType(BillingType.OVERUSE)
-//                .billingStatus(BillingStatus.PENDING)
-//                .amount(amount)
-//                .periodStart(sub.getSubscriptionStartDate())
-//                .periodEnd(sub.getSubscriptionEndDate())
-//                .billedAt(LocalDateTime.now())
-//                .build();
-//
-//        return billingRepository.save(billing);
-//    }
+    @Transactional
+    public BillingOveruseResponse getOveruseDetails(Long billingId) {
 
-    /**
-     * ✅ 정기 구독 결제 생성
-     */
-//    public Billing createMonthlyBilling(Long organizationId) {
-//        Organization org = organizationRepository.findById(organizationId)
-//                .orElseThrow(() -> new IllegalArgumentException("기관이 존재하지 않습니다."));
-//
-//        var sub = org.getSubscription();
-//        var plan = sub.getSubscriptionPlan();
-//
-//        Billing billing = Billing.builder()
-//                .organization(org)
-//                .subscriptionPlan(plan)
-//                .billingType(BillingType.MONTHLY)
-//                .billingStatus(BillingStatus.PENDING)
-//                .amount(plan.getPrice())
-//                .periodStart(sub.getSubscriptionStartDate())
-//                .periodEnd(sub.getSubscriptionEndDate())
-//                .billedAt(LocalDateTime.now())
-//                .build();
-//
-//        return billingRepository.save(billing);
-//    }
-//}
+        // 1) 구독 Billing 조회
+        Billing billing = billingRepository.findById(billingId)
+                .orElseThrow(() -> new EntityNotFoundException("Billing not found"));
+
+        if (billing.getBillingType() != BillingType.SUBSCRIPTION &&
+                billing.getBillingType() != BillingType.REGULAR) {
+            throw new IllegalArgumentException("이 Billing은 구독 청구 내역이 아닙니다.");
+        }
+
+        Long orgId = billing.getOrganization().getOrganizationId();
+        LocalDateTime start = billing.getPeriodStart();
+        LocalDateTime end = billing.getPeriodEnd();
+
+        // 2) 해당 기간 동안 발생한 초과요금 Billing 조회
+        List<Billing> overuseList = billingRepository
+                .findByOrganization_OrganizationIdAndBillingTypeAndBilledAtBetween(
+                        orgId,
+                        BillingType.OVERUSE_BATCH,
+                        start,
+                        end
+                );
+
+        long totalOveruseAmount = overuseList.stream()
+                .mapToInt(b -> b.getAmount().intValue())
+                .sum();
+
+        return BillingOveruseResponse.of(billing, overuseList, totalOveruseAmount);
+    }
+
+    public BillingListResponse getBillingListByOrganization(Long organizationId) {
+
+        Organization org = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("기관을 찾을 수 없습니다."));
+
+        List<Billing> list = billingRepository.findByOrganizationAndBillingTypeIn(
+                org,
+                List.of(BillingType.MONTHLY, BillingType.SUBSCRIPTION, BillingType.REGULAR)
+        );
+
+        // ⭐ BillingResponse → BillingSummaryResponse 로 변경됨
+        List<BillingSummaryResponse> billings = list.stream()
+                .map(BillingSummaryResponse::from)
+                .toList();
+
+        return new BillingListResponse(
+                org.getOrganizationId(),
+                org.getOrganizationName(),
+                billings
+        );
+    }
+}

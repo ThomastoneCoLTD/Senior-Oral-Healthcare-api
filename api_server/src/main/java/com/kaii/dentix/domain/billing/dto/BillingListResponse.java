@@ -5,10 +5,21 @@ import lombok.Getter;
 
 import java.util.List;
 
-@Getter
 @Builder
+@Getter
 public class BillingListResponse {
 
-    private List<BillingResponse> billings;  // 상세 리스트
-    private Long totalAmount;              // 합계 금액
+    private Long organizationId;
+    private String organizationName;
+    private List<BillingSummaryResponse> billings;
+
+    public BillingListResponse(
+            Long organizationId,
+            String organizationName,
+            List<BillingSummaryResponse> billings
+    ) {
+        this.organizationId = organizationId;
+        this.organizationName = organizationName;
+        this.billings = billings;
+    }
 }

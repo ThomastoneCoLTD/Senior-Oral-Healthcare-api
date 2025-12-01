@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 
 @Validated
@@ -68,27 +69,48 @@ public class QuestionnaireController {
 
     @GetMapping("/template")
     public ResponseEntity<?> getTemplate(@RequestParam(defaultValue = "ko") String lang) throws IOException {
+
+        // 프론트 표준 언어코드로 통일
+        Map<String, String> langMap = Map.of(
+                "zh-CN", "zh-CN",
+                "zh-TW", "zh-TW",
+                "ko", "ko",
+                "en", "en",
+                "vi", "vi"
+        );
+
+        // fallback
+        lang = langMap.getOrDefault(lang, "ko");
+
         InputStream jsonStream = new ClassPathResource("template/questionnaire.json").getInputStream();
         JsonNode root = objectMapper.readTree(jsonStream);
 
-        // ✅ 언어 필터링해서 lang만 추출
         ArrayNode template = (ArrayNode) root.get("template");
         ArrayNode localized = objectMapper.createArrayNode();
 
         for (JsonNode q : template) {
             ObjectNode question = objectMapper.createObjectNode();
-            question.put("sort", q.get("sort").asInt());
-            question.put("key", q.get("key").asText());
-            question.put("number", q.get("number").asText());
-            question.put("title", q.path("title").path(lang).asText());
-            question.put("description", q.path("description").path(lang).asText(null));
-            question.put("minimum", q.path("minimum").asInt());
-            question.put("maximum", q.path("maximum").isNull() ? null : q.path("maximum").asInt());
 
+            question.put("sort", q.path("sort").asInt());
+            question.put("key", q.path("key").asText());
+            question.put("number", q.path("number").asText());
+
+            // title/description
+            question.put("title", q.path("title").path(lang).asText());
+
+            JsonNode descNode = q.path("description").path(lang);
+            question.put("description", descNode.isNull() ? null : descNode.asText());
+
+            question.put("minimum", q.path("minimum").asInt());
+
+            JsonNode maxNode = q.path("maximum");
+            question.put("maximum", maxNode.isNull() ? null : maxNode.asInt());
+
+            // options
             ArrayNode contents = objectMapper.createArrayNode();
             for (JsonNode c : q.get("contents")) {
                 ObjectNode opt = objectMapper.createObjectNode();
-                opt.put("id", c.get("id").asInt());
+                opt.put("id", c.path("id").asInt());
                 opt.put("text", c.path("text").path(lang).asText());
                 contents.add(opt);
             }
@@ -100,6 +122,8 @@ public class QuestionnaireController {
         ObjectNode response = objectMapper.createObjectNode();
         response.set("template", localized);
         response.put("version", root.path("version").asText());
+
         return ResponseEntity.ok(Map.of("response", response));
     }
+
 }

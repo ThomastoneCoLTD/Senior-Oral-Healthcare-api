@@ -8,17 +8,16 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
 import com.kaii.dentix.domain.billing.application.BillingService;
+import com.kaii.dentix.domain.billing.dto.BillingListResponse;
+import com.kaii.dentix.domain.billing.dto.BillingOveruseResponse;
 import com.kaii.dentix.domain.billing.dto.BillingStatusHistoryResponse;
 import com.kaii.dentix.domain.billing.dto.BillingStatusUpdateRequest;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
-import com.kaii.dentix.domain.superUser.dto.OrganizationDetailResponse;
-import com.kaii.dentix.domain.superUser.dto.OrganizationListResponse;
+import com.kaii.dentix.domain.superUser.dto.*;
 import com.kaii.dentix.domain.superUser.application.SuperAdminOrganizationService;
-import com.kaii.dentix.domain.superUser.dto.SuperAdminAllUserStatisticsResponse;
-import com.kaii.dentix.domain.superUser.dto.SuperAdminCurrentSubscriptionDto;
 import com.kaii.dentix.global.common.dto.PagingRequest;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -107,8 +106,8 @@ public class SuperAdminOrganizationController {
             @Valid @RequestBody BillingStatusUpdateRequest requestDto
     ) {
         // TODO: 토큰에서 슈퍼관리자 아이디 꺼내기
-         Admin admin = adminService.getTokenAdmin(request);
-         String changedBy = admin.getAdminLoginIdentifier();
+        Admin admin = adminService.getTokenAdmin(request);
+        String changedBy = admin.getAdminLoginIdentifier();
 //        String changedBy = "superadmin"; // 일단 하드코딩, 나중에 위로 교체
 //
         BillingStatusHistoryResponse response =
@@ -185,5 +184,59 @@ public class SuperAdminOrganizationController {
                 new DataResponse<>(200, "현재 구독상품 조회 성공", dto)
         );
     }
+    /** 특정 기관의 Billing 리스트 조회 */
+    @GetMapping("/{organizationId}/org-bill")
+    public ResponseEntity<?> getBillingList(
+            @PathVariable Long organizationId,
+            HttpServletRequest request
+    ) {
+        Admin superAdmin = adminService.getTokenAdmin(request);
 
+        if (!superAdmin.isSuperAdmin()) {
+            return ResponseEntity.status(403).body("권한이 없습니다.");
+        }
+
+        BillingListResponse response = billingService.getBillingListByOrganization(organizationId);
+
+        return ResponseEntity.ok(new DataResponse<>(200, "OK", response));
+    }
+
+    @GetMapping("/{organizationId}/billing")
+    public ResponseEntity<?> getOrganizationBilling(
+            @PathVariable Long organizationId, HttpServletRequest request) {
+
+        Admin superAdmin = adminService.getTokenAdmin(request);
+        if (!superAdmin.isSuperAdmin()) {
+            return ResponseEntity.status(403).body("권한이 없습니다.");
+        }
+
+        SuperAdminBillingListResponse response =
+                superAdminOrganizationService.getOrganizationBillingForSuperAdmin(organizationId);
+
+        return ResponseEntity.ok(new DataResponse<>(200, "OK", response));
+    }
+    @GetMapping("/billing/{billingId}/overuse")
+    public ResponseEntity<?> getBillingOveruseDetail(@PathVariable Long billingId,HttpServletRequest request) {
+
+        Admin superAdmin = adminService.getTokenAdmin(request);
+        if (!superAdmin.isSuperAdmin()) {
+            return ResponseEntity.status(403).body("권한이 없습니다.");
+        }
+
+        BillingOveruseResponse response = superAdminOrganizationService.getOveruseDetail(billingId);
+        return ResponseEntity.ok(new DataResponse<>(200, "초과요금 상세 조회 성공", response));
+    }
+    @GetMapping("/{billingId}/overuse")
+    public ResponseEntity<?> getOveruseBillingDetails(
+            @PathVariable Long billingId
+    ) {
+
+        BillingOveruseResponse response = billingService.getOveruseDetails(billingId);
+
+        return ResponseEntity.ok(Map.of(
+                "rt", 200,
+                "rtMsg", "초과요금 상세 조회 성공",
+                "response", response
+        ));
+    }
 }

@@ -165,6 +165,7 @@ public class JwtTokenUtil {
         if (role == UserRole.ROLE_ADMIN) {
             return adminRepository.findById(id).isEmpty();
         }
+
         return true;
     }
 

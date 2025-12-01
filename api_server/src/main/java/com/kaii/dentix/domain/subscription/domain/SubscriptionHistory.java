@@ -16,37 +16,55 @@ import java.time.LocalDateTime;
 @Table(name = "subscription_history")
 public class SubscriptionHistory extends TimeEntity {
 
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "subscription_history_id")
     private Long id;
 
-    /** 기관 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
 
-    /** 구독 플랜 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subscription_plan_id", nullable = false)
     private SubscriptionPlan subscriptionPlan;
 
-    /** 구독 시작일 */
     @Column(nullable = false)
     private LocalDateTime startDate;
 
-    /** 구독 종료일 */
     @Column
     private LocalDateTime endDate;
 
-    /** 변경 사유 (optional: 예를 들어 “플랜 업그레이드”, “자동 갱신”) */
     @Column(length = 100)
     private String reason;
 
-    /** 편의 메서드 */
+    @Column(nullable = false)
+    private Integer successCount = 0;
+
+    @Column(nullable = false)
+    private Integer overuseCount = 0;
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    public void increaseUsage() {
+        if (successCount < subscriptionPlan.getMaxSuccessResponses()) {
+            successCount++;
+        } else {
+            overuseCount++;
+        }
+    }
+
     public void closeHistory(String reason) {
+        this.active = false;
         this.endDate = LocalDateTime.now();
         this.reason = reason;
+    }
+
+    @PrePersist
+    public void prePersist() {
+        if (startDate == null) startDate = LocalDateTime.now();
+        if (successCount == null) successCount = 0;
+        if (overuseCount == null) overuseCount = 0;
     }
 }

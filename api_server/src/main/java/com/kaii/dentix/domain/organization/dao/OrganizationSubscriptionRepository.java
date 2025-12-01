@@ -58,4 +58,5 @@ public interface OrganizationSubscriptionRepository extends JpaRepository<Organi
     List<OrganizationSubscription> findAllByOrganizationOrderBySubscriptionStartDateDesc(
             Organization organization
     );
+    Optional<OrganizationSubscription> findTopByOrganization_OrganizationIdAndActiveTrue(Long organizationId);
 }

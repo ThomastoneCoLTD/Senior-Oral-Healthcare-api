@@ -6,6 +6,9 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class TopUserUsage {
+
     private Long userId;
+    private String userName;
+    private String userLoginIdentifier;
     private Long count;
 }

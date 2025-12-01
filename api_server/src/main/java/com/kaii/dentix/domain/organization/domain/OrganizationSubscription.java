@@ -63,38 +63,39 @@ public class OrganizationSubscription extends TimeEntity {
     /** 자동 갱신 여부 */
     @Column(name = "auto_renew", nullable = false)
     private Boolean autoRenew = true;
-
+    @Column(nullable = false)
+    private Boolean active = true;
     /* ---------- 비즈니스 로직 ---------- */
 
     /** 구독 초기화 (기관 신규 등록 시) */
     public void initializeSubscription() {
         LocalDateTime now = LocalDateTime.now();
 
-        // ✅ 구독 주기 계산 (기본 monthly)
+        // 🔥 billing 주기 (plan 기준)
         LocalDateTime nextCycleDate;
         if (subscriptionPlan != null && subscriptionPlan.isYearly()) {
-            nextCycleDate = now.plusYears(1);
+            nextCycleDate = now.plusYears(1);    // 결제는 연간
         } else {
-            nextCycleDate = now.plusMonths(1);
+            nextCycleDate = now.plusMonths(1);   // 결제는 월간
         }
 
-        // ✅ 안전한 쿼터 계산
+        // 🔥 사용량 리셋 주기 (무조건 월간)
+        LocalDateTime nextUsageReset = now.plusMonths(1);
+
+        // 🔥 안전한 쿼터 계산
         int quota = safeQuota();
 
-        // ✅ 모든 필드 명확히 초기화
-        this.subscriptionStartDate = now;
-        this.subscriptionEndDate = nextCycleDate;
+        // 👇 설정
+        this.subscriptionStartDate = now;          // 결제 시작일
+        this.subscriptionEndDate = nextCycleDate;  // 결제 종료일(연간면 1년)
         this.subscriptionRenewalDate = nextCycleDate;
 
-        // ✅ usageResetDate도 반드시 세팅 (💡 NPE 원인 제거)
-        this.usageResetDate = nextCycleDate;
+        this.usageResetDate = nextUsageReset;      // 🔥 무조건 월간 리셋 기준일
 
-        // ✅ 사용량 초기화
         this.successCount = 0;
         this.remainingResponses = quota;
         this.usageRate = 0.0;
 
-        // ✅ 상태 및 자동갱신 활성화
         this.status = SubscriptionStatus.ACTIVE;
         this.autoRenew = true;
     }

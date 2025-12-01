@@ -6,6 +6,7 @@ import com.kaii.dentix.domain.admin.application.AdminUserService;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.AdminListDto;
 import com.kaii.dentix.domain.admin.dto.AdminOrganizationUsageResponse;
+import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckUsageDto;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
@@ -46,6 +47,8 @@ public class AdminOrganizationController {
     private final AdminUserService adminUserService;
     private final OrganizationUsageService organizationUsageService;
     private final OrganizationHistoryRepository organizationHistoryRepository;
+    private final JwtTokenUtil jwtTokenUtil;
+
     /**
      * 일반관리자 - 기관 사용자 사용량 조회
      */
@@ -146,9 +149,25 @@ public class AdminOrganizationController {
     }
 
     @GetMapping("/usage/my")
-    public DataResponse<OrganizationUsageResponse> getMyUsage(HttpServletRequest request) {
+    public ResponseEntity<?> getMyOrganizationUsage(HttpServletRequest request) {
         Long adminId = adminService.getTokenAdmin(request).getAdminId();
-        return new DataResponse<>(200, "기관 사용량 조회 성공",
-                organizationUsageService.getMyOrganizationUsage(adminId));
+//        Admin admin = adminService.getTokenAdmin(request);
+
+        OrganizationUsageResponse data =
+                organizationUsageService.getMyOrganizationUsage(adminId);
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "rt", 200,
+                        "rtMsg", "기관 사용자 사용량 조회 성공",
+                        "response", data  // 👈 반드시 여기에 넣어야 프론트가 읽음!
+                )
+        );
     }
+//    @GetMapping("/usage/my")
+//    public DataResponse<OrganizationUsageResponse> getMyUsage(HttpServletRequest request) {
+//        Long adminId = adminService.getTokenAdmin(request).getAdminId();
+//        return new DataResponse<>(200, "기관 사용량 조회 성공",
+//                organizationUsageService.getMyOrganizationUsage(adminId));
+//    }
 }

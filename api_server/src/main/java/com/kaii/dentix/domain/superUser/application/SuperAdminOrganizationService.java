@@ -5,6 +5,8 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.superAdmin.SuperAdminUserStatisticResponse;
 import com.kaii.dentix.domain.billing.dao.BillingRepository;
 import com.kaii.dentix.domain.billing.domain.Billing;
+import com.kaii.dentix.domain.billing.dto.BillingListResponse;
+import com.kaii.dentix.domain.billing.dto.BillingOveruseResponse;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckUsageDto;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
@@ -18,12 +20,14 @@ import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
 import com.kaii.dentix.domain.superUser.dto.*;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
+import com.kaii.dentix.domain.type.BillingType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.response.DataResponse;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -173,4 +177,57 @@ public class SuperAdminOrganizationService {
                 .endDate(org.getOrganizationSubscription().getSubscriptionEndDate())
                 .build();
     }
+    public SuperAdminBillingListResponse getOrganizationBillingForSuperAdmin(Long organizationId) {
+
+        Organization org = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("기관 없음"));
+
+        List<Billing> billings = billingRepository
+                .findByOrganizationAndBillingTypeInOrderByBilledAtDesc(
+                        org,
+                        List.of(
+                                BillingType.MONTHLY,
+                                BillingType.SUBSCRIPTION,
+                                BillingType.REGULAR
+                        )
+                );
+
+        return SuperAdminBillingListResponse.from(org, billings);
+    }
+    public BillingOveruseResponse getOveruseDetail(Long billingId) {
+
+        Billing baseBilling = billingRepository.findById(billingId)
+                .orElseThrow(() -> new EntityNotFoundException("Billing 없음"));
+
+        if (!(baseBilling.getBillingType() == BillingType.SUBSCRIPTION ||
+                baseBilling.getBillingType() == BillingType.REGULAR ||
+                baseBilling.getBillingType() == BillingType.MONTHLY)) {
+            throw new IllegalArgumentException("구독 관련 Billing만 조회 가능합니다.");
+        }
+
+        List<Billing> overuseList = billingRepository.findByOrganizationAndBillingTypeAndBilledAtBetween(
+                baseBilling.getOrganization(),
+                BillingType.OVERUSE,
+                baseBilling.getPeriodStart(),
+                baseBilling.getPeriodEnd()
+        );
+
+        Long totalAmount = overuseList.stream().mapToLong(Billing::getAmount).sum();
+
+        return BillingOveruseResponse.builder()
+                .billingId(baseBilling.getId())
+                .planName(baseBilling.getSubscriptionPlan().getPlanName().name())
+                .periodStart(baseBilling.getPeriodStart())
+                .periodEnd(baseBilling.getPeriodEnd())
+                .baseAmount(baseBilling.getAmount())
+                .totalOveruseAmount(totalAmount)
+                .totalOveruseCount((long) overuseList.size())
+                .overuseList(
+                        overuseList.stream()
+                                .map(BillingOveruseResponse.Item::from)
+                                .toList()
+                )
+                .build();
+    }
+
 }

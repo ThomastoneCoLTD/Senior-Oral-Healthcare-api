@@ -8,19 +8,67 @@
       "title": {
         "ko": "현재 구강 건강 상태는 어떻다고 생각하십니까?",
         "en": "How do you rate your current oral health?",
-        "vi": "Bạn đánh giá tình trạng sức khỏe răng miệng hiện tại của mình như thế nào?"
+        "vi": "Bạn đánh giá tình trạng sức khỏe răng miệng hiện tại của mình như thế nào?",
+        "zh-Hans": "您认为您目前的口腔健康状况如何？",
+        "zh-Hant": "您認為您目前的口腔健康狀況如何？"
       },
-      "description": { "ko": null, "en": null, "vi": null },
+      "description": { "ko": null, "en": null, "vi": null, "zh-Hans": null, "zh-Hant": null },
       "minimum": 1,
       "maximum": 1,
       "contents": [
-        { "id": 1, "text": { "ko": "매우 건강하다", "en": "Very healthy", "vi": "Rất khỏe mạnh" } },
-        { "id": 2, "text": { "ko": "건강한 편이다", "en": "Quite healthy", "vi": "Khá khỏe mạnh" } },
-        { "id": 3, "text": { "ko": "보통이다", "en": "Average", "vi": "Bình thường" } },
-        { "id": 4, "text": { "ko": "건강하지 못한 편이다", "en": "Unhealthy", "vi": "Không khỏe mạnh" } },
-        { "id": 5, "text": { "ko": "전혀 건강하지 않다", "en": "Very unhealthy", "vi": "Rất yếu" } }
+        {
+          "id": 1,
+          "text": {
+            "ko": "매우 건강하다",
+            "en": "Very healthy",
+            "vi": "Rất khỏe mạnh",
+            "zh-Hans": "非常健康",
+            "zh-Hant": "非常健康"
+          }
+        },
+        {
+          "id": 2,
+          "text": {
+            "ko": "건강한 편이다",
+            "en": "Quite healthy",
+            "vi": "Khá khỏe mạnh",
+            "zh-Hans": "比较健康",
+            "zh-Hant": "比較健康"
+          }
+        },
+        {
+          "id": 3,
+          "text": {
+            "ko": "보통이다",
+            "en": "Average",
+            "vi": "Bình thường",
+            "zh-Hans": "一般",
+            "zh-Hant": "一般"
+          }
+        },
+        {
+          "id": 4,
+          "text": {
+            "ko": "건강하지 못한 편이다",
+            "en": "Unhealthy",
+            "vi": "Không khỏe mạnh",
+            "zh-Hans": "不太健康",
+            "zh-Hant": "不太健康"
+          }
+        },
+        {
+          "id": 5,
+          "text": {
+            "ko": "전혀 건강하지 않다",
+            "en": "Very unhealthy",
+            "vi": "Rất yếu",
+            "zh-Hans": "非常不健康",
+            "zh-Hant": "非常不健康"
+          }
+        }
       ]
     },
+
     {
       "sort": 2,
       "key": "q_2",
@@ -28,18 +76,57 @@
       "title": {
         "ko": "현재 나이가 어떻게 되시나요?",
         "en": "What is your current age?",
-        "vi": "Hiện nay bạn bao nhiêu tuổi?"
+        "vi": "Hiện nay bạn bao nhiêu tuổi?",
+        "zh-Hans": "您目前的年龄是？",
+        "zh-Hant": "您目前的年齡是？"
       },
-      "description": { "ko": null, "en": null, "vi": null },
+      "description": { "ko": null, "en": null, "vi": null, "zh-Hans": null, "zh-Hant": null },
       "minimum": 1,
       "maximum": 1,
       "contents": [
-        { "id": 1, "text": { "ko": "만 2세 미만", "en": "Under 2 years old", "vi": "Dưới 2 tuổi" } },
-        { "id": 2, "text": { "ko": "만 2-6세", "en": "2–6 years old", "vi": "Từ 2–6 tuổi" } },
-        { "id": 3, "text": { "ko": "만 60세 이상", "en": "60 years or older", "vi": "Từ 60 tuổi trở lên" } },
-        { "id": 4, "text": { "ko": "그 외", "en": "Other", "vi": "Khác" } }
+        {
+          "id": 1,
+          "text": {
+            "ko": "만 2세 미만",
+            "en": "Under 2 years old",
+            "vi": "Dưới 2 tuổi",
+            "zh-Hans": "2岁以下",
+            "zh-Hant": "2歲以下"
+          }
+        },
+        {
+          "id": 2,
+          "text": {
+            "ko": "만 2-6세",
+            "en": "2–6 years old",
+            "vi": "Từ 2–6 tuổi",
+            "zh-Hans": "2–6岁",
+            "zh-Hant": "2–6歲"
+          }
+        },
+        {
+          "id": 3,
+          "text": {
+            "ko": "만 60세 이상",
+            "en": "60 years or older",
+            "vi": "Từ 60 tuổi trở lên",
+            "zh-Hans": "60岁以上",
+            "zh-Hant": "60歲以上"
+          }
+        },
+        {
+          "id": 4,
+          "text": {
+            "ko": "그 외",
+            "en": "Other",
+            "vi": "Khác",
+            "zh-Hans": "其他",
+            "zh-Hant": "其他"
+          }
+        }
       ]
     },
+
     {
       "sort": 3,
       "key": "q_3",
@@ -47,25 +134,66 @@
       "title": {
         "ko": "지난 12개월 동안 구강관련 불편감이 있었습니까?",
         "en": "Have you experienced any oral discomfort in the past 12 months?",
-        "vi": "Trong 12 tháng qua, bạn có gặp khó chịu về răng miệng không?"
+        "vi": "Trong 12 tháng qua, bạn có gặp khó chịu về răng miệng không?",
+        "zh-Hans": "在过去12个月中，您是否有过口腔不适？",
+        "zh-Hant": "在過去12個月中，您是否有過口腔不適？"
       },
       "description": {
         "ko": "(중복 표시 가능)",
         "en": "(Multiple selections allowed)",
-        "vi": "(Có thể chọn nhiều đáp án)"
+        "vi": "(Có thể chọn nhiều đáp án)",
+        "zh-Hans": "(可多选)",
+        "zh-Hant": "(可多選)"
       },
       "minimum": 1,
       "maximum": null,
       "contents": [
-        { "id": 1, "text": { "ko": "아니요", "en": "No", "vi": "Không" } },
-        { "id": 2, "text": { "ko": "씹기 힘들다", "en": "Difficulty chewing", "vi": "Khó nhai" } },
-        { "id": 3, "text": { "ko": "이가 아프다", "en": "Toothache", "vi": "Đau răng" } },
-        { "id": 4, "text": { "ko": "뜨겁고 찬 음식에 시리고 민감하다", "en": "Sensitive to hot or cold foods", "vi": "Nhạy cảm với đồ nóng hoặc lạnh" } },
-        { "id": 5, "text": { "ko": "잇몸이 붓고 피가 난다", "en": "Swollen or bleeding gums", "vi": "Nướu sưng hoặc chảy máu" } },
-        { "id": 6, "text": { "ko": "입이 마른다", "en": "Dry mouth", "vi": "Khô miệng" } },
-        { "id": 7, "text": { "ko": "입냄새가 난다", "en": "Bad breath", "vi": "Hôi miệng" } }
+        { "id": 1, "text": { "ko": "아니요", "en": "No", "vi": "Không", "zh-Hans": "没有", "zh-Hant": "沒有" } },
+        { "id": 2, "text": { "ko": "씹기 힘들다", "en": "Difficulty chewing", "vi": "Khó nhai", "zh-Hans": "咀嚼困难", "zh-Hant": "咀嚼困難" } },
+        { "id": 3, "text": { "ko": "이가 아프다", "en": "Toothache", "vi": "Đau răng", "zh-Hans": "牙痛", "zh-Hant": "牙痛" } },
+        {
+          "id": 4,
+          "text": {
+            "ko": "뜨겁고 찬 음식에 시리고 민감하다",
+            "en": "Sensitive to hot or cold foods",
+            "vi": "Nhạy cảm với đồ nóng hoặc lạnh",
+            "zh-Hans": "对冷热食物敏感",
+            "zh-Hant": "對冷熱食物敏感"
+          }
+        },
+        {
+          "id": 5,
+          "text": {
+            "ko": "잇몸이 붓고 피가 난다",
+            "en": "Swollen or bleeding gums",
+            "vi": "Nướu sưng hoặc chảy máu",
+            "zh-Hans": "牙龈肿胀或出血",
+            "zh-Hant": "牙齦腫脹或出血"
+          }
+        },
+        {
+          "id": 6,
+          "text": {
+            "ko": "입이 마른다",
+            "en": "Dry mouth",
+            "vi": "Khô miệng",
+            "zh-Hans": "口干",
+            "zh-Hant": "口乾"
+          }
+        },
+        {
+          "id": 7,
+          "text": {
+            "ko": "입냄새가 난다",
+            "en": "Bad breath",
+            "vi": "Hôi miệng",
+            "zh-Hans": "口臭",
+            "zh-Hant": "口臭"
+          }
+        }
       ]
     },
+
     {
       "sort": 4,
       "key": "q_4",
@@ -73,19 +201,22 @@
       "title": {
         "ko": "어제 하루 동안 칫솔질을 몇 차례 하였습니까?",
         "en": "How many times did you brush your teeth yesterday?",
-        "vi": "Hôm qua bạn đã đánh răng bao nhiêu lần?"
+        "vi": "Hôm qua bạn đã đánh răng bao nhiêu lần?",
+        "zh-Hans": "您昨天刷了几次牙？",
+        "zh-Hant": "您昨天刷了幾次牙？"
       },
-      "description": { "ko": null, "en": null, "vi": null },
+      "description": { "ko": null, "en": null, "vi": null, "zh-Hans": null, "zh-Hant": null },
       "minimum": 1,
       "maximum": 1,
       "contents": [
-        { "id": 1, "text": { "ko": "칫솔질을 하지 않았다", "en": "Did not brush", "vi": "Không đánh răng" } },
-        { "id": 2, "text": { "ko": "1회", "en": "Once", "vi": "1 lần" } },
-        { "id": 3, "text": { "ko": "2회", "en": "Twice", "vi": "2 lần" } },
-        { "id": 4, "text": { "ko": "3회", "en": "Three times", "vi": "3 lần" } },
-        { "id": 5, "text": { "ko": "4회 이상", "en": "Four or more times", "vi": "4 lần trở lên" } }
+        { "id": 1, "text": { "ko": "칫솔질을 하지 않았다", "en": "Did not brush", "vi": "Không đánh răng", "zh-Hans": "没有刷牙", "zh-Hant": "沒有刷牙" } },
+        { "id": 2, "text": { "ko": "1회", "en": "Once", "vi": "1 lần", "zh-Hans": "一次", "zh-Hant": "一次" } },
+        { "id": 3, "text": { "ko": "2회", "en": "Twice", "vi": "2 lần", "zh-Hans": "两次", "zh-Hant": "兩次" } },
+        { "id": 4, "text": { "ko": "3회", "en": "Three times", "vi": "3 lần", "zh-Hans": "三次", "zh-Hant": "三次" } },
+        { "id": 5, "text": { "ko": "4회 이상", "en": "Four or more times", "vi": "4 lần trở lên", "zh-Hans": "四次或以上", "zh-Hant": "四次或以上" } }
       ]
     },
+
     {
       "sort": 5,
       "key": "q_5",
@@ -93,19 +224,22 @@
       "title": {
         "ko": "어제 칫솔질을 하신 때를 모두 표시하여 주십시오.",
         "en": "Please check all the times you brushed your teeth yesterday.",
-        "vi": "Vui lòng chọn tất cả thời điểm bạn đã đánh răng hôm qua."
+        "vi": "Vui lòng chọn tất cả thời điểm bạn đã đánh răng hôm qua.",
+        "zh-Hans": "请勾选您昨天刷牙的所有时间。",
+        "zh-Hant": "請勾選您昨天刷牙的所有時間。"
       },
-      "description": { "ko": null, "en": null, "vi": null },
+      "description": { "ko": null, "en": null, "vi": null, "zh-Hans": null, "zh-Hant": null },
       "minimum": 0,
       "maximum": null,
       "contents": [
-        { "id": 1, "text": { "ko": "아침 식사 전", "en": "Before breakfast", "vi": "Trước bữa sáng" } },
-        { "id": 2, "text": { "ko": "아침 식사 후", "en": "After breakfast", "vi": "Sau bữa sáng" } },
-        { "id": 3, "text": { "ko": "점심 식사 후", "en": "After lunch", "vi": "Sau bữa trưa" } },
-        { "id": 4, "text": { "ko": "저녁 식사 후", "en": "After dinner", "vi": "Sau bữa tối" } },
-        { "id": 5, "text": { "ko": "취침 전", "en": "Before bedtime", "vi": "Trước khi đi ngủ" } }
+        { "id": 1, "text": { "ko": "아침 식사 전", "en": "Before breakfast", "vi": "Trước bữa sáng", "zh-Hans": "早餐前", "zh-Hant": "早餐前" } },
+        { "id": 2, "text": { "ko": "아침 식사 후", "en": "After breakfast", "vi": "Sau bữa sáng", "zh-Hans": "早餐后", "zh-Hant": "早餐後" } },
+        { "id": 3, "text": { "ko": "점심 식사 후", "en": "After lunch", "vi": "Sau bữa trưa", "zh-Hans": "午餐后", "zh-Hant": "午餐後" } },
+        { "id": 4, "text": { "ko": "저녁 식사 후", "en": "After dinner", "vi": "Sau bữa tối", "zh-Hans": "晚餐后", "zh-Hant": "晚餐後" } },
+        { "id": 5, "text": { "ko": "취침 전", "en": "Before bedtime", "vi": "Trước khi đi ngủ", "zh-Hans": "睡前", "zh-Hant": "睡前" } }
       ]
     },
+
     {
       "sort": 6,
       "key": "q_6",
@@ -113,24 +247,38 @@
       "title": {
         "ko": "치약과 칫솔 이외에 입안의 건강을 위해 귀하께서 사용하시는 용품이 있습니까?",
         "en": "Do you use any oral care products other than toothpaste and toothbrush?",
-        "vi": "Bạn có sử dụng sản phẩm chăm sóc răng miệng nào khác ngoài kem đánh răng và bàn chải không?"
+        "vi": "Bạn có sử dụng sản phẩm chăm sóc răng miệng nào khác ngoài kem đánh răng và bàn chải không?",
+        "zh-Hans": "除了牙膏和牙刷之外，您是否还使用其他口腔护理用品？",
+        "zh-Hant": "除了牙膏和牙刷之外，您是否還使用其他口腔護理用品？"
       },
       "description": {
         "ko": "사용하시는 용품에 모두 표시해 주세요.",
         "en": "Please check all the products you use.",
-        "vi": "Vui lòng chọn tất cả các sản phẩm bạn sử dụng."
+        "vi": "Vui lòng chọn tất cả các sản phẩm bạn sử dụng.",
+        "zh-Hans": "请勾选您使用的所有产品。",
+        "zh-Hant": "請勾選您使用的所有產品。"
       },
       "minimum": 0,
       "maximum": null,
       "contents": [
-        { "id": 1, "text": { "ko": "치실(Floss)", "en": "Dental floss", "vi": "Chỉ nha khoa" } },
-        { "id": 2, "text": { "ko": "치간칫솔", "en": "Interdental brush", "vi": "Bàn chải kẽ răng" } },
-        { "id": 3, "text": { "ko": "양치용액(구강세정액)", "en": "Mouthwash", "vi": "Nước súc miệng" } },
-        { "id": 4, "text": { "ko": "전동칫솔", "en": "Electric toothbrush", "vi": "Bàn chải điện" } },
-        { "id": 5, "text": { "ko": "워터픽(물사출기)", "en": "Water flosser", "vi": "Máy tăm nước" } },
-        { "id": 6, "text": { "ko": "혀클리너, 첨단칫솔(임플란트 칫솔), 틀니관리용품", "en": "Tongue cleaner, implant brush, or denture care products", "vi": "Dụng cụ làm sạch lưỡi, bàn chải cấy ghép, sản phẩm chăm sóc răng giả" } }
+        { "id": 1, "text": { "ko": "치실(Floss)", "en": "Dental floss", "vi": "Chỉ nha khoa", "zh-Hans": "牙线", "zh-Hant": "牙線" } },
+        { "id": 2, "text": { "ko": "치간칫솔", "en": "Interdental brush", "vi": "Bàn chải kẽ răng", "zh-Hans": "牙间刷", "zh-Hant": "牙間刷" } },
+        { "id": 3, "text": { "ko": "양치용액(구강세정액)", "en": "Mouthwash", "vi": "Nước súc miệng", "zh-Hans": "漱口水", "zh-Hant": "漱口水" } },
+        { "id": 4, "text": { "ko": "전동칫솔", "en": "Electric toothbrush", "vi": "Bàn chải điện", "zh-Hans": "电动牙刷", "zh-Hant": "電動牙刷" } },
+        { "id": 5, "text": { "ko": "워터픽(물사출기)", "en": "Water flosser", "vi": "Máy tăm nước", "zh-Hans": "冲牙器", "zh-Hant": "沖牙器" } },
+        {
+          "id": 6,
+          "text": {
+            "ko": "혀클리너, 첨단칫솔(임플란트 칫솔), 틀니관리용품",
+            "en": "Tongue cleaner, implant brush, or denture care products",
+            "vi": "Dụng cụ làm sạch lưỡi, bàn chải cấy ghép, sản phẩm chăm sóc răng giả",
+            "zh-Hans": "舌苔清洁器、植体牙刷或假牙护理用品",
+            "zh-Hant": "舌苔清潔器、植體牙刷或假牙護理用品"
+          }
+        }
       ]
     },
+
     {
       "sort": 7,
       "key": "q_7",
@@ -138,16 +286,19 @@
       "title": {
         "ko": "치아 닦는 방법을 (치과나 보건소 등에서) 배운 적이 있습니까?",
         "en": "Have you ever been taught how to brush your teeth properly (e.g., at a dental clinic or health center)?",
-        "vi": "Bạn đã từng được hướng dẫn cách đánh răng đúng cách chưa (ví dụ tại nha khoa hoặc trung tâm y tế)?"
+        "vi": "Bạn đã từng được hướng dẫn cách đánh răng đúng cách chưa (ví dụ tại nha khoa hoặc trung tâm y tế)?",
+        "zh-Hans": "您是否曾在牙科诊所或保健中心学习过正确的刷牙方法？",
+        "zh-Hant": "您是否曾在牙科診所或保健中心學過正確的刷牙方法？"
       },
-      "description": { "ko": null, "en": null, "vi": null },
+      "description": { "ko": null, "en": null, "vi": null, "zh-Hans": null, "zh-Hant": null },
       "minimum": 1,
       "maximum": 1,
       "contents": [
-        { "id": 1, "text": { "ko": "예", "en": "Yes", "vi": "Có" } },
-        { "id": 2, "text": { "ko": "아니오", "en": "No", "vi": "Không" } }
+        { "id": 1, "text": { "ko": "예", "en": "Yes", "vi": "Có", "zh-Hans": "是", "zh-Hant": "是" } },
+        { "id": 2, "text": { "ko": "아니오", "en": "No", "vi": "Không", "zh-Hans": "否", "zh-Hant": "否" } }
       ]
     },
+
     {
       "sort": 8,
       "key": "q_8",
@@ -155,27 +306,41 @@
       "title": {
         "ko": "가장 최근에 치과에서 받은 진료의 내용은 무엇입니까?",
         "en": "What kind of dental treatment did you receive most recently?",
-        "vi": "Bạn đã nhận điều trị nha khoa nào gần đây nhất?"
+        "vi": "Bạn đã nhận điều trị nha khoa nào gần đây nhất?",
+        "zh-Hans": "您最近一次在牙科接受的治疗是什么？",
+        "zh-Hant": "您最近一次在牙科接受的治療是什麼？"
       },
       "description": {
         "ko": "해당 사항 모두 선택",
         "en": "Select all that apply",
-        "vi": "Chọn tất cả các đáp án phù hợp"
+        "vi": "Chọn tất cả các đáp án phù hợp",
+        "zh-Hans": "可多选",
+        "zh-Hant": "可多選"
       },
       "minimum": 1,
       "maximum": null,
       "contents": [
-        { "id": 1, "text": { "ko": "구강검사", "en": "Oral examination", "vi": "Khám răng miệng" } },
-        { "id": 2, "text": { "ko": "스케일링", "en": "Scaling", "vi": "Lấy cao răng" } },
-        { "id": 3, "text": { "ko": "충치치료를 받았다", "en": "Cavity treatment", "vi": "Trị sâu răng" } },
-        { "id": 4, "text": { "ko": "신경치료를 받았다", "en": "Root canal treatment", "vi": "Điều trị tủy" } },
-        { "id": 5, "text": { "ko": "이를 뺐다", "en": "Tooth extraction", "vi": "Nhổ răng" } },
-        { "id": 6, "text": { "ko": "보철, 임플란트를 해 넣었다", "en": "Prosthesis or implant", "vi": "Làm răng giả hoặc cấy ghép implant" } },
-        { "id": 7, "text": { "ko": "교정 치료 중이다", "en": "Orthodontic treatment", "vi": "Niềng răng" } },
-        { "id": 8, "text": { "ko": "잇몸치료", "en": "Gum treatment", "vi": "Điều trị nướu" } },
-        { "id": 9, "text": { "ko": "해당사항 없음", "en": "None", "vi": "Không có" } }
+        { "id": 1, "text": { "ko": "구강검사", "en": "Oral examination", "vi": "Khám răng miệng", "zh-Hans": "口腔检查", "zh-Hant": "口腔檢查" } },
+        { "id": 2, "text": { "ko": "스케일링", "en": "Scaling", "vi": "Lấy cao răng", "zh-Hans": "洗牙", "zh-Hant": "洗牙" } },
+        { "id": 3, "text": { "ko": "충치치료를 받았다", "en": "Cavity treatment", "vi": "Trị sâu răng", "zh-Hans": "蛀牙治疗", "zh-Hant": "蛀牙治療" } },
+        { "id": 4, "text": { "ko": "신경치료를 받았다", "en": "Root canal treatment", "vi": "Điều trị tủy", "zh-Hans": "根管治疗", "zh-Hant": "根管治療" } },
+        { "id": 5, "text": { "ko": "이를 뺐다", "en": "Tooth extraction", "vi": "Nhổ răng", "zh-Hans": "拔牙", "zh-Hant": "拔牙" } },
+        {
+          "id": 6,
+          "text": {
+            "ko": "보철, 임플란트를 해 넣었다",
+            "en": "Prosthesis or implant",
+            "vi": "Làm răng giả hoặc cấy ghép implant",
+            "zh-Hans": "义齿或种植牙",
+            "zh-Hant": "義齒或植牙"
+          }
+        },
+        { "id": 7, "text": { "ko": "교정 치료 중이다", "en": "Orthodontic treatment", "vi": "Niềng răng", "zh-Hans": "正在接受矫正治疗", "zh-Hant": "正在接受矯正治療" } },
+        { "id": 8, "text": { "ko": "잇몸치료", "en": "Gum treatment", "vi": "Điều trị nướu", "zh-Hans": "牙龈治疗", "zh-Hant": "牙齦治療" } },
+        { "id": 9, "text": { "ko": "해당사항 없음", "en": "None", "vi": "Không có", "zh-Hans": "无", "zh-Hant": "無" } }
       ]
     },
+
     {
       "sort": 9,
       "key": "q_9",
@@ -183,20 +348,32 @@
       "title": {
         "ko": "어제 단 음식(과자, 사탕, 케이크, 탄산음료등)을 몇 번 드셨습니까?",
         "en": "How many times did you eat sweet foods (snacks, candy, cake, soda, etc.) yesterday?",
-        "vi": "Hôm qua bạn đã ăn đồ ngọt (bánh kẹo, nước ngọt, v.v.) bao nhiêu lần?"
+        "vi": "Hôm qua bạn đã ăn đồ ngọt (bánh kẹo, nước ngọt, v.v.) bao nhiêu lần?",
+        "zh-Hans": "您昨天吃了几次甜食（零食、糖果、蛋糕、汽水等）？",
+        "zh-Hant": "您昨天吃了幾次甜食（零食、糖果、蛋糕、汽水等）？"
       },
-      "description": { "ko": null, "en": null, "vi": null },
+      "description": { "ko": null, "en": null, "vi": null, "zh-Hans": null, "zh-Hant": null },
       "minimum": 1,
       "maximum": 1,
       "contents": [
-        { "id": 1, "text": { "ko": "1번", "en": "Once", "vi": "1 lần" } },
-        { "id": 2, "text": { "ko": "2번", "en": "Twice", "vi": "2 lần" } },
-        { "id": 3, "text": { "ko": "3번", "en": "Three times", "vi": "3 lần" } },
-        { "id": 4, "text": { "ko": "4번 이상", "en": "Four or more times", "vi": "4 lần trở lên" } },
-        { "id": 5, "text": { "ko": "먹지 않음", "en": "Did not eat", "vi": "Không ăn" } },
-        { "id": 6, "text": { "ko": "모른다", "en": "Don't know", "vi": "Không biết" } }
+        { "id": 1, "text": { "ko": "1번", "en": "Once", "vi": "1 lần", "zh-Hans": "一次", "zh-Hant": "一次" } },
+        { "id": 2, "text": { "ko": "2번", "en": "Twice", "vi": "2 lần", "zh-Hans": "两次", "zh-Hant": "兩次" } },
+        { "id": 3, "text": { "ko": "3번", "en": "Three times", "vi": "3 lần", "zh-Hans": "三次", "zh-Hant": "三次" } },
+        {
+          "id": 4,
+          "text": {
+            "ko": "4번 이상",
+            "en": "Four or more times",
+            "vi": "4 lần trở lên",
+            "zh-Hans": "四次或以上",
+            "zh-Hant": "四次或以上"
+          }
+        },
+        { "id": 5, "text": { "ko": "먹지 않음", "en": "Did not eat", "vi": "Không ăn", "zh-Hans": "没吃", "zh-Hant": "沒吃" } },
+        { "id": 6, "text": { "ko": "모른다", "en": "Don't know", "vi": "Không biết", "zh-Hans": "不知道", "zh-Hant": "不知道" } }
       ]
     },
+
     {
       "sort": 10,
       "key": "q_10",
@@ -204,15 +381,26 @@
       "title": {
         "ko": "담배를 피우십니까?",
         "en": "Do you smoke?",
-        "vi": "Bạn có hút thuốc không?"
+        "vi": "Bạn có hút thuốc không?",
+        "zh-Hans": "您吸烟吗？",
+        "zh-Hant": "您吸菸嗎？"
       },
-      "description": { "ko": null, "en": null, "vi": null },
+      "description": { "ko": null, "en": null, "vi": null, "zh-Hans": null, "zh-Hant": null },
       "minimum": 1,
       "maximum": 1,
       "contents": [
-        { "id": 1, "text": { "ko": "전혀 피운 적 없다", "en": "Never smoked", "vi": "Chưa từng hút" } },
-        { "id": 2, "text": { "ko": "현재 피우고 있다", "en": "Currently smoking", "vi": "Đang hút thuốc" } },
-        { "id": 3, "text": { "ko": "이전에 피웠으나 끊었다", "en": "Used to smoke but quit", "vi": "Đã hút nhưng đã bỏ" } }
+        { "id": 1, "text": { "ko": "전혀 피운 적 없다", "en": "Never smoked", "vi": "Chưa từng hút", "zh-Hans": "从未吸烟", "zh-Hant": "從未吸菸" } },
+        { "id": 2, "text": { "ko": "현재 피우고 있다", "en": "Currently smoking", "vi": "Đang hút thuốc", "zh-Hans": "目前吸烟", "zh-Hant": "目前吸菸" } },
+        {
+          "id": 3,
+          "text": {
+            "ko": "이전에 피웠으나 끊었다",
+            "en": "Used to smoke but quit",
+            "vi": "Đã hút nhưng đã bỏ",
+            "zh-Hans": "曾经吸烟但已戒掉",
+            "zh-Hant": "曾經吸菸但已戒掉"
+          }
+        }
       ]
     }
   ]

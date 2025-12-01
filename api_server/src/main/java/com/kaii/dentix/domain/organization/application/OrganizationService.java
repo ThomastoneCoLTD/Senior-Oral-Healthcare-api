@@ -58,12 +58,13 @@ public class OrganizationService {
      */
     @Transactional
     public OrganizationResponse createOrganization(OrganizationRequest request) {
-        // 1️⃣ 필수 필드 검증
+
+        // 1️⃣ 필수값 체크
         if (request.getSubscriptionPlanId() == null) {
             throw new BadRequestApiException("구독 플랜을 선택해 주세요.");
         }
 
-        // 2️⃣ 중복 검증
+        // 2️⃣ 중복 체크
         if (organizationRepository.existsByOrganizationName(request.getOrganizationName())) {
             throw new AlreadyDataException("이미 존재하는 기관명입니다.");
         }
@@ -75,7 +76,7 @@ public class OrganizationService {
             throw new AlreadyDataException("이미 등록된 이메일입니다.");
         }
 
-        // 3️⃣ 구독 플랜 조회
+        // 3️⃣ 플랜 조회
         SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
                 .orElseThrow(() -> new BadRequestApiException("존재하지 않는 구독 플랜입니다."));
 
@@ -89,46 +90,49 @@ public class OrganizationService {
 
         organizationRepository.save(organization);
 
-        // 5️⃣ 구독 상태 생성 및 초기화
+        // 5️⃣ 기관 첫 구독 생성
         OrganizationSubscription subscription = OrganizationSubscription.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
                 .autoRenew(true)
                 .build();
 
-        subscription.initializeSubscription();  //
+        subscription.initializeSubscription();  // 날짜 + 사용량 초기화
         organizationSubscriptionRepository.save(subscription);
-        OrganizationSubscription activeSubscription =
-                organizationSubscriptionService.getActiveSubscription(organization);
-        // ✅ 6️⃣ Billing (청구 내역) 생성 — 첫 달 혹은 첫 해 요금
+
+        // 🔥 굳이 activeSubscription을 다시 조회할 필요 없음.
+        OrganizationSubscription activeSubscription = subscription;
+
+        // 6️⃣ Billing 생성
         Billing billing = Billing.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
                 .subscription(activeSubscription)
-                .billingType(BillingType.REGULAR) // 정기 결제 유형
-                .billingStatus(BillingStatus.UNPAID) // 결제 대기
+                .billingType(BillingType.REGULAR)
+                .billingStatus(BillingStatus.UNPAID)
                 .amount(plan.getPrice())
                 .billedAt(LocalDateTime.now())
-                .periodStart(subscription.getSubscriptionStartDate())
-                .periodEnd(subscription.getSubscriptionEndDate())
+                .periodStart(activeSubscription.getSubscriptionStartDate())
+                .periodEnd(activeSubscription.getSubscriptionEndDate())
                 .description("기관 등록 시 자동 청구 생성")
                 .build();
 
         billingRepository.save(billing);
 
-        // ✅ 7️⃣ 구독 이력 생성
+        // 7️⃣ 구독 이력 생성
         OrganizationSubscriptionHistory history = OrganizationSubscriptionHistory.create(
                 organization,
                 plan,
                 SubscriptionStatus.ACTIVE,
-                subscription.getSubscriptionStartDate(),
-                subscription.getSubscriptionEndDate(),
+                activeSubscription.getSubscriptionStartDate(),
+                activeSubscription.getSubscriptionEndDate(),
                 "신규 구독 등록"
         );
 
         organizationSubscriptionHistoryRepository.save(history);
 
-        // 8️⃣ 관리자 연결
+
+        // 8️⃣ 관리자 연결 (이 단계 실패해도 앞의 Billing은 rollback되지 않게 유지 가능)
         Long adminId = jwtTokenUtil.getCurrentAdminId();
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
@@ -139,7 +143,8 @@ public class OrganizationService {
 
         admin.setOrganization(organization);
 
-        // ✅ 9️⃣ 응답 DTO
+
+        // 9️⃣ 최종 응답
         return OrganizationResponse.builder()
                 .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())
@@ -147,8 +152,8 @@ public class OrganizationService {
                 .organizationPhoneNumber(organization.getOrganizationPhoneNumber())
                 .subscriptionPlanId(plan.getId())
                 .subscriptionPlanName(plan.getPlanName().name())
-                .subscriptionStartDate(subscription.getSubscriptionStartDate())
-                .subscriptionEndDate(subscription.getSubscriptionEndDate())
+                .subscriptionStartDate(activeSubscription.getSubscriptionStartDate())
+                .subscriptionEndDate(activeSubscription.getSubscriptionEndDate())
                 .build();
     }
 

@@ -5,8 +5,10 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.subscription.application.SubscriptionService;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
@@ -27,6 +29,7 @@ public class OrganizationUsageService {
     private final OralCheckRepository oralCheckRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final SubscriptionService subscriptionService;
+    private final OrganizationSubscriptionRepository organizationSubscriptionRepository;
 
     @Transactional
     public OrganizationUsageResponse getMyOrganizationUsage(Long adminId) {
@@ -35,33 +38,36 @@ public class OrganizationUsageService {
                 .orElseThrow(() -> new NotFoundDataException("관리자를 찾을 수 없습니다."));
 
         Organization organization = admin.getOrganization();
+        Long organizationId = organization.getOrganizationId();
 
-        SubscriptionHistory subscriptionHistory =
-                subscriptionService.getCurrentSubscription(organization.getOrganizationId());
+        // 🔥 여기! 기존 SubscriptionHistory → OrganizationSubscription 로 교체
+        OrganizationSubscription sub = organizationSubscriptionRepository
+                .findByOrganization_OrganizationId(organizationId)
+                .orElseThrow(() -> new NotFoundDataException("현재 구독 정보가 없습니다."));
 
-        Long successCount =
-                oralCheckRepository.countSuccessByOrganization(organization.getOrganizationId());
+        // 사용량 계산
+        Long successCount = sub.getSuccessCount().longValue();
+        Integer max = sub.getSubscriptionPlan().getMaxSuccessResponses();
+        Long remaining = sub.getRemainingResponses().longValue();
 
-        Integer max = subscriptionHistory.getSubscriptionPlan().getMaxSuccessResponses();
-        Long remaining = max - successCount;
-
-        double usageRate = (max == 0) ? 0 : (double) successCount / max;
+        // usageRate는 0~100% → 프론트는 0.0 ~ 1.0을 기대하므로 스케일 변환
+        double usageRate = (sub.getUsageRate() != null)
+                ? sub.getUsageRate() / 100.0
+                : 0.0;
 
         return OrganizationUsageResponse.builder()
-                .subscriptionPlanName(subscriptionHistory.getSubscriptionPlan().getPlanName().name())
+                .subscriptionPlanName(sub.getSubscriptionPlan().getPlanName().name())
                 .maxSuccessResponses(max)
                 .successCount(successCount)
                 .remainingResponses(remaining)
                 .usageRate(usageRate)
 
-                // 🔥 사용량
-                .dailyUsage(oralCheckRepository.countTodayUsage(organization.getOrganizationId()))
-                .weeklyUsage(oralCheckRepository.countThisWeekUsage(organization.getOrganizationId()))
-                .monthlyUsage(oralCheckRepository.countThisMonthUsage(organization.getOrganizationId()))
+                .dailyUsage(oralCheckRepository.countTodayUsage(organizationId))
+                .weeklyUsage(oralCheckRepository.countThisWeekUsage(organizationId))
+                .monthlyUsage(oralCheckRepository.countThisMonthUsage(organizationId))
 
-                // 🔥 DTO로 반환
-                .topUsers(oralCheckRepository.findTopUsers(organization.getOrganizationId()))
-                .recentUsages(oralCheckRepository.findRecentUsages(organization.getOrganizationId()))
+                .topUsers(oralCheckRepository.findTopUsers(organizationId))
+                .recentUsages(oralCheckRepository.findRecentUsages(organizationId))
 
                 .build();
     }

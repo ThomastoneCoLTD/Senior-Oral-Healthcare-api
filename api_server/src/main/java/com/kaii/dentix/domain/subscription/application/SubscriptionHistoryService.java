@@ -1,10 +1,12 @@
 package com.kaii.dentix.domain.subscription.application;
 
+import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +20,7 @@ import java.util.List;
 public class SubscriptionHistoryService {
 
     private final SubscriptionHistoryRepository subscriptionHistoryRepository;
-
+    private final OrganizationRepository organizationRepository;
     /** ✅ 새 구독 이력 저장 (기관 등록 시, 최초 1회) */
     public void createInitialHistory(Organization organization, SubscriptionPlan plan) {
         SubscriptionHistory history = SubscriptionHistory.builder()
@@ -60,5 +62,20 @@ public class SubscriptionHistoryService {
                 .stream()
                 .map(SubscriptionHistoryResponse::fromEntity)
                 .toList();
+    }
+
+    @Transactional
+    public void recordUsage(Long organizationId) {
+
+        Organization org = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new EntityNotFoundException("기관 없음"));
+
+        SubscriptionHistory history = subscriptionHistoryRepository
+                .findByOrganizationAndActiveTrue(org)
+                .orElseThrow(() -> new RuntimeException("활성 구독 없음"));
+
+        history.increaseUsage();
+
+        subscriptionHistoryRepository.save(history);
     }
 }

@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 /**
  * ✅ 관리자 Billing 컨트롤러
@@ -43,6 +44,7 @@ public class AdminBillingController {
     private final OrganizationService organizationService;
     private final JwtTokenUtil jwtTokenUtil;
     private final AdminRepository adminRepository;
+
     /**
      * ✅ 미납 청구 목록 조회
      */
@@ -119,7 +121,19 @@ public class AdminBillingController {
                 billingService.getOveruseBySubscription(admin);
         return ResponseEntity.ok(new DataResponse<>(200, "OK", list));
     }
+    @GetMapping("/{billingId}/overuse")
+    public ResponseEntity<?> getOveruseBillingDetails(
+            @PathVariable Long billingId
+    ) {
 
+        BillingOveruseResponse response = billingService.getOveruseDetails(billingId);
+
+        return ResponseEntity.ok(Map.of(
+                "rt", 200,
+                "rtMsg", "초과요금 상세 조회 성공",
+                "response", response
+        ));
+    }
 //    /** ✅ 내 기관의 Billing 내역 조회 */
 //    @GetMapping("/my")
 //    public ResponseEntity<List<BillingResponse>> getMyBillingList(HttpServletRequest request) {

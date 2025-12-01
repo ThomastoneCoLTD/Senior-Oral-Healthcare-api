@@ -93,5 +93,26 @@ public interface BillingRepository extends JpaRepository<Billing, Long> {
             OrganizationSubscription subscription,
             List<BillingType> types
     );
+    List<Billing> findByOrganization_OrganizationIdAndBillingTypeAndBilledAtBetween(
+            Long organizationId,
+            BillingType billingType,
+            LocalDateTime start,
+            LocalDateTime end
+    );
 
-}
+    List<Billing> findByOrganizationAndBillingTypeInOrderByBilledAtDesc(
+            Organization organization,
+            List<BillingType> billingTypes
+    );
+
+    List<Billing> findByOrganizationAndBillingTypeIn(
+            Organization organization,
+            List<BillingType> billingTypes
+    );
+
+    List<Billing> findByOrganizationAndBillingTypeAndBilledAtBetween(
+            Organization organization,
+            BillingType billingType,
+            LocalDateTime start,
+            LocalDateTime end
+    );}

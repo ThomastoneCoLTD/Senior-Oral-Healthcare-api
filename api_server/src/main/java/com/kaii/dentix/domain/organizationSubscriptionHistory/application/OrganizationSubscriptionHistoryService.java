@@ -21,7 +21,7 @@ import java.util.List;
 public class OrganizationSubscriptionHistoryService {
     private final AdminRepository adminRepository;
     private final SubscriptionHistoryRepository subscriptionHistoryRepository;
-
+    private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
     /**
      * ✅ 기관 관리자 본인 기관의 구독 이력 조회
      */
@@ -37,11 +37,10 @@ public class OrganizationSubscriptionHistoryService {
         }
 
         // 2️⃣ 기관의 구독 이력 최신순으로 전체 조회
-        List<SubscriptionHistory> histories =
-                subscriptionHistoryRepository.findAllByOrganization_OrganizationIdOrderByStartDateDesc(
+        List<OrganizationSubscriptionHistory> histories =
+                organizationSubscriptionHistoryRepository.findAllByOrgIdWithFetch(
                         organization.getOrganizationId()
                 );
-
         if (histories.isEmpty()) {
             throw new IllegalStateException("해당 기관의 구독 이력이 존재하지 않습니다.");
         }
