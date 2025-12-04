@@ -80,11 +80,11 @@ s3:
 
   folderPath:
     oralCheck: 'https://thomastone-saas.s3.ap-northeast-2.amazonaws.com/test/'
-cloud:
-  aws:
-    credentials:
-      access-key: ${AWS_ACCESS_KEY_ID}
-      secret-key: ${AWS_SECRET_ACCESS_KEY}
+#cloud:
+#  aws:
+#    credentials:
+#      access-key: ${AWS_ACCESS_KEY_ID}
+#      secret-key: ${AWS_SECRET_ACCESS_KEY}
 
 #  accessKey: YOUR_AWS_ACCESS_KEY
 #  secretKey: YOUR_AWS_SECRET_KEY
