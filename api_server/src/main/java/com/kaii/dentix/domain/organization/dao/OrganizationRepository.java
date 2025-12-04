@@ -17,6 +17,14 @@ import java.util.List;
 import java.util.Optional;
 @Repository
 public interface OrganizationRepository extends JpaRepository<Organization, Long>,OrganizationRepositoryCustom {
+    @Query("""
+    SELECT o
+    FROM Organization o
+    JOIN FETCH o.subscriptionPlan
+    WHERE o.organizationId = :id
+""")
+    Organization findWithPlanById(Long id);
+
 //    Optional<Organization> findByOrganizationId(Long organizationId);
 //
 //    @Modifying
