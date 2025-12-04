@@ -31,7 +31,7 @@ jobs:
 
     # 5. Build Spring Boot JAR
     - name: Build Spring Boot (bootJar)
-      run: ./gradlew clean bootJar -x test
+      run: ./gradlew clean bootJar -x test -x asciidoc
       working-directory: api_server
 
     # 6. AWS Credentials 설정
