@@ -49,14 +49,13 @@ jobs:
        #Upload JAR & env to S3
       - name: Upload jar & env to S3
         run: |
-          JAR_PATH=$(ls api_server/build/libs/*.jar | head -n 1)
-
-          echo "Uploading app.jar and .env to S3..."
-
-          # Upload JAR
+          JAR_PATH=$(ls api_server/build/libs/*-SNAPSHOT.jar | head -n 1)
+          echo "Using JAR: $JAR_PATH"
+      
+          echo "Uploading bootJar and .env to S3..."
+          
           aws s3 cp "$JAR_PATH" "s3://${{ secrets.S3_BUCKET_NAME }}/latest/app.jar" --acl private
-
-          # Upload .env file
+          
           aws s3 cp "env" "s3://${{ secrets.S3_BUCKET_NAME }}/latest/.env" --acl private
-
-          echo "Upload complete: app.jar + .env uploaded to S3"
+          
+          echo "Upload complete: bootJar + env uploaded to S3"
