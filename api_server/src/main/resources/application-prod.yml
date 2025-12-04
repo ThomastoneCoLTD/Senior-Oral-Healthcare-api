@@ -91,8 +91,8 @@ server:
 #    secretKey: 'ABCDEFGHIJKLMNOPQRSTUVXYZ12345678'
 aiModel:
   apiUrl:
-    oralCheck: 'http://denti-gpu-load-balancer-2139915999.ap-southeast-1.elb.amazonaws.com/denti/api/plaque_navy'
-    questionnaire: 'http://denti-gpu-load-balancer-2139915999.ap-southeast-1.elb.amazonaws.com/denti/api/prsc_dku'
+    oralCheck: 'https://denti-api.thomabio.com/denti/api/plaque_navy'
+    questionnaire: 'https://denti-api.thomabio.com/denti/api/prsc_dku'
 s3:
   storage:
     bucketName: denti-dev
