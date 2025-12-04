@@ -104,8 +104,8 @@ s3:
 
 aws:
   region: ap-southeast-1
-  access-key: ${AWS_ACCESS_KEY_ID}
-  secret-key: ${AWS_SECRET_ACCESS_KEY}
+#  access-key: ${AWS_ACCESS_KEY_ID}
+#  secret-key: ${AWS_SECRET_ACCESS_KEY}
 
 #cloud:
 #  aws:
