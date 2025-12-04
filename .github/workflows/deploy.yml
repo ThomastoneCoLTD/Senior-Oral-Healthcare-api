@@ -9,28 +9,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout source code
+      #Checkout source code
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Java 17
+      #Set up Java 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # 3️⃣ Give permission to gradlew inside api_server
+      #Give permission to gradlew inside api_server
       - name: Give gradlew permission
         run: chmod +x gradlew
         working-directory: api_server
 
-      # 4️⃣ Build Spring Boot project inside api_server
+      #Build Spring Boot project inside api_server
       - name: Build JAR inside api_server
         run: ./gradlew clean build -x test -x asciidoctor
         working-directory: api_server
 
-      # 5️⃣ Configure AWS credentials
+      #Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -38,10 +38,25 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-2  # change if needed
 
-      # 6️⃣ Upload built JAR from api_server/build/libs to S3
-      - name: Upload jar to S3
+      #Create .env file for environment variables
+      - name: Create env file
+        run: |
+          echo "SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}" > env
+          echo "SPRING_PROFILES_ACTIVE=prod" >> env
+          echo "🔥 Created env file:"
+          cat env
+
+       #Upload JAR & env to S3
+      - name: Upload jar & env to S3
         run: |
           JAR_PATH=$(ls api_server/build/libs/*.jar | head -n 1)
-          echo "Uploading $JAR_PATH to s3://${{ secrets.S3_BUCKET_NAME }}/latest/app.jar ..."
+
+          echo "Uploading app.jar and .env to S3..."
+
+          # Upload JAR
           aws s3 cp "$JAR_PATH" "s3://${{ secrets.S3_BUCKET_NAME }}/latest/app.jar" --acl private
-          echo "✅ Upload complete"
+
+          # Upload .env file
+          aws s3 cp "env" "s3://${{ secrets.S3_BUCKET_NAME }}/latest/.env" --acl private
+
+          echo "Upload complete: app.jar + .env uploaded to S3"
