@@ -5,28 +5,25 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.superAdmin.SuperAdminUserStatisticResponse;
 import com.kaii.dentix.domain.billing.dao.BillingRepository;
 import com.kaii.dentix.domain.billing.domain.Billing;
-import com.kaii.dentix.domain.billing.dto.BillingListResponse;
 import com.kaii.dentix.domain.billing.dto.BillingOveruseResponse;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
-import com.kaii.dentix.domain.oralCheck.dto.OralCheckUsageDto;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
-import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
+import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionHistoryResponse;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.subscription.application.SubscriptionService;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
 import com.kaii.dentix.domain.superUser.dto.*;
-import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.type.BillingType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
-import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -43,14 +39,13 @@ import java.util.Map;
 public class SuperAdminOrganizationService {
 
     private final OrganizationRepository organizationRepository;
-    private final SubscriptionHistoryRepository subscriptionHistoryRepository;
+    private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
     private final BillingRepository billingRepository;
     private final OralCheckRepository oralcheckRepository;
     private final SubscriptionService subscriptionService;
     private final OralCheckRepository oralCheckRepository;
     private final UserRepository userRepository;
     private final AdminUserCustomRepository adminUserCustomRepository;
-    private final OrganizationRepository subscriptionRepository;
     /** ✅ 1. 전체 기관 목록 조회 */
     @Transactional(readOnly = true)
     public List<OrganizationListResponse> getAllOrganizations() {
@@ -66,13 +61,16 @@ public class SuperAdminOrganizationService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 기관을 찾을 수 없습니다."));
         return OrganizationDetailResponse.fromEntity(org);
     }
-    @Transactional(readOnly = true)
     /** ✅ 3. 기관별 구독이력 조회 */
-    public List<SubscriptionHistoryResponse> getOrganizationSubscriptions(Long organizationId) {
-        return subscriptionHistoryRepository
-                .findAllByOrganization_OrganizationIdOrderByStartDateDesc(organizationId)
-                .stream()
-                .map(SubscriptionHistoryResponse::fromEntity)
+    @Transactional(readOnly = true)
+    public List<OrganizationSubscriptionHistoryResponse> getOrganizationSubscriptions(Long organizationId) {
+
+        List<OrganizationSubscriptionHistory> histories =
+                organizationSubscriptionHistoryRepository
+                        .findAllByOrganization_OrganizationIdOrderByStartDateDesc(organizationId);
+
+        return histories.stream()
+                .map(OrganizationSubscriptionHistoryResponse::fromEntity)   // 🔥 이제 정상 동작
                 .toList();
     }
     @Transactional(readOnly = true)
@@ -91,41 +89,43 @@ public class SuperAdminOrganizationService {
     @Transactional
     public OrganizationUsageResponse getOrganizationUsageByOrgId(Long organizationId) {
 
-        // 🔥 기관 존재 여부 확인
+        // 1) 기관 조회
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new NotFoundDataException("기관 정보를 찾을 수 없습니다."));
 
-        // 🔥 현재 구독 정보 조회
-        SubscriptionHistory subscriptionHistory =
-                subscriptionService.getCurrentSubscription(organizationId);
+        // 2) 현재 구독 정보 (OrganizationSubscription 기반)
+        OrganizationSubscription subscription = organization.getOrganizationSubscription();
+        if (subscription == null) {
+            throw new NotFoundDataException("현재 활성 구독이 없습니다.");
+        }
 
-        // 🔥 성공 카운트 조회
+        // 3) 구독 플랜 정보
+        int max = subscription.getSubscriptionPlan().getMaxSuccessResponses();
+
+        // 4) 성공횟수, 사용량 계산
         Long successCount = oralCheckRepository.countSuccessByOrganization(organizationId);
-
-        Integer max = subscriptionHistory.getSubscriptionPlan().getMaxSuccessResponses();
         Long remaining = max - successCount;
-
         double usageRate = (max == 0) ? 0 : (double) successCount / max;
 
+        // 5) 응답 생성
         return OrganizationUsageResponse.builder()
-                .subscriptionPlanName(subscriptionHistory.getSubscriptionPlan().getPlanName().name())
+                .subscriptionPlanName(subscription.getSubscriptionPlan().getPlanName().name())
                 .maxSuccessResponses(max)
                 .successCount(successCount)
                 .remainingResponses(remaining)
                 .usageRate(usageRate)
 
-                // 🔥 사용량 (일/주/월)
+                // 일/주/월 사용량
                 .dailyUsage(oralCheckRepository.countTodayUsage(organizationId))
                 .weeklyUsage(oralCheckRepository.countThisWeekUsage(organizationId))
                 .monthlyUsage(oralCheckRepository.countThisMonthUsage(organizationId))
 
-                // 🔥 top users / recent usages
+                // 분석 사용자 / 최근 분석
                 .topUsers(oralCheckRepository.findTopUsers(organizationId))
                 .recentUsages(oralCheckRepository.findRecentUsages(organizationId))
 
                 .build();
     }
-
     @Transactional(readOnly = true)
     public SuperAdminAllUserStatisticsResponse getSuperAdminTotalUserStatistics(Admin admin) {
 

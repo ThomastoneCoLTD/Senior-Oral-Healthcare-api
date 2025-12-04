@@ -1,5 +1,6 @@
 package com.kaii.dentix.domain.admin.controller;
 
+import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
@@ -18,10 +19,12 @@ import com.kaii.dentix.global.common.response.SuccessResponse;
 import io.jsonwebtoken.Jwt;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+@Slf4j
 
 @RestController
 @RequestMapping("/admin/subscriptions")
@@ -34,7 +37,7 @@ public class AdminSubscriptionController {
     private final AdminRepository adminRepository;
     private final JwtTokenUtil jwtTokenUtil;
     private final OrganizationSubscriptionService organizationSubscriptionService;
-
+    private final AdminService adminService;
     @GetMapping("/all")
     public ResponseEntity<List<SubscriptionInfoResponse>> getAllPlans() {
         List<SubscriptionInfoResponse> plans = subscriptionInfoService.getAllPlans();
@@ -75,7 +78,8 @@ public class AdminSubscriptionController {
             HttpServletRequest request,
             @RequestBody OrganizationSubscriptionChangeRequest dto
     ) {
-        SuccessResponse response = subscriptionService.updateMyOrganizationSubscription(request, dto);
+        Admin admin = adminService.getTokenAdmin(request);   // ✔ Admin 인증
+        SuccessResponse response = subscriptionService.updateMyOrganizationSubscription(admin, dto);
         return ResponseEntity.ok(response);
     }
 

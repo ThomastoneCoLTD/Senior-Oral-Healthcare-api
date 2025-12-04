@@ -36,7 +36,7 @@ public class WebSecurityConfig {
             "/actuator/health",
             "/docs/*",
             "/login", "/login/*",
-            "/user", "/user/*",
+//            "/user", "/user/*",
             "/password", "/password/*",
             "/service-agreement",
             "/contents", "/contents/*",
@@ -70,7 +70,7 @@ public class WebSecurityConfig {
 
                         // 🔥 파일 다운로드는 브라우저에서 직접 URL로 접근하므로 permitAll
                         .requestMatchers("/admin/user/bulk-upload/template").permitAll()
-
+                        .requestMatchers("/actuator/health").permitAll()
                         // Admin API 전체: 인증 필요
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
@@ -89,6 +89,7 @@ public class WebSecurityConfig {
 
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
+                "http://localhost:8080",
                 "https://denti.thomabio.com"
         ));
 

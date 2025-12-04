@@ -51,8 +51,8 @@ spring:
   mail:
     host: smtp.sendgrid.net     # ✅ Workspace용 호스트
     port: 587                      # STARTTLS
-#    username: apikey
-    password: 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
+    username: apikey
+    password: ${SENDGRID_API_KEY}
     properties:
       mail:
         smtp:
@@ -64,7 +64,7 @@ jwt:
   accessTokenKey: "j39sd9f39sd9f39sd9f39sd9f39sd9fs"
   refreshTokenKey: "kx9d9d9kd9dk9d9dk9d9dk9d9dk9d9dk"
   secret: "jwt"
-  expiration: 86400000
+  expiration: 604800000
 
 server:
   tomcat:
@@ -78,7 +78,7 @@ server:
       charset: UTF-8
       force: true
     session:
-      timeout: 10000ms
+      timeout: 60m
     multipart:
       max-file-size: 500MB
       max-request-size: 500MB
@@ -91,8 +91,8 @@ server:
 #    secretKey: 'ABCDEFGHIJKLMNOPQRSTUVXYZ12345678'
 aiModel:
   apiUrl:
-    oralCheck: 'https://ai-backend-gpu.kai-i.com/denti/api/plaque_navy'
-    questionnaire: 'https://ai-backend-gpu.kai-i.com/denti/api/prsc_dku'
+    oralCheck: 'https://denti-gpu-load-balancer-2139915999.ap-southeast-1.elb.amazonaws.com/denti/api/plaque_navy'
+    questionnaire: 'https://denti-gpu-load-balancer-2139915999.ap-southeast-1.elb.amazonaws.com/denti/api/prsc_dku'
 s3:
   storage:
     bucketName: denti-dev

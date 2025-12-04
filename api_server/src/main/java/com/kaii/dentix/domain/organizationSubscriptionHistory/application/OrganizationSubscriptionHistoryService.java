@@ -2,13 +2,11 @@ package com.kaii.dentix.domain.organizationSubscriptionHistory.application;
 
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.billing.dto.BillingListResponse;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dto.OrganizationSubscriptionHistoryResponse;
-import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
+import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +18,6 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class OrganizationSubscriptionHistoryService {
     private final AdminRepository adminRepository;
-    private final SubscriptionHistoryRepository subscriptionHistoryRepository;
     private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
     /**
      * ✅ 기관 관리자 본인 기관의 구독 이력 조회
@@ -58,7 +55,21 @@ public class OrganizationSubscriptionHistoryService {
                         .build())
                 .toList();
     }
+    @Transactional(readOnly = true)
+    public List<SubscriptionHistoryResponse> getSubscriptionHistoryByOrganization(Long organizationId) {
 
+        // 🔥 fetch join으로 subscriptionPlan, organization 모두 가져옴
+        List<OrganizationSubscriptionHistory> histories =
+                organizationSubscriptionHistoryRepository.findAllByOrgIdWithFetch(organizationId);
+
+        if (histories.isEmpty()) {
+            return List.of();
+        }
+
+        return histories.stream()
+                .map(SubscriptionHistoryResponse::fromEntity)
+                .toList();
+    }
 //    @Transactional
 //    public BillingListResponse getBillingsForAdmin(Admin admin) {
 //

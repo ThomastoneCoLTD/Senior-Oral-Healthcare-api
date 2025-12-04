@@ -4,6 +4,7 @@ import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 public interface OrganizationSubscriptionHistoryRepository extends JpaRepository<OrganizationSubscriptionHistory, Long> {
@@ -11,12 +12,15 @@ public interface OrganizationSubscriptionHistoryRepository extends JpaRepository
    List<OrganizationSubscriptionHistory> findAllByOrganizationOrderByStartDateDesc(Organization organization);
 
     @Query("""
-    SELECT h
-    FROM OrganizationSubscriptionHistory h
-    JOIN FETCH h.organization o
-    JOIN FETCH h.subscriptionPlan p
-    WHERE o.organizationId = :organizationId
-    ORDER BY h.startDate DESC
-""")
-    List<OrganizationSubscriptionHistory> findAllByOrgIdWithFetch(Long organizationId);
+        SELECT osh
+        FROM OrganizationSubscriptionHistory osh
+        JOIN FETCH osh.subscriptionPlan sp
+        JOIN FETCH osh.organization o
+        WHERE o.organizationId = :orgId
+        ORDER BY osh.startDate DESC
+    """)
+    List<OrganizationSubscriptionHistory> findAllByOrgIdWithFetch(@Param("orgId") Long orgId);
+
+    List<OrganizationSubscriptionHistory>
+    findAllByOrganization_OrganizationIdOrderByStartDateDesc(Long organizationId);
 }

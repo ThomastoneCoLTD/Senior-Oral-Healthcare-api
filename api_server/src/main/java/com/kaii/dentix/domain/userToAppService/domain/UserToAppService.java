@@ -20,10 +20,10 @@ public class UserToAppService {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "userId", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "appServiceId", nullable = false) // ✅ 변경됨
+    @JoinColumn(name = "app_service_id", nullable = false)
     private AppService appService;
 }

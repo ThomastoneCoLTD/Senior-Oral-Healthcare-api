@@ -110,14 +110,18 @@ public class JwtTokenUtil {
     public UsernamePasswordAuthenticationToken getAuthentication(String token, TokenType tokenType) {
         Claims claims = getClaims(token, tokenType);
         String role = claims.get("roles", String.class);
-        Long id = Long.valueOf(claims.getSubject());
+        String isSuper = claims.get("adminIsSuper", String.class);
 
-        Collection<? extends GrantedAuthority> authorities =
-                Collections.singletonList(new SimpleGrantedAuthority(role));
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority(role)); // ROLE_ADMIN
+
+        if ("Y".equalsIgnoreCase(isSuper)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"));
+        }
 
         org.springframework.security.core.userdetails.User principal =
                 new org.springframework.security.core.userdetails.User(
-                        String.valueOf(id),
+                        claims.getSubject(),
                         "",
                         authorities
                 );

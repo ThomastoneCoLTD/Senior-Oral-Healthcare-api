@@ -20,6 +20,8 @@ import org.reactivestreams.Subscription;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -40,26 +42,36 @@ public class OrganizationUsageService {
         Organization organization = admin.getOrganization();
         Long organizationId = organization.getOrganizationId();
 
-        // 🔥 여기! 기존 SubscriptionHistory → OrganizationSubscription 로 교체
         OrganizationSubscription sub = organizationSubscriptionRepository
                 .findByOrganization_OrganizationId(organizationId)
                 .orElseThrow(() -> new NotFoundDataException("현재 구독 정보가 없습니다."));
 
-        // 사용량 계산
-        Long successCount = sub.getSuccessCount().longValue();
         Integer max = sub.getSubscriptionPlan().getMaxSuccessResponses();
-        Long remaining = sub.getRemainingResponses().longValue();
 
-        // usageRate는 0~100% → 프론트는 0.0 ~ 1.0을 기대하므로 스케일 변환
-        double usageRate = (sub.getUsageRate() != null)
-                ? sub.getUsageRate() / 100.0
+        // 🔥 LocalDateTime → Date 변환 (Asia/Seoul 기준)
+        ZoneId zone = ZoneId.of("Asia/Seoul");
+        Date startDate = Date.from(sub.getSubscriptionStartDate().atZone(zone).toInstant());
+        Date endDate   = Date.from(sub.getSubscriptionEndDate().atZone(zone).toInstant());
+
+        // 🔥 구독 기간 동안 사용량
+        Long successCount = oralCheckRepository.countSubscriptionPeriodUsage(
+                organizationId,
+                startDate,
+                endDate
+        );
+
+        // 🔥 음수 허용 잔여량
+        Long remaining = max - successCount;
+
+        double usageRate = (max != null && max > 0)
+                ? (double) successCount / max
                 : 0.0;
 
         return OrganizationUsageResponse.builder()
                 .subscriptionPlanName(sub.getSubscriptionPlan().getPlanName().name())
                 .maxSuccessResponses(max)
                 .successCount(successCount)
-                .remainingResponses(remaining)
+                .remainingResponses(remaining)   // 초과 시 -값
                 .usageRate(usageRate)
 
                 .dailyUsage(oralCheckRepository.countTodayUsage(organizationId))

@@ -59,12 +59,12 @@ public class OrganizationService {
     @Transactional
     public OrganizationResponse createOrganization(OrganizationRequest request) {
 
-        // 1️⃣ 필수값 체크
+        //1. 필수값 체크
         if (request.getSubscriptionPlanId() == null) {
             throw new BadRequestApiException("구독 플랜을 선택해 주세요.");
         }
 
-        // 2️⃣ 중복 체크
+        //2. 중복 체크
         if (organizationRepository.existsByOrganizationName(request.getOrganizationName())) {
             throw new AlreadyDataException("이미 존재하는 기관명입니다.");
         }
@@ -76,11 +76,11 @@ public class OrganizationService {
             throw new AlreadyDataException("이미 등록된 이메일입니다.");
         }
 
-        // 3️⃣ 플랜 조회
+        //3. 플랜 조회
         SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
                 .orElseThrow(() -> new BadRequestApiException("존재하지 않는 구독 플랜입니다."));
 
-        // 4️⃣ 기관 생성
+        //4. 기관 생성
         Organization organization = Organization.builder()
                 .organizationName(request.getOrganizationName())
                 .organizationEmail(request.getOrganizationEmail())
@@ -90,7 +90,7 @@ public class OrganizationService {
 
         organizationRepository.save(organization);
 
-        // 5️⃣ 기관 첫 구독 생성
+        //5. 기관 첫 구독 생성
         OrganizationSubscription subscription = OrganizationSubscription.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
@@ -100,10 +100,10 @@ public class OrganizationService {
         subscription.initializeSubscription();  // 날짜 + 사용량 초기화
         organizationSubscriptionRepository.save(subscription);
 
-        // 🔥 굳이 activeSubscription을 다시 조회할 필요 없음.
+        //굳이 activeSubscription을 다시 조회할 필요 없음.
         OrganizationSubscription activeSubscription = subscription;
 
-        // 6️⃣ Billing 생성
+        //6. Billing 생성
         Billing billing = Billing.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
@@ -119,7 +119,7 @@ public class OrganizationService {
 
         billingRepository.save(billing);
 
-        // 7️⃣ 구독 이력 생성
+        //7. 구독 이력 생성
         OrganizationSubscriptionHistory history = OrganizationSubscriptionHistory.create(
                 organization,
                 plan,
@@ -132,7 +132,7 @@ public class OrganizationService {
         organizationSubscriptionHistoryRepository.save(history);
 
 
-        // 8️⃣ 관리자 연결 (이 단계 실패해도 앞의 Billing은 rollback되지 않게 유지 가능)
+        //8. 관리자 연결 (이 단계 실패해도 앞의 Billing은 rollback되지 않게 유지 가능)
         Long adminId = jwtTokenUtil.getCurrentAdminId();
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
@@ -144,7 +144,7 @@ public class OrganizationService {
         admin.setOrganization(organization);
 
 
-        // 9️⃣ 최종 응답
+        //9. 최종 응답
         return OrganizationResponse.builder()
                 .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())

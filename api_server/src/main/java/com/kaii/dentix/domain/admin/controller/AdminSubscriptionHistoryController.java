@@ -25,7 +25,6 @@ public class AdminSubscriptionHistoryController {
 
     private final SubscriptionHistoryService subscriptionHistoryService;
     private final JwtTokenUtil jwtTokenUtil;
-    private final OrganizationSubscriptionService organizationSubscriptionService;
     private final OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
 
     /** ✅ 기관별 구독 이력 조회 */
@@ -34,7 +33,7 @@ public class AdminSubscriptionHistoryController {
             @PathVariable Long organizationId
     ) {
         List<SubscriptionHistoryResponse> historyList =
-                subscriptionHistoryService.getSubscriptionHistoryByOrganization(organizationId);
+                organizationSubscriptionHistoryService.getSubscriptionHistoryByOrganization(organizationId);
         return ResponseEntity.ok(historyList);
     }
 

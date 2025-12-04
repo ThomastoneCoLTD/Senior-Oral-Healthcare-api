@@ -170,4 +170,17 @@ ORDER BY COUNT(oc) DESC
     ORDER BY o.created DESC
 """)
     List<RecentUsage> findRecentUsages(Long orgId);
+
+    @Query("""
+    SELECT COUNT(oc)
+    FROM OralCheck oc
+    WHERE oc.user.organization.organizationId = :orgId
+      AND oc.created >= :start
+      AND oc.created < :end
+""")
+    Long countSubscriptionPeriodUsage(
+            Long orgId,
+            Date start,
+            Date end
+    );
 }

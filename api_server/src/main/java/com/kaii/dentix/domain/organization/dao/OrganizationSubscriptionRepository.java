@@ -44,6 +44,7 @@ public interface OrganizationSubscriptionRepository extends JpaRepository<Organi
         List<OrganizationSubscription> list = findActiveAllByOrgId(orgId);
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
+    Optional<OrganizationSubscription> findTopByOrganization_OrganizationIdOrderBySubscriptionStartDateDesc(Long orgId);
 
     @Query("""
         SELECT s FROM OrganizationSubscription s

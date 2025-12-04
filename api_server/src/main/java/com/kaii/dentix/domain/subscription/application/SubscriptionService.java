@@ -5,33 +5,32 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.billing.dao.BillingRepository;
 import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionChangeRequest;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
+import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionUsageRepository;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
-import com.kaii.dentix.domain.subscription.dto.SubscriptionPlanUpdateRequest;
-import com.kaii.dentix.domain.subscription.dto.SubscriptionResponse;
-import com.kaii.dentix.domain.subscription.dto.SubscriptionResponseDto;
-import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.BillingStatus;
 import com.kaii.dentix.domain.type.BillingType;
-import com.kaii.dentix.domain.type.PlanName;
-import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.domain.type.SubscriptionStatus;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SubscriptionService {
@@ -41,46 +40,93 @@ public class SubscriptionService {
     private final OrganizationRepository organizationRepository;
     private final SubscriptionUsageRepository subscriptionUsageRepository;
     private final SubscriptionHistoryRepository subscriptionHistoryRepository;
+    private final OrganizationSubscriptionRepository organizationSubscriptionRepository;
+    private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
     //    private final SubscriptionUsageRepository subscriptionRepository;
     private final AdminService adminService;
 
     @Transactional
     public SuccessResponse updateMyOrganizationSubscription(
-            HttpServletRequest request,
+            Admin admin,
             OrganizationSubscriptionChangeRequest dto
     ) {
-        // ✅ 1. 기관 조회
-        Organization organization = organizationRepository.findById(dto.getOrganizationId())
-                .orElseThrow(() -> new EntityNotFoundException("기관을 찾을 수 없습니다."));
+        Organization organization = admin.getOrganization();
 
-        // ✅ 2. 새 구독상품 조회
         SubscriptionPlan newPlan = subscriptionPlanRepository.findById(dto.getNewSubscriptionPlanId())
                 .orElseThrow(() -> new EntityNotFoundException("구독상품을 찾을 수 없습니다."));
 
-        // ✅ 3. 기관 정보 먼저 업데이트 + flush (detach 방지)
+        // =============================
+        // 1) Latest OrganizationSubscription 조회
+        // =============================
+        OrganizationSubscription subscription =
+                organizationSubscriptionRepository
+                        .findTopByOrganization_OrganizationIdOrderBySubscriptionStartDateDesc(
+                                organization.getOrganizationId()
+                        )
+                        .orElseThrow(() -> new IllegalArgumentException("구독 정보를 찾을 수 없습니다."));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // =============================
+        // 2) OrganizationSubscription 업데이트
+        // =============================
+        subscription.setSubscriptionPlan(newPlan);
+        subscription.setSubscriptionStartDate(now);
+        subscription.setSubscriptionEndDate(now.plusMonths(1));
+        subscription.setSubscriptionRenewalDate(now.plusMonths(1));
+        subscription.setUsageResetDate(now.plusMonths(1));
+
+        subscription.setSuccessCount(0);
+        subscription.setRemainingResponses(newPlan.getMaxSuccessResponses());
+        subscription.setUsageRate(0.0);
+
+        subscription.setStatus(SubscriptionStatus.ACTIVE);
+
+        organizationSubscriptionRepository.saveAndFlush(subscription); // UPDATE 발생
+
+        // =============================
+        // 3) Organization에도 반영
+        // =============================
         organization.setSubscriptionPlan(newPlan);
-        organization.setSubscriptionStartDate(LocalDateTime.now());
-        organization.setSubscriptionEndDate(LocalDateTime.now().plusMonths(1));
+        organization.setSubscriptionStartDate(now);
+        organization.setSubscriptionEndDate(now.plusMonths(1));
+
         organizationRepository.saveAndFlush(organization);
 
-        // ✅ 4. 구독이력 기록 (기존 종료 + 신규 추가)
-        subscriptionHistoryService.recordPlanChange(organization, newPlan, "구독상품 변경");
-
-        // ✅ 5. Billing 생성
+        // =============================
+        // 4) Billing 생성
+        // =============================
         Billing billing = new Billing();
         billing.setOrganization(organization);
         billing.setSubscriptionPlan(newPlan);
+        billing.setSubscription(subscription);
         billing.setBillingType(BillingType.SUBSCRIPTION);
         billing.setBillingStatus(BillingStatus.PENDING);
         billing.setAmount(newPlan.getPrice());
-        billing.setPeriodStart(LocalDateTime.now());
-        billing.setPeriodEnd(organization.getSubscriptionEndDate());
+        billing.setBilledAt(now);
+        billing.setPeriodStart(now);
+        billing.setPeriodEnd(now.plusMonths(1));
         billing.setDescription("구독상품 변경 결제");
+
         billingRepository.save(billing);
 
-        return new SuccessResponse(200, "기관 구독상품 변경 완료");
-    }
+        // =============================
+        // 5) 새로운 OrganizationSubscriptionHistory 저장
+        // =============================
+        OrganizationSubscriptionHistory history =
+                OrganizationSubscriptionHistory.builder()
+                        .organization(organization)
+                        .subscriptionPlan(newPlan)
+                        .status(SubscriptionStatus.ACTIVE)
+                        .startDate(now)
+                        .endDate(now.plusMonths(1))
+                        .reason("구독상품 변경")
+                        .build();
 
+        organizationSubscriptionHistoryRepository.save(history);
+
+        return new SuccessResponse(200, "구독상품 변경 완료");
+    }
     @Transactional
     public SubscriptionHistory getCurrentSubscription(Long organizationId) {
 

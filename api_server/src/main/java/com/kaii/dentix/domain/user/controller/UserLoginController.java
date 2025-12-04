@@ -46,15 +46,6 @@ public class UserLoginController {
         return new SuccessResponse();
     }
 
-//    /**
-//     *  사용자 로그인
-//     */
-//    @PostMapping(name = "사용자 로그인")
-//    public DataResponse<UserLoginDto> userLogin(HttpServletRequest httpServletRequest, @Valid @RequestBody UserLoginRequest request){
-//        DataResponse<UserLoginDto> response = new DataResponse<>(userLoginService.userLogin(httpServletRequest, request));
-//        return response;
-//    }
-
     /**
      *  사용자 비밀번호 찾기
      */
@@ -82,5 +73,4 @@ public class UserLoginController {
         DataResponse<AccessTokenDto> response = new DataResponse<>(userLoginService.accessTokenReissue(httpServletRequest));
         return response;
     }
-
 }

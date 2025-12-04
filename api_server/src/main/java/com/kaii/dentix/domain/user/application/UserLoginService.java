@@ -243,15 +243,19 @@ public class  UserLoginService {
             throw new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다.");
         }
 
-        //기관 및 구독 정보 추출
+        // 🔥 관리자 승인 여부 체크 추가 (핵심)
+        if (user.getIsVerify() == null || user.getIsVerify() != YnType.Y) {
+            throw new UnauthorizedException("관리자 승인 후 이용 가능합니다.");
+        }
 
+        //기관 및 구독 정보 추출
         Organization organization = user.getOrganization();
         log.info("organization:{}",organization);
+
         SubscriptionPlan plan = null;
         String planName = null;
         Boolean customSurveyEnabled = false;
 
-        //문진표 서비스가 null인지 확인
         if (organization != null && organization.getOrganizationSubscription() != null) {
             plan = organization.getOrganizationSubscription().getSubscriptionPlan();
 
@@ -268,13 +272,7 @@ public class  UserLoginService {
         //로그인 갱신
         user.updateLogin(refreshToken);
 
-        //디바이스 정보 이벤트 발행
-//        publisher.publishEvent(new UserModifyDeviceInfoEvent(
-//                user.getUserId(),
-//                httpServletRequest
-//        ));
-
-        //사용자의 서비스 목록 조회 (UserService → AppService)
+        //서비스 목록 조회
         List<UserToAppService> mappings = userToAppServiceRepository.findByUser(user);
 
         List<UserLoginDto.AppServiceInfo> userServices = mappings.stream()
@@ -285,7 +283,6 @@ public class  UserLoginService {
                         .build())
                 .toList();
 
-        //대표 서비스도 여전히 첫 번째로 유지
         Long mainServiceId = userServices.isEmpty() ? null : userServices.get(0).getServiceId();
         String mainServiceName = userServices.isEmpty() ? null : userServices.get(0).getName();
 
@@ -296,7 +293,7 @@ public class  UserLoginService {
                 .refreshToken(refreshToken)
                 .serviceId(mainServiceId)
                 .name(mainServiceName)
-                .services(userServices) //전체 서비스 리스트 명시적으로 추가
+                .services(userServices)
                 .organizationId(organization != null ? organization.getOrganizationId() : null)
                 .organizationName(organization != null ? organization.getOrganizationName() : null)
                 .organizationPlanName(planName)

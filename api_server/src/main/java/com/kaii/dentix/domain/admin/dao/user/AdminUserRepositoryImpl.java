@@ -6,19 +6,23 @@ import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
 import com.kaii.dentix.domain.admin.dto.AdminUserSignUpCountDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
+import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.domain.QOralCheck;
 import com.kaii.dentix.domain.oralStatus.domain.QOralStatus;
 import com.kaii.dentix.domain.organization.domain.QOrganization;
 import com.kaii.dentix.domain.questionnaire.domain.QQuestionnaire;
+import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
 import com.kaii.dentix.domain.type.DatePeriodType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.domain.QUser;
+import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.userOralStatus.domain.QUserOralStatus;
 import com.kaii.dentix.domain.userToAppService.domain.QUserToAppService;
 import com.kaii.dentix.global.common.dto.PagingRequest;
 import com.kaii.dentix.global.common.util.DateFormatUtil;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -37,6 +41,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -69,68 +74,75 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
             builder.and(user.organization.organizationId.eq(request.getOrganizationId()));
         }
 
-        List<AdminUserInfoDto> result = queryFactory
-                .select(Projections.constructor(
-                        AdminUserInfoDto.class,
-                        user.userId,
-                        user.userLoginIdentifier,
-                        user.userName,
-                        user.userGender,
-                        Expressions.stringTemplate("group_concat(DISTINCT {0})", oralStatus.oralStatusTitle),
-                        questionnaire.created,
-                        oralCheck.oralCheckResultTotalType,
-                        oralCheck.created,
-                        user.isVerify,
-                        Expressions.stringTemplate("group_concat(DISTINCT {0})", appService.name)
-                ))
-                .from(user)
-
-                .leftJoin(user.organization, organization)
-                .leftJoin(userToAppService).on(userToAppService.user.eq(user))
-                .leftJoin(userToAppService.appService, appService)
-
-                .leftJoin(questionnaire).on(
-                        questionnaire.userId.eq(user.userId)
-                                .and(questionnaire.created.eq(
-                                        JPAExpressions.select(questionnaire.created.max())
-                                                .from(questionnaire)
-                                                .where(questionnaire.userId.eq(user.userId))
-                                ))
-                )
-
-                .leftJoin(userOralStatus).on(userOralStatus.questionnaire.eq(questionnaire))
-                .leftJoin(userOralStatus.oralStatus, oralStatus)
-
-                .leftJoin(oralCheck).on(
-                        oralCheck.user.userId.eq(user.userId)
-                                .and(oralCheck.created.eq(
-                                        JPAExpressions.select(oralCheck.created.max())
-                                                .from(oralCheck)
-                                                .where(oralCheck.user.userId.eq(user.userId))
-                                ))
-                )
-
+        // 🔥 1) 사용자 목록만 조회 (가장 빠름)
+        List<User> users = queryFactory
+                .selectFrom(user)
+                .leftJoin(user.organization, organization).fetchJoin()
                 .where(builder)
-                .groupBy(
-                        user.userId,
-                        questionnaire.questionnaireId,
-                        oralCheck.oralCheckId
-                )
                 .orderBy(user.created.desc())
                 .offset(paging.getOffset())
                 .limit(paging.getPageSize())
                 .fetch();
 
+        if (users.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), paging, 0);
+        }
 
-        Long totalCount = Optional.ofNullable(
-                queryFactory.select(user.countDistinct())
-                        .from(user)
-                        .leftJoin(user.organization, organization)
-                        .where(builder)
-                        .fetchOne()
-        ).orElse(0L);
+        List<Long> userIds = users.stream().map(User::getUserId).toList();
 
+        // 🔥 2) 최신 설문
+        Map<Long, Questionnaire> latestQuestionnaires = getLatestQuestionnaires(userIds);
 
+        // 🔥 3) 최신 검사 결과
+        Map<Long, OralCheck> latestOralChecks = getLatestOralChecks(userIds);
+
+        // 🔥 4) 유저별 oralStatusTitle
+        Map<Long, String> oralStatusTitles = getOralStatusTitles(userIds);
+
+        // 🔥 5) 유저별 사용 서비스명
+        Map<Long, List<String>> serviceNames = getUserServices(userIds);
+
+        // 🔥 6) DTO 리스트 조립
+        List<AdminUserInfoDto> result = users.stream()
+                .map(u -> new AdminUserInfoDto(
+                        u.getUserId(),
+                        u.getUserLoginIdentifier(),
+                        u.getUserName(),
+                        u.getUserGender(),
+
+                        // oralStatusTitle
+                        oralStatusTitles.getOrDefault(u.getUserId(), null),
+
+                        // questionnaireDate
+                        latestQuestionnaires.containsKey(u.getUserId())
+                                ? latestQuestionnaires.get(u.getUserId()).getCreated()
+                                : null,
+
+                        // oralCheckResultTotalType
+                        latestOralChecks.containsKey(u.getUserId())
+                                ? latestOralChecks.get(u.getUserId()).getOralCheckResultTotalType()
+                                : null,
+
+                        // oralCheckDate
+                        latestOralChecks.containsKey(u.getUserId())
+                                ? latestOralChecks.get(u.getUserId()).getCreated()
+                                : null,
+
+                        u.getIsVerify(),
+
+                        // serviceNames는 콤마 연결만 넘기면 DTO가 알아서 split 처리함
+                        serviceNames.get(u.getUserId()) != null
+                                ? String.join(",", serviceNames.get(u.getUserId()))
+                                : ""
+                ))
+                .toList();
+
+        Long totalCount = queryFactory
+                .select(user.count())
+                .from(user)
+                .where(builder)
+                .fetchOne();
+        if (totalCount == null) totalCount = 0L;
         return new PageImpl<>(result, paging, totalCount);
     }
 
@@ -141,6 +153,109 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
             throw new IllegalArgumentException("organizationId가 필요합니다.");
 
         return findAll(request);
+    }
+
+    private Map<Long, Questionnaire> getLatestQuestionnaires(List<Long> userIds) {
+
+        QQuestionnaire q = QQuestionnaire.questionnaire;
+
+        List<Questionnaire> list = queryFactory
+                .selectFrom(q)
+                .where(q.userId.in(userIds)
+                        .and(q.created.in(
+                                JPAExpressions
+                                        .select(q.created.max())
+                                        .from(q)
+                                        .where(q.userId.in(userIds))
+                                        .groupBy(q.userId)
+                        )))
+                .fetch();
+
+        return list.stream()
+                .filter(qn -> qn != null && qn.getUserId() != null)
+                .collect(Collectors.toMap(
+                        Questionnaire::getUserId,
+                        qn -> qn,
+                        (a, b) -> a
+                ));
+    }
+
+    private Map<Long, OralCheck> getLatestOralChecks(List<Long> userIds) {
+
+        QOralCheck oc = QOralCheck.oralCheck;
+
+        List<OralCheck> list = queryFactory
+                .selectFrom(oc)
+                .where(oc.user.userId.in(userIds)
+                        .and(oc.created.in(
+                                JPAExpressions
+                                        .select(oc.created.max())
+                                        .from(oc)
+                                        .where(oc.user.userId.in(userIds))
+                                        .groupBy(oc.user.userId)
+                        )))
+                .fetch();
+
+        return list.stream()
+                .filter(ocx -> ocx != null &&
+                        ocx.getUser() != null &&
+                        ocx.getUser().getUserId() != null)
+                .collect(Collectors.toMap(
+                        ocx -> ocx.getUser().getUserId(),
+                        ocx -> ocx,
+                        (a, b) -> a
+                ));
+    }
+
+    private Map<Long, String> getOralStatusTitles(List<Long> userIds) {
+
+        QUserOralStatus uos = QUserOralStatus.userOralStatus;
+        QOralStatus os = QOralStatus.oralStatus;
+
+        List<Tuple> list = queryFactory
+                .select(uos.questionnaire.userId, os.oralStatusTitle)
+                .from(uos)
+                .leftJoin(uos.oralStatus, os)
+                .where(uos.questionnaire.userId.in(userIds))
+                .fetch();
+
+        return list.stream()
+                .filter(t -> t.get(uos.questionnaire.userId) != null)  // key null 제거
+                .collect(Collectors.toMap(
+                        t -> t.get(uos.questionnaire.userId),
+                        t -> {
+                            String value = t.get(os.oralStatusTitle);
+                            return value != null ? value : "";
+                        },
+                        (a, b) -> a
+                ));
+    }
+
+    private Map<Long, List<String>> getUserServices(List<Long> userIds) {
+
+        QUserToAppService uta = QUserToAppService.userToAppService;
+        QAppService as = QAppService.appService;
+
+        List<Tuple> list = queryFactory
+                .select(uta.user.userId, as.name)
+                .from(uta)
+                .leftJoin(uta.appService, as)
+                .where(uta.user.userId.in(userIds))
+                .fetch();
+
+        return list.stream()
+                // ❗ key null 제거
+                .filter(t -> {
+                    Long key = t.get(uta.user.userId);
+                    return key != null;
+                })
+                .collect(Collectors.groupingBy(
+                        t -> t.get(uta.user.userId),
+                        Collectors.mapping(
+                                t -> Optional.ofNullable(t.get(as.name)).orElse(""),
+                                Collectors.toList()
+                        )
+                ));
     }
 
 

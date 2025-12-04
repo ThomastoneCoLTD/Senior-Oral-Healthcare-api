@@ -60,7 +60,7 @@ public class QuestionnaireService {
      */
     @Transactional(readOnly = true)
     public QuestionnaireTemplateJsonDto getQuestionnaireTemplate(HttpServletRequest request) throws IOException {
-        // ✅ 1. 사용자 및 기관 조회
+        //1. 사용자 및 기관 조회
         User user = userService.getTokenUser(request);
         Organization organization = user.getOrganization();
 
@@ -75,12 +75,12 @@ public class QuestionnaireService {
             throw new BadRequestApiException("기관의 구독 플랜 정보가 없습니다.");
         }
 
-        // ✅ 2. Small 플랜 차단
+        //2. Small 플랜 차단
         if (plan.getPlanName() == PlanName.SMALL) {
             throw new BadRequestApiException("현재 구독 상품(Small)에서는 문진표 서비스를 이용할 수 없습니다.");
         }
 
-        // ✅ 3. 템플릿 파일 로드
+        //3. 템플릿 파일 로드
         ClassPathResource resource = new ClassPathResource("template/questionnaire.json");
         if (!resource.exists()) {
             throw new BadRequestApiException("문진표 템플릿 파일이 존재하지 않습니다.");
@@ -89,7 +89,7 @@ public class QuestionnaireService {
         try (InputStream inputStream = resource.getInputStream()) {
             byte[] bytes = FileCopyUtils.copyToByteArray(inputStream);
 
-            // ✅ TypeReference 사용 (LinkedHashMap 캐스팅 문제 방지)
+            //TypeReference 사용 (LinkedHashMap 캐스팅 문제 방지)
             return objectMapper.readValue(new String(bytes), new TypeReference<>() {});
         }
     }
@@ -197,13 +197,13 @@ public class QuestionnaireService {
         Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
                 .orElseThrow(() -> new NotFoundDataException("문진표가 존재하지 않습니다."));
 
-        // ✅ 언어 감지 (헤더에서)
+        //언어 감지 (헤더에서)
         String lang = Optional.ofNullable(request.getHeader("Accept-Language"))
                 .map(l -> l.split(",")[0]) // "en-US,en;q=0.9" → "en"
                 .map(String::toLowerCase)
                 .orElse("ko");
 
-        // ✅ 언어별 OralStatus 변환
+        //언어별 OralStatus 변환
         List<OralStatusTypeInfoDto> oralStatusList = questionnaire.getUserOralStatusList().stream()
                 .map(userOralStatus -> {
                     OralStatus oralStatus = userOralStatus.getOralStatus();
@@ -239,7 +239,7 @@ public class QuestionnaireService {
                 })
                 .toList();
 
-        // ✅ 카테고리 및 콘텐츠 (언어 필터는 필요 시 확장)
+        //카테고리 및 콘텐츠 (언어 필터는 필요 시 확장)
 //        List<ContentsCategoryDto> categories = contentsService.getCategoryList(null);
         List<ContentsDto> contents = contentsCustomRepository.getCustomizedContents(questionnaireId);
         contents = contents.subList(0, Math.min(contents.size(), 2)); // 최대 2개

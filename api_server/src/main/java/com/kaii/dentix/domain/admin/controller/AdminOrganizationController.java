@@ -160,7 +160,7 @@ public class AdminOrganizationController {
                 Map.of(
                         "rt", 200,
                         "rtMsg", "기관 사용자 사용량 조회 성공",
-                        "response", data  // 👈 반드시 여기에 넣어야 프론트가 읽음!
+                        "response", data
                 )
         );
     }
