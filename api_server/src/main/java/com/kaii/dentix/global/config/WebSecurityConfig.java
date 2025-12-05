@@ -67,7 +67,7 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 허용 URL
                         .requestMatchers(EXCLUDE_URLS).permitAll()
-
+                        .requestMatchers("/admin/billing/export/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         // 🔥 파일 다운로드는 브라우저에서 직접 URL로 접근하므로 permitAll
                         .requestMatchers("/admin/user/bulk-upload/template").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
