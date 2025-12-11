@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.billing.dto;
 
 import com.kaii.dentix.domain.billing.domain.Billing;
+import com.kaii.dentix.domain.billing.util.BillingDescriptionMapper;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -40,7 +41,7 @@ public class BillingResponse {
                 .paidAt(b.getPaidAt())
                 .periodStart(b.getPeriodStart())
                 .periodEnd(b.getPeriodEnd())
-                .description(b.getDescription())
+                .description(BillingDescriptionMapper.toEnglish(b.getDescription()))
                 .build();
     }
 }

@@ -501,4 +501,36 @@ public class BillingService {
                 billings
         );
     }
+
+    @Transactional(readOnly = true)
+    public BillingExcelData getBillingExcelBundle(Long organizationId) {
+
+        Organization org = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new IllegalArgumentException("기관을 찾을 수 없습니다."));
+
+        List<Billing> billingList = billingRepository.findByOrganizationAndBillingTypeIn(
+                org,
+                List.of(BillingType.MONTHLY, BillingType.SUBSCRIPTION, BillingType.REGULAR)
+        );
+
+        List<BillingSummaryResponse> summaries = billingList.stream()
+                .map(BillingSummaryResponse::from)
+                .toList();
+
+        // Billing ID 별 Detail 시트 전부 생성
+        Map<Long, BillingOveruseResponse> detailMap = new LinkedHashMap<>();
+
+        for (Billing b : billingList) {
+            BillingOveruseResponse detail = getOveruseDetails(b.getId()); // 기존 함수 재사용
+            detailMap.put(b.getId(), detail);
+        }
+
+        return BillingExcelData.builder()
+                .organizationId(org.getOrganizationId())
+                .organizationName(org.getOrganizationName())
+                .summaries(summaries)
+                .detailMap(detailMap)
+                .build();
+    }
+
 }

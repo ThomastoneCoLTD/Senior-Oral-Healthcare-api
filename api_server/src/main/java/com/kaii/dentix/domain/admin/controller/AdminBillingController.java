@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.admin.controller;
 import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.billing.application.BillingExcelGenerator;
 import com.kaii.dentix.domain.billing.application.BillingExportService;
 import com.kaii.dentix.domain.billing.application.BillingService;
 import com.kaii.dentix.domain.billing.dto.*;
@@ -12,6 +13,8 @@ import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.extractor.ExcelExtractor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ✅ 관리자 Billing 컨트롤러
+ *관리자 Billing 컨트롤러
  */
 @RestController
 @RequestMapping("/admin/billing")
@@ -34,9 +37,10 @@ public class AdminBillingController {
     private final OrganizationService organizationService;
     private final JwtTokenUtil jwtTokenUtil;
     private final AdminRepository adminRepository;
+    private final BillingExcelGenerator billingExcelGenerator;
 
     /**
-     * ✅ 미납 청구 목록 조회
+     *미납 청구 목록 조회
      */
     @GetMapping("/unpaid")
     public ResponseEntity<List<BillingDto>> getUnpaidBillings() {
@@ -44,7 +48,7 @@ public class AdminBillingController {
         return ResponseEntity.ok(unpaidBillings);
     }
 
-    /** ✅ 기관별 Billing 내역 조회 */
+    /**기관별 Billing 내역 조회 */
     @GetMapping("/{organizationId}/billings")
     public ResponseEntity<List<BillingResponse>> getOrganizationBillings(
             @PathVariable Long organizationId
@@ -53,7 +57,7 @@ public class AdminBillingController {
         return ResponseEntity.ok(billings);
     }
 
-    /** ✅ Billing 단건 조회 */
+    /**Billing 단건 조회 */
     @GetMapping("/{billingId}")
     public ResponseEntity<BillingDetailResponse> getBillingDetail(
             @PathVariable Long billingId
@@ -62,7 +66,7 @@ public class AdminBillingController {
         return ResponseEntity.ok(response);
     }
 
-    /** ✅ 결제 완료 처리 (markPaid) */
+    /**결제 완료 처리 (markPaid) */
     @PatchMapping("/{billingId}/pay")
     public ResponseEntity<BillingDetailResponse> markBillingAsPaid(
             @PathVariable Long billingId,
@@ -72,7 +76,7 @@ public class AdminBillingController {
         return ResponseEntity.ok(response);
     }
 
-    /** ✅ 관리자 본인 기관의 빌링 내역 조회 */
+    /**관리자 본인 기관의 빌링 내역 조회 */
     @GetMapping("/my-organization")
     public ResponseEntity<?> getMyOrganizationBillings(HttpServletRequest request) {
         Admin admin = adminService.getTokenAdmin(request);
@@ -82,27 +86,23 @@ public class AdminBillingController {
     }
 
     /**
-     * ✅ 기관별 빌링 내역 엑셀 export
-     * 슈퍼관리자는 모든 기관, 일반 관리자는 본인 기관만 가능
-     */
-    /**
-     * ✅ 빌링 내역 엑셀 Export
+     *빌링 내역 엑셀 Export
      * - 기관 관리자는 자신의 기관만 가능
      * - 슈퍼관리자는 organizationId 지정 가능
      */
-    @GetMapping("/export/excel")
-    public void exportBillingExcel(
-            @RequestParam(required = false) Long organizationId,
-            HttpServletRequest request,
+    @GetMapping(value = "/export/excel", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public void exportAllBillingExcel(
+            @RequestParam Long organizationId,
             HttpServletResponse response
     ) throws IOException {
-        ByteArrayOutputStream out = billingExportService.exportBillingExcel(request, organizationId);
+
+        BillingExcelData bundle = billingService.getBillingExcelBundle(organizationId);
 
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=billing_history.xlsx");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=billing_all_" + organizationId + ".xlsx");
 
-        out.writeTo(response.getOutputStream());
-        out.close();
+        billingExcelGenerator.generateExcel(bundle, response.getOutputStream());
     }
     @GetMapping("/overuse/by-subscription")
     public ResponseEntity<?> getOveruseBySubscription(HttpServletRequest request) {
@@ -124,7 +124,7 @@ public class AdminBillingController {
                 "response", response
         ));
     }
-//    /** ✅ 내 기관의 Billing 내역 조회 */
+//    /**내 기관의 Billing 내역 조회 */
 //    @GetMapping("/my")
 //    public ResponseEntity<List<BillingResponse>> getMyBillingList(HttpServletRequest request) {
 //

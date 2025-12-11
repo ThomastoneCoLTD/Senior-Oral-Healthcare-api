@@ -25,7 +25,7 @@ public class BillingExportService {
 
     @Transactional
     public ByteArrayOutputStream exportBillingExcel(HttpServletRequest request, Long organizationId) throws IOException {
-        // ✅ 1. 관리자 권한별 기관 ID 결정
+        //1. 관리자 권한별 기관 ID 결정
         Long orgId;
         boolean isSuperAdmin = jwtTokenUtil.isSuperAdmin(request);
 
@@ -40,7 +40,7 @@ public class BillingExportService {
 
         Organization organization = organizationService.getOrganization(orgId);
 
-        // ✅ 2. 구독상품 확인
+        //2. 구독상품 확인
         if (organization.getOrganizationSubscription() == null ||
                 organization.getOrganizationSubscription().getSubscriptionPlan() == null) {
             throw new IllegalArgumentException("해당 기관의 구독 정보가 없습니다.");
@@ -55,17 +55,17 @@ public class BillingExportService {
             throw new IllegalStateException("이 구독 상품에서는 빌링 내역 Export 기능을 사용할 수 없습니다.");
         }
 
-        // ✅ 3. 해당 기관의 빌링 내역 조회
+        //3. 해당 기관의 빌링 내역 조회
         List<Billing> billings = billingRepository.findAllByOrganization(organization);
         if (billings.isEmpty()) {
             throw new IllegalArgumentException("해당 기관의 빌링 내역이 존재하지 않습니다.");
         }
 
-        // ✅ 4. 엑셀 생성
+        //4. 엑셀 생성
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Billing History");
 
-        // ✅ 헤더
+        //헤더
         Row headerRow = sheet.createRow(0);
         String[] headers = {
                 "Billing ID", "Billing Type", "Status",
@@ -85,7 +85,7 @@ public class BillingExportService {
             cell.setCellStyle(headerStyle);
         }
 
-        // ✅ 데이터 작성
+        //데이터 작성
         int rowNum = 1;
         for (Billing billing : billings) {
             Row row = sheet.createRow(rowNum++);
