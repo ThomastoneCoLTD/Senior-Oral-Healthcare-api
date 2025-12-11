@@ -4,7 +4,6 @@ import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.AdminFindPasswordDto;
 import com.kaii.dentix.domain.admin.dto.AdminLoginDto;
-import com.kaii.dentix.domain.admin.dto.AdminResetPasswordRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminFindPasswordRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminLoginRequest;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;

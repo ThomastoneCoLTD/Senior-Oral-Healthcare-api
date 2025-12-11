@@ -16,12 +16,12 @@ public class UserLoginDto extends TokenDto{
     private String name;
 
 
-    // ✅ 사용자와 연결된 서비스 전체 목록
+    //사용자와 연결된 서비스 전체 목록
     private List<AppServiceInfo> services;
     private Long organizationId;
     private String organizationName;
 
-    // ✅ 기관 구독정보 추가
+    //기관 구독정보 추가
     private String organizationPlanName;              // SMALL, GROWTH, MID 등
     private Boolean organizationCustomSurveyEnabled;
     @Getter

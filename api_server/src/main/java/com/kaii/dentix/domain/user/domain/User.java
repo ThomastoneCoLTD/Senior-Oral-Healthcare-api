@@ -34,8 +34,10 @@ public class User extends TimeEntity {
 
     @Column(length = 100, nullable = false)
     private String userName;
+
     @Column(length = 45, nullable = false)
     private String userPhoneNumber;
+
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "enum")
     private GenderType userGender;
@@ -47,19 +49,15 @@ public class User extends TimeEntity {
     private String findPwdAnswer;
 
     private String userRefreshToken;
+
     @Column(nullable = true)
     private Integer successCount = 0;
-    @Column
-    private Date birth;
 
     @Temporal(TemporalType.TIMESTAMP)
     public Date deleted;
 
     @Temporal(TemporalType.TIMESTAMP)
     public Date userLastLoginDate;
-
-
-//    private Long patientId;
 
     @Setter
     @Enumerated(EnumType.STRING)
@@ -70,8 +68,6 @@ public class User extends TimeEntity {
     @JoinColumn(name = "organizationId")
     private Organization organization;
 
-//    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-//    private List<UserToAppService> userToAppServices;
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserToAppService> userToAppServices = new ArrayList<>();
 
@@ -82,8 +78,6 @@ public class User extends TimeEntity {
         this.userRefreshToken = refreshToken;
         this.userLastLoginDate = new Date();
     }
-
-
 
     /**
      *  비밀번호 수정

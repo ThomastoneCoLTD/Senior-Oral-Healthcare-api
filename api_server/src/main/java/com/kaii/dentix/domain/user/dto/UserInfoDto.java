@@ -22,7 +22,8 @@ public class UserInfoDto {
     private List<UserServiceAgreeList> userServiceAgreeLists;
 
     private GenderType userGender;
-    // ✅ 연결된 서비스 목록
+
+    //연결된 서비스 목록
     private List<ServiceInfo> services;
 
     /**

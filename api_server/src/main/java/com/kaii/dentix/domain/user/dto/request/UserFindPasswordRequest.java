@@ -21,5 +21,4 @@ public class UserFindPasswordRequest {
 
     @NotBlank(message = "답변은 필수입니다.")
     private String findPwdAnswer;
-
 }

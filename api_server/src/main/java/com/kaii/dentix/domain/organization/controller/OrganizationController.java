@@ -35,6 +35,7 @@ public class OrganizationController {
         OrganizationResponse response = organizationService.findByPhoneNumber(phoneNumber);
         return ResponseEntity.ok(response);
     }
+
 }
 
 

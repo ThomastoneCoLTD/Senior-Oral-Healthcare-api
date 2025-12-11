@@ -1,41 +1,26 @@
 package com.kaii.dentix.domain.organization.application;
 
-import com.amazonaws.services.kms.model.NotFoundException;
 import com.kaii.dentix.domain.admin.application.AdminOrganizationService;
 import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.billing.dao.BillingRepository;
-import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
-import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionChangeRequest;
 import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionResponse;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscription.application.SubscriptionService;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
-import com.kaii.dentix.domain.type.BillingStatus;
-import com.kaii.dentix.domain.type.BillingType;
-import com.kaii.dentix.domain.type.SubscriptionStatus;
-import com.kaii.dentix.global.common.response.SuccessResponse;
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor

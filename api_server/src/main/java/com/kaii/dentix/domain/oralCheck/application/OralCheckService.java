@@ -2,8 +2,6 @@ package com.kaii.dentix.domain.oralCheck.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.domain.admin.application.AdminService;
-import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
 import com.kaii.dentix.domain.billing.application.BillingService;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
@@ -12,7 +10,6 @@ import com.kaii.dentix.domain.oralCheck.dto.*;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
 import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
 import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
-import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
@@ -53,17 +50,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.kaii.dentix.domain.type.oral.OralCheckDivisionCommentType.*;
-import static com.kaii.dentix.global.common.response.ResponseMessage.SUCCESS_MSG;
 
 @Slf4j
 @Service
@@ -86,11 +78,8 @@ public class OralCheckService {
     private final UserRepository userRepository;
 
     private final ObjectMapper objectMapper;
-    private final OrganizationRepository organizationRepository;
     private final BillingService billingService;
-
-    private final AdminService adminService;
-    private final OralCheckRepository oralcheckRepository;
+    
     @Value("${spring.profiles.active}")
     private String active;
 
@@ -98,7 +87,7 @@ public class OralCheckService {
     private String folderPath;
 
     /**
-     * ✅ 구강검진 사진 촬영 + AI 분석 + 과금 처리
+     *구강검진 사진 촬영 + AI 분석 + 과금 처리
      */
     @Transactional
     @CacheEvict(
@@ -113,7 +102,7 @@ public class OralCheckService {
 
         log.info("요청 URI: {}", request.getRequestURI());
 
-        // ✅ 1. 사용자 인증 및 기관 확인
+        //1. 사용자 인증 및 기관 확인
         User user = userService.getTokenUser(request);
         Organization organization = user.getOrganization();
 
@@ -126,13 +115,13 @@ public class OralCheckService {
             throw new BadRequestApiException("기관의 구독 정보가 없습니다.");
         }
 
-        // ✅ 2. 파일 업로드
+        //2. 파일 업로드
         String uploadedUrl = awss3Service.upload(file, folderPath, true);
         if (StringUtils.isBlank(uploadedUrl)) {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        // ✅ 3. AI 분석 요청
+        //3. AI 분석 요청
         OralCheckAnalysisResponse analysisData;
         try {
             analysisData = aiModelService.getPyDentalAiModel(file);
@@ -158,7 +147,7 @@ public class OralCheckService {
             }
         }
 
-        // ✅ 4. 분석 결과 저장
+        //4. 분석 결과 저장
         OralCheck oralCheck;
         int resultCode = 500;
 
@@ -178,20 +167,20 @@ public class OralCheckService {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        // ✅ 5. 사용량 / 과금 처리
+        //5. 사용량 / 과금 처리
         if (subscription.isOverused()) {
-            // 💡 남은 사용량이 0 이하 → 과금
+            //남은 사용량이 0 이하 → 과금
             log.warn("기관 [{}] 사용량 초과 감지 → 자동 과금 생성", organization.getOrganizationId());
             billingService.createOveruseBatchBilling(organization);
         } else {
-            // 💡 정상 사용 → 사용량 차감
+            // 정상 사용 → 사용량 차감
             subscription.increaseSuccessCount();
         }
 
-        // ✅ 6. 남은 응답 계산
+        //남은 응답 계산
         int remaining = Math.max(subscription.getRemainingResponses(), 0);
 
-        // ✅ 7. 사용자 응답 반환
+        //사용자 응답 반환
         return new DataResponse<>(
                 200,
                 "AI 분석이 완료되었습니다.",
@@ -286,10 +275,9 @@ public class OralCheckService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저 없음"));
-
-        // ✅ 빌더 수정
+        
         OralCheck insertData = OralCheck.builder()
-                .user(user) // ✅ userId 대신 user
+                .user(user) //
                 .oralCheckPicturePath(filePath)
                 .oralCheckAnalysisState(OralCheckAnalysisState.SUCCESS)
                 .oralCheckTotalRange(totalRange)
@@ -318,7 +306,7 @@ public class OralCheckService {
                 .orElseThrow(() -> new RuntimeException("유저 없음"));
 
         OralCheck insertData = OralCheck.builder()
-                .user(user) // ✅ userId → user
+                .user(user) //userId → user
                 .oralCheckPicturePath(filePath)
                 .oralCheckAnalysisState(OralCheckAnalysisState.FAIL)
                 .oralCheckResultJsonData(resultJsonData)
@@ -336,7 +324,7 @@ public class OralCheckService {
         OralCheck oralCheck = oralCheckRepository.findById(oralCheckId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강 검진입니다."));
 
-        // ✅ userId → user.getUserId()
+        //userId → user.getUserId()
         if (!oralCheck.getUser().getUserId().equals(user.getUserId())) {
             throw new BadRequestApiException("회원 정보와 구강 검진 정보가 일치하지 않습니다.");
         }

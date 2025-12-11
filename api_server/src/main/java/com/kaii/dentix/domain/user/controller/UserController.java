@@ -3,7 +3,6 @@ package com.kaii.dentix.domain.user.controller;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dto.*;
 import com.kaii.dentix.domain.user.dto.request.*;
-import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepository;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreementResponse;
 import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
@@ -22,8 +21,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 @RequestMapping("/user")
 public class UserController {
-
     private final UserService userService;
+    
     /**
      *  사용자 자동 로그인
      */
@@ -86,6 +85,7 @@ public class UserController {
         DataResponse<UserInfoDto> response = new DataResponse<>(userService.userInfo(httpServletRequest));
         return response;
     }
+
     @GetMapping("/info")
     public DataResponse<UserInfoDto> getUserInfo(HttpServletRequest httpServletRequest) {
         UserInfoDto dto = userService.userInfo(httpServletRequest);
@@ -109,8 +109,11 @@ public class UserController {
         userService.userRevoke(httpServletRequest);
         return new SuccessResponse();
     }
-    // 서비스 변경 API
-    @PostMapping("/service/update")
+
+    /**
+     *  사용자 서비스 변경
+     */
+    @PostMapping("/service")
     public ResponseEntity<?> updateUserServices(
             HttpServletRequest request,
             @RequestBody UserServiceUpdateRequest body

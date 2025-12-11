@@ -7,7 +7,6 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
-import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementDto;
@@ -21,24 +20,19 @@ import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.user.dto.*;
 import com.kaii.dentix.domain.user.dto.request.*;
-import com.kaii.dentix.domain.user.event.UserModifyDeviceInfoEvent;
 import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepository;
 import com.kaii.dentix.domain.userServiceAgreement.domain.UserServiceAgreement;
 import com.kaii.dentix.domain.userToAppService.dao.UserToAppServiceRepository;
 import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
 import com.kaii.dentix.global.common.error.exception.*;
-import com.kaii.dentix.global.common.response.SuccessResponse;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Date;
 import java.util.List;
@@ -93,7 +87,6 @@ public class  UserLoginService {
                     .userServiceAgreeDate(now)
                     .build());
         });
-
     }
 
     /**
@@ -146,28 +139,19 @@ public class  UserLoginService {
      */
     @Transactional
     public UserSignUpDto userSignUp(HttpServletRequest httpServletRequest, UserSignUpRequest request) {
-
-//        //1. 인증된 회원인지 확인
-//        if (request.getUserId() != null) {
-//            userRepository.findById(request.getUserId())
-//                    .orElseThrow(() -> new NotFoundDataException("존재하지 않는 회원입니다."));
-//            if (userRepository.findByUserId(request.getUserId()).isPresent()) {
-//                throw new AlreadyDataException("이미 가입한 사용자입니다.");
-//            }
-//        }
-
-        //2. 아이디 중복 확인
+        //아이디 중복 확인
         this.loginIdCheck(request.getUserLoginIdentifier());
 
-        //3. 비밀번호 찾기 질문 유효성 검사
+        //비밀번호 찾기 질문 유효성 검사
         if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
             throw new NotFoundDataException("존재하지 않는 질문입니다.");
         }
-//        // ✅ 1. 기관 전화번호로 조회
+
+        //기관 전화번호로 조회
         Organization organization = organizationRepository.findById(request.getOrganizationId())
                 .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
 
-        //4. 사용자 정보 저장
+        //사용자 정보 저장
         User user = userRepository.save(User.builder()
                 .userLoginIdentifier(request.getUserLoginIdentifier())
                 .userName(request.getUserName())
@@ -180,7 +164,7 @@ public class  UserLoginService {
                 .isVerify(YnType.N)
                 .build());
 
-        //5. 서비스 정보 연결 (UserToAppService 생성)
+        //서비스 정보 연결
         List<AppService> appServices = appServiceRepository.findAllById(request.getAppServiceIds());
         if (appServices.isEmpty()) {
             throw new NotFoundDataException("선택한 서비스가 존재하지 않습니다.");
@@ -193,18 +177,15 @@ public class  UserLoginService {
                     .build());
         }
 
-        //6. 토큰 생성 및 로그인 처리
+        //토큰 생성 및 로그인 처리
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
 
-        //7. 서비스 이용 약관 동의 저장
+        //서비스 이용 약관 동의 저장
         this.userServiceAgreeCheckAndSave(request.getUserServiceAgreementRequest(), user.getUserId());
 
-        //8. 디바이스 정보 이벤트 발행
-//        publisher.publishEvent(new UserModifyDeviceInfoEvent(user.getUserId(), httpServletRequest));
-
-        //9. 최종 반환 DTO
+        //최종 반환 DTO
         return UserSignUpDto.builder()
                 .userId(user.getUserId())
                 .accessToken(accessToken)
@@ -216,16 +197,15 @@ public class  UserLoginService {
                 .organizationName(organization.getOrganizationName())
                 .build();
     }
+
      /**
       * 아이디 중복 확인
      */
     @Transactional(readOnly = true)
     public void loginIdCheck(String userLoginIdentifier){
-
         if (userRepository.findByUserLoginIdentifier(userLoginIdentifier).isPresent()){
             throw new AlreadyDataException("이미 사용 중인 아이디입니다.");
         }
-
     }
 
     /**
@@ -233,7 +213,6 @@ public class  UserLoginService {
      */
     @Transactional
     public UserLoginDto userLogin(HttpServletRequest httpServletRequest, UserLoginRequest request) {
-
         //사용자 조회
         User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
                 .orElseThrow(() -> new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다."));
@@ -243,7 +222,7 @@ public class  UserLoginService {
             throw new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다.");
         }
 
-        // 🔥 관리자 승인 여부 체크 추가 (핵심)
+        //관리자 승인 여부 체크 추가 (핵심)
         if (user.getIsVerify() == null || user.getIsVerify() != YnType.Y) {
             throw new UnauthorizedException("관리자 승인 후 이용 가능합니다.");
         }
@@ -329,23 +308,19 @@ public class  UserLoginService {
     @Transactional
     public void userModifyPassword(UserModifyPasswordRequest request) {
 
-        // 1. 사용자 조회
+        //사용자 조회
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
 
-        // 2. 새 비밀번호로 변경
+        //새 비밀번호로 변경
         user.setUserPassword(passwordEncoder.encode(request.getUserPassword()));
         userRepository.save(user);
     }
-    /**
-     *  사용자 비밀번호 재설정
-     */
 
     /**
      *  AccessToken 재발급
      */
     public AccessTokenDto accessTokenReissue(HttpServletRequest request) {
-
         String refreshToken = jwtTokenUtil.getRefreshToken(request);
 
         if (jwtTokenUtil.isExpired(refreshToken, TokenType.RefreshToken)) throw new TokenExpiredException();

@@ -35,15 +35,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SubscriptionService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
-    private final SubscriptionHistoryService subscriptionHistoryService;
     private final BillingRepository billingRepository;
     private final OrganizationRepository organizationRepository;
-    private final SubscriptionUsageRepository subscriptionUsageRepository;
     private final SubscriptionHistoryRepository subscriptionHistoryRepository;
     private final OrganizationSubscriptionRepository organizationSubscriptionRepository;
     private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
-    //    private final SubscriptionUsageRepository subscriptionRepository;
-    private final AdminService adminService;
+
 
     @Transactional
     public SuccessResponse updateMyOrganizationSubscription(

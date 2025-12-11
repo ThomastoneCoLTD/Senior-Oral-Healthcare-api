@@ -13,7 +13,6 @@ import com.kaii.dentix.domain.billing.dto.BillingOveruseResponse;
 import com.kaii.dentix.domain.billing.dto.BillingStatusHistoryResponse;
 import com.kaii.dentix.domain.billing.dto.BillingStatusUpdateRequest;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
-import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
 import com.kaii.dentix.domain.superUser.dto.*;

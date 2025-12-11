@@ -84,7 +84,6 @@ public class AdminUserBulkService {
                     user.setUserName(name);
                     user.setUserGender(GenderType.valueOf(genderValue));
                     user.setUserPhoneNumber(phone);
-                    user.setBirth(birth);
                     user.setIsVerify(YnType.N);
                     user.setOrganization(org);
                     user.setSuccessCount(0);
@@ -103,7 +102,7 @@ public class AdminUserBulkService {
 
                 } catch (Exception e) {
                     failCount++;
-                    log.error("❌ [Row {}] 사용자 등록 실패: {}", row.getRowNum(), e.getMessage());
+                    log.error("[Row {}] 사용자 등록 실패: {}", row.getRowNum(), e.getMessage());
                 }
             }
 

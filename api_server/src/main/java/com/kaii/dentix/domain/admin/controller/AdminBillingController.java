@@ -8,25 +8,15 @@ import com.kaii.dentix.domain.billing.application.BillingService;
 import com.kaii.dentix.domain.billing.dto.*;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
-import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
-import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
-import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 

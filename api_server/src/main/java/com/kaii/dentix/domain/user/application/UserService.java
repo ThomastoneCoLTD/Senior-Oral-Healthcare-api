@@ -18,7 +18,6 @@ import com.kaii.dentix.domain.user.event.UserModifyDeviceInfoEvent;
 import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepository;
 import com.kaii.dentix.domain.userServiceAgreement.domain.UserServiceAgreement;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
-import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreeList;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreementResponse;
 import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
 import com.kaii.dentix.domain.userToAppService.dao.UserToAppServiceRepository;
@@ -127,7 +126,6 @@ public class UserService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
-
     }
 
     /**
@@ -219,40 +217,16 @@ public class UserService {
     /**
      *  사용자 회원정보 조회
      */
-//    public UserInfoDto userInfo(HttpServletRequest httpServletRequest){
-//        User user = this.getTokenUser(httpServletRequest);
-//
-//        // 사용자 서비스 '선택' 이용 동의 여부 조회
-//        List<UserServiceAgreeList> serviceAgreementList = serviceAgreementCustomRepository.findAllByNotRequiredServiceAgreement(user.getUserId());
-//
-//        String patientPhoneNumber = null;
-//
-//        if (user.getPatientId() != null){
-//            Patient patient = patientRepository.findById(user.getPatientId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 환자입니다."));
-//            patientPhoneNumber = patient.getPatientPhoneNumber();
-//        }
-//
-//        return UserInfoDto.builder()
-//                .userName(user.getUserName())
-//                .userLoginIdentifier(user.getUserLoginIdentifier())
-//                .patientPhoneNumber(patientPhoneNumber != null ? patientPhoneNumber : user.getIsVerify().equals(YnType.Y) ? "-" : null)
-//                .userServiceAgreeLists(serviceAgreementList)
-//                .userGender(user.getUserGender())
-//                .build();
-//    }
-    /**
-     *  사용자 회원정보 조회
-     */
     @Transactional(readOnly = true)
     public UserInfoDto userInfo(HttpServletRequest request) {
-        // ✅ JWT에서 사용자 정보 가져오기
+        //JWT에서 사용자 정보 가져오기
         User user = this.getTokenUser(request);
 
-        // ✅ User + UserToAppService + AppService fetch join 조회
+        //User + UserToAppService + AppService fetch join 조회
         User fullUser = userRepository.findByUserIdWithServices(user.getUserId())
                 .orElseThrow(() -> new NotFoundDataException("사용자를 찾을 수 없습니다."));
 
-        // ✅ 사용자와 연결된 서비스 목록 매핑
+        //사용자와 연결된 서비스 목록 매핑
         List<UserInfoDto.ServiceInfo> services = userToAppServiceRepository.findByUser(fullUser).stream()
                 .map(rel -> UserInfoDto.ServiceInfo.builder()
                         .serviceId(rel.getAppService().getAppServiceId())
@@ -261,7 +235,7 @@ public class UserService {
                         .build())
                 .toList();
 
-        // ✅ 최종 DTO 반환
+        //최종 DTO 반환
         return UserInfoDto.builder()
                 .userName(fullUser.getUserName())
                 .userLoginIdentifier(fullUser.getUserLoginIdentifier())
@@ -287,10 +261,10 @@ public class UserService {
         User user = this.getTokenUser(httpServletRequest);
         user.revoke();
     }
-    /**
-     * ✅ 사용자 서비스 변경
-     */
 
+    /**
+     *사용자 서비스 업데이트
+     */
     @Transactional
     public UserServiceChangeDto updateUserServices(HttpServletRequest httpServletRequest, UserServiceUpdateRequest request) {
 
@@ -352,6 +326,7 @@ public class UserService {
                 .services(services)
                 .build();
     }
+
     @Transactional(readOnly = true)
     public List<UserServiceAgreementResponse> getUserServiceAgreements(HttpServletRequest httpServletRequest) {
         User user = this.getTokenUser(httpServletRequest);
@@ -359,6 +334,4 @@ public class UserService {
 
         return userServiceAgreementRepository.findAllByUserIdWithServiceName(currentUserId);
     }
-
-
 }

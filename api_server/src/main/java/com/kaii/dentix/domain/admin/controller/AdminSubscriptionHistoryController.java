@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.admin.controller;
 
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
-import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dto.OrganizationSubscriptionHistoryResponse;
 import com.kaii.dentix.domain.subscription.application.SubscriptionHistoryService;
