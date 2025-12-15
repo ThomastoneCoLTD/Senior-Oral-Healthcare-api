@@ -54,7 +54,7 @@ public class AdminService {
         String token = jwtTokenUtil.getAccessToken(servletRequest);
         UserRole role = jwtTokenUtil.getRoles(token, TokenType.AccessToken);
 
-        // ✅ 관리자 또는 슈퍼관리자만 접근 가능
+        //관리자 또는 슈퍼관리자만 접근 가능
         if (!(role == UserRole.ROLE_ADMIN || role == UserRole.ROLE_SUPER_ADMIN)) {
             throw new UnauthorizedException("관리자 권한이 필요합니다.");
         }
@@ -66,7 +66,7 @@ public class AdminService {
     }
 
     /**
-     * ✅ 로그인한 관리자의 기관 정보 조회
+     *로그인한 관리자의 기관 정보 조회
      */
     public Organization getMyOrganization(Admin admin) {
         if (admin.getOrganization() == null) {
@@ -193,19 +193,19 @@ public class AdminService {
     @Transactional(readOnly = true)
     public AdminUserListDto userList(AdminUserListRequest request, HttpServletRequest servletRequest) {
 
-        // ✅ 현재 로그인한 관리자 정보 가져오기
+        //현재 로그인한 관리자 정보 가져오기
         Admin admin = adminService.getTokenAdmin(servletRequest);
 
-        // ✅ 권한 판단
+        //권한 판단
         boolean isSuperAdmin = admin.getAdminIsSuper() == YnType.Y;
 
         Page<AdminUserInfoDto> userList;
 
-        // ✅ 슈퍼관리자면 전체 사용자 조회
+        //슈퍼관리자면 전체 사용자 조회
         if (isSuperAdmin) {
             userList = adminUserCustomRepository.findAll(request); // 모든 기관 포함
         }
-        // ✅ 일반관리자면 자신의 기관 사용자만 조회
+        //일반관리자면 자신의 기관 사용자만 조회
         else {
             if (admin.getOrganization() == null) {
                 throw new BadRequestApiException("소속 기관이 없습니다.");
@@ -223,6 +223,18 @@ public class AdminService {
                 .build();
     }
 
-
-
+    /** 일반관리자 - 기관등록 */
+//    @Transactional
+//    public void assignCurrentAdminToOrganization(Organization organization) {
+//
+//        Long adminId = jwtTokenUtil.getCurrentAdminId();
+//        Admin admin = adminRepository.findById(adminId)
+//                .orElseThrow(() -> new IllegalStateException("관리자 없음"));
+//
+//        if (admin.getOrganization() != null) {
+//            throw new IllegalStateException("이미 기관에 소속됨");
+//        }
+//
+//        admin.setOrganization(organization);
+//    }
 }

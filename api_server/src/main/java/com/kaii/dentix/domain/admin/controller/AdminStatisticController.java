@@ -29,50 +29,24 @@ import java.util.List;
 public class AdminStatisticController {
 
     private final AdminStatisticService adminStatisticService;
-    private final AdminService adminService;
     /**
      *  사용자 통계
      */
-    @GetMapping(name = "사용자 통계")
-    public DataResponse<AdminUserStatisticResponse> userStatistic(AdminStatisticRequest request){
-        DataResponse<AdminUserStatisticResponse> response = new DataResponse<>(adminStatisticService.userStatistic(request));
-        return response;
-    }
-
-    /**
-     *  기관별 사용자 통계
-     */
-    @GetMapping("/org")
-    public ResponseEntity<AdminUserStatisticResponse> getOrganizationStatistics(
-            AdminStatisticRequest request,  // ✅ 쿼리 파라미터(TODAY, WEEK1 등 필터 가능)
-            HttpServletRequest httpRequest
-    ) {
-        AdminUserStatisticResponse response = adminStatisticService.getOrgStatistics(request, httpRequest);
-        return ResponseEntity.ok(response);
-    }
-
-    private final SubscriptionInfoService subscriptionInfoService;
-//    private final JwtTokenUtil jwtTokenUtil;
-
-//    @GetMapping("/me")
-//    public ResponseEntity<SubscriptionInfoResponse> getMySubscriptionInfo(HttpServletRequest request) {
-//        // JWT에서 관리자(Admin) 정보 추출
-//        Admin admin = adminService.getTokenAdmin(request);
-//        if (admin == null || admin.getOrganization() == null) {
-//            log.warn("⚠️ 관리자 또는 소속 기관이 존재하지 않습니다.");
-//            return ResponseEntity.badRequest().build();
-//        }
+//    @GetMapping(name = "사용자 통계")
+//    public DataResponse<AdminUserStatisticResponse> userStatistic(AdminStatisticRequest request){
+//        DataResponse<AdminUserStatisticResponse> response = new DataResponse<>(adminStatisticService.userStatistic(request));
+//        return response;
+//    }
 //
-//        Long organizationId = admin.getOrganization().getOrganizationId();
-//        log.info("📊 기관 사용량 요청 | adminId={}, organizationId={}, organizationName={}",
-//                admin.getAdminId(), organizationId, admin.getOrganization().getOrganizationName());
-//
-////        // 서비스 호출
-//        SubscriptionInfoResponse response = adminStatisticService.getMySubscriptionInfo(organizationId);
-////
-////        log.info("✅ 기관 사용량 응답 완료 | 기관={}, 총응답수={}, 사용률={}%",
-////                response.getOrganizationName(), response.getTotalSuccessCount(), response.getUsageRate());
-//
+//    /**
+//     *  기관별 사용자 통계
+//     */
+//    @GetMapping("/org")
+//    public ResponseEntity<AdminUserStatisticResponse> getOrganizationStatistics(
+//            AdminStatisticRequest request,  //쿼리 파라미터(TODAY, WEEK1 등 필터 가능)
+//            HttpServletRequest httpRequest
+//    ) {
+//        AdminUserStatisticResponse response = adminStatisticService.getOrgStatistics(request, httpRequest);
 //        return ResponseEntity.ok(response);
 //    }
 
@@ -83,12 +57,5 @@ public class AdminStatisticController {
         AdminStatisticsOrgUserResponse response = adminStatisticService.getOrganizationUserStatistics(httpRequest);
         return ResponseEntity.ok(response);
     }
-
-//    @GetMapping("/all")
-//    public ResponseEntity<List<SuperAdminUserStatisticResponse>> getAllOrganizationStats(HttpServletRequest request) {
-//        Admin admin = adminService.getTokenAdmin(request);
-//        List<SuperAdminUserStatisticResponse> response = adminStatisticService.getAllOrganizationUserStats(admin);
-//        return ResponseEntity.ok(response);
-//    }
 
 }

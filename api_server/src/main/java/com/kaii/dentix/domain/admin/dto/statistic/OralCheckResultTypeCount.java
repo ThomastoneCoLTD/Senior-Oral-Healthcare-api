@@ -6,7 +6,7 @@ import lombok.*;
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor
 public class OralCheckResultTypeCount {
-    private OralCheckResultType oralCheckResultType; // ✅ 상태 (HEALTHY, GOOD 등)
+    private OralCheckResultType oralCheckResultType; //상태 (HEALTHY, GOOD 등)
     private Long count;
 
 
@@ -18,7 +18,7 @@ public class OralCheckResultTypeCount {
 
     private int countDanger;
 
-    // ✅ JPQL용 생성자 (추가)
+    //JPQL용 생성자 (추가)
     public OralCheckResultTypeCount(OralCheckResultType oralCheckResultType, Long count) {
         this.oralCheckResultType = oralCheckResultType;
         this.count = count;

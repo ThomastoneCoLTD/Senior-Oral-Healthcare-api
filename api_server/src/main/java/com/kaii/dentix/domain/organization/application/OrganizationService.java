@@ -51,11 +51,8 @@ public class OrganizationService {
     private final BillingRepository billingRepository;
     private final OrganizationHistoryRepository organizationHistoryRepository;
     private final OrganizationSubscriptionService organizationSubscriptionService;
-//    private final OrganizationRepository organizationRepository;
-    //    private final SubscriptionPlanRepository subscriptionPlanRepository;
-    /**
-     *기관 등록 + 구독 플랜 선택
-     */
+
+    /** 일반관리자 - 기관등록 */
     @Transactional
     public OrganizationResponse createOrganization(OrganizationRequest request) {
 
@@ -216,7 +213,7 @@ public class OrganizationService {
     }
 
 
-//    @Transactional
+    //    @Transactional
     private void saveHistory(Organization org, String field, String beforeValue, String afterValue, Long adminId) {
         OrganizationHistory history = OrganizationHistory.builder()
                 .organization(org)
@@ -230,11 +227,7 @@ public class OrganizationService {
         organizationHistoryRepository.save(history);
     }
 
-    /**
-     * 기관정보 수정
-     * @param organizationId
-     * @param request
-     */
+    /** 일반관리자 - 본인 기관 정보 수정 */
     @Transactional
     public void updateOrganization(Long organizationId, OrganizationUpdateRequest request, Long adminId) {
 

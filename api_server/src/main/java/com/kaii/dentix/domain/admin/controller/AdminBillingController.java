@@ -39,13 +39,51 @@ public class AdminBillingController {
     private final AdminRepository adminRepository;
     private final BillingExcelGenerator billingExcelGenerator;
 
-    /**
-     *미납 청구 목록 조회
-     */
+    /** 일반관리자 - 본인 기관의 미납 청구 목록 조회 */
     @GetMapping("/unpaid")
     public ResponseEntity<List<BillingDto>> getUnpaidBillings() {
         List<BillingDto> unpaidBillings = billingService.findAllUnpaidBillings();
         return ResponseEntity.ok(unpaidBillings);
+    }
+
+    /** 일반관리자 - 본인 기관의 빌링 내역 조회 */
+    @GetMapping("/my-organization")
+    public ResponseEntity<?> getMyOrganizationBillings(HttpServletRequest request) {
+        Admin admin = adminService.getTokenAdmin(request);
+        BillingListResponse response = billingService.getBillingsForAdmin(admin);
+//        List<BillingResponse> responses = billingService.getBillingsForAdmin(admin);
+        return ResponseEntity.ok(new DataResponse<>(200, "OK", response));
+    }
+
+    /** 일반관리자 - 본인 기관의 빌링 중 초과요금 내역 상세 조회 */
+    @GetMapping("/{billingId}/overuse")
+    public ResponseEntity<?> getOveruseBillingDetails(@PathVariable Long billingId) {
+        BillingOveruseResponse response = billingService.getOveruseDetails(billingId);
+        return ResponseEntity.ok(Map.of(
+                "rt", 200,
+                "rtMsg", "초과요금 상세 조회 성공",
+                "response", response
+        ));
+    }
+
+    /**
+     * 빌링 내역 엑셀 Export
+     * - 기관 관리자는 자신의 기관만 가능
+     * - 슈퍼관리자는 organizationId 지정 가능
+     */
+    @GetMapping(value = "/export/excel", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public void exportAllBillingExcel(
+            @RequestParam Long organizationId,
+            HttpServletResponse response
+    ) throws IOException {
+
+        BillingExcelData bundle = billingService.getBillingExcelBundle(organizationId);
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=billing_all_" + organizationId + ".xlsx");
+
+        billingExcelGenerator.generateExcel(bundle, response.getOutputStream());
     }
 
     /**기관별 Billing 내역 조회 */
@@ -76,34 +114,6 @@ public class AdminBillingController {
         return ResponseEntity.ok(response);
     }
 
-    /**관리자 본인 기관의 빌링 내역 조회 */
-    @GetMapping("/my-organization")
-    public ResponseEntity<?> getMyOrganizationBillings(HttpServletRequest request) {
-        Admin admin = adminService.getTokenAdmin(request);
-        BillingListResponse response = billingService.getBillingsForAdmin(admin);
-//        List<BillingResponse> responses = billingService.getBillingsForAdmin(admin);
-        return ResponseEntity.ok(new DataResponse<>(200, "OK", response));
-    }
-
-    /**
-     *빌링 내역 엑셀 Export
-     * - 기관 관리자는 자신의 기관만 가능
-     * - 슈퍼관리자는 organizationId 지정 가능
-     */
-    @GetMapping(value = "/export/excel", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public void exportAllBillingExcel(
-            @RequestParam Long organizationId,
-            HttpServletResponse response
-    ) throws IOException {
-
-        BillingExcelData bundle = billingService.getBillingExcelBundle(organizationId);
-
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition",
-                "attachment; filename=billing_all_" + organizationId + ".xlsx");
-
-        billingExcelGenerator.generateExcel(bundle, response.getOutputStream());
-    }
     @GetMapping("/overuse/by-subscription")
     public ResponseEntity<?> getOveruseBySubscription(HttpServletRequest request) {
         Admin admin = adminService.getTokenAdmin(request);
@@ -111,28 +121,4 @@ public class AdminBillingController {
                 billingService.getOveruseBySubscription(admin);
         return ResponseEntity.ok(new DataResponse<>(200, "OK", list));
     }
-    @GetMapping("/{billingId}/overuse")
-    public ResponseEntity<?> getOveruseBillingDetails(
-            @PathVariable Long billingId
-    ) {
-
-        BillingOveruseResponse response = billingService.getOveruseDetails(billingId);
-
-        return ResponseEntity.ok(Map.of(
-                "rt", 200,
-                "rtMsg", "초과요금 상세 조회 성공",
-                "response", response
-        ));
-    }
-//    /**내 기관의 Billing 내역 조회 */
-//    @GetMapping("/my")
-//    public ResponseEntity<List<BillingResponse>> getMyBillingList(HttpServletRequest request) {
-//
-//        Long adminId = jwtTokenUtil.getCurrentAdminId();
-//        Admin admin = adminRepository.findById(adminId)
-//                .orElseThrow(() -> new IllegalArgumentException("관리자 계정을 찾을 수 없습니다."));
-//
-//        List<BillingResponse> responses = billingService.getBillingsForMyOrganization(admin);
-//        return ResponseEntity.ok(responses);
-//    }
 }

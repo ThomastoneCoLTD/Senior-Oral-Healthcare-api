@@ -17,17 +17,9 @@ import org.springframework.web.bind.annotation.*;
 public class OrganizationController {
     private final OrganizationService organizationService;
 
-    //기관 등록
-    @PostMapping
-    public ResponseEntity<OrganizationResponse> create(@RequestBody OrganizationRequest request) {
-        log.info("▶ 기관 등록 요청 body: name={}, phone={}, plan={}",
-                request.getOrganizationName(),
-                request.getOrganizationPhoneNumber(),
-                request.getSubscriptionPlanId());
-        return ResponseEntity.ok(organizationService.createOrganization(request));
-    }
-
-    // 기관 가입정보 조회
+    /**
+     * 기관정보조회 - 기관전화번호
+     */
     @GetMapping("/check/{phoneNumber}")
     public ResponseEntity<OrganizationResponse> checkOrganization(
             @PathVariable String phoneNumber

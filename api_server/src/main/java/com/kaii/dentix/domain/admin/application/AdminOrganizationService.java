@@ -1,16 +1,10 @@
 package com.kaii.dentix.domain.admin.application;
 
-import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.jwt.JwtTokenUtil;
-import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationHistoryRepository;
-import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationHistory;
 import com.kaii.dentix.domain.organization.dto.OrganizationHistoryResponse;
-import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
-import com.kaii.dentix.domain.user.dao.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,19 +15,10 @@ import java.util.List;
 @RequiredArgsConstructor
 
 public class AdminOrganizationService {
-    private final JwtTokenUtil jwtTokenUtil;
-    private final AdminRepository adminRepository;
-    private final UserRepository userRepository;
-    private final OrganizationRepository organizationRepository;
-    private final SubscriptionPlanRepository subscriptionPlanRepository;
-    private final OralCheckRepository oralCheckRepository;
+
     private final OrganizationHistoryRepository organizationHistoryRepository;
 
-
-
-    /**
-     * ✅ 로그인한 어드민의 소속 기관 정보 반환
-     */
+    /** 일반관리자 - 본인 기관 정보 조회 */
     public Organization getMyOrganization(Admin admin) {
         Organization organization = admin.getOrganization();
         if (organization == null) {
@@ -42,6 +27,7 @@ public class AdminOrganizationService {
         return organization;
     }
 
+    /** 일반관리자 - 본인 기관 수정 이력 조회 */
     @Transactional
     public List<OrganizationHistoryResponse> getOrganizationHistory(Long organizationId) {
 
@@ -92,10 +78,10 @@ public class AdminOrganizationService {
 //    }
 //    @Transactional
 //    public OrganizationResponse getMyOrganization(HttpServletRequest request) {
-//        // ✅ 현재 로그인 관리자 ID 추출
+//        // 현재 로그인 관리자 ID 추출
 //        Admin admin = this.getTokenAdmin(request);
 //
-//        // ✅ 관리자 조회
+//        // 관리자 조회
 ////        Admin admin = adminRepository.findById(adminId)
 ////                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
 //
@@ -105,7 +91,7 @@ public class AdminOrganizationService {
 //
 //        Organization organization = admin.getOrganization();
 //
-//        // ✅ 응답 DTO 변환
+//        // 응답 DTO 변환
 //        return OrganizationResponse.builder()
 //                .organizationId(organization.getOrganizationId())
 //                .organizationName(organization.getOrganizationName())
@@ -122,10 +108,10 @@ public class AdminOrganizationService {
 
 //@Transactional
 //public Object getMyOrganization(HttpServletRequest request) {
-//    // ✅ 현재 로그인 관리자 정보 가져오기
+//    // 현재 로그인 관리자 정보 가져오기
 //    Admin admin = this.getTokenAdmin(request);
 //
-//    // ✅ 슈퍼관리자라면 전체 기관 조회
+//    // 슈퍼관리자라면 전체 기관 조회
 //    if (admin.getAdminIsSuper() == YnType.Y) {
 //        List<OrganizationResponse> allOrganizations = organizationRepository.findAll()
 //                .stream()
@@ -141,17 +127,17 @@ public class AdminOrganizationService {
 //                        .build())
 //                .toList();
 //
-//        return allOrganizations; // ✅ 슈퍼관리자는 전체 목록 반환
+//        return allOrganizations; // 슈퍼관리자는 전체 목록 반환
 //    }
 //
-//    // ✅ 일반관리자: 자신의 기관만 조회
+//    // 일반관리자: 자신의 기관만 조회
 //    if (admin.getOrganization() == null) {
 //        throw new BadRequestApiException("아직 등록된 기관이 없습니다.");
 //    }
 //
 //    Organization organization = admin.getOrganization();
 //
-//    // ✅ 단일 응답 DTO 변환
+//    // 단일 응답 DTO 변환
 //    return OrganizationResponse.builder()
 //            .organizationId(organization.getOrganizationId())
 //            .organizationName(organization.getOrganizationName())
@@ -170,14 +156,14 @@ public class AdminOrganizationService {
 //        SubscriptionPlan newPlan = subscriptionPlanRepository.findById(newPlanId)
 //                .orElseThrow(() -> new IllegalArgumentException("구독상품이 존재하지 않습니다."));
 //
-//        // ✅ 1. 플랜 변경
+//        // 1. 플랜 변경
 //        org.updateSubscriptionPlan(newPlan);
 //
-//        // ✅ 2. 구독 시작일 갱신
+//        // 2. 구독 시작일 갱신
 //        LocalDateTime now = LocalDateTime.now();
 //        org.updateSubscriptionStartDate(now);
 //
-//        // ✅ 3. 해당 날짜 이후 성공 건수 다시 계산
+//        // 3. 해당 날짜 이후 성공 건수 다시 계산
 //        long successCount = oralCheckRepository.countSuccessSince(orgId, now);
 //        org.increaseUsage();
 //

@@ -28,7 +28,7 @@ public class AdminUserInfoDto {
     private Date oralCheckDate;
     private YnType isVerify;
     private String oralStatusTitle;
-    private List<String> serviceNames; // ✅ 리스트로 변경
+    private List<String> serviceNames; //리스트로 변경
 
     public AdminUserInfoDto(
             Long userId,
@@ -40,7 +40,7 @@ public class AdminUserInfoDto {
             OralCheckResultType oralCheckResultTotalType,
             Date oralCheckDate,
             YnType isVerify,
-            String serviceNames // ✅ group_concat 문자열
+            String serviceNames //group_concat 문자열
     ) {
         this.userId = userId;
         this.userLoginIdentifier = userLoginIdentifier;
@@ -52,7 +52,7 @@ public class AdminUserInfoDto {
         this.oralCheckDate = oralCheckDate;
         this.isVerify = isVerify;
 
-        // ✅ 문자열을 콤마로 split → List<String> 으로 변환
+        //문자열을 콤마로 split → List<String> 으로 변환
         if (serviceNames != null && !serviceNames.isEmpty()) {
             this.serviceNames = Arrays.stream(serviceNames.split(","))
                     .map(String::trim)

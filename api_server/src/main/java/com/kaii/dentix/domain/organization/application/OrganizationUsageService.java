@@ -48,19 +48,19 @@ public class OrganizationUsageService {
 
         Integer max = sub.getSubscriptionPlan().getMaxSuccessResponses();
 
-        // 🔥 LocalDateTime → Date 변환 (Asia/Seoul 기준)
+        //LocalDateTime → Date 변환 (Asia/Seoul 기준)
         ZoneId zone = ZoneId.of("Asia/Seoul");
         Date startDate = Date.from(sub.getSubscriptionStartDate().atZone(zone).toInstant());
         Date endDate   = Date.from(sub.getSubscriptionEndDate().atZone(zone).toInstant());
 
-        // 🔥 구독 기간 동안 사용량
+        //구독 기간 동안 사용량
         Long successCount = oralCheckRepository.countSubscriptionPeriodUsage(
                 organizationId,
                 startDate,
                 endDate
         );
 
-        // 🔥 음수 허용 잔여량
+        //음수 허용 잔여량
         Long remaining = max - successCount;
 
         double usageRate = (max != null && max > 0)
@@ -84,7 +84,7 @@ public class OrganizationUsageService {
                 .build();
     }
     /**
-     * ✅ 성공 응답 기록 및 남은 횟수 반환
+     * 성공 응답 기록 및 남은 횟수 반환
      */
 //    @Transactional
 //    public int recordSuccessAndGetRemaining(Long organizationId) {
@@ -94,25 +94,25 @@ public class OrganizationUsageService {
 //        SubscriptionPlan plan = organization.getSubscriptionPlan();
 //        int maxQuota = plan.getMaxSuccessResponses();
 //
-//        // ⚠️ 만료일 경과시 자동 리셋 (예방적)
+//        // 만료일 경과시 자동 리셋 (예방적)
 //        if (organization.getUsageResetDate() != null &&
 //                LocalDateTime.now().isAfter(organization.getUsageResetDate())) {
 //            organization.resetUsage();
 //        }
 //
-//        // ✅ Organization 내부 비즈니스 로직 활용
+//        // Organization 내부 비즈니스 로직 활용
 //        organization.increaseUsage();
 //
-//        // ✅ 리포지토리 save → JPA 영속 상태라면 생략 가능
+//        // 리포지토리 save → JPA 영속 상태라면 생략 가능
 //        organizationRepository.save(organization);
 //
-//        // ✅ 남은 사용 가능 횟수 계산 (음수면 초과 상태)
+//        // 남은 사용 가능 횟수 계산 (음수면 초과 상태)
 //        int remaining = organization.getRemainingResponses();
 //        return Math.max(remaining, 0);
 //    }
 //
 //    /**
-//     * ✅ 사용량 리셋 (주기 도래 시 자동 리셋)
+//     * 사용량 리셋 (주기 도래 시 자동 리셋)
 //     */
 //    @Transactional
 //    public void resetUsageIfNeeded(Long organizationId) {

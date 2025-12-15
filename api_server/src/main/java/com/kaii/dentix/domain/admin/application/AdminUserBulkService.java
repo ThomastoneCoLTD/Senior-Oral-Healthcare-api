@@ -1,15 +1,12 @@
 package com.kaii.dentix.domain.admin.application;
 
 import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -26,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-//import static com.kaii.dentix.DentixApplication.log;
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -52,7 +48,7 @@ public class AdminUserBulkService {
             int rowCount = 0;
 
             for (Row row : sheet) {
-                if (rowCount++ == 0) continue; // ✅ 헤더 스킵
+                if (rowCount++ == 0) continue; //헤더 스킵
 
                 try {
                     String loginId = getStringValue(row.getCell(0));
@@ -60,20 +56,19 @@ public class AdminUserBulkService {
                     String name = getStringValue(row.getCell(2));
                     String genderValue = getStringValue(row.getCell(3)).trim().toUpperCase();
                     String phone = getStringValue(row.getCell(4));
-                    Date birth = parseExcelDate(row.getCell(5));
                     String findPwdQuestionIdStr = getStringValue(row.getCell(6));
                     String findPwdAnswer = getStringValue(row.getCell(7));
 
                     if (loginId.isEmpty() || password.isEmpty() || name.isEmpty()) {
-                        log.warn("⚠️ 필수값 누락 [Row {}]", row.getRowNum());
+                        log.warn("필수값 누락 [Row {}]", row.getRowNum());
                         failCount++;
                         continue;
                     }
 
-                    // ✅ 성별 변환
+                    //성별 변환
                     if (genderValue.equals("F")) genderValue = "W";
                     if (!genderValue.equals("M") && !genderValue.equals("W")) {
-                        log.warn("⚠️ 잘못된 성별값 [Row {}]: {}", row.getRowNum(), genderValue);
+                        log.warn("잘못된 성별값 [Row {}]: {}", row.getRowNum(), genderValue);
                         failCount++;
                         continue;
                     }
@@ -92,7 +87,7 @@ public class AdminUserBulkService {
                         try {
                             user.setFindPwdQuestionId(Long.parseLong(findPwdQuestionIdStr));
                         } catch (NumberFormatException e) {
-                            log.warn("⚠️ 잘못된 비밀번호 질문 ID [Row {}]: {}", row.getRowNum(), findPwdQuestionIdStr);
+                            log.warn("잘못된 비밀번호 질문 ID [Row {}]: {}", row.getRowNum(), findPwdQuestionIdStr);
                         }
                     }
                     user.setFindPwdAnswer(findPwdAnswer);
@@ -106,26 +101,26 @@ public class AdminUserBulkService {
                 }
             }
 
-            // ✅ 일괄 저장
+            //일괄 저장
             userRepository.saveAll(saveList);
 
         } catch (Exception e) {
-            log.error("❌ 엑셀 파싱 오류: {}", e.getMessage(), e);
+            log.error("엑셀 파싱 오류: {}", e.getMessage(), e);
             throw new RuntimeException("엑셀 파일 처리 중 오류가 발생했습니다.");
         }
 
-        log.info("✅ 사용자 일괄등록 완료 - 성공: {}, 실패: {}", successCount, failCount);
+        log.info("사용자 일괄등록 완료 - 성공: {}, 실패: {}", successCount, failCount);
         return "성공: " + successCount + "명, 실패: " + failCount + "명";
     }
 
-    /** ✅ 셀 값 문자열 변환 */
+    /**셀 값 문자열 변환 */
     private String getStringValue(Cell cell) {
         if (cell == null) return "";
         cell.setCellType(CellType.STRING);
         return cell.getStringCellValue().trim();
     }
 
-    /** ✅ 엑셀 날짜 변환 (LocalDate or Numeric 지원) */
+    /**엑셀 날짜 변환 (LocalDate or Numeric 지원) */
     private Date parseExcelDate(Cell cell) {
         try {
             if (cell == null) return null;
@@ -138,7 +133,7 @@ public class AdminUserBulkService {
                 return java.sql.Date.valueOf(localDate);
             }
         } catch (Exception e) {
-            log.warn("⚠️ 날짜 변환 실패: {}", cell);
+            log.warn("날짜 변환 실패: {}", cell);
             return null;
         }
     }

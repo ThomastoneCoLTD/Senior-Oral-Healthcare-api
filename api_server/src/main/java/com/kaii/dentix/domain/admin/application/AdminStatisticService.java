@@ -230,7 +230,7 @@ private final AdminService adminService;
     @Transactional(readOnly = true)
     public AdminStatisticsOrgUserResponse getOrganizationUserStatistics(HttpServletRequest httpRequest) {
 
-        // 1️⃣ 로그인 관리자 식별
+        //로그인 관리자 식별
         Long adminId = jwtTokenUtil.getUserId(
                 jwtTokenUtil.getAccessToken(httpRequest),
                 TokenType.AccessToken
@@ -244,12 +244,12 @@ private final AdminService adminService;
 
         Long orgId = admin.getOrganization().getOrganizationId();
 
-        // 2️⃣ 기관 내 사용자 통계 조회
+        //기관 내 사용자 통계 조회
         long totalUsers = userRepository.countByOrganization_OrganizationId(orgId);
         long maleUsers = userRepository.countByOrganization_OrganizationIdAndUserGender(orgId, GenderType.M);
         long femaleUsers = userRepository.countByOrganization_OrganizationIdAndUserGender(orgId, GenderType.W);
 
-        // 3️⃣ 최근 가입자 (7일)
+        //최근 가입자 (7일)
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
         Date oneWeekAgoDate = java.sql.Timestamp.valueOf(oneWeekAgo);
 
@@ -257,7 +257,7 @@ private final AdminService adminService;
 //        LocalDate oneWeekAgo = LocalDate.now().minusDays(7);
 //        long newUsers = userRepository.countByOrganization_OrganizationIdAndCreatedAfter(orgId, oneWeekAgo.atStartOfDay());
 
-        // 4️⃣ 전체 구강 상태별 사용자 (최근 검진 기준)
+        //전체 구강 상태별 사용자 (최근 검진 기준)
         List<OralCheckResultTypeCount> oralStateCounts = oralCheckRepository.countByOrganization(orgId);
 
         return AdminStatisticsOrgUserResponse.builder()
@@ -330,16 +330,16 @@ private final AdminService adminService;
 @Transactional(readOnly = true)
 public SuperAdminAllUserStatisticsResponse getSuperAdminTotalStats(Admin admin) {
 
-    // 🔐 슈퍼관리자 권한 체크
+    //슈퍼관리자 권한 체크
     if (admin.getAdminIsSuper() != YnType.Y) {
         throw new BadRequestApiException("슈퍼관리자만 접근할 수 있습니다.");
     }
 
-    // 1️⃣ 기존 기관별 통계 재사용
+    //기존 기관별 통계 재사용
     List<SuperAdminUserStatisticResponse> orgStats =
             adminUserCustomRepository.getAllOrganizationUserStats();
 
-    // 2️⃣ 전체 유저 통계 계산
+    //전체 유저 통계 계산
     long totalUsers = userRepository.count();
     long maleUsers = userRepository.countByUserGender(GenderType.M);
     long femaleUsers = userRepository.countByUserGender(GenderType.W);
@@ -349,7 +349,7 @@ public SuperAdminAllUserStatisticsResponse getSuperAdminTotalStats(Admin admin) 
 
     long newUsers = userRepository.countByCreatedAfter(weekAgoDate);
 
-    // 3️⃣ 하나로 묶어서 리턴
+    //하나로 묶어서 리턴
     return SuperAdminAllUserStatisticsResponse.builder()
             .totalUsers(totalUsers)
             .maleUsers(maleUsers)

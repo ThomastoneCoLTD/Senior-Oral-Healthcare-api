@@ -15,6 +15,9 @@ import com.kaii.dentix.domain.organization.dto.OrganizationHistoryResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationRequest;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.dto.OrganizationSubscriptionHistoryResponse;
+import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
 import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,48 +47,26 @@ public class AdminOrganizationController {
     private final JwtTokenUtil jwtTokenUtil;
 
     /**
-     * 일반관리자 - 기관 사용자 사용량 조회
+     * 기관등록
      */
-    @GetMapping("/user")
-    public ResponseEntity<DataResponse<Map<String, Object>>> getUsage(HttpServletRequest request) {
-        return ResponseEntity.ok(adminUserService.getOrganizationUserUsage(request));
-    }
-
-//private final AdminOrganizationService adminOrganizationService;
-//
-//    @GetMapping("/organization")
-//    public ResponseEntity<?> getMyOrganization(HttpServletRequest request)( {
-//        return ResponseEntity.ok(adminOrganizationService.getMyOrganization(request));
-//    }
-//    @GetMapping("/usage")
-//    public ResponseEntity<?> getAllOrganizationUsage(HttpServletRequest request) {
-//        Admin admin = adminService.getTokenAdmin(request);
-//        List<AdminOrganizationUsageResponse> result = adminOrganizationService.getAllOrganizationUsage(request, admin);
-//        return ResponseEntity.ok(result);
+//    @PostMapping
+//    public ResponseEntity<OrganizationResponse> create(@RequestBody OrganizationRequest request) {
+//        log.info("▶ 기관 등록 요청 body: name={}, phone={}, plan={}",
+//                request.getOrganizationName(),
+//                request.getOrganizationPhoneNumber(),
+//                request.getSubscriptionPlanId());
+//        return ResponseEntity.ok(organizationService.createOrganization(request));
 //    }
 
-    /**
-     * ✅ 기관 등록 + 구독 플랜 설정
-     * - 관리자(Admin) 로그인 상태에서 기관 등록 가능
-     * - 기관 기본정보 + 구독상품 동시 등록
-     */
+    /** 일반관리자 - 기관등록 */
     @PostMapping
     public ResponseEntity<OrganizationResponse> createOrganization(
             @RequestBody OrganizationRequest request) {
-
-        log.info("▶ [기관 등록 요청] name={}, phone={}, email={}, planId={}",
-                request.getOrganizationName(),
-                request.getOrganizationPhoneNumber(),
-                request.getOrganizationEmail(),
-                request.getSubscriptionPlanId());
-
         OrganizationResponse response = organizationService.createOrganization(request);
-
         return ResponseEntity.ok(response);
     }
 
-
-    /** ADMIN 본인 기관 정보 조회 */
+    /** 일반관리자 - 본인 기관 정보 조회 */
     @GetMapping("/my")
     public ResponseEntity<OrganizationResponse> getMyOrganization(HttpServletRequest request) {
         Admin admin = adminService.getTokenAdmin(request);
@@ -95,27 +76,7 @@ public class AdminOrganizationController {
         return ResponseEntity.ok(response);
     }
 
-    /** SUPER_ADMIN 기관 단건 조회 */
-    @GetMapping("/{organizationId}")
-    public ResponseEntity<OrganizationResponse> getOrganization(@PathVariable Long organizationId) {
-        OrganizationResponse response = organizationService.getOrganizationById(organizationId);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * ✅ 슈퍼관리자용 - 모든 기관 정보 조회
-     * - 각 기관의 기본정보 + 구독정보 함께 반환
-     */
-    @GetMapping("/super")
-    public ResponseEntity<List<OrganizationResponse>> getAllOrganizations() {
-        log.info("🧾 [슈퍼관리자] 전체 기관 정보 조회 요청");
-
-        List<OrganizationResponse> organizations = organizationService.getAllOrganizations();
-
-        return ResponseEntity.ok(organizations);
-    }
-
-    /** 기관 정보 수정 */
+    /** 일반관리자 - 본인 기관 정보 수정 */
     @PutMapping("/{organizationId}")
     public SuccessResponse updateOrganization(
             HttpServletRequest httpServletRequest,
@@ -131,7 +92,7 @@ public class AdminOrganizationController {
         return new SuccessResponse(200, "기관 정보 수정 완료");
     }
 
-    /** 기관 수정 이력 조회 */
+    /** 일반관리자 - 본인 기관 수정 이력 조회 */
     @GetMapping("/history/{organizationId}")
     public DataResponse<List<OrganizationHistoryResponse>> getHistory(
             @PathVariable Long organizationId
@@ -141,6 +102,27 @@ public class AdminOrganizationController {
 
         return new DataResponse<>(200, "기관 수정 이력 조회 성공", list);
     }
+
+    /** SUPER_ADMIN 기관 단건 조회 */
+    @GetMapping("/{organizationId}")
+    public ResponseEntity<OrganizationResponse> getOrganization(@PathVariable Long organizationId) {
+        OrganizationResponse response = organizationService.getOrganizationById(organizationId);
+        return ResponseEntity.ok(response);
+    }
+
+    /** SUPER_ADMIN 모든 기관 정보 조회
+     * - 각 기관의 기본정보 + 구독정보 함께 반환
+     */
+    @GetMapping("/super")
+    public ResponseEntity<List<OrganizationResponse>> getAllOrganizations() {
+        log.info("🧾 [슈퍼관리자] 전체 기관 정보 조회 요청");
+
+        List<OrganizationResponse> organizations = organizationService.getAllOrganizations();
+
+        return ResponseEntity.ok(organizations);
+    }
+
+
 
     @GetMapping("/usage/my")
     public ResponseEntity<?> getMyOrganizationUsage(HttpServletRequest request) {

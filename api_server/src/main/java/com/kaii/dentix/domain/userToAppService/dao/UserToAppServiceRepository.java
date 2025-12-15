@@ -1,7 +1,5 @@
 package com.kaii.dentix.domain.userToAppService.dao;
 
-import com.kaii.dentix.domain.appService.domain.AppService;
-import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.user.dto.UserServiceUsageDto;
 import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
@@ -15,10 +13,8 @@ import java.util.List;
 @Repository
 public interface UserToAppServiceRepository extends JpaRepository<UserToAppService, Long> {
     List<UserToAppService> findByUser(User user);
-    void deleteByUser(User user);
-    boolean existsByUserAndAppService(User user, AppService appService);
-    List<UserToAppService> findByAppService_Name(String name);
-    // ✅ 전체 목록 + 특정 서비스 필터 둘 다 가능
+
+    //전체 목록 + 특정 서비스 필터 둘 다 가능
     @Query("""
     SELECT new com.kaii.dentix.domain.user.dto.UserServiceUsageDto(
         u.userId,

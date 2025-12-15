@@ -15,11 +15,10 @@ import java.util.List;
 public class AppServiceUsageService {
 
     private final UserToAppServiceRepository userToAppServiceRepository;
-    private final OralCheckRepository oralCheckRepository;
 
     @Transactional(readOnly = true)
     public List<UserServiceUsageDto> getServiceUserUsage(String serviceName) {
-        // ✅ 하나의 메서드만 호출
+        // 하나의 메서드만 호출
         return userToAppServiceRepository.findUsageByServiceName(serviceName);
     }
 }

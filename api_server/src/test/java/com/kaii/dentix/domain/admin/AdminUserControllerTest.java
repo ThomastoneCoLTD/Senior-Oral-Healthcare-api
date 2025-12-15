@@ -2,13 +2,14 @@ package com.kaii.dentix.domain.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.common.ControllerTest;
-import com.kaii.dentix.admin.application.AdminUserService;
-import com.kaii.dentix.admin.controller.AdminUserController;
-import com.kaii.dentix.admin.dto.AdminUserInfoDto;
-import com.kaii.dentix.admin.dto.AdminUserListDto;
-import com.kaii.dentix.admin.dto.AdminUserModifyInfoDto;
-import com.kaii.dentix.admin.dto.request.AdminUserListRequest;
-import com.kaii.dentix.admin.dto.request.AdminUserModifyRequest;
+
+import com.kaii.dentix.domain.admin.application.AdminUserService;
+import com.kaii.dentix.domain.admin.controller.AdminUserController;
+import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
+import com.kaii.dentix.domain.admin.dto.AdminUserListDto;
+import com.kaii.dentix.domain.admin.dto.AdminUserModifyInfoDto;
+import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
+import com.kaii.dentix.domain.admin.dto.request.AdminUserModifyRequest;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;

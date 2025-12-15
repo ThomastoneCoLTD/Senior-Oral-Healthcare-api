@@ -43,28 +43,28 @@ public class AdminLoginService {
         Admin admin = adminRepository.findByAdminLoginIdentifier(request.getAdminLoginIdentifier())
                 .orElseThrow(() -> new UnauthorizedException("입력하신 정보가 일치하지 않습니다. 다시 확인해주세요."));
 
-        // ✅ 최초 로그인 여부 확인
+        //최초 로그인 여부 확인
         YnType isFirstLogin = admin.getAdminLastLoginDate() == null ? YnType.Y : YnType.N;
 
-        // ✅ 비밀번호가 비어있는 경우 (최초 로그인)
+        //비밀번호가 비어있는 경우 (최초 로그인)
 //        if (admin.getAdminPassword() == null || admin.getAdminPassword().isEmpty()) {
 //            isFirstLogin = YnType.Y;
 //            admin.updatePassword(passwordEncoder, SecurityUtil.defaultPassword);
 //        }
 
-        // ✅ 비밀번호 검증
+        //비밀번호 검증
         if (!passwordEncoder.matches(request.getAdminPassword(), admin.getAdminPassword())) {
             throw new UnauthorizedException("입력하신 정보가 일치하지 않습니다. 다시 확인해주세요.");
         }
 
-        // ✅ 토큰 생성
+        //토큰 생성
         String accessToken = jwtTokenUtil.createToken(admin, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(admin, TokenType.RefreshToken);
 
-        // ✅ 리프레시 토큰 저장
+        //리프레시 토큰 저장
         admin.updateAdminLogin(refreshToken);
 
-        // ✅ 기관이 연결되어 있는지 확인
+        //기관이 연결되어 있는지 확인
         Organization org = admin.getOrganization();
         OrganizationSubscriptionResponse subscriptionResponse = null;
         Long organizationId = null;
@@ -74,7 +74,7 @@ public class AdminLoginService {
             organizationId = org.getOrganizationId();
             organizationName = org.getOrganizationName();
 
-            // ✅ 기관 구독 정보 조회
+            //기관 구독 정보 조회
             OrganizationSubscription subscription = subscriptionRepository
                     .findByOrganization_OrganizationId(organizationId)
                     .orElse(null);
@@ -93,7 +93,7 @@ public class AdminLoginService {
                         ? subscription.getUsageResetDate().toLocalDate()
                         : null;
 
-                // ✅ DTO 변환
+                //DTO 변환
                 subscriptionResponse = OrganizationSubscriptionResponse.fromEntity(
                         org.getOrganizationId(),
                         org.getOrganizationName(),
@@ -107,7 +107,7 @@ public class AdminLoginService {
             }
         }
 
-        // ✅ 최종 응답 구성
+        //최종 응답 구성
         return AdminLoginDto.builder()
                 .isFirstLogin(isFirstLogin)
                 .adminId(admin.getAdminId())

@@ -22,10 +22,10 @@ public class BillingExcelGenerator {
 
         Workbook wb = new XSSFWorkbook();
 
-        // 1️⃣ Summary Sheet 생성
+        //Summary Sheet 생성
         createSummarySheet(wb, bundle.getSummaries());
 
-        // 2️⃣ Billing ID 별 Detail 시트 생성
+        //Billing ID 별 Detail 시트 생성
         for (Map.Entry<Long, BillingOveruseResponse> entry : bundle.getDetailMap().entrySet()) {
             Long billingId = entry.getKey();
             BillingOveruseResponse detail = entry.getValue();

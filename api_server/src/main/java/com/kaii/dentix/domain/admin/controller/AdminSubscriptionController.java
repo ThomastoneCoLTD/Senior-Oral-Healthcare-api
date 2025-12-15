@@ -4,14 +4,15 @@ import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
-import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionChangeRequest;
 import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionResponse;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.dto.OrganizationSubscriptionHistoryResponse;
 import com.kaii.dentix.domain.subscription.application.SubscriptionInfoService;
 import com.kaii.dentix.domain.subscription.application.SubscriptionService;
+import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
 import com.kaii.dentix.domain.subscription.dto.SubscriptionInfoResponse;
-import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -27,22 +28,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminSubscriptionController {
     private final SubscriptionInfoService subscriptionInfoService;
-    private final UserRepository userRepository;
     private final SubscriptionService subscriptionService;
-    private final OrganizationService organizationService;
     private final AdminRepository adminRepository;
     private final JwtTokenUtil jwtTokenUtil;
     private final OrganizationSubscriptionService organizationSubscriptionService;
     private final AdminService adminService;
+    private final OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
+
+
     @GetMapping("/all")
     public ResponseEntity<List<SubscriptionInfoResponse>> getAllPlans() {
         List<SubscriptionInfoResponse> plans = subscriptionInfoService.getAllPlans();
         return ResponseEntity.ok(plans);
     }
 
-    /**
-     * ✅ 본인 기관 구독 정보 조회
-     */
+    /** 일반관리자 - 본인 기관 구독 정보 조회 */
     @GetMapping("/my")
     public ResponseEntity<OrganizationSubscriptionResponse> getMySubscription() {
         Long adminId = jwtTokenUtil.getCurrentAdminId();
@@ -55,51 +55,36 @@ public class AdminSubscriptionController {
 
         return ResponseEntity.ok(response);
     }
-//    @PutMapping("/organization/{organizationId}/{planId}")
-//    public SuccessResponse changePlan(
-//            @PathVariable Long organizationId,
-//            @PathVariable Long planId) {
-//        organizationService.changeSubscriptionPlan(organizationId, planId);
-//        return new SuccessResponse();
-//    }
 
-    /**
-     * 기관의 구독상품 변경
-     */
-
-
-    /** ✅ (1) 기관 관리자용: 자기 기관 구독 변경 */
+    /** 일반관리자 - 본인 기관 구독 정보 수정 */
     @PutMapping("/my")
     public ResponseEntity<SuccessResponse> updateMySubscription(
             HttpServletRequest request,
             @RequestBody OrganizationSubscriptionChangeRequest dto
     ) {
-        Admin admin = adminService.getTokenAdmin(request);   // ✔ Admin 인증
+        Admin admin = adminService.getTokenAdmin(request);   //Admin 인증
         SuccessResponse response = subscriptionService.updateMyOrganizationSubscription(admin, dto);
         return ResponseEntity.ok(response);
     }
 
+    /** 일반관리자 - 본인 기관의 구독 이력 조회 */
+    @GetMapping("/history")
+    public ResponseEntity<List<OrganizationSubscriptionHistoryResponse>> getMySubscriptionHistory() {
+        Long adminId = jwtTokenUtil.getCurrentAdminId();
 
-//    @PutMapping("/{organizationId}/subscription/{subscriptionPlanId}")
-//    public DataResponse<OrganizationResponse> changeSubscriptionPlan(
-//            @PathVariable Long organizationId,
-//            @PathVariable Long subscriptionPlanId
-//    ) {
-//        OrganizationResponse response = organizationService.changeSubscriptionPlan(organizationId, subscriptionPlanId);
-//        return new DataResponse<>(response);
-//    }
+        List<OrganizationSubscriptionHistoryResponse> histories =
+                organizationSubscriptionHistoryService.getMySubscriptionHistory(adminId);
 
-//    @PutMapping("/organization/{organizationId}/{planId}")
-//    public DataResponse<OrganizationResponse> changeSubscriptionPlan(
-//            @PathVariable Long organizationId,
-//            @PathVariable Long planId
-//    ) {
-//        OrganizationResponse response = organizationService.changeSubscriptionPlan(organizationId, organizationId);
-//        return new DataResponse<>(response);
-//    }
+        return ResponseEntity.ok(histories);
+    }
 
-//    @GetMapping("/info")
-//    public ResponseEntity<?> getSubscriptionInfo(HttpServletRequest request) {
-//        return ResponseEntity.ok(subscriptionService.getSubscriptionInfo(request));
-//    }
+    /** ???기관별 구독 이력 조회 */
+    @GetMapping("/{organizationId}/subscription-history")
+    public ResponseEntity<List<SubscriptionHistoryResponse>> getSubscriptionHistory(
+            @PathVariable Long organizationId
+    ) {
+        List<SubscriptionHistoryResponse> historyList =
+                organizationSubscriptionHistoryService.getSubscriptionHistoryByOrganization(organizationId);
+        return ResponseEntity.ok(historyList);
+    }
 }
