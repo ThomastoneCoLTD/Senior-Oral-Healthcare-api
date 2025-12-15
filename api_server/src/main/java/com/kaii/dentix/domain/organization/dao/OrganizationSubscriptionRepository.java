@@ -29,7 +29,7 @@ public interface OrganizationSubscriptionRepository extends JpaRepository<Organi
 
     /** ✅ 구독 종료일이 특정 시점 이전이고 autoRenew가 true인 구독 조회 → BillingScheduler에서 사용 */
     List<OrganizationSubscription> findAllBySubscriptionEndDateBeforeAndAutoRenewTrue(LocalDateTime dateTime);
-
+    Optional<OrganizationSubscription> findByOrganization(Organization organization);
     @Query("""
         select os from OrganizationSubscription os
         join fetch os.organization o

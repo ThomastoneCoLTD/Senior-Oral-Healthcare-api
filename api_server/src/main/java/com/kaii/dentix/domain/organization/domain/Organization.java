@@ -82,7 +82,9 @@ public class Organization extends TimeEntity {
     private List<SubscriptionHistory> subscriptionHistories = new ArrayList<>();
 
     @Transient
-    public SubscriptionPlan getSubscriptionPlan() {
-        return (this.organizationSubscription != null) ? this.organizationSubscription.getSubscriptionPlan() : null;
+    public SubscriptionPlan getCurrentSubscriptionPlan() {
+        return (this.organizationSubscription != null)
+                ? this.organizationSubscription.getSubscriptionPlan()
+                : null;
     }
 }
