@@ -47,14 +47,13 @@ public class SubscriptionService {
             Admin admin,
             OrganizationSubscriptionChangeRequest dto
     ) {
-        Organization organization = admin.getOrganization();
+        Organization organization = organizationRepository.findById(
+                admin.getOrganization().getOrganizationId()
+        ).orElseThrow(() -> new EntityNotFoundException("기관을 찾을 수 없습니다."));
 
         SubscriptionPlan newPlan = subscriptionPlanRepository.findById(dto.getNewSubscriptionPlanId())
                 .orElseThrow(() -> new EntityNotFoundException("구독상품을 찾을 수 없습니다."));
 
-        // =============================
-        // 1) Latest OrganizationSubscription 조회
-        // =============================
         OrganizationSubscription subscription =
                 organizationSubscriptionRepository
                         .findTopByOrganization_OrganizationIdOrderBySubscriptionStartDateDesc(
@@ -64,35 +63,23 @@ public class SubscriptionService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // =============================
-        // 2) OrganizationSubscription 업데이트
-        // =============================
+        // OrganizationSubscription 업데이트 (정상)
         subscription.setSubscriptionPlan(newPlan);
         subscription.setSubscriptionStartDate(now);
         subscription.setSubscriptionEndDate(now.plusMonths(1));
         subscription.setSubscriptionRenewalDate(now.plusMonths(1));
         subscription.setUsageResetDate(now.plusMonths(1));
-
         subscription.setSuccessCount(0);
         subscription.setRemainingResponses(newPlan.getMaxSuccessResponses());
         subscription.setUsageRate(0.0);
-
         subscription.setStatus(SubscriptionStatus.ACTIVE);
 
-        organizationSubscriptionRepository.saveAndFlush(subscription); // UPDATE 발생
-
-        // =============================
-        // 3) Organization에도 반영
-        // =============================
+        // Organization 업데이트 (이제 정상)
         organization.setSubscriptionPlan(newPlan);
         organization.setSubscriptionStartDate(now);
         organization.setSubscriptionEndDate(now.plusMonths(1));
 
-        organizationRepository.saveAndFlush(organization);
-
-        // =============================
-        // 4) Billing 생성
-        // =============================
+        // Billing
         Billing billing = new Billing();
         billing.setOrganization(organization);
         billing.setSubscriptionPlan(newPlan);
@@ -107,9 +94,7 @@ public class SubscriptionService {
 
         billingRepository.save(billing);
 
-        // =============================
-        // 5) 새로운 OrganizationSubscriptionHistory 저장
-        // =============================
+        // History
         OrganizationSubscriptionHistory history =
                 OrganizationSubscriptionHistory.builder()
                         .organization(organization)
@@ -124,6 +109,7 @@ public class SubscriptionService {
 
         return new SuccessResponse(200, "구독상품 변경 완료");
     }
+
     @Transactional
     public SubscriptionHistory getCurrentSubscription(Long organizationId) {
 
