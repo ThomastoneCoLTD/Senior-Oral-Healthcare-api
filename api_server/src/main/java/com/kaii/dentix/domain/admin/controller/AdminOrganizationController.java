@@ -67,7 +67,7 @@ public class AdminOrganizationController {
     @GetMapping("/my")
     public ResponseEntity<OrganizationReResponse> getMyOrganization(HttpServletRequest request) {
         Admin admin = adminService.getTokenAdmin(request);
-        OrganizationReResponse response = adminService.getMyOrganization(admin);
+        OrganizationReResponse response = adminOrganizationService.getMyOrganization(admin);
         return ResponseEntity.ok(response);
     }
 

@@ -72,8 +72,7 @@ public class OrganizationSubscriptionService {
                 subscription.getUsageResetDate().toLocalDate()
         );
     }
-
-
+    @Transactional(readOnly = true)
     public OrganizationSubscription getActiveSubscription(Organization organization) {
         return organizationSubscriptionRepository.findActiveSubscription(organization, LocalDateTime.now())
                 .orElseThrow(() -> new IllegalStateException("현재 활성 구독 상품이 없습니다."));

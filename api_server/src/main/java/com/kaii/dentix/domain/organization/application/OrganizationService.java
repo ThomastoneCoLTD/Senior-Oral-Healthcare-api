@@ -161,6 +161,7 @@ public class OrganizationService {
     /**
      *기관 단건 조회 (기관별 상세 정보)_슈퍼관리자
      */
+    @Transactional
     public OrganizationResponse getOrganizationById(Long organizationId) {
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 기관입니다."));
@@ -170,6 +171,7 @@ public class OrganizationService {
     /**
      * 기관 ID로 기관 단건 조회
      */
+    @Transactional
     public Organization getOrganization(Long organizationId) {
         return organizationRepository.findById(organizationId)
                 .orElseThrow(() ->
@@ -179,6 +181,7 @@ public class OrganizationService {
     /**
      * 모든 기관 조회
      */
+
     @Transactional
     public List<OrganizationResponse> getAllOrganizations() {
         List<Organization> organizations = organizationRepository.findAllWithSubscription();
