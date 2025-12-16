@@ -78,7 +78,8 @@ public class OrganizationService {
         //3. 플랜 조회
         SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
                 .orElseThrow(() -> new BadRequestApiException("존재하지 않는 구독 플랜입니다."));
-log.info(plan)
+        log.info("plan:{}",plan);
+
         //4. 기관 생성
         Organization organization = Organization.builder()
                 .organizationName(request.getOrganizationName())
