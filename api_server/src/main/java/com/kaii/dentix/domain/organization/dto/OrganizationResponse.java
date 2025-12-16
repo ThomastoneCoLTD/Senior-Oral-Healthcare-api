@@ -82,4 +82,10 @@ public class OrganizationResponse {
 
                 .build();
     }
+    public static OrganizationResponse from(
+            Organization org,
+            OrganizationSubscriptionHistory history
+    ) {
+        return from(org, history, null);
+    }
 }
