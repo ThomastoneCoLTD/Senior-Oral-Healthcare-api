@@ -2,21 +2,13 @@ package com.kaii.dentix.domain.admin.application;
 
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.organization.dao.OrganizationHistoryRepository;
-import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationHistory;
-import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.organization.dto.OrganizationHistoryResponse;
-import com.kaii.dentix.domain.organization.dto.OrganizationReResponse;
-import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
-import com.kaii.dentix.domain.type.SubscriptionStatus;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -25,44 +17,15 @@ import java.util.List;
 public class AdminOrganizationService {
 
     private final OrganizationHistoryRepository organizationHistoryRepository;
-    private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
-    private final OrganizationSubscriptionRepository organizationSubscriptionRepository;
+
     /** 일반관리자 - 본인 기관 정보 조회 */
-//    public Organization getMyOrganization(Admin admin) {
-//        Organization organization = admin.getOrganization();
-//        if (organization == null) {
-//            throw new IllegalArgumentException("관리자가 소속된 기관이 없습니다.");
-//        }
-//        return organization;
-//    }
-    /** 일반관리자 - 본인 기관 정보 조회 */
-    @Transactional
-    public OrganizationReResponse getMyOrganization(Admin admin) {
-        Organization org = admin.getOrganization();
-        if (org == null) {
-            throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
+    public Organization getMyOrganization(Admin admin) {
+        Organization organization = admin.getOrganization();
+        if (organization == null) {
+            throw new IllegalArgumentException("관리자가 소속된 기관이 없습니다.");
         }
-
-        // 1️⃣ 현재 구독 (History 기준)
-        OrganizationSubscriptionHistory currentHistory =
-                organizationSubscriptionHistoryRepository
-                        .findTopByOrganization_OrganizationIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanOrderByStartDateDesc(
-                                org.getOrganizationId(),
-                                SubscriptionStatus.ACTIVE,
-                                LocalDateTime.now(),
-                                LocalDateTime.now()
-                        )
-                        .orElse(null);
-
-        // 2️⃣ 현재 사용량 (Subscription 기준)
-        OrganizationSubscription usage =
-                organizationSubscriptionRepository
-                        .findByOrganization(org)
-                        .orElse(null);
-
-        return OrganizationReResponse.from(org, currentHistory, usage);
+        return organization;
     }
-
 
     /** 일반관리자 - 본인 기관 수정 이력 조회 */
     @Transactional
