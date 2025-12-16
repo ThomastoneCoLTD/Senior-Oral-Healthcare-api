@@ -88,7 +88,7 @@ public class AdminOrganizationController {
     }
 
     /** 일반관리자 - 본인 기관 수정 이력 조회 */
-    @GetMapping("/{organizationId}/history")
+    @GetMapping("/history/{organizationId}")
     public DataResponse<List<OrganizationHistoryResponse>> getHistory(
             @PathVariable Long organizationId
     ) {
