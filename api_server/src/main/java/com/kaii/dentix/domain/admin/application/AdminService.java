@@ -74,23 +74,23 @@ public class AdminService {
     /**
      *로그인한 관리자의 기관 정보 조회
      */
-    public OrganizationReResponse getMyOrganization(Admin admin) {
-        Organization org = admin.getOrganization();
-        if (org == null) {
-            throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
-        }
-
-        OrganizationSubscriptionHistory currentHistory =
-                organizationSubscriptionHistoryRepository
-                        .findTopByOrganization_OrganizationIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanOrderByStartDateDesc(
-                                org.getOrganizationId(),
-                                SubscriptionStatus.ACTIVE,
-                                LocalDateTime.now(),
-                                LocalDateTime.now()
-                        )
-                        .orElse(null);
-        return OrganizationReResponse.from(org, currentHistory);
-    }
+//    public OrganizationReResponse getMyOrganization(Admin admin) {
+//        Organization org = admin.getOrganization();
+//        if (org == null) {
+//            throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
+//        }
+//
+//        OrganizationSubscriptionHistory currentHistory =
+//                organizationSubscriptionHistoryRepository
+//                        .findTopByOrganization_OrganizationIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanOrderByStartDateDesc(
+//                                org.getOrganizationId(),
+//                                SubscriptionStatus.ACTIVE,
+//                                LocalDateTime.now(),
+//                                LocalDateTime.now()
+//                        )
+//                        .orElse(null);
+//        return OrganizationReResponse.from(org, currentHistory);
+//    }
 
     /**
      *  관리자 등록

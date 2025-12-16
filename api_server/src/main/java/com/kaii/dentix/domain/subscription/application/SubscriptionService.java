@@ -69,25 +69,18 @@ public class SubscriptionService {
                         });
 
         // 4️⃣ 기존 구독 → 이력 종료 처리
-        if (currentSubscription.getSubscriptionPlan() != null
-                && currentSubscription.getSubscriptionStartDate() != null) {
+        if (currentSubscription.getSubscriptionPlan() != null) {
 
-            SubscriptionHistory history = SubscriptionHistory.builder()
+            OrganizationSubscriptionHistory history = OrganizationSubscriptionHistory.builder()
                     .organization(organization)
                     .subscriptionPlan(currentSubscription.getSubscriptionPlan())
                     .startDate(currentSubscription.getSubscriptionStartDate())
-                    .successCount(
-                            currentSubscription.getSuccessCount() != null
-                                    ? currentSubscription.getSuccessCount()
-                                    : 0
-                    )
-                    .overuseCount(0) // 필요 시 계산 로직 추가 가능
-                    .active(false)
                     .endDate(now)
+                    .status(SubscriptionStatus.EXPIRED) // ✅ 과거 기록
                     .reason("구독상품 변경")
                     .build();
 
-            subscriptionHistoryRepository.save(history);
+            organizationSubscriptionHistoryRepository.save(history);
         }
 
         // 5️⃣ 현재 구독 갱신 (엔티티 책임)
