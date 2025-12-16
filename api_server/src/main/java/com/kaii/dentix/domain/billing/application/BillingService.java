@@ -216,11 +216,18 @@ public class BillingService {
         log.info("이메일 발송 완료 → {}", email);
     }
 
+    public Organization getMyOrganizationEntity(Admin admin) {
+        Organization org = admin.getOrganization();
+        if (org == null) {
+            throw new IllegalArgumentException("소속 기관 없음");
+        }
+        return org;
+    }
 
     @Transactional(readOnly = true)
     public List<SubscriptionOveruseResponse> getOveruseBySubscription(Admin admin) {
 
-        Organization org = adminOrganizationService.getMyOrganization(admin);
+        Organization org = this.getMyOrganizationEntity(admin);
         if (org == null) {
             throw new IllegalArgumentException("소속 기관 없음");
         }

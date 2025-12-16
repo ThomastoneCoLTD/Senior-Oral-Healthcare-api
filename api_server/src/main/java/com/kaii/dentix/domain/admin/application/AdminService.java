@@ -12,6 +12,10 @@ import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
+import com.kaii.dentix.domain.type.SubscriptionStatus;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
@@ -29,6 +33,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -41,7 +46,7 @@ public class AdminService {
 
     private final PasswordEncoder passwordEncoder;
     private final FindPwdQuestionRepository findPwdQuestionRepository;
-
+    private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
     private final ModelMapper modelMapper;
     private AdminService adminService;
     private AdminUserCustomRepository adminUserCustomRepository;
@@ -68,11 +73,22 @@ public class AdminService {
     /**
      *로그인한 관리자의 기관 정보 조회
      */
-    public Organization getMyOrganization(Admin admin) {
-        if (admin.getOrganization() == null) {
+    public OrganizationResponse getMyOrganization(Admin admin) {
+        Organization org = admin.getOrganization();
+        if (org == null) {
             throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
         }
-        return admin.getOrganization();
+
+        OrganizationSubscriptionHistory currentHistory =
+                organizationSubscriptionHistoryRepository
+                        .findTopByOrganization_OrganizationIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanOrderByStartDateDesc(
+                                org.getOrganizationId(),
+                                SubscriptionStatus.ACTIVE,
+                                LocalDateTime.now(),
+                                LocalDateTime.now()
+                        )
+                        .orElse(null);
+        return OrganizationResponse.from(org, currentHistory);
     }
 
     /**
