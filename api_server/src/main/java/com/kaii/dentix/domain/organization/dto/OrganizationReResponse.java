@@ -57,19 +57,19 @@ public class OrganizationReResponse {
                 .organizationEmail(org.getOrganizationEmail())
                 .organizationPhoneNumber(org.getOrganizationPhoneNumber())
 
-                // ✅ 현재 구독 (History 기준)
+                //현재 구독 (History 기준)
                 .subscriptionPlanId(plan != null ? plan.getId() : null)
                 .subscriptionPlanName(plan != null ? plan.getPlanName().name() : null)
                 .subscriptionStartDate(history != null ? history.getStartDate() : null)
                 .subscriptionEndDate(history != null ? history.getEndDate() : null)
                 .subscriptionStatus(history != null ? history.getStatus().name() : null)
 
-                // ✅ 사용량 (OrganizationSubscription 기준)
+                //사용량 (OrganizationSubscription 기준)
                 .successCount(success)
                 .remainingResponses(remaining)
                 .usageRate(usageRate)
 
-                // ✅ 플랜 옵션
+                //플랜 옵션
                 .price(plan != null ? plan.getPrice() : null)
                 .customSurveyEnabled(plan != null ? plan.getCustomSurveyEnabled() : null)
                 .reportExportEnabled(plan != null ? plan.getReportExportEnabled() : null)
