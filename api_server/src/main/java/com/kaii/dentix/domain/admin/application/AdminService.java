@@ -74,6 +74,7 @@ public class AdminService {
     /**
      *로그인한 관리자의 기관 정보 조회
      */
+    @Transactional
     public OrganizationReResponse getMyOrganization(Admin admin) {
         Organization org = admin.getOrganization();
         if (org == null) {

@@ -7,6 +7,7 @@ import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationHistory;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.organization.dto.OrganizationHistoryResponse;
+import com.kaii.dentix.domain.organization.dto.OrganizationReResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
@@ -35,7 +36,8 @@ public class AdminOrganizationService {
 //        return organization;
 //    }
     /** 일반관리자 - 본인 기관 정보 조회 */
-    public OrganizationResponse getMyOrganization(Admin admin) {
+    @Transactional
+    public OrganizationReResponse getMyOrganization(Admin admin) {
         Organization org = admin.getOrganization();
         if (org == null) {
             throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
@@ -58,7 +60,7 @@ public class AdminOrganizationService {
                         .findByOrganization(org)
                         .orElse(null);
 
-        return OrganizationResponse.from(org, currentHistory, usage);
+        return OrganizationReResponse.from(org, currentHistory, usage);
     }
 
 
