@@ -11,10 +11,7 @@ import com.kaii.dentix.domain.organization.application.OrganizationUsageService;
 import com.kaii.dentix.domain.organization.dao.OrganizationHistoryRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
 import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.organization.dto.OrganizationHistoryResponse;
-import com.kaii.dentix.domain.organization.dto.OrganizationRequest;
-import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
-import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
+import com.kaii.dentix.domain.organization.dto.*;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dto.OrganizationSubscriptionHistoryResponse;
 import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
@@ -68,9 +65,9 @@ public class AdminOrganizationController {
 
     /** 일반관리자 - 본인 기관 정보 조회 */
     @GetMapping("/my")
-    public ResponseEntity<OrganizationResponse> getMyOrganization(HttpServletRequest request) {
+    public ResponseEntity<OrganizationReResponse> getMyOrganization(HttpServletRequest request) {
         Admin admin = adminService.getTokenAdmin(request);
-        OrganizationResponse response = adminService.getMyOrganization(admin);
+        OrganizationReResponse response = adminService.getMyOrganization(admin);
         return ResponseEntity.ok(response);
     }
 

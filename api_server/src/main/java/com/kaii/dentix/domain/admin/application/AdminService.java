@@ -12,6 +12,7 @@ import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.dto.OrganizationReResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
@@ -73,7 +74,7 @@ public class AdminService {
     /**
      *로그인한 관리자의 기관 정보 조회
      */
-    public OrganizationResponse getMyOrganization(Admin admin) {
+    public OrganizationReResponse getMyOrganization(Admin admin) {
         Organization org = admin.getOrganization();
         if (org == null) {
             throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
@@ -88,7 +89,7 @@ public class AdminService {
                                 LocalDateTime.now()
                         )
                         .orElse(null);
-        return OrganizationResponse.from(org, currentHistory);
+        return OrganizationReResponse.from(org, currentHistory);
     }
 
     /**

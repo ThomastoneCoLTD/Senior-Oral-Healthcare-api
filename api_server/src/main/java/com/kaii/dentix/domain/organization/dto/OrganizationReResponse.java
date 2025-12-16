@@ -1,22 +1,19 @@
 package com.kaii.dentix.domain.organization.dto;
 
+import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import lombok.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import com.kaii.dentix.domain.organization.domain.Organization;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class OrganizationResponse {
+public class OrganizationReResponse {
 
     private Long organizationId;
     private String organizationName;
@@ -36,31 +33,55 @@ public class OrganizationResponse {
     private Boolean customSurveyEnabled;
     private Integer overuseUnitPrice;
     private Integer maxSuccessResponses;
-    public static OrganizationResponse from(Organization org) {
-        OrganizationSubscription sub = org.getOrganizationSubscription();
-        var plan = (sub != null) ? sub.getSubscriptionPlan() : null;
+    public static OrganizationReResponse from(
+            Organization org,
+            OrganizationSubscriptionHistory history,
+            OrganizationSubscription usage
+    ) {
+        SubscriptionPlan plan = (history != null) ? history.getSubscriptionPlan() : null;
 
-        return OrganizationResponse.builder()
+        int max = (plan != null && plan.getMaxSuccessResponses() != null)
+                ? plan.getMaxSuccessResponses()
+                : 0;
+
+        int success = (usage != null && usage.getSuccessCount() != null)
+                ? usage.getSuccessCount()
+                : 0;
+
+        int remaining = Math.max(max - success, 0);
+        double usageRate = (max > 0) ? (success * 100.0 / max) : 0.0;
+
+        return OrganizationReResponse.builder()
                 .organizationId(org.getOrganizationId())
                 .organizationName(org.getOrganizationName())
                 .organizationEmail(org.getOrganizationEmail())
                 .organizationPhoneNumber(org.getOrganizationPhoneNumber())
 
+                // ✅ 현재 구독 (History 기준)
                 .subscriptionPlanId(plan != null ? plan.getId() : null)
                 .subscriptionPlanName(plan != null ? plan.getPlanName().name() : null)
-                .subscriptionStartDate(sub != null ? sub.getSubscriptionStartDate() : null)
-                .subscriptionEndDate(sub != null ? sub.getSubscriptionEndDate() : null)
-                .subscriptionStatus(sub != null ? sub.getStatus().name() : null)
-                .successCount(sub != null ? sub.getSuccessCount() : null)
-                .remainingResponses(sub != null ? sub.getRemainingResponses() : null)
-                .usageRate(sub != null ? sub.getUsageRate() : null)
+                .subscriptionStartDate(history != null ? history.getStartDate() : null)
+                .subscriptionEndDate(history != null ? history.getEndDate() : null)
+                .subscriptionStatus(history != null ? history.getStatus().name() : null)
 
-                // 🔥 신규 필드들
+                // ✅ 사용량 (OrganizationSubscription 기준)
+                .successCount(success)
+                .remainingResponses(remaining)
+                .usageRate(usageRate)
+
+                // ✅ 플랜 옵션
                 .price(plan != null ? plan.getPrice() : null)
                 .customSurveyEnabled(plan != null ? plan.getCustomSurveyEnabled() : null)
                 .reportExportEnabled(plan != null ? plan.getReportExportEnabled() : null)
                 .overuseUnitPrice(plan != null ? plan.getOveruseUnitPrice() : null)
-                .maxSuccessResponses(plan != null ? plan.getMaxSuccessResponses() : null)
+                .maxSuccessResponses(max)
+
                 .build();
+    }
+    public static OrganizationReResponse from(
+            Organization org,
+            OrganizationSubscriptionHistory history
+    ) {
+        return from(org, history, null);
     }
 }

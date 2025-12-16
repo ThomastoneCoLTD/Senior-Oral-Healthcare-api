@@ -29,12 +29,14 @@ import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -76,7 +78,7 @@ public class OrganizationService {
         //3. 플랜 조회
         SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
                 .orElseThrow(() -> new BadRequestApiException("존재하지 않는 구독 플랜입니다."));
-
+log.info(plan)
         //4. 기관 생성
         Organization organization = Organization.builder()
                 .organizationName(request.getOrganizationName())
