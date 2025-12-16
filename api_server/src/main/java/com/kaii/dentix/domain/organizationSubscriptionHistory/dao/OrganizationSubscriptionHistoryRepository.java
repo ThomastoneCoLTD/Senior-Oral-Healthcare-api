@@ -16,15 +16,13 @@ public interface OrganizationSubscriptionHistoryRepository extends JpaRepository
    List<OrganizationSubscriptionHistory> findAllByOrganizationOrderByStartDateDesc(Organization organization);
 
     @Query("""
-        SELECT osh
-        FROM OrganizationSubscriptionHistory osh
-        JOIN FETCH osh.subscriptionPlan sp
-        JOIN FETCH osh.organization o
-        WHERE o.organizationId = :orgId
-        ORDER BY osh.startDate DESC
-    """)
+        select h
+        from OrganizationSubscriptionHistory h
+        join fetch h.subscriptionPlan
+        where h.organization.organizationId = :orgId
+        order by h.startDate desc
+        """)
     List<OrganizationSubscriptionHistory> findAllByOrgIdWithFetch(@Param("orgId") Long orgId);
-
     List<OrganizationSubscriptionHistory>
     findAllByOrganization_OrganizationIdOrderByStartDateDesc(Long organizationId);
 
@@ -35,4 +33,5 @@ public interface OrganizationSubscriptionHistoryRepository extends JpaRepository
             LocalDateTime startDate,
             LocalDateTime endDate
     );
+
 }
