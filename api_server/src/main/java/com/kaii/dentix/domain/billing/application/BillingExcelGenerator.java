@@ -1,10 +1,8 @@
 package com.kaii.dentix.domain.billing.application;
 
-
 import com.kaii.dentix.domain.billing.dto.BillingExcelData;
 import com.kaii.dentix.domain.billing.dto.BillingOveruseResponse;
 import com.kaii.dentix.domain.billing.dto.BillingSummaryResponse;
-
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -22,10 +20,10 @@ public class BillingExcelGenerator {
 
         Workbook wb = new XSSFWorkbook();
 
-        //Summary Sheet 생성
+        // 1️⃣ Summary Sheet 생성
         createSummarySheet(wb, bundle.getSummaries());
 
-        //Billing ID 별 Detail 시트 생성
+        // 2️⃣ Billing ID 별 Detail 시트 생성
         for (Map.Entry<Long, BillingOveruseResponse> entry : bundle.getDetailMap().entrySet()) {
             Long billingId = entry.getKey();
             BillingOveruseResponse detail = entry.getValue();
