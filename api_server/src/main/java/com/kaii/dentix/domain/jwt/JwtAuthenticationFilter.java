@@ -60,29 +60,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-            // 토큰이 없으면 에러를 던지지 말고, 그냥 다음 필터로 넘깁니다.
-            // 그러면 WebSecurityConfig에 설정한 permitAll()이 정상 작동합니다.
-            if (StringUtils.isNotBlank(accessToken)) {
-                if (accessToken.startsWith("Bearer ")) {
-                    accessToken = accessToken.substring(7);
-                }
-
-                if (!jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken) &&
-                        !jwtTokenUtil.isUnauthorized(accessToken, TokenType.AccessToken)) {
-
-                    Authentication authentication = jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
-                    if (authentication != null) {
-                        SecurityContextHolder.getContext().setAuthentication(authentication);
-                    }
-                }
+            // 1. 토큰이 아예 없는 경우: 그냥 통과시킨다 (SecurityConfig의 permitAll이 결정하도록)
+            if (StringUtils.isBlank(accessToken)) {
+                filterChain.doFilter(request, response);
+                return;
             }
+
+            if (accessToken.startsWith("Bearer ")) {
+                accessToken = accessToken.substring(7);
+            }
+
+            // 2. 토큰이 있지만 유효하지 않은 경우: 로그만 남기고 통과시킨다
+            if (jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken) ||
+                    jwtTokenUtil.isUnauthorized(accessToken, TokenType.AccessToken)) {
+                log.warn("유효하지 않은 토큰 접근");
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // 3. 유효한 토큰인 경우: 인증 객체 등록
+            Authentication authentication = jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
         } catch (Exception e) {
-            log.warn("JWT 인증 처리 중 예외 발생 (무시하고 진행): {}", e.getMessage());
-            // 여기서 return 하지 않고 계속 진행하게 하면, 권한이 필요한 페이지는
-            // 나중에 AuthorizationFilter에서 알아서 거부합니다.
+            log.error("JWT 필터 오류: {}", e.getMessage());
+            // 에러 발생 시에도 응답을 직접 끝내지(return) 말고 다음 필터로 넘깁니다.
         }
 
-        //7) 다음 필터로
         filterChain.doFilter(request, response);
     }
 }

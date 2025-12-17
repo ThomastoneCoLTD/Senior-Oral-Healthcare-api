@@ -33,9 +33,8 @@ public class WebSecurityConfig {
             "/actuator/health",
             "/docs/*",
             "/login", "/login/*",
-            "/admin/billing/export/excel", // <-- 여기에 추가
-            "/admin/user/bulk-upload/template",
-//            "/user", "/user/*",
+            "/admin/billing/export/excel/*",
+            "/admin/user/bulk-upload/template/*",
             "/password", "/password/*",
             "/service-agreement",
             "/contents", "/contents/*",
