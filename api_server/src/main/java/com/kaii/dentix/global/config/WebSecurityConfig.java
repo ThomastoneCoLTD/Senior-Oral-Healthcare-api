@@ -73,21 +73,19 @@ public class WebSecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // 1. OPTIONS 메서드는 무조건 가장 먼저 허용 (CORS 해결)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 배열 대신 명시적으로 먼저 허용 (순서가 중요합니다!)
-                        .requestMatchers("/admin/billing/export/excel").permitAll()
-                        .requestMatchers("/admin/user/bulk-upload/template").permitAll()
+                        // 2. 엑셀 및 템플릿 경로를 명확하게 최상단 배치
+                        .requestMatchers("/admin/billing/export/excel/**").permitAll()
+                        .requestMatchers("/admin/user/bulk-upload/template/**").permitAll()
 
-                        // 그 다음 배열 적용
+                        // 3. 기존 배열 적용
                         .requestMatchers(EXCLUDE_URLS).permitAll()
 
-                        // 나머지 권한 설정
+                        // 4. 나머지 권한 검사
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-                        // 만약 ROLE_ 이슈가 의심된다면 아래처럼 변경
-                        // .requestMatchers("/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ADMIN", "SUPER_ADMIN")
-
-                        .anyRequest().hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil),
                         UsernamePasswordAuthenticationFilter.class);
