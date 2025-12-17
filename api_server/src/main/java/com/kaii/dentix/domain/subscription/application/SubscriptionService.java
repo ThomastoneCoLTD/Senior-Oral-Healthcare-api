@@ -65,7 +65,7 @@ public class SubscriptionService {
                         .orElseGet(() -> {
                             OrganizationSubscription s = new OrganizationSubscription();
                             s.setOrganization(organization);
-                            return s;
+                            return organizationSubscriptionRepository.save(s);
                         });
 
         // 4️⃣ 기존 구독 → 이력 종료 처리
@@ -83,23 +83,23 @@ public class SubscriptionService {
             organizationSubscriptionHistoryRepository.save(history);
         }
 
+
         // 5️⃣ 현재 구독 갱신 (엔티티 책임)
-        currentSubscription.setSubscriptionPlan(newPlan);
         currentSubscription.initializeSubscription();
+        currentSubscription.setSubscriptionPlan(newPlan);
+
+        log.error("SUB ID BEFORE SAVE = {}", currentSubscription.getId());
+        log.error("PLAN BEFORE SAVE = {}",
+                currentSubscription.getSubscriptionPlan() == null
+                        ? "null"
+                        : currentSubscription.getSubscriptionPlan().getPlanName()
+        );
+
         organizationSubscriptionRepository.save(currentSubscription);
 
+        log.error("SUB ID AFTER SAVE = {}", currentSubscription.getId());
 
-        OrganizationSubscriptionHistory activeHistory =
-                OrganizationSubscriptionHistory.builder()
-                        .organization(organization)
-                        .subscriptionPlan(newPlan)
-                        .startDate(currentSubscription.getSubscriptionStartDate())
-                        .endDate(currentSubscription.getSubscriptionEndDate())
-                        .status(SubscriptionStatus.ACTIVE)
-                        .reason("구독상품 변경")
-                        .build();
 
-        organizationSubscriptionHistoryRepository.save(activeHistory);
 
         // 6️⃣ Billing 생성
         Billing billing = new Billing();
