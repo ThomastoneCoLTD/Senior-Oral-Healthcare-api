@@ -8,6 +8,7 @@ import com.kaii.dentix.domain.billing.dao.BillingRepository;
 import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.billing.domain.BillingStatusHistory;
 import com.kaii.dentix.domain.billing.dto.*;
+import com.kaii.dentix.domain.billing.event.OveruseBillingCreatedEvent;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
@@ -25,6 +26,7 @@ import com.kaii.dentix.global.common.dto.PagingRequest;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -54,7 +56,7 @@ public class BillingService {
     private final OrganizationSubscriptionService organizationSubscriptionService;
     private final OrganizationSubscriptionRepository oraganizationSubscriptionRepository;
     private final BillingRepository billRepository;
-
+    private final ApplicationEventPublisher applicationEventPublisher;
     /** 일반관리자 - 본인 기관의 미납 청구 목록 조회 */
     public List<BillingDto> findAllUnpaidBillings() {
         return billingRepository.findAllByBillingStatus(BillingStatus.PENDING)
@@ -139,6 +141,7 @@ public class BillingService {
 
     @Transactional
     public Billing createOveruseBatchBilling(Organization organization) {
+
         if (organization == null) {
             throw new IllegalArgumentException("기관 정보가 없습니다.");
         }
@@ -149,43 +152,39 @@ public class BillingService {
         }
 
         SubscriptionPlan plan = subscription.getSubscriptionPlan();
-        int unitPrice = plan.getOveruseUnitPrice();
-        // 요청 시각
+        Long unitPrice = (long) plan.getOveruseUnitPrice();
+
         LocalDateTime now = LocalDateTime.now();
-        // 1건 기준으로 과금
-        long amount = unitPrice;
+
         OrganizationSubscription activeSubscription =
                 organizationSubscriptionService.getActiveSubscription(organization);
 
         Billing billing = Billing.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
-                .amount(amount)
                 .subscription(activeSubscription)
-                .description("AI 구강 분석 초과 1건 요금")
+                .amount(unitPrice) // 1건 단위
                 .billingStatus(BillingStatus.UNPAID)
                 .billingType(BillingType.OVERUSE_BATCH)
-                .billedAt(now)               //청구일
-                .periodStart(now)            //이용기간 시작
-                .periodEnd(now)              //이용기간 종료 (1건 단위라 동일)
+                .billedAt(now)
+                .periodStart(now)
+                .periodEnd(now)
                 .description("AI 구강 분석 초과 1건 요금")
                 .build();
 
         billingRepository.save(billing);
 
-        log.info("기관 [{}] 초과 사용 1건 Billing 생성 완료 (요금: {})", organization.getOrganizationId(), amount);
+        log.info("기관 [{}] 초과 사용 Billing 생성 (금액: {})",
+                organization.getOrganizationId(), unitPrice);
 
-        // 이메일 알림 발송 (선택)
-        if (organization.getOrganizationEmail() != null) {
-            emailService.sendBillingNotice(
-                    organization.getOrganizationEmail(),
-                    organization.getOrganizationName(),
-                    amount
-            );
-        }
+        // 👉 이벤트 발행 (메일은 여기서 안 보냄)
+        applicationEventPublisher.publishEvent(
+                new OveruseBillingCreatedEvent(billing)
+        );
 
         return billing;
     }
+
 
     private void sendBillingEmailNotification(String email, Billing billing) {
         if (email == null || email.isBlank()) {

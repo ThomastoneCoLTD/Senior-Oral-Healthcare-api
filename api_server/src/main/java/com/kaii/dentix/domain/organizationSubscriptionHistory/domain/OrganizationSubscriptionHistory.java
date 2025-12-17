@@ -53,7 +53,17 @@ public class OrganizationSubscriptionHistory extends TimeEntity {
     /** ✅ 변경 사유 (자동 갱신 / 수동 변경 / 신규 등록 등) */
     @Column(name = "reason", length = 100)
     private String reason;
-
+    @Column(name = "success_count", nullable = false)
+    private Integer successCount;
+    @Column(name = "remaining_responses", nullable = false)
+    private Integer remainingResponses;
+    public boolean isOverused() {
+        return remainingResponses <= 0;
+    }
+    public void increaseSuccessCount() {
+        this.successCount++;
+        this.remainingResponses--;
+    }
     /** ✅ 생성자 메서드 */
     public static OrganizationSubscriptionHistory create(Organization organization,
                                                          SubscriptionPlan plan,

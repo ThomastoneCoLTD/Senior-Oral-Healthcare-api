@@ -10,7 +10,9 @@ import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminUserModifyRequest;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckUsageDto;
+import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -26,6 +28,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +47,7 @@ public class AdminUserService {
     private final AdminService adminService;
     private final OralCheckRepository oralcheckRepository;
     private final AdminUserRepositoryImpl adminUserRepository;
-
+    private final OrganizationSubscriptionService organizationSubscriptionService;
     /** 일반관리자 - 본인 기관의 사용자 사용자 목록 조회 */
     @Transactional(readOnly = true)
     public AdminUserListDto userList(AdminUserListRequest request, HttpServletRequest servletRequest) {
@@ -142,8 +147,19 @@ public class AdminUserService {
             throw new BadRequestApiException("기관 정보가 없습니다.");
         }
 
+        OrganizationSubscription activeSubscription =
+                organizationSubscriptionService.getActiveSubscription(org);
+
+        LocalDateTime start = activeSubscription.getSubscriptionStartDate();
+        LocalDateTime end   = activeSubscription.getUsageResetDate();
+        Date startDate = Date.from(start.atZone(ZoneId.systemDefault()).toInstant());
+        Date endDate   = Date.from(end.atZone(ZoneId.systemDefault()).toInstant());
         List<OralCheckUsageDto> usageList =
-                oralcheckRepository.findUserUsageByOrganization(org.getOrganizationId());
+                oralcheckRepository.findUserUsageByOrganizationAndPeriod(
+                        org.getOrganizationId(),
+                        startDate,
+                        endDate
+                );
 
         //총합 계산
         long total = usageList.stream()

@@ -7,10 +7,12 @@ import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSu
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dto.OrganizationSubscriptionHistoryResponse;
 import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
+import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -69,6 +71,24 @@ public class OrganizationSubscriptionHistoryService {
         return histories.stream()
                 .map(SubscriptionHistoryResponse::fromEntity)
                 .toList();
+    }
+
+    private final OrganizationSubscriptionHistoryRepository historyRepository;
+
+    @Transactional(readOnly = true)
+    public OrganizationSubscriptionHistory getActiveHistory(Organization organization) {
+
+        LocalDateTime now = LocalDateTime.now();
+
+        List<OrganizationSubscriptionHistory> histories =
+                historyRepository.findActiveHistories(organization, now);
+
+        if (histories.isEmpty()) {
+            throw new BadRequestApiException("현재 활성화된 구독 이력이 없습니다.");
+        }
+
+        // 가장 최근 시작한 구독 이력 1건
+        return histories.get(0);
     }
 //    @Transactional
 //    public BillingListResponse getBillingsForAdmin(Admin admin) {

@@ -33,5 +33,16 @@ public interface OrganizationSubscriptionHistoryRepository extends JpaRepository
             LocalDateTime startDate,
             LocalDateTime endDate
     );
-
+    @Query("""
+        SELECT h
+        FROM OrganizationSubscriptionHistory h
+        WHERE h.organization = :organization
+          AND h.startDate <= :now
+          AND (h.endDate IS NULL OR h.endDate > :now)
+        ORDER BY h.startDate DESC
+    """)
+    List<OrganizationSubscriptionHistory> findActiveHistories(
+            @Param("organization") Organization organization,
+            @Param("now") LocalDateTime now
+    );
 }

@@ -49,10 +49,10 @@ spring:
       hibernate.connection.provider_disables_autocommit: true
 
   mail:
-    host: smtp.sendgrid.net     # ✅ Workspace용 호스트
+    host: smtp.google.com
     port: 587                      # STARTTLS
-    username: apikey
-    password: ${SENDGRID_API_KEY}
+    username: cs@thomastone.co.kr
+    password: bkaxfipbjjjwbyow
     properties:
       mail:
         smtp:
