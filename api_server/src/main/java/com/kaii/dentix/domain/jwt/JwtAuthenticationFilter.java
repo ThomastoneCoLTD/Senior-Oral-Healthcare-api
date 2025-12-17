@@ -29,9 +29,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /** 🔥 JWT 검사 제외 경로 (파일 다운로드, 헬스체크 등) */
     private static final String[] JWT_EXCLUDE_PATHS = {
+            "/login",                  // 로그인
+            "/password",               // 비밀번호 질문/찾기
+            "/verify",                 // 회원 확인
+            "/actuator/health",        // 헬스체크
             "/admin/user/bulk-upload/template",
-            "/admin/billing/export/excel",
-            "/actuator/health"
+            "/admin/billing/export/excel"
     };
 
     @Override
