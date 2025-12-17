@@ -97,7 +97,7 @@ public class OrganizationService {
                 .autoRenew(true)
                 .build();
 
-        subscription.initializeSubscription();  // 날짜 + 사용량 초기화
+        subscription.initializeForNewSubscription();
         organizationSubscriptionRepository.save(subscription);
 
         //굳이 activeSubscription을 다시 조회할 필요 없음.

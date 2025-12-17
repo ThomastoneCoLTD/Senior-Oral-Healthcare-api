@@ -105,30 +105,32 @@ public class OrganizationSubscription extends TimeEntity {
      *  🔥 구독 초기화 (함수명 유지)
      * ====================================== */
     public void initializeSubscription() {
-        ensureInitialized();
-
         LocalDateTime now = LocalDateTime.now();
 
-        // 🔥 결제 주기 (플랜 연간/월간 구분)
-        LocalDateTime nextCycleDate;
+        // 결제 주기만 계산
         if (subscriptionPlan != null && subscriptionPlan.isYearly()) {
-            nextCycleDate = now.plusYears(1);
+            this.subscriptionEndDate = now.plusYears(1);
         } else {
-            nextCycleDate = now.plusMonths(1);
+            this.subscriptionEndDate = now.plusMonths(1);
         }
 
-        // 🔥 사용량 리셋일 (무조건 월간)
-        LocalDateTime nextUsageReset = now.plusMonths(1);
+        this.subscriptionStartDate = now;
+    }
+    public void initializeForNewSubscription() {
+        LocalDateTime now = LocalDateTime.now();
 
-        // 🔥 쿼터 계산
         int quota = safeQuota();
 
-        // 👇 구독 정보 세팅
         this.subscriptionStartDate = now;
-        this.subscriptionEndDate = nextCycleDate;
-        this.subscriptionRenewalDate = nextCycleDate;
 
-        this.usageResetDate = nextUsageReset;
+        if (subscriptionPlan != null && subscriptionPlan.isYearly()) {
+            this.subscriptionEndDate = now.plusYears(1);
+        } else {
+            this.subscriptionEndDate = now.plusMonths(1);
+        }
+
+        this.subscriptionRenewalDate = this.subscriptionEndDate;
+        this.usageResetDate = now.plusMonths(1);
 
         this.successCount = 0;
         this.remainingResponses = quota;
@@ -138,7 +140,6 @@ public class OrganizationSubscription extends TimeEntity {
         this.autoRenew = true;
         this.active = true;
     }
-
     /** ======================================
      *  분석 성공 → 사용량 증가
      * ====================================== */

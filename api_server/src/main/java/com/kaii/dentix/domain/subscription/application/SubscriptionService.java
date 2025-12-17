@@ -68,40 +68,87 @@ public class SubscriptionService {
                             return organizationSubscriptionRepository.save(s);
                         });
 
-        // 4️⃣ 기존 구독 → 이력 종료 처리
-        if (currentSubscription.getSubscriptionPlan() != null) {
-
-            OrganizationSubscriptionHistory history = OrganizationSubscriptionHistory.builder()
-                    .organization(organization)
-                    .subscriptionPlan(currentSubscription.getSubscriptionPlan())
-                    .startDate(currentSubscription.getSubscriptionStartDate())
-                    .endDate(now)
-                    .status(SubscriptionStatus.EXPIRED) // ✅ 과거 기록
-                    .reason("구독상품 변경")
-                    .build();
-
-            organizationSubscriptionHistoryRepository.save(history);
+        // ✅ 2️⃣ 같은 플랜 변경 방어
+        if (currentSubscription.getSubscriptionPlan() != null &&
+                currentSubscription.getSubscriptionPlan().getId().equals(newPlan.getId())) {
+            return new SuccessResponse(200, "이미 적용된 구독입니다.");
         }
 
+        // 4️⃣ 기존 ACTIVE 히스토리 → EXPIRED 처리 (1개만 존재하도록 보장)
+        organizationSubscriptionHistoryRepository
+                .findByOrganizationAndStatus(organization, SubscriptionStatus.ACTIVE)
+                .ifPresent(active -> {
+                    active.setEndDate(now);
+                    active.setStatus(SubscriptionStatus.EXPIRED);
+                });
 
-        // 5️⃣ 현재 구독 갱신 (엔티티 책임)
-        currentSubscription.initializeSubscription();
+        // 5️⃣ 기존 구독 기준 EXPIRED 히스토리 생성 (스냅샷)
+        if (currentSubscription.getSubscriptionPlan() != null) {
+
+            int successCount =
+                    currentSubscription.getSuccessCount() != null
+                            ? currentSubscription.getSuccessCount()
+                            : 0;
+
+            int max =
+                    currentSubscription.getSubscriptionPlan().getMaxSuccessResponses() != null
+                            ? currentSubscription.getSubscriptionPlan().getMaxSuccessResponses()
+                            : 0;
+
+            int remaining = Math.max(max - successCount, 0);
+
+            OrganizationSubscriptionHistory expiredHistory =
+                    OrganizationSubscriptionHistory.builder()
+                            .organization(organization)
+                            .subscriptionPlan(currentSubscription.getSubscriptionPlan())
+                            .startDate(currentSubscription.getSubscriptionStartDate())
+                            .endDate(now)
+                            .status(SubscriptionStatus.EXPIRED)
+                            .reason("구독상품 변경")
+                            .successCount(successCount)
+                            .remainingResponses(remaining)
+                            .build();
+
+            organizationSubscriptionHistoryRepository.save(expiredHistory);
+        }
+
+        // 6️⃣ 현재 구독 갱신
         currentSubscription.setSubscriptionPlan(newPlan);
 
-        log.error("SUB ID BEFORE SAVE = {}", currentSubscription.getId());
-        log.error("PLAN BEFORE SAVE = {}",
-                currentSubscription.getSubscriptionPlan() == null
-                        ? "null"
-                        : currentSubscription.getSubscriptionPlan().getPlanName()
-        );
+        // ✅ 3️⃣ initializeSubscription 안전성
+        // ⚠️ 이 메서드는 "기간 계산만" 해야 한다 (plan 변경 금지)
+        currentSubscription.initializeSubscription();
 
         organizationSubscriptionRepository.save(currentSubscription);
 
-        log.error("SUB ID AFTER SAVE = {}", currentSubscription.getId());
+        // 7️⃣ 새 ACTIVE 히스토리 생성
+        int activeSuccessCount =
+                currentSubscription.getSuccessCount() != null
+                        ? currentSubscription.getSuccessCount()
+                        : 0;
 
+        int activeMax =
+                newPlan.getMaxSuccessResponses() != null
+                        ? newPlan.getMaxSuccessResponses()
+                        : 0;
 
+        int activeRemaining = Math.max(activeMax - activeSuccessCount, 0);
 
-        // 6️⃣ Billing 생성
+        OrganizationSubscriptionHistory activeHistory =
+                OrganizationSubscriptionHistory.builder()
+                        .organization(organization)
+                        .subscriptionPlan(newPlan)
+                        .startDate(currentSubscription.getSubscriptionStartDate())
+                        .endDate(currentSubscription.getSubscriptionEndDate())
+                        .status(SubscriptionStatus.ACTIVE)
+                        .reason("구독상품 변경")
+                        .successCount(activeSuccessCount)
+                        .remainingResponses(activeRemaining)
+                        .build();
+
+        organizationSubscriptionHistoryRepository.save(activeHistory);
+
+        // 8️⃣ Billing 생성
         Billing billing = new Billing();
         billing.setOrganization(organization);
         billing.setSubscriptionPlan(newPlan);
@@ -118,6 +165,7 @@ public class SubscriptionService {
 
         return new SuccessResponse(200, "구독상품 변경 완료");
     }
+
 
 
 

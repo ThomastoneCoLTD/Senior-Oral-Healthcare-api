@@ -45,4 +45,10 @@ public interface OrganizationSubscriptionHistoryRepository extends JpaRepository
             @Param("organization") Organization organization,
             @Param("now") LocalDateTime now
     );
+
+   Optional<OrganizationSubscriptionHistory>
+   findByOrganizationAndStatus(
+           Organization organization,
+           SubscriptionStatus status
+   );
 }
