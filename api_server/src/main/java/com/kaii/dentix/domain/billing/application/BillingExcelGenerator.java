@@ -17,23 +17,18 @@ import java.util.Map;
 @Component
 public class BillingExcelGenerator {
     public void generateExcel(BillingExcelData bundle, OutputStream os) throws IOException {
-
         Workbook wb = new XSSFWorkbook();
 
-        // 1️⃣ Summary Sheet 생성
         createSummarySheet(wb, bundle.getSummaries());
 
-        // 2️⃣ Billing ID 별 Detail 시트 생성
-        for (Map.Entry<Long, BillingOveruseResponse> entry : bundle.getDetailMap().entrySet()) {
-            Long billingId = entry.getKey();
-            BillingOveruseResponse detail = entry.getValue();
-
-            createBillingDetailSheet(wb, "Billing_" + billingId, detail);
+        for (Map.Entry<Long, BillingOveruseResponse> e : bundle.getDetailMap().entrySet()) {
+            createBillingDetailSheet(wb, "Billing_" + e.getKey(), e.getValue());
         }
 
         wb.write(os);
         wb.close();
     }
+
     private void autoSizeColumns(Sheet sheet, int columnCount) {
         for (int i = 0; i < columnCount; i++) {
             sheet.autoSizeColumn(i);

@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.billing.dto;
 
 import com.kaii.dentix.domain.billing.domain.Billing;
+import com.kaii.dentix.domain.billing.util.BillingDescriptionMapper;
 import com.kaii.dentix.domain.type.BillingType;
 import lombok.*;
 
@@ -31,7 +32,9 @@ public class BillingSummaryResponse {
                 .billedAt(billing.getBilledAt())
                 .periodStart(billing.getPeriodStart())
                 .periodEnd(billing.getPeriodEnd())
-                .description(billing.getDescription())
+                .description(
+                        BillingDescriptionMapper.toEnglish(billing.getDescription())
+                )
                 .build();
     }
 }

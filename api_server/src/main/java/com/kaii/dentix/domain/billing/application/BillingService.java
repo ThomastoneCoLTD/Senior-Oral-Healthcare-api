@@ -418,21 +418,24 @@ public class BillingService {
         Organization org = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new IllegalArgumentException("기관을 찾을 수 없습니다."));
 
-        List<Billing> billingList = billingRepository.findByOrganizationAndBillingTypeIn(
-                org,
-                List.of(BillingType.MONTHLY, BillingType.SUBSCRIPTION, BillingType.REGULAR)
-        );
+        List<Billing> billingList =
+                billingRepository.findByOrganizationAndBillingTypeIn(
+                        org,
+                        List.of(BillingType.MONTHLY, BillingType.SUBSCRIPTION, BillingType.REGULAR)
+                );
 
+        // ✅ Summary (영문 description 적용됨)
         List<BillingSummaryResponse> summaries = billingList.stream()
                 .map(BillingSummaryResponse::from)
                 .toList();
 
-        // Billing ID 별 Detail 시트 전부 생성
+        // ✅ Billing ID별 Detail
         Map<Long, BillingOveruseResponse> detailMap = new LinkedHashMap<>();
-
-        for (Billing b : billingList) {
-            BillingOveruseResponse detail = getOveruseDetails(b.getId()); // 기존 함수 재사용
-            detailMap.put(b.getId(), detail);
+        for (Billing billing : billingList) {
+            detailMap.put(
+                    billing.getId(),
+                    getOveruseDetails(billing.getId())
+            );
         }
 
         return BillingExcelData.builder()

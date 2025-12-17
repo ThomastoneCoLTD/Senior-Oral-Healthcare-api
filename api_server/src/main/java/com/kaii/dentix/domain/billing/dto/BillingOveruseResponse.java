@@ -1,6 +1,9 @@
 package com.kaii.dentix.domain.billing.dto;
 
 import com.kaii.dentix.domain.billing.domain.Billing;
+import com.kaii.dentix.domain.billing.util.BillingDescriptionMapper;
+import com.sun.mail.imap.protocol.Item;
+import jakarta.mail.FetchProfile;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -24,7 +27,6 @@ public class BillingOveruseResponse {
 
     private List<Item> overuseList;
 
-    // ⭐⭐⭐ 여기 추가된 부분 ⭐⭐⭐
     public static BillingOveruseResponse of(
             Billing baseBilling,
             List<Billing> overuseList,
@@ -37,10 +39,10 @@ public class BillingOveruseResponse {
                 .periodEnd(baseBilling.getPeriodEnd())
                 .baseAmount(baseBilling.getAmount())
                 .totalOveruseAmount(totalOveruseAmount)
-                .totalOveruseCount((long) overuseList.size())
+                .totalOveruseCount(overuseList.size())
                 .overuseList(
                         overuseList.stream()
-                                .map(BillingOveruseResponse.Item::from)
+                                .map(Item::from)   // ✅ Item 안의 static from
                                 .toList()
                 )
                 .build();
@@ -64,7 +66,7 @@ public class BillingOveruseResponse {
                     .amount(billing.getAmount())
                     .billedAt(billing.getBilledAt())
                     .billingStatus(billing.getBillingStatus().name())
-                    .description(billing.getDescription())
+                    .description(BillingDescriptionMapper.toEnglish(billing.getDescription()))
                     .build();
         }
     }
