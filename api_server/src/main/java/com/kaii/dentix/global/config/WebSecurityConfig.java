@@ -30,11 +30,11 @@ public class WebSecurityConfig {
 //    private final UserDeviceTypeService userDeviceTypeService;
 
     public static String[] EXCLUDE_URLS = {
-            "/admin/billing/export/excel", // <-- 여기에 추가
-            "/admin/user/bulk-upload/template",
             "/actuator/health",
             "/docs/*",
             "/login", "/login/*",
+            "/admin/billing/export/excel", // <-- 여기에 추가
+            "/admin/user/bulk-upload/template",
 //            "/user", "/user/*",
             "/password", "/password/*",
             "/service-agreement",
@@ -56,6 +56,7 @@ public class WebSecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // 2. FilterChain 설정 변경
     @Bean
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         http
@@ -63,38 +64,31 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // ★ 여기서 응답 헤더 직접 추가 (XSS / MIME / CSP / Frame 방지)
                 .headers(headers -> headers
                         .addHeaderWriter((request, response) -> {
-                            // 스캐너가 요구하는 XSS 관련 헤더들
                             response.setHeader("X-XSS-Protection", "1; mode=block");
                             response.setHeader("X-Content-Type-Options", "nosniff");
                             response.setHeader("X-Frame-Options", "DENY");
-                            // 너무 빡세지 않게 기본 CSP
                             response.setHeader("Content-Security-Policy",
                                     "default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'");
                         })
                 )
-
                 .authorizeHttpRequests(auth -> auth
+                        // OPTIONS 요청은 항상 최상단
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 정적 제외 URL (엑셀 경로 포함됨)을 최우선 적용
                         .requestMatchers(EXCLUDE_URLS).permitAll()
-                        .requestMatchers("/admin/billing/export/excel").permitAll()
-                        .requestMatchers("/admin/user/bulk-upload/template").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
 
-                        // Admin API 전체
+                        // 그 외 /admin/으로 시작하는 모든 경로는 권한 체크
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-
-                        // SuperAdmin API
                         .requestMatchers("/superadmin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
-                        // 모든 나머지 요청은 USER / ADMIN / SUPER_ADMIN 허용
                         .anyRequest().hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil),
                         UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
     @Bean
