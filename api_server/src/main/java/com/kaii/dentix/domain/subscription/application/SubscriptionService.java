@@ -86,8 +86,20 @@ public class SubscriptionService {
         // 5️⃣ 현재 구독 갱신 (엔티티 책임)
         currentSubscription.setSubscriptionPlan(newPlan);
         currentSubscription.initializeSubscription();
-
         organizationSubscriptionRepository.save(currentSubscription);
+
+
+        OrganizationSubscriptionHistory activeHistory =
+                OrganizationSubscriptionHistory.builder()
+                        .organization(organization)
+                        .subscriptionPlan(newPlan)
+                        .startDate(currentSubscription.getSubscriptionStartDate())
+                        .endDate(currentSubscription.getSubscriptionEndDate())
+                        .status(SubscriptionStatus.ACTIVE)
+                        .reason("구독상품 변경")
+                        .build();
+
+        organizationSubscriptionHistoryRepository.save(activeHistory);
 
         // 6️⃣ Billing 생성
         Billing billing = new Billing();
