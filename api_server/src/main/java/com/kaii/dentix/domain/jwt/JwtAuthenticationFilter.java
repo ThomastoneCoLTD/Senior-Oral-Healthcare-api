@@ -27,70 +27,76 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenUtil jwtTokenUtil;
 
+    /** 🔥 JWT 검사 제외 경로 (파일 다운로드, 헬스체크 등) */
+    private static final String[] JWT_EXCLUDE_PATHS = {
+            "/admin/user/bulk-upload/template",
+            "/admin/billing/export/excel",
+            "/actuator/health"
+    };
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        // ✅ 실제 요청 경로 추출
-        String projectName = "/dentix"; // nginx나 프록시 하위 경로 대응
-        String requestURI = request.getRequestURI();
-        if (requestURI.startsWith(projectName)) {
-            requestURI = requestURI.substring(projectName.length());
-        }
+        final String uri = request.getRequestURI();
+        log.info("[JWT Filter] requestURI={}", uri);
 
-        final String uri = requestURI;
-
-        // ✅ JWT 인증이 필요 없는 URL 매칭
-        boolean permitAll = Arrays.stream(EXCLUDE_URLS)
-                .anyMatch(url -> {
-                    String normalizedUrl = url.replace("*", "");
-                    return uri.startsWith(normalizedUrl);
-                });
-
-        // ✅ 추가 예외 케이스 (엑셀 템플릿 다운로드 등)
-        if (uri.startsWith("/admin/user/bulk-upload/template")) {
-            permitAll = true;
-        }
-
-        log.info("[JWT Filter] requestURI={}, permitAll={}", requestURI, permitAll);
-
-        if (!permitAll) {
-            try {
-                // ✅ Authorization 헤더에서 토큰 추출
-                String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
-
-                if (StringUtils.isBlank(accessToken)) {
-                    throw new TokenExpiredException();
-                }
-
-                if (accessToken.startsWith("Bearer ")) {
-                    accessToken = accessToken.substring(7);
-                }
-
-                // ✅ 만료 / 비인가 토큰 검증
-                if (jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken)) {
-                    throw new TokenExpiredException();
-                }
-
-                if (jwtTokenUtil.isUnauthorized(accessToken, TokenType.AccessToken)) {
-                    throw new TokenExpiredException();
-                }
-
-                // ✅ SecurityContext 등록
-                Authentication authentication = jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
-                if (authentication != null) {
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-                    log.info("✅ SecurityContext 설정 완료: {}", authentication.getAuthorities());
-                }
-
-            } catch (Exception e) {
-                log.warn("❌ JWT 인증 실패: {}", e.getMessage());
-                ErrorResponse.of(response, HttpStatus.FORBIDDEN, ResponseMessage.FORBIDDEN_MSG);
+        /* =========================
+           1️⃣ JWT 검사 제외 경로
+           ========================= */
+        for (String path : JWT_EXCLUDE_PATHS) {
+            if (uri.startsWith(path)) {
+                filterChain.doFilter(request, response);
                 return;
             }
         }
 
-        // ✅ 예외 경로면 JWT 검사 건너뛰고 다음 필터로
-        filterChain.doFilter(request, response);
+        /* =========================
+           2️⃣ Authorization 헤더 추출
+           ========================= */
+        String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+
+        if (StringUtils.isBlank(accessToken)) {
+            log.warn("Authorization 헤더 없음");
+            ErrorResponse.of(response, HttpStatus.FORBIDDEN, ResponseMessage.FORBIDDEN_MSG);
+            return;
+        }
+
+        if (accessToken.startsWith("Bearer ")) {
+            accessToken = accessToken.substring(7);
+        }
+
+        try {
+            /* =========================
+               3️⃣ 토큰 검증
+               ========================= */
+            if (jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken)) {
+                throw new TokenExpiredException();
+            }
+
+            if (jwtTokenUtil.isUnauthorized(accessToken, TokenType.AccessToken)) {
+                throw new TokenExpiredException();
+            }
+
+            /* =========================
+               4️⃣ SecurityContext 등록
+               ========================= */
+            Authentication authentication =
+                    jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
+
+            if (authentication != null) {
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.info("SecurityContext 설정 완료: {}", authentication.getAuthorities());
+            }
+
+            filterChain.doFilter(request, response);
+
+        } catch (Exception e) {
+            log.warn("JWT 인증 실패: {}", e.getMessage());
+            ErrorResponse.of(response, HttpStatus.FORBIDDEN, ResponseMessage.FORBIDDEN_MSG);
+        }
     }
 }
