@@ -74,7 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             /* =========================
-               3️⃣ 토큰 검증
+              토큰 검증
                ========================= */
             if (jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken)) {
                 throw new TokenExpiredException();
@@ -84,8 +84,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 throw new TokenExpiredException();
             }
 
-            /* =========================
-               4️⃣ SecurityContext 등록
+            /* ===
+            SecurityContext 등록
                ========================= */
             Authentication authentication =
                     jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
