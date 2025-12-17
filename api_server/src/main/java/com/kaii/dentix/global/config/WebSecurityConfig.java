@@ -5,6 +5,7 @@ import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -75,6 +76,7 @@ public class WebSecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(EXCLUDE_URLS).permitAll()
                         .requestMatchers("/admin/billing/export/excel").permitAll()
                         .requestMatchers("/admin/user/bulk-upload/template").permitAll()
@@ -113,6 +115,7 @@ public class WebSecurityConfig {
                 "Accept", "Origin"
         ));
 
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
