@@ -65,12 +65,16 @@ public class OrganizationSubscriptionHistory extends TimeEntity {
         this.remainingResponses--;
     }
     /** ✅ 생성자 메서드 */
-    public static OrganizationSubscriptionHistory create(Organization organization,
-                                                         SubscriptionPlan plan,
-                                                         SubscriptionStatus status,
-                                                         LocalDateTime startDate,
-                                                         LocalDateTime endDate,
-                                                         String reason) {
+    public static OrganizationSubscriptionHistory create(
+            Organization organization,
+            SubscriptionPlan plan,
+            SubscriptionStatus status,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            String reason,
+            int successCount,
+            int remainingResponses
+    ) {
         return OrganizationSubscriptionHistory.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
@@ -78,6 +82,8 @@ public class OrganizationSubscriptionHistory extends TimeEntity {
                 .startDate(startDate)
                 .endDate(endDate)
                 .reason(reason)
+                .successCount(successCount)          // ✅ 필수
+                .remainingResponses(remainingResponses) // ✅ 필수
                 .build();
     }
 }

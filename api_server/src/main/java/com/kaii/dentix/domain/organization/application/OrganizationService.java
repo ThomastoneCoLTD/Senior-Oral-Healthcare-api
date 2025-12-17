@@ -58,12 +58,12 @@ public class OrganizationService {
     @Transactional
     public OrganizationResponse createOrganization(OrganizationRequest request) {
 
-        //1. 필수값 체크
+        // 1️⃣ 필수값 체크
         if (request.getSubscriptionPlanId() == null) {
             throw new BadRequestApiException("구독 플랜을 선택해 주세요.");
         }
 
-        //2. 중복 체크
+        // 2️⃣ 중복 체크
         if (organizationRepository.existsByOrganizationName(request.getOrganizationName())) {
             throw new AlreadyDataException("이미 존재하는 기관명입니다.");
         }
@@ -75,12 +75,12 @@ public class OrganizationService {
             throw new AlreadyDataException("이미 등록된 이메일입니다.");
         }
 
-        //3. 플랜 조회
-        SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
-                .orElseThrow(() -> new BadRequestApiException("존재하지 않는 구독 플랜입니다."));
-        log.info("plan:{}",plan);
+        // 3️⃣ 플랜 조회
+        SubscriptionPlan plan = subscriptionPlanRepository.findById(
+                request.getSubscriptionPlanId()
+        ).orElseThrow(() -> new BadRequestApiException("존재하지 않는 구독 플랜입니다."));
 
-        //4. 기관 생성
+        // 4️⃣ 기관 생성
         Organization organization = Organization.builder()
                 .organizationName(request.getOrganizationName())
                 .organizationEmail(request.getOrganizationEmail())
@@ -90,7 +90,7 @@ public class OrganizationService {
 
         organizationRepository.save(organization);
 
-        //5. 기관 첫 구독 생성
+        // 5️⃣ 최초 구독 생성
         OrganizationSubscription subscription = OrganizationSubscription.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
@@ -100,39 +100,44 @@ public class OrganizationService {
         subscription.initializeForNewSubscription();
         organizationSubscriptionRepository.save(subscription);
 
-        //굳이 activeSubscription을 다시 조회할 필요 없음.
-        OrganizationSubscription activeSubscription = subscription;
+        // 6️⃣ 최초 ACTIVE 구독 히스토리 생성
+        int successCount = 0;
+        int max = plan.getMaxSuccessResponses() != null
+                ? plan.getMaxSuccessResponses()
+                : 0;
+        int remaining = max;
 
-        //6. Billing 생성
+        OrganizationSubscriptionHistory activeHistory =
+                OrganizationSubscriptionHistory.create(
+                        organization,
+                        plan,
+                        SubscriptionStatus.ACTIVE,
+                        subscription.getSubscriptionStartDate(),
+                        subscription.getSubscriptionEndDate(),
+                        "기관 최초 구독 생성",
+                        successCount,
+                        remaining
+                );
+
+        organizationSubscriptionHistoryRepository.save(activeHistory);
+
+        // 7️⃣ Billing 생성
         Billing billing = Billing.builder()
                 .organization(organization)
                 .subscriptionPlan(plan)
-                .subscription(activeSubscription)
+                .subscription(subscription)
                 .billingType(BillingType.REGULAR)
                 .billingStatus(BillingStatus.UNPAID)
                 .amount(plan.getPrice())
                 .billedAt(LocalDateTime.now())
-                .periodStart(activeSubscription.getSubscriptionStartDate())
-                .periodEnd(activeSubscription.getSubscriptionEndDate())
-                .description("기관 등록 시 자동 청구 생성")
+                .periodStart(subscription.getSubscriptionStartDate())
+                .periodEnd(subscription.getSubscriptionEndDate())
+                .description("기관 등록 시 최초 구독 청구")
                 .build();
 
         billingRepository.save(billing);
 
-        //7. 구독 이력 생성
-        OrganizationSubscriptionHistory history = OrganizationSubscriptionHistory.create(
-                organization,
-                plan,
-                SubscriptionStatus.ACTIVE,
-                activeSubscription.getSubscriptionStartDate(),
-                activeSubscription.getSubscriptionEndDate(),
-                "신규 구독 등록"
-        );
-
-        organizationSubscriptionHistoryRepository.save(history);
-
-
-        //8. 관리자 연결 (이 단계 실패해도 앞의 Billing은 rollback되지 않게 유지 가능)
+        // 8️⃣ 관리자 연결
         Long adminId = jwtTokenUtil.getCurrentAdminId();
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
@@ -143,8 +148,7 @@ public class OrganizationService {
 
         admin.setOrganization(organization);
 
-
-        //9. 최종 응답
+        // 9️⃣ 응답
         return OrganizationResponse.builder()
                 .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())
@@ -152,11 +156,10 @@ public class OrganizationService {
                 .organizationPhoneNumber(organization.getOrganizationPhoneNumber())
                 .subscriptionPlanId(plan.getId())
                 .subscriptionPlanName(plan.getPlanName().name())
-                .subscriptionStartDate(activeSubscription.getSubscriptionStartDate())
-                .subscriptionEndDate(activeSubscription.getSubscriptionEndDate())
+                .subscriptionStartDate(subscription.getSubscriptionStartDate())
+                .subscriptionEndDate(subscription.getSubscriptionEndDate())
                 .build();
     }
-
 
     /**
      *기관 단건 조회 (기관별 상세 정보)_슈퍼관리자
