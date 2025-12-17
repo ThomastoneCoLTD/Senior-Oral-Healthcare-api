@@ -58,39 +58,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            //4) Authorization 헤더에서 토큰 추출
             String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-            if (StringUtils.isBlank(accessToken)) {
-                throw new TokenExpiredException();
+            // 토큰이 없으면 에러를 던지지 말고, 그냥 다음 필터로 넘깁니다.
+            // 그러면 WebSecurityConfig에 설정한 permitAll()이 정상 작동합니다.
+            if (StringUtils.isNotBlank(accessToken)) {
+                if (accessToken.startsWith("Bearer ")) {
+                    accessToken = accessToken.substring(7);
+                }
+
+                if (!jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken) &&
+                        !jwtTokenUtil.isUnauthorized(accessToken, TokenType.AccessToken)) {
+
+                    Authentication authentication = jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
+                    if (authentication != null) {
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    }
+                }
             }
-
-            if (accessToken.startsWith("Bearer ")) {
-                accessToken = accessToken.substring(7);
-            }
-
-            //5) 만료/비인가 토큰 검사
-            if (jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken)) {
-                throw new TokenExpiredException();
-            }
-
-            if (jwtTokenUtil.isUnauthorized(accessToken, TokenType.AccessToken)) {
-                throw new TokenExpiredException();
-            }
-
-            //6) 인증객체 생성 → SecurityContext 등록
-            Authentication authentication =
-                    jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
-
-            if (authentication != null) {
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.info("SecurityContext 설정 완료: {}", authentication.getAuthorities());
-            }
-
         } catch (Exception e) {
-            log.warn("JWT 인증 실패: {}", e.getMessage());
-            ErrorResponse.of(response, HttpStatus.FORBIDDEN, ResponseMessage.FORBIDDEN_MSG);
-            return;
+            log.warn("JWT 인증 처리 중 예외 발생 (무시하고 진행): {}", e.getMessage());
+            // 여기서 return 하지 않고 계속 진행하게 하면, 권한이 필요한 페이지는
+            // 나중에 AuthorizationFilter에서 알아서 거부합니다.
         }
 
         //7) 다음 필터로
