@@ -31,6 +31,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // OPTIONS 요청은 JWT 검증 없이 바로 통과시켜야 CORS가 동작합니다.
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         //실제 요청 경로 추출
         String projectName = "/dentix"; // nginx나 프록시 하위 경로 대응
         String requestURI = request.getRequestURI();
