@@ -30,6 +30,8 @@ public class WebSecurityConfig {
 //    private final UserDeviceTypeService userDeviceTypeService;
 
     public static String[] EXCLUDE_URLS = {
+            "/admin/billing/export/excel", // <-- 여기에 추가
+            "/admin/user/bulk-upload/template",
             "/actuator/health",
             "/docs/*",
             "/login", "/login/*",
