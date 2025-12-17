@@ -74,16 +74,25 @@ public class AiModelService {
      */
     @SneakyThrows
     @Async
-    public QuestionnaireAnalysisResponse getQuestionnaireAiModel(Map<String, Map<String, Object>> survey) {
+    public CompletableFuture<QuestionnaireAnalysisResponse>
+    getQuestionnaireAiModel(Map<String, Map<String, Object>> survey) {
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
         MultiValueMap<String, Object> params = new LinkedMultiValueMap<>();
         params.add("survey", survey);
 
-        HttpEntity<MultiValueMap<String, Object>> entity = new HttpEntity<>(params, headers);
+        HttpEntity<MultiValueMap<String, Object>> entity =
+                new HttpEntity<>(params, headers);
 
-        return restTemplate.postForObject(questionnaireAiModelApiUrl, entity, QuestionnaireAnalysisResponse.class);
+        QuestionnaireAnalysisResponse response =
+                restTemplate.postForObject(
+                        questionnaireAiModelApiUrl,
+                        entity,
+                        QuestionnaireAnalysisResponse.class
+                );
+
+        return CompletableFuture.completedFuture(response);
     }
-
 }

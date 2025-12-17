@@ -128,7 +128,8 @@ public class QuestionnaireService {
         QuestionnaireAnalysisResponse analysisData;
 //        log.info(analysisData.toString());
         try {
-            analysisData = aiModelService.getQuestionnaireAiModel(questionnaireForm);
+            analysisData =
+                    aiModelService.getQuestionnaireAiModel(questionnaireForm).join();
                     log.info("data:{}",analysisData.toString());
 
         } catch (Exception e) {
