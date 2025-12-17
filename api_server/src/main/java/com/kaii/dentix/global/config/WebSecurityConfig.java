@@ -98,32 +98,29 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of(
+        // 1. 요청을 보내는 프론트엔드 도메인을 정확히 명시
+        configuration.setAllowedOrigins(List.of(
                 "http://localhost:5173",
                 "http://localhost:8080",
-                "https://denti.thomabio.com"
+                "https://denti.thomabio.com" // 반드시 포함되어야 함
         ));
 
-        // ⚠ PATCH 반드시 추가해야 함!
-        configuration.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
-        ));
+        // 2. 허용할 HTTP 메서드
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
-        configuration.setAllowedHeaders(List.of(
-                "Content-Type", "Authorization", "X-Requested-With",
-                "Accept", "Origin"
-        ));
+        // 3. 허용할 헤더 (Authorization 헤더 필수)
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
 
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("*"));
+        // 4. 자격 증명 허용 (쿠키나 Authorization 헤더 사용 시 true)
         configuration.setAllowCredentials(true);
+
+        // 5. 브라우저가 캐시할 시간
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
 
 
 }
