@@ -73,15 +73,19 @@ public class WebSecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // OPTIONS 요청은 항상 최상단
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 정적 제외 URL (엑셀 경로 포함됨)을 최우선 적용
+                        // 배열 대신 명시적으로 먼저 허용 (순서가 중요합니다!)
+                        .requestMatchers("/admin/billing/export/excel").permitAll()
+                        .requestMatchers("/admin/user/bulk-upload/template").permitAll()
+
+                        // 그 다음 배열 적용
                         .requestMatchers(EXCLUDE_URLS).permitAll()
 
-                        // 그 외 /admin/으로 시작하는 모든 경로는 권한 체크
+                        // 나머지 권한 설정
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-                        .requestMatchers("/superadmin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        // 만약 ROLE_ 이슈가 의심된다면 아래처럼 변경
+                        // .requestMatchers("/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ADMIN", "SUPER_ADMIN")
 
                         .anyRequest().hasAnyRole("USER", "ADMIN", "SUPER_ADMIN")
                 )
