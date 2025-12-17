@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class AiModelService {
@@ -39,7 +40,8 @@ public class AiModelService {
      */
     @SneakyThrows
     @Async
-    public OralCheckAnalysisResponse getPyDentalAiModel(MultipartFile picture) {
+    public CompletableFuture<OralCheckAnalysisResponse> getPyDentalAiModel(MultipartFile picture) {
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
@@ -54,9 +56,17 @@ public class AiModelService {
 
         params.add("picture", fileResource);
 
-        HttpEntity<MultiValueMap<String, Object>> entity = new HttpEntity<>(params, headers);
+        HttpEntity<MultiValueMap<String, Object>> entity =
+                new HttpEntity<>(params, headers);
 
-        return restTemplate.postForObject(oralCheckAiModelApiUrl, entity, OralCheckAnalysisResponse.class);
+        OralCheckAnalysisResponse response =
+                restTemplate.postForObject(
+                        oralCheckAiModelApiUrl,
+                        entity,
+                        OralCheckAnalysisResponse.class
+                );
+
+        return CompletableFuture.completedFuture(response);
     }
 
     /**

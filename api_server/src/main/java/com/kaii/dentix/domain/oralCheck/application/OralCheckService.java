@@ -127,7 +127,7 @@ public class OralCheckService {
         //3. AI 분석 요청
         OralCheckAnalysisResponse analysisData;
         try {
-            analysisData = aiModelService.getPyDentalAiModel(file);
+            analysisData = aiModelService.getPyDentalAiModel(file).join();
             log.info("업로드된 이미지 URL: {}", uploadedUrl);
         } catch (Exception e) {
             log.error("AI 모델 연동 실패: {}", e.getMessage(), e);
