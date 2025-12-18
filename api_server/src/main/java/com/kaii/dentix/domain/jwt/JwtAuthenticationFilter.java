@@ -26,6 +26,18 @@ import static com.kaii.dentix.global.config.WebSecurityConfig.EXCLUDE_URLS;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenUtil jwtTokenUtil;
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+
+        // nginx 하위 경로 대응
+        if (uri.startsWith("/dentix")) {
+            uri = uri.substring("/dentix".length());
+        }
+
+        return uri.equals("/actuator/health")
+                || uri.startsWith("/actuator/health/");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
