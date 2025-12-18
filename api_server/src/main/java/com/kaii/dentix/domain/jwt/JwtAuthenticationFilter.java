@@ -55,6 +55,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             permitAll = true;
         }
 
+        if (uri.startsWith("/admin/billing/export/excel")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         log.info("[JWT Filter] requestURI={}, permitAll={}", requestURI, permitAll);
 
         //3) 인증 필요 없는 경우 → JWT 검사 없이 다음 필터로

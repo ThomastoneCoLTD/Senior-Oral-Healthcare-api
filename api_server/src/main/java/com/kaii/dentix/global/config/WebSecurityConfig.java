@@ -33,7 +33,6 @@ public class WebSecurityConfig {
             "/actuator/health",
             "/docs/*",
             "/login", "/login/*",
-            "/admin/billing/export/excel/*",
             "/admin/user/bulk-upload/template/*",
             "/password", "/password/*",
             "/service-agreement",
