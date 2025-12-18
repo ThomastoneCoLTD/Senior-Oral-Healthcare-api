@@ -81,7 +81,7 @@ public class WebSecurityConfig {
                         // 2. 엑셀 및 템플릿 경로를 명확하게 최상단 배치
                         .requestMatchers(
                                 "/admin/billing/export/**"
-                        ).hasAnyRole("ADMIN", "SUPER_ADMIN","ROLE_ADMIN")
+                        ).hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/admin/user/bulk-upload/template/**").permitAll()
                         .requestMatchers(
                                 "/actuator/health",
