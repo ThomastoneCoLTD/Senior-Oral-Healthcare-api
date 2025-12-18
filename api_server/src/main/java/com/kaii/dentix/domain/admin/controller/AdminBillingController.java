@@ -90,33 +90,21 @@ public class AdminBillingController {
                     "Content-Disposition",
                     "attachment; filename=billing_all_" + organizationId + ".xlsx"
             );
+            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            response.setHeader("Pragma", "no-cache");
+            response.setHeader("Expires", "0");
 
-            billingExcelGenerator.generateExcel(
-                    bundle,
-                    response.getOutputStream()
-            );
+            // ⚠ Content-Length 설정하지 말 것 (HTTP/2 충돌 방지)
+
+            try (var out = response.getOutputStream()) {
+                billingExcelGenerator.generateExcel(bundle, out);
+                out.flush();
+            }
 
         } catch (Exception e) {
+            // ❗ 파일 다운로드 API에서는 응답 변경 금지
             log.error("Billing excel export failed", e);
-
-            if (response.isCommitted()) {
-                return;
-            }
-
-            try {
-                response.reset();
-                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("""
-            {
-              "code": 500,
-              "message": "엑셀 파일 생성 중 오류가 발생했습니다."
-            }
-            """);
-            } catch (IOException io) {
-                // 여기선 로그만
-                log.error("Failed to write error response", io);
-            }
+            // 그냥 종료 (브라우저에서는 다운로드 실패로 처리)
         }
     }
 
