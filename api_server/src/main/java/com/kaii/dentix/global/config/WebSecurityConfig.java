@@ -86,24 +86,6 @@ public class WebSecurityConfig {
                         .anyRequest().hasAnyAuthority("USER", "ADMIN", "SUPER_ADMIN")
                 ).authorizeHttpRequests(auth -> auth
                         .requestMatchers(EXCLUDE_URLS).permitAll()
-
-                        // ✅ 엑셀 export: ADMIN / SUPER_ADMIN 허용
-                        .requestMatchers("/admin/billing/export/**")
-                        .hasAnyAuthority("ADMIN", "SUPER_ADMIN")
-
-                        // 파일 다운로드
-                        .requestMatchers("/admin/user/bulk-upload/template").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
-
-                        // Admin API
-                        .requestMatchers("/admin/**")
-                        .hasAnyAuthority("ADMIN", "SUPER_ADMIN")
-
-                        // SuperAdmin API
-                        .requestMatchers("/superadmin/**")
-                        .hasAnyAuthority("ADMIN", "SUPER_ADMIN")
-
-                        .anyRequest().hasAnyAuthority("USER", "ADMIN", "SUPER_ADMIN")
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil), UsernamePasswordAuthenticationFilter.class);
 
