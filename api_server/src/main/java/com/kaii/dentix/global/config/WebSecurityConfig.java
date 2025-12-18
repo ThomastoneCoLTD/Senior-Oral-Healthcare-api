@@ -75,27 +75,27 @@ public class WebSecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 1. OPTIONS 항상 허용
+                        // 1️⃣ OPTIONS (항상 최상단)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 2. 엑셀 export (ADMIN, SUPER_ADMIN 허용)
+                        // 2️⃣ 엑셀 export (ADMIN, SUPER_ADMIN)
                         .requestMatchers("/admin/billing/export/**")
                         .hasAnyAuthority("ADMIN", "SUPER_ADMIN")
 
-                        // 3. 템플릿 다운로드
+                        // 3️⃣ 템플릿 다운로드
                         .requestMatchers("/admin/user/bulk-upload/template/**").permitAll()
 
-                        // 4. 헬스체크
+                        // 4️⃣ 헬스체크
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
 
-                        // 5. 기존 제외 URL
+                        // 5️⃣ 로그인/비인증 허용 URL
                         .requestMatchers(EXCLUDE_URLS).permitAll()
 
-                        // 6. 나머지 admin API
+                        // 6️⃣ Admin API 전체
                         .requestMatchers("/admin/**")
                         .hasAnyAuthority("ADMIN", "SUPER_ADMIN")
 
-                        // 7. 나머지 요청
+                        // 7️⃣ 나머지는 인증만 필요 (⭐ 반드시 맨 마지막)
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil),
