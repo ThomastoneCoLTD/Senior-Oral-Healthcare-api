@@ -3,6 +3,7 @@ package com.kaii.dentix.global.config;
 import com.kaii.dentix.domain.jwt.JwtAuthenticationFilter;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -10,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -20,6 +22,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+@Slf4j
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -88,7 +91,7 @@ public class WebSecurityConfig {
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil),
                         UsernamePasswordAuthenticationFilter.class);
-
+        log.error("AUTH = {}", SecurityContextHolder.getContext().getAuthentication());
         return http.build();
     }
     @Bean
@@ -97,8 +100,6 @@ public class WebSecurityConfig {
 
         // 1. 명확한 도메인 허용 (와일드카드 '*' 보다는 명시적 도메인 추천)
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173",
-                "http://localhost:8080",
                 "https://denti.thomabio.com"
         ));
 

@@ -13,6 +13,7 @@ import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.extractor.ExcelExtractor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,7 @@ import java.util.Map;
 /**
  *관리자 Billing 컨트롤러
  */
+@Slf4j
 @RestController
 @RequestMapping("/admin/billing")
 @RequiredArgsConstructor
@@ -78,7 +80,7 @@ public class AdminBillingController {
     ) throws IOException {
 
         BillingExcelData bundle = billingService.getBillingExcelBundle(organizationId);
-
+        log.error("### EXPORT CONTROLLER HIT ###");
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setHeader("Content-Disposition",
                 "attachment; filename=billing_all_" + organizationId + ".xlsx");
