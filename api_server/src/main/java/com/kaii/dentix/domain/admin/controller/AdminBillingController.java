@@ -74,14 +74,14 @@ public class AdminBillingController {
      * - 기관 관리자는 자신의 기관만 가능
      * - 슈퍼관리자는 organizationId 지정 가능
      */
-    @GetMapping(value = "/export/excel", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping("/export/excel")
     public void exportAllBillingExcel(
             @RequestParam Long organizationId,
             HttpServletResponse response
-    ) throws IOException {
-
+    ) {
         try {
-            BillingExcelData bundle = billingService.getBillingExcelBundle(organizationId);
+            BillingExcelData bundle =
+                    billingService.getBillingExcelBundle(organizationId);
 
             response.setContentType(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -91,22 +91,32 @@ public class AdminBillingController {
                     "attachment; filename=billing_all_" + organizationId + ".xlsx"
             );
 
-            billingExcelGenerator.generateExcel(bundle, response.getOutputStream());
+            billingExcelGenerator.generateExcel(
+                    bundle,
+                    response.getOutputStream()
+            );
 
         } catch (Exception e) {
-            // ⭐ 여기서 응답을 직접 종료
-            response.reset();
-            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-            response.setContentType("application/json;charset=UTF-8");
+            log.error("Billing excel export failed", e);
 
-            response.getWriter().write("""
+            if (response.isCommitted()) {
+                return;
+            }
+
+            try {
+                response.reset();
+                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("""
             {
               "code": 500,
               "message": "엑셀 파일 생성 중 오류가 발생했습니다."
             }
-        """);
-
-            // ⭐ GlobalExceptionHandler로 던지지 않음
+            """);
+            } catch (IOException io) {
+                // 여기선 로그만
+                log.error("Failed to write error response", io);
+            }
         }
     }
 
