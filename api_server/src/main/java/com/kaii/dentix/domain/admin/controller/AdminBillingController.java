@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.extractor.ExcelExtractor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -79,13 +80,34 @@ public class AdminBillingController {
             HttpServletResponse response
     ) throws IOException {
 
-        BillingExcelData bundle = billingService.getBillingExcelBundle(organizationId);
-        log.error("### EXPORT CONTROLLER HIT ###");
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition",
-                "attachment; filename=billing_all_" + organizationId + ".xlsx");
+        try {
+            BillingExcelData bundle = billingService.getBillingExcelBundle(organizationId);
 
-        billingExcelGenerator.generateExcel(bundle, response.getOutputStream());
+            response.setContentType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            );
+            response.setHeader(
+                    "Content-Disposition",
+                    "attachment; filename=billing_all_" + organizationId + ".xlsx"
+            );
+
+            billingExcelGenerator.generateExcel(bundle, response.getOutputStream());
+
+        } catch (Exception e) {
+            // ⭐ 여기서 응답을 직접 종료
+            response.reset();
+            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            response.setContentType("application/json;charset=UTF-8");
+
+            response.getWriter().write("""
+            {
+              "code": 500,
+              "message": "엑셀 파일 생성 중 오류가 발생했습니다."
+            }
+        """);
+
+            // ⭐ GlobalExceptionHandler로 던지지 않음
+        }
     }
 
     /**기관별 Billing 내역 조회 */

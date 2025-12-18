@@ -97,8 +97,6 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // 1. 명확한 도메인 허용 (와일드카드 '*' 보다는 명시적 도메인 추천)
         configuration.setAllowedOrigins(List.of(
                 "https://denti.thomabio.com"
         ));
