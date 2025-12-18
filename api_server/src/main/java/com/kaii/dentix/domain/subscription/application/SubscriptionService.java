@@ -74,7 +74,7 @@ public class SubscriptionService {
             return new SuccessResponse(200, "이미 적용된 구독입니다.");
         }
 
-        // 4️⃣ 기존 ACTIVE 히스토리 → EXPIRED 처리 (1개만 존재하도록 보장)
+        //기존 ACTIVE 히스토리 → EXPIRED 처리 (1개만 존재하도록 보장)
         organizationSubscriptionHistoryRepository
                 .findByOrganizationAndStatus(organization, SubscriptionStatus.ACTIVE)
                 .ifPresent(active -> {
@@ -82,41 +82,12 @@ public class SubscriptionService {
                     active.setStatus(SubscriptionStatus.EXPIRED);
                 });
 
-        // 5️⃣ 기존 구독 기준 EXPIRED 히스토리 생성 (스냅샷)
-        if (currentSubscription.getSubscriptionPlan() != null) {
 
-            int successCount =
-                    currentSubscription.getSuccessCount() != null
-                            ? currentSubscription.getSuccessCount()
-                            : 0;
-
-            int max =
-                    currentSubscription.getSubscriptionPlan().getMaxSuccessResponses() != null
-                            ? currentSubscription.getSubscriptionPlan().getMaxSuccessResponses()
-                            : 0;
-
-            int remaining = Math.max(max - successCount, 0);
-
-            OrganizationSubscriptionHistory expiredHistory =
-                    OrganizationSubscriptionHistory.builder()
-                            .organization(organization)
-                            .subscriptionPlan(currentSubscription.getSubscriptionPlan())
-                            .startDate(currentSubscription.getSubscriptionStartDate())
-                            .endDate(now)
-                            .status(SubscriptionStatus.EXPIRED)
-                            .reason("구독상품 변경")
-                            .successCount(successCount)
-                            .remainingResponses(remaining)
-                            .build();
-
-            organizationSubscriptionHistoryRepository.save(expiredHistory);
-        }
-
-        // 6️⃣ 현재 구독 갱신
+        //현재 구독 갱신
         currentSubscription.setSubscriptionPlan(newPlan);
 
-        // ✅ 3️⃣ initializeSubscription 안전성
-        // ⚠️ 이 메서드는 "기간 계산만" 해야 한다 (plan 변경 금지)
+        //  initializeSubscription 안전성
+        // 이 메서드는 "기간 계산만" 해야 한다 (plan 변경 금지)
         currentSubscription.initializeSubscription();
 
         organizationSubscriptionRepository.save(currentSubscription);
