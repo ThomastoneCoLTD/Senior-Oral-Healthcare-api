@@ -81,7 +81,10 @@ public class WebSecurityConfig {
                         // 2. 엑셀 및 템플릿 경로를 명확하게 최상단 배치
                         .requestMatchers("/admin/billing/export/excel/**").permitAll()
                         .requestMatchers("/admin/user/bulk-upload/template/**").permitAll()
-
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/health/**"
+                        ).permitAll()
                         // 3. 기존 배열 적용
                         .requestMatchers(EXCLUDE_URLS).permitAll()
 
@@ -98,6 +101,7 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
+                "http://localhost:8080",
                 "https://denti.thomabio.com"
         ));
 
