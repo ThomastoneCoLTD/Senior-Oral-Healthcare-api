@@ -20,14 +20,18 @@ public class CloudWatchController {
 
     @GetMapping("/summary")
     public AwsMetricsSummaryResponse getAwsMetricsSummary() {
-        String ec2InstanceId = "i-075a45b255bd21e67";
-        String rdsInstanceId = "db-mysql-saas-dev";
-        String s3BucketName  = "denti-dev";
+        // ASG 이름으로 조회
+        String asgName = "denti-global-backend-asg";
+        String rdsInstanceId = "aurora-denti-global-dev-instance-1";
+        String s3BucketName  = "denti-global-singapore";
 
         List<ResourceMetric> allMetrics = new ArrayList<>();
-        allMetrics.addAll(cloudWatchService.ec2Metrics(ec2InstanceId));
+
+        // ec2Metrics(instanceId) 대신 asgMetrics(asgName) 호출!
+        allMetrics.addAll(cloudWatchService.asgMetrics(asgName));
         allMetrics.addAll(cloudWatchService.rdsMetrics(rdsInstanceId));
         allMetrics.addAll(cloudWatchService.s3Metrics(s3BucketName));
+
         return new AwsMetricsSummaryResponse(allMetrics);
     }
 }

@@ -39,26 +39,35 @@ public class CloudWatchService {
                     .sorted((a, b) -> a.timestamp().compareTo(b.timestamp()))
                     .collect(Collectors.toList());
         } catch (CloudWatchException e) {
-            System.err.println("❌ CloudWatch metric fetch error: " + metricName + " -> " + e.awsErrorDetails().errorMessage());
+            System.err.println("CloudWatch metric fetch error: " + metricName + " -> " + e.awsErrorDetails().errorMessage());
             return List.of();
         }
     }
 
-    /** ✅ EC2 CPU, Memory, Network */
-    public List<ResourceMetric> ec2Metrics(String instanceId) {
+    /**EC2 CPU, Memory, Network */
+//    public List<ResourceMetric> ec2Metrics(String instanceId) {
+//        return List.of(
+//                new ResourceMetric("EC2", "CPUUtilization",
+//                        getMetricData("AWS/EC2", "CPUUtilization", "InstanceId", instanceId)),
+//                new ResourceMetric("EC2", "MemoryUtilization",
+//                        getMetricData("CWAgent", "mem_used_percent", "InstanceId", instanceId)), // CloudWatch Agent 필요
+//                new ResourceMetric("EC2", "NetworkIn",
+//                        getMetricData("AWS/EC2", "NetworkIn", "InstanceId", instanceId)),
+//                new ResourceMetric("EC2", "NetworkOut",
+//                        getMetricData("AWS/EC2", "NetworkOut", "InstanceId", instanceId))
+//        );
+//    }
+
+    /** 1. ASG 전체 지표 (오토스케일링 그룹 기준) */
+    public List<ResourceMetric> asgMetrics(String asgName) {
         return List.of(
-                new ResourceMetric("EC2", "CPUUtilization",
-                        getMetricData("AWS/EC2", "CPUUtilization", "InstanceId", instanceId)),
-                new ResourceMetric("EC2", "MemoryUtilization",
-                        getMetricData("CWAgent", "mem_used_percent", "InstanceId", instanceId)), // CloudWatch Agent 필요
-                new ResourceMetric("EC2", "NetworkIn",
-                        getMetricData("AWS/EC2", "NetworkIn", "InstanceId", instanceId)),
-                new ResourceMetric("EC2", "NetworkOut",
-                        getMetricData("AWS/EC2", "NetworkOut", "InstanceId", instanceId))
+                new ResourceMetric("ASG", "GroupInServiceInstances",
+                        getMetricData("AWS/AutoScaling", "GroupInServiceInstances", "AutoScalingGroupName", asgName)),
+                new ResourceMetric("EC2(ASG)", "CPUUtilization",
+                        getMetricData("AWS/EC2", "CPUUtilization", "AutoScalingGroupName", asgName))
         );
     }
-
-    /** ✅ RDS CPU, Memory, Storage, Connections */
+    /**RDS CPU, Memory, Storage, Connections */
     public List<ResourceMetric> rdsMetrics(String dbInstanceIdentifier) {
         return List.of(
                 new ResourceMetric("RDS", "CPUUtilization",
@@ -72,7 +81,7 @@ public class CloudWatchService {
         );
     }
 
-    /** ✅ S3 버킷 용량, 객체 수 */
+    /**S3 버킷 용량, 객체 수 */
     public List<ResourceMetric> s3Metrics(String bucketName) {
         return List.of(
                 new ResourceMetric("S3", "BucketSizeBytes",
