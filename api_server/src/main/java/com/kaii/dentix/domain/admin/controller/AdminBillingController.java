@@ -35,11 +35,7 @@ import java.util.Map;
 public class AdminBillingController {
 
     private final BillingService billingService;
-    private final BillingExportService billingExportService;
     private final AdminService adminService;
-    private final OrganizationService organizationService;
-    private final JwtTokenUtil jwtTokenUtil;
-    private final AdminRepository adminRepository;
     private final BillingExcelGenerator billingExcelGenerator;
 
     /** 일반관리자 - 본인 기관의 미납 청구 목록 조회 */
@@ -102,9 +98,8 @@ public class AdminBillingController {
             }
 
         } catch (Exception e) {
-            // ❗ 파일 다운로드 API에서는 응답 변경 금지
+            //파일 다운로드 API에서는 응답 변경 금지
             log.error("Billing excel export failed", e);
-            // 그냥 종료 (브라우저에서는 다운로드 실패로 처리)
         }
     }
 

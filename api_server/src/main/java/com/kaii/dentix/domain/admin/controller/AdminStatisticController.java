@@ -29,26 +29,6 @@ import java.util.List;
 public class AdminStatisticController {
 
     private final AdminStatisticService adminStatisticService;
-    /**
-     *  사용자 통계
-     */
-//    @GetMapping(name = "사용자 통계")
-//    public DataResponse<AdminUserStatisticResponse> userStatistic(AdminStatisticRequest request){
-//        DataResponse<AdminUserStatisticResponse> response = new DataResponse<>(adminStatisticService.userStatistic(request));
-//        return response;
-//    }
-//
-//    /**
-//     *  기관별 사용자 통계
-//     */
-//    @GetMapping("/org")
-//    public ResponseEntity<AdminUserStatisticResponse> getOrganizationStatistics(
-//            AdminStatisticRequest request,  //쿼리 파라미터(TODAY, WEEK1 등 필터 가능)
-//            HttpServletRequest httpRequest
-//    ) {
-//        AdminUserStatisticResponse response = adminStatisticService.getOrgStatistics(request, httpRequest);
-//        return ResponseEntity.ok(response);
-//    }
 
     @GetMapping("/org/users")
     public ResponseEntity<AdminStatisticsOrgUserResponse> getOrganizationUserStatistics(

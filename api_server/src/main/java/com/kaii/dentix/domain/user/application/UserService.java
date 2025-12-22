@@ -22,7 +22,10 @@ import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreementRespo
 import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
 import com.kaii.dentix.domain.userToAppService.dao.UserToAppServiceRepository;
 import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
-import com.kaii.dentix.global.common.error.exception.*;
+import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
+import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
+import com.kaii.dentix.global.common.error.exception.TokenExpiredException;
+import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +52,6 @@ public class UserService {
 
     private final ApplicationEventPublisher publisher;
     private final UserServiceAgreementRepository userServiceAgreementRepository;
-//    private final UserDeviceTypeRepository userDeviceTypeRepository;
 
     private final PasswordEncoder passwordEncoder;
 

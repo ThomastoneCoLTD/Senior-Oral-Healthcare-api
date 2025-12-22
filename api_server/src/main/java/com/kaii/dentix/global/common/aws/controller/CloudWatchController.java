@@ -1,16 +1,17 @@
 package com.kaii.dentix.global.common.aws.controller;
 
+import java.util.List;
+import java.util.ArrayList;
+import lombok.RequiredArgsConstructor;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.kaii.dentix.global.common.aws.dto.ResourceMetric;
 import com.kaii.dentix.global.common.aws.application.CloudWatchService;
 import com.kaii.dentix.global.common.aws.dto.AwsMetricsSummaryResponse;
-import com.kaii.dentix.global.common.aws.dto.MetricPoint;
-import com.kaii.dentix.global.common.aws.dto.ResourceMetric;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-import software.amazon.awssdk.services.cloudwatch.model.*;
 
-import java.time.Instant;
-import java.util.*;
 @RestController
 @RequestMapping("/api/aws/metrics")
 @RequiredArgsConstructor

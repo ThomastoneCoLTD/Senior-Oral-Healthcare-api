@@ -3,8 +3,6 @@ package com.kaii.dentix.domain.admin.dto.request;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.kaii.dentix.global.config.PasswordSerializer;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.*;
 
 @Getter @Builder

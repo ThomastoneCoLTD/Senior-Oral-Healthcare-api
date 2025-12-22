@@ -79,6 +79,10 @@ server:
       force: true
     session:
       timeout: 60m
+      cookie:
+        http-only: true    # [cite: 251] 쿠키 속성 검사(HttpOnly) 해결 - 자바스크립트 접근 차단
+        secure: true       # [cite: 346] 쿠키 속성 검사(Secure) 해결 - HTTPS에서만 전송
+        same-site: lax     # [cite: 299] 쿠키 속성 검사(SameSite) 해결 - CSRF 방지 (Strict 또는 Lax 권장)
     multipart:
       max-file-size: 500MB
       max-request-size: 500MB

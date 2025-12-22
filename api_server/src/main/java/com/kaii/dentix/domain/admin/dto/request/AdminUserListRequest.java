@@ -6,7 +6,6 @@ import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;

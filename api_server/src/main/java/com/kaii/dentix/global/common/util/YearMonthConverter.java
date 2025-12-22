@@ -7,7 +7,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 
 /**
- * ✅ YearMonth ↔ String 변환기
+ * YearMonth ↔ String 변환기
  */
 @Converter(autoApply = true)
 public class YearMonthConverter implements AttributeConverter<YearMonth, String> {

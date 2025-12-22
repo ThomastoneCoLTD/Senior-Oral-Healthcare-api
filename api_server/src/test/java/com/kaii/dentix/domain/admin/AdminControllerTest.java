@@ -1,12 +1,11 @@
 package com.kaii.dentix.domain.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.admin.dto.*;
 import com.kaii.dentix.common.ControllerTest;
-import com.kaii.dentix.admin.application.AdminService;
-import com.kaii.dentix.admin.controller.AdminController;
-import com.kaii.dentix.admin.dto.request.AdminModifyPasswordRequest;
-import com.kaii.dentix.admin.dto.request.AdminSignUpRequest;
+import com.kaii.dentix.domain.admin.application.AdminService;
+import com.kaii.dentix.domain.admin.dto.*;
+import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
+import com.kaii.dentix.domain.admin.dto.request.AdminSignUpRequest;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import com.kaii.dentix.global.common.dto.PagingDTO;
@@ -45,7 +44,7 @@ import static org.springframework.restdocs.request.RequestDocumentation.queryPar
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AdminController.class)
+@WebMvcTest(com.kaii.dentix.domain.admin.controller.AdminController.class)
 public class AdminControllerTest extends ControllerTest {
 
     private MockMvc mockMvc;
@@ -64,12 +63,11 @@ public class AdminControllerTest extends ControllerTest {
     private PasswordEncoder passwordEncoder;
 
     @MockBean
-    private AdminService adminService;
+    private com.kaii.dentix.domain.admin.application.AdminService adminService;
 
     public AdminSignUpDto adminSignUpDto(){
         return AdminSignUpDto.builder()
                 .adminId(1L)
-                .adminPassword("dentix2023!")
                 .build();
     }
 

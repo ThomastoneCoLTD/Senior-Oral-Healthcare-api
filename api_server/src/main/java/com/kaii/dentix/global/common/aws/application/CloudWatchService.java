@@ -8,7 +8,7 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchClient;
 import software.amazon.awssdk.services.cloudwatch.model.*;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service

@@ -74,7 +74,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
             builder.and(user.organization.organizationId.eq(request.getOrganizationId()));
         }
 
-        // 🔥 1) 사용자 목록만 조회 (가장 빠름)
+        //1) 사용자 목록만 조회 (가장 빠름)
         List<User> users = queryFactory
                 .selectFrom(user)
                 .leftJoin(user.organization, organization).fetchJoin()
@@ -90,19 +90,19 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
         List<Long> userIds = users.stream().map(User::getUserId).toList();
 
-        // 🔥 2) 최신 설문
+        //2) 최신 설문
         Map<Long, Questionnaire> latestQuestionnaires = getLatestQuestionnaires(userIds);
 
-        // 🔥 3) 최신 검사 결과
+        //3) 최신 검사 결과
         Map<Long, OralCheck> latestOralChecks = getLatestOralChecks(userIds);
 
-        // 🔥 4) 유저별 oralStatusTitle
+        //4) 유저별 oralStatusTitle
         Map<Long, String> oralStatusTitles = getOralStatusTitles(userIds);
 
-        // 🔥 5) 유저별 사용 서비스명
+        //5) 유저별 사용 서비스명
         Map<Long, List<String>> serviceNames = getUserServices(userIds);
 
-        // 🔥 6) DTO 리스트 조립
+        //6) DTO 리스트 조립
         List<AdminUserInfoDto> result = users.stream()
                 .map(u -> new AdminUserInfoDto(
                         u.getUserId(),

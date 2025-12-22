@@ -1,11 +1,12 @@
 package com.kaii.dentix.domain.userServiceAgreement.dto.request;
 
-import com.kaii.dentix.domain.type.YnType;
-import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
+import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.NotNull;
+
+import com.kaii.dentix.domain.type.YnType;
 
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor

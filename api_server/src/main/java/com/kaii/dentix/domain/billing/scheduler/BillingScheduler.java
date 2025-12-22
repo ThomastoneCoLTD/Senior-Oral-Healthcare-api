@@ -31,7 +31,7 @@ public class BillingScheduler {
     private final OrganizationRepository organizationRepository;
 
     /**
-     * ✅ 매일 자정마다 실행
+     * 매일 자정마다 실행
      * - 만료된 구독(autoRenew=true) 조회
      * - 새 Billing 생성 (UNPAID)
      * - 구독기간 + 기관정보 갱신
@@ -43,7 +43,7 @@ public class BillingScheduler {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 1️⃣ 만료된 + 자동갱신 구독 조회
+        //만료된 + 자동갱신 구독 조회
         List<OrganizationSubscription> expiringSubscriptions =
                 organizationSubscriptionRepository.findAllBySubscriptionEndDateBeforeAndAutoRenewTrue(now.plusDays(1));
 
@@ -54,28 +54,28 @@ public class BillingScheduler {
             LocalDateTime newStart = now;
             LocalDateTime newEnd;
 
-            // ✅ planCycle은 String 타입이므로 문자열 비교
+            // planCycle은 String 타입이므로 문자열 비교
             String planCycle = plan.getPlanCycle();
             if ("monthly".equalsIgnoreCase(planCycle)) {
                 newEnd = newStart.plusMonths(1);
             } else if ("yearly".equalsIgnoreCase(planCycle)) {
                 newEnd = newStart.plusYears(1);
             } else {
-                log.warn("⚠️ [{}] 기관의 planCycle 값이 '{}' → 기본 monthly로 처리",
+                log.warn("[{}] 기관의 planCycle 값이 '{}' → 기본 monthly로 처리",
                         organization.getOrganizationName(), planCycle);
                 newEnd = newStart.plusMonths(1);
             }
 
-            // ✅ 중복 Billing 방지
+            // 중복 Billing 방지
             boolean alreadyExists = billingRepository.existsByOrganizationAndPeriodStart(organization, newStart);
             if (alreadyExists) {
-                log.info("⚠️ [{}] 기관의 {} 플랜 Billing이 이미 오늘 존재 → 건너뜀",
+                log.info("[{}] 기관의 {} 플랜 Billing이 이미 오늘 존재 → 건너뜀",
                         organization.getOrganizationName(),
                         plan.getPlanName());
                 continue;
             }
 
-            // ✅ 새 Billing 생성 (결제 미완료 상태)
+            // 새 Billing 생성 (결제 미완료 상태)
             Billing newBilling = Billing.builder()
                     .organization(organization)
                     .subscriptionPlan(plan)
@@ -90,22 +90,22 @@ public class BillingScheduler {
 
             billingRepository.save(newBilling);
 
-            // ✅ 구독 정보 갱신
+            // 구독 정보 갱신
             subscription.setSubscriptionStartDate(newStart);
             subscription.setSubscriptionEndDate(newEnd);
             subscription.setStatus(SubscriptionStatus.ACTIVE);
             organizationSubscriptionRepository.save(subscription);
 
-            // ✅ 기관 테이블 구독 정보 동기화
+            // 기관 테이블 구독 정보 동기화
             organization.setSubscriptionStartDate(newStart);
             organization.setSubscriptionEndDate(newEnd);
             organizationRepository.save(organization);
 
-            log.info("✅ [{}] 기관의 {} 플랜 자동 Billing 생성 (UNPAID)",
+            log.info("[{}] 기관의 {} 플랜 자동 Billing 생성 (UNPAID)",
                     organization.getOrganizationName(),
                     plan.getPlanName());
         }
 
-        log.info("🕛 [BillingScheduler] 구독 자동 갱신 검사 완료");
+        log.info("[BillingScheduler] 구독 자동 갱신 검사 완료");
     }
 }

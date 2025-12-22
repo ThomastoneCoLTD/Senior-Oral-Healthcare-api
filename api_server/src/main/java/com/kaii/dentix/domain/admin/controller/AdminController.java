@@ -2,19 +2,19 @@ package com.kaii.dentix.domain.admin.controller;
 
 import com.kaii.dentix.domain.admin.application.AdminLoginService;
 import com.kaii.dentix.domain.admin.application.AdminService;
-import com.kaii.dentix.domain.admin.dto.*;
+import com.kaii.dentix.domain.admin.dto.AdminAutoLoginDto;
+import com.kaii.dentix.domain.admin.dto.AdminListDto;
+import com.kaii.dentix.domain.admin.dto.AdminPasswordResetDto;
+import com.kaii.dentix.domain.admin.dto.AdminSignUpDto;
 import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
 import com.kaii.dentix.domain.admin.dto.request.AdminSignUpRequest;
 import com.kaii.dentix.domain.organization.application.OrganizationService;
-import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
-import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,8 +24,6 @@ import org.springframework.web.bind.annotation.*;
 public class AdminController {
 
     private final AdminService adminService;
-    private final AdminLoginService adminLoginService;
-    private final OrganizationService organizationService;
     /**
      *  관리자 등록
      */
@@ -43,13 +41,6 @@ public class AdminController {
         adminService.adminModifyPassword(httpServletRequest, request);
         return new SuccessResponse();
     }
-//    @PutMapping(value = "/reset-password", name = "관리자 비밀번호 재설정")
-//    public SuccessResponse adminResetPassword(
-//            @Valid @RequestBody AdminResetPasswordRequest request) {
-//
-//        adminService.adminResetPassword(request);
-//        return new SuccessResponse();
-//    }
     /**
      *  관리자 삭제
      */
@@ -85,14 +76,4 @@ public class AdminController {
         DataResponse<AdminAutoLoginDto> response = new DataResponse<>(adminService.adminAutoLogin(httpServletRequest));
         return response;
     }
-//
-//    @PutMapping("/{id}")
-//    public ResponseEntity<OrganizationResponse> update(
-//            @PathVariable Long id,
-//            @RequestBody OrganizationUpdateRequest request) {
-//        return ResponseEntity.ok(organizationService.update(id, request));
-//    }
-
-
-
 }

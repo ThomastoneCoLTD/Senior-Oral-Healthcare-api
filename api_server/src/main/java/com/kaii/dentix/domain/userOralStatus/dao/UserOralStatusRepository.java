@@ -1,14 +1,15 @@
 package com.kaii.dentix.domain.userOralStatus.dao;
 
-import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
-import com.kaii.dentix.domain.userOralStatus.domain.UserOralStatus;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Date;
 import java.util.List;
+
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
+import com.kaii.dentix.domain.userOralStatus.domain.UserOralStatus;
 
 public interface UserOralStatusRepository extends JpaRepository<UserOralStatus, Long> {
 

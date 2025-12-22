@@ -1,15 +1,17 @@
 package com.kaii.dentix.domain.systemLog.domain;
 
-import com.kaii.dentix.domain.type.UserRole;
+import java.util.Date;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.DynamicInsert;
 
-import java.util.Date;
+import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.CreationTimestamp;
+
+import com.kaii.dentix.domain.type.UserRole;
 
 @Entity
 @Table(name = "system_log")
@@ -19,7 +21,6 @@ import java.util.Date;
 @Getter
 @DynamicInsert
 public class SystemLog {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long systemLogId;

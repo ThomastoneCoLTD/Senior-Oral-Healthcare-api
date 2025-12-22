@@ -15,8 +15,6 @@ import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionHistoryRe
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.subscription.application.SubscriptionService;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
-import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
 import com.kaii.dentix.domain.superUser.dto.*;
 import com.kaii.dentix.domain.type.BillingType;
 import com.kaii.dentix.domain.type.GenderType;
@@ -41,12 +39,11 @@ public class SuperAdminOrganizationService {
     private final OrganizationRepository organizationRepository;
     private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
     private final BillingRepository billingRepository;
-    private final OralCheckRepository oralcheckRepository;
-    private final SubscriptionService subscriptionService;
     private final OralCheckRepository oralCheckRepository;
     private final UserRepository userRepository;
     private final AdminUserCustomRepository adminUserCustomRepository;
-    /** ✅ 1. 전체 기관 목록 조회 */
+
+    /**1. 전체 기관 목록 조회 */
     @Transactional(readOnly = true)
     public List<OrganizationListResponse> getAllOrganizations() {
         return organizationRepository.findAll()
@@ -54,14 +51,16 @@ public class SuperAdminOrganizationService {
                 .map(OrganizationListResponse::fromEntity)
                 .toList();
     }
+
+    /**2. 기관 상세 정보 조회 */
     @Transactional(readOnly = true)
-    /** ✅ 2. 기관 상세 정보 조회 */
     public OrganizationDetailResponse getOrganizationDetail(Long organizationId) {
         Organization org = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 기관을 찾을 수 없습니다."));
         return OrganizationDetailResponse.fromEntity(org);
     }
-    /** ✅ 3. 기관별 구독이력 조회 */
+
+    /**3. 기관별 구독이력 조회 */
     @Transactional(readOnly = true)
     public List<OrganizationSubscriptionHistoryResponse> getOrganizationSubscriptions(Long organizationId) {
 
@@ -70,9 +69,10 @@ public class SuperAdminOrganizationService {
                         .findAllByOrganization_OrganizationIdOrderByStartDateDesc(organizationId);
 
         return histories.stream()
-                .map(OrganizationSubscriptionHistoryResponse::fromEntity)   // 🔥 이제 정상 동작
+                .map(OrganizationSubscriptionHistoryResponse::fromEntity)
                 .toList();
     }
+
     @Transactional(readOnly = true)
     public List<SuperAdminBillingDto> getOrganizationBillings(Long organizationId) {
 
@@ -126,25 +126,26 @@ public class SuperAdminOrganizationService {
 
                 .build();
     }
+
     @Transactional(readOnly = true)
     public SuperAdminAllUserStatisticsResponse getSuperAdminTotalUserStatistics(Admin admin) {
 
-        // 🔒 슈퍼관리자 권한 체크
+        //슈퍼관리자 권한 체크
         if (admin.getAdminIsSuper() != YnType.Y) {
             throw new BadRequestApiException("슈퍼관리자만 접근할 수 있습니다.");
         }
 
-        // 📌 기관별 사용자 통계 (기존 커스텀 쿼리)
+        //기관별 사용자 통계 (기존 커스텀 쿼리)
         List<SuperAdminUserStatisticResponse> orgStats =
                 adminUserCustomRepository.getAllOrganizationUserStats();
 
-        // 📌 전체 사용자 수
+        //전체 사용자 수
         long totalUsers = userRepository.count();
 
         long maleUsers = userRepository.countByUserGender(GenderType.M);
         long femaleUsers = userRepository.countByUserGender(GenderType.W);
 
-        // 📌 최근 7일 신규 가입자
+        //최근 7일 신규 가입자
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
         Date oneWeekAgoDate = java.sql.Timestamp.valueOf(oneWeekAgo);
 
@@ -160,7 +161,6 @@ public class SuperAdminOrganizationService {
     }
 
     public SuperAdminCurrentSubscriptionDto getCurrentSubscription(Long orgId) {
-
         Organization org = organizationRepository.findByOrganizationId(orgId)
                 .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
 
@@ -177,8 +177,8 @@ public class SuperAdminOrganizationService {
                 .endDate(org.getOrganizationSubscription().getSubscriptionEndDate())
                 .build();
     }
-    public SuperAdminBillingListResponse getOrganizationBillingForSuperAdmin(Long organizationId) {
 
+    public SuperAdminBillingListResponse getOrganizationBillingForSuperAdmin(Long organizationId) {
         Organization org = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("기관 없음"));
 
@@ -194,8 +194,8 @@ public class SuperAdminOrganizationService {
 
         return SuperAdminBillingListResponse.from(org, billings);
     }
-    public BillingOveruseResponse getOveruseDetail(Long billingId) {
 
+    public BillingOveruseResponse getOveruseDetail(Long billingId) {
         Billing baseBilling = billingRepository.findById(billingId)
                 .orElseThrow(() -> new EntityNotFoundException("Billing 없음"));
 

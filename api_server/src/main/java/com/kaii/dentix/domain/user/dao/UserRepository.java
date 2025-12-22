@@ -1,17 +1,13 @@
 package com.kaii.dentix.domain.user.dao;
 
 //import com.kaii.dentix.domain.patient.domain.Patient;
-import com.kaii.dentix.domain.admin.dto.AdminUserInfoDto;
-import com.kaii.dentix.domain.organization.domain.Organization;
+
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.domain.User;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +35,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByOrganization_OrganizationIdAndCreatedAfter(Long organizationId, Date created);
 //    List<User> findAllByOrganization_OrganizationId(Long organizationId);
 
-//    // ✅ 기관 ID 기준 사용자 조회 (정확히 Organization과 매핑되는 필드명 확인!)
+//    // 기관 ID 기준 사용자 조회 (정확히 Organization과 매핑되는 필드명 확인!)
 //    @Query("SELECT u FROM User u WHERE u.organization.organizationId = :organizationId")
 //    List<User> findByOrganization_OrganizationId(@Param("organizationId") Long organizationId);
 //

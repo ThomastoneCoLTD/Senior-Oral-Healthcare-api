@@ -72,25 +72,36 @@ public class WebSecurityConfig {
                             response.setHeader("X-Frame-Options", "DENY");
                             response.setHeader("Content-Security-Policy",
                                     "default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'");
+                            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+                            response.setHeader("Pragma", "no-cache");
+                            response.setHeader("Expires", "0");
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // 1. OPTIONS 메서드는 무조건 가장 먼저 허용 (CORS 해결)
+                        //CORS Preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 2. 엑셀 및 템플릿 경로를 명확하게 최상단 배치
-                        .requestMatchers("/admin/billing/export/excel/**").permitAll()
-                        .requestMatchers("/admin/user/bulk-upload/template/**").permitAll()
+                        //인증 제외 URL
                         .requestMatchers(
+                                "/admin/billing/export/excel/**",
+                                "/admin/user/bulk-upload/template/**",
                                 "/actuator/health",
                                 "/actuator/health/**"
                         ).permitAll()
-                        // 3. 기존 배열 적용
                         .requestMatchers(EXCLUDE_URLS).permitAll()
 
-                        // 4. 나머지 권한 검사
+                        //관리자 API
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-                        .anyRequest().authenticated()
+
+                        //일반 API - 허용 메소드만 인증 요구
+                        .requestMatchers(HttpMethod.GET, "/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/**").authenticated()
+
+                        //임의 HTTP 메소드 차단
+                        .anyRequest().denyAll()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil),
                         UsernamePasswordAuthenticationFilter.class);

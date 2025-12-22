@@ -28,14 +28,7 @@ public class AdminOrganizationService {
     private final OrganizationHistoryRepository organizationHistoryRepository;
     private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
     private final OrganizationSubscriptionRepository organizationSubscriptionRepository;
-    /** 일반관리자 - 본인 기관 정보 조회 */
-//    public Organization getMyOrganization(Admin admin) {
-//        Organization organization = admin.getOrganization();
-//        if (organization == null) {
-//            throw new IllegalArgumentException("관리자가 소속된 기관이 없습니다.");
-//        }
-//        return organization;
-//    }
+
     /** 일반관리자 - 본인 기관 정보 조회 */
     @Transactional
     public OrganizationReResponse getMyOrganization(Admin admin) {
@@ -45,13 +38,13 @@ public class AdminOrganizationService {
             throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
         }
 
-        // ✅ 현재 구독 (단일 기준)
+        //현재 구독 (단일 기준)
         OrganizationSubscription subscription =
                 organizationSubscriptionRepository
                         .findByOrganization(org)
                         .orElseThrow(() -> new EntityNotFoundException("구독 정보가 없습니다."));
 
-        // ✅ 과거 구독 이력 (필요하면 함께 내려줌)
+        //과거 구독 이력 (필요하면 함께 내려줌)
         List<OrganizationSubscriptionHistory> histories =
                 organizationSubscriptionHistoryRepository
                         .findAllByOrganization_OrganizationIdOrderByStartDateDesc(
@@ -80,135 +73,4 @@ public class AdminOrganizationService {
                 )
                 .toList();
     }
-
-//    @Transactional
-//    public OrganizationUsageResponse getMyOrganizationUsage(Long adminId) {
-//
-//        Admin admin = adminRepository.findById(adminId)
-//                .orElseThrow(() -> new NotFoundDataException("관리자를 찾을 수 없습니다."));
-//
-//        Organization organization = admin.getOrganization();
-//        Subscription subscription = subscriptionService.getCurrentSubscription(organization);
-//
-//        int successCount = oralCheckRepository.countSuccessByOrganization(organization.getOrganizationId());
-//        int max = subscription.getMaxSuccessResponses();
-//        int remaining = max - successCount;
-//        double usageRate = (double) successCount / max;
-//
-//        return OrganizationUsageResponse.builder()
-//                .subscriptionPlanName(subscription.getPlanName())
-//                .maxSuccessResponses(max)
-//                .successCount(successCount)
-//                .remainingResponses(remaining)
-//                .usageRate(usageRate)
-//
-//                .dailyUsage(oralCheckRepository.countTodayUsage(organization.getOrganizationId()))
-//                .weeklyUsage(oralCheckRepository.countThisWeekUsage(organization.getOrganizationId()))
-//                .monthlyUsage(oralCheckRepository.countThisMonthUsage(organization.getOrganizationId()))
-//
-//                .topUsers(oralCheckRepository.findTopUsers(organization.getOrganizationId()))
-//                .recentUsages(oralCheckRepository.findRecentUsages(organization.getOrganizationId()))
-//                .build();
-//    }
-//    @Transactional
-//    public OrganizationResponse getMyOrganization(HttpServletRequest request) {
-//        // 현재 로그인 관리자 ID 추출
-//        Admin admin = this.getTokenAdmin(request);
-//
-//        // 관리자 조회
-////        Admin admin = adminRepository.findById(adminId)
-////                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
-//
-//        if (admin.getOrganization() == null) {
-//            throw new BadRequestApiException("아직 등록된 기관이 없습니다.");
-//        }
-//
-//        Organization organization = admin.getOrganization();
-//
-//        // 응답 DTO 변환
-//        return OrganizationResponse.builder()
-//                .organizationId(organization.getOrganizationId())
-//                .organizationName(organization.getOrganizationName())
-//                .organizationPhoneNumber(organization.getOrganizationPhoneNumber())
-//                .subscriptionPlanId(organization.getSubscriptionPlan().getId())
-//                .subscriptionPlanName(organization.getSubscriptionPlan().getPlanName())
-//                .subscriptionStartDate(organization.getSubscriptionStartDate())
-//                .usageResetDate(organization.getUsageResetDate())
-//                .successCount(organization.getSuccessCount())
-//                .build();
-//    }
-//
-
-
-//@Transactional
-//public Object getMyOrganization(HttpServletRequest request) {
-//    // 현재 로그인 관리자 정보 가져오기
-//    Admin admin = this.getTokenAdmin(request);
-//
-//    // 슈퍼관리자라면 전체 기관 조회
-//    if (admin.getAdminIsSuper() == YnType.Y) {
-//        List<OrganizationResponse> allOrganizations = organizationRepository.findAll()
-//                .stream()
-//                .map(org -> OrganizationResponse.builder()
-//                        .organizationId(org.getOrganizationId())
-//                        .organizationName(org.getOrganizationName())
-//                        .organizationPhoneNumber(org.getOrganizationPhoneNumber())
-//                        .subscriptionPlanId(org.getSubscriptionPlan() != null ? org.getSubscriptionPlan().getId() : null)
-//                        .subscriptionPlanName(org.getSubscriptionPlan() != null ? org.getSubscriptionPlan().getPlanName().name() : null)
-////                        .subscriptionStartDate(org.getSubscriptionStartDate())
-////                        .usageResetDate(org.getUsageResetDate())
-////                        .successCount(org.getSuccessCount())
-//                        .build())
-//                .toList();
-//
-//        return allOrganizations; // 슈퍼관리자는 전체 목록 반환
-//    }
-//
-//    // 일반관리자: 자신의 기관만 조회
-//    if (admin.getOrganization() == null) {
-//        throw new BadRequestApiException("아직 등록된 기관이 없습니다.");
-//    }
-//
-//    Organization organization = admin.getOrganization();
-//
-//    // 단일 응답 DTO 변환
-//    return OrganizationResponse.builder()
-//            .organizationId(organization.getOrganizationId())
-//            .organizationName(organization.getOrganizationName())
-//            .organizationPhoneNumber(organization.getOrganizationPhoneNumber())
-//            .subscriptionPlanId(organization.getSubscriptionPlan().getId())
-//            .subscriptionPlanName(organization.getSubscriptionPlan().getPlanName().name())
-////            .subscriptionStartDate(organization.getSubscriptionStartDate())
-////            .usageResetDate(organization.getUsageResetDate())
-////            .successCount(organization.getSuccessCount())
-//            .build();
-//}
-//    public void changeSubscriptionPlan(Long orgId, Long newPlanId) {
-//        Organization org = organizationRepository.findById(orgId)
-//                .orElseThrow(() -> new IllegalArgumentException("기관이 존재하지 않습니다."));
-//
-//        SubscriptionPlan newPlan = subscriptionPlanRepository.findById(newPlanId)
-//                .orElseThrow(() -> new IllegalArgumentException("구독상품이 존재하지 않습니다."));
-//
-//        // 1. 플랜 변경
-//        org.updateSubscriptionPlan(newPlan);
-//
-//        // 2. 구독 시작일 갱신
-//        LocalDateTime now = LocalDateTime.now();
-//        org.updateSubscriptionStartDate(now);
-//
-//        // 3. 해당 날짜 이후 성공 건수 다시 계산
-//        long successCount = oralCheckRepository.countSuccessSince(orgId, now);
-//        org.increaseUsage();
-//
-//        organizationRepository.save(org);
-//    }
-//    @Transactional
-//    public List<AdminOrganizationUsageResponse> getAllOrganizationUsage(HttpServletRequest request, Admin admin) {
-//        if (admin.getAdminIsSuper() != YnType.Y) {
-//            throw new BadRequestApiException("슈퍼관리자만 전체 기관 사용량 조회가 가능합니다.");
-//        }
-//        return organizationRepository.findAllOrganizationUsage();
-//    }
-
 }

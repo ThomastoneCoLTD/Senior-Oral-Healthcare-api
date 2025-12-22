@@ -28,10 +28,9 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class AdminLoginService {
     private final JwtTokenUtil jwtTokenUtil;
-
     private final AdminRepository adminRepository;
-    private final OrganizationSubscriptionRepository subscriptionRepository;
     private final PasswordEncoder passwordEncoder;
+    private final OrganizationSubscriptionRepository subscriptionRepository;
 
     /**
      *  관리자 로그인
@@ -45,12 +44,6 @@ public class AdminLoginService {
 
         //최초 로그인 여부 확인
         YnType isFirstLogin = admin.getAdminLastLoginDate() == null ? YnType.Y : YnType.N;
-
-        //비밀번호가 비어있는 경우 (최초 로그인)
-//        if (admin.getAdminPassword() == null || admin.getAdminPassword().isEmpty()) {
-//            isFirstLogin = YnType.Y;
-//            admin.updatePassword(passwordEncoder, SecurityUtil.defaultPassword);
-//        }
 
         //비밀번호 검증
         if (!passwordEncoder.matches(request.getAdminPassword(), admin.getAdminPassword())) {
@@ -82,7 +75,7 @@ public class AdminLoginService {
             if (subscription != null) {
                 SubscriptionPlan plan = subscription.getSubscriptionPlan();
 
-                // ⚙️ LocalDate 변환
+                //LocalDate 변환
                 LocalDate startDate = subscription.getSubscriptionStartDate() != null
                         ? subscription.getSubscriptionStartDate().toLocalDate()
                         : null;
@@ -141,13 +134,4 @@ public class AdminLoginService {
                 .adminLoginIdentifier(admin.getAdminLoginIdentifier())
                 .build();
     }
-
-//    @Transactional
-//    public void adminModifyPassword(AdminResetPasswordRequest request) {
-//
-//        Admin admin = adminRepository.findById(request.getAdminId())
-//                .orElseThrow(() -> new NotFoundDataException("관리자를 찾을 수 없습니다."));
-//
-//        admin.updatePassword(passwordEncoder, request.getNewPassword());
-//    }
 }

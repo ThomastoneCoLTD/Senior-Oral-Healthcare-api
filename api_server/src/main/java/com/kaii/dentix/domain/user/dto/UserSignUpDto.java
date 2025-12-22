@@ -9,8 +9,6 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class UserSignUpDto extends TokenDto{
 
-//    private Long patientId;
-
     private Long userId;
 
     private String userLoginIdentifier;

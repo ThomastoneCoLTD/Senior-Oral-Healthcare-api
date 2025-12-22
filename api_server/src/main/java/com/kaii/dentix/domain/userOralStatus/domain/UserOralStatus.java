@@ -1,10 +1,11 @@
 package com.kaii.dentix.domain.userOralStatus.domain;
 
+import lombok.*;
+import jakarta.persistence.*;
+
+import com.kaii.dentix.global.common.entity.TimeEntity;
 import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
-import com.kaii.dentix.global.common.entity.TimeEntity;
-import jakarta.persistence.*;
-import lombok.*;
 
 @Entity
 @Getter @Builder

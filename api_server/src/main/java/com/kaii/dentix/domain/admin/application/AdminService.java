@@ -12,11 +12,6 @@ import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.organization.dto.OrganizationReResponse;
-import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
-import com.kaii.dentix.domain.type.SubscriptionStatus;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
@@ -34,7 +29,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -47,7 +41,7 @@ public class AdminService {
 
     private final PasswordEncoder passwordEncoder;
     private final FindPwdQuestionRepository findPwdQuestionRepository;
-    private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
+
     private final ModelMapper modelMapper;
     private AdminService adminService;
     private AdminUserCustomRepository adminUserCustomRepository;
@@ -74,23 +68,12 @@ public class AdminService {
     /**
      *로그인한 관리자의 기관 정보 조회
      */
-//    public OrganizationReResponse getMyOrganization(Admin admin) {
-//        Organization org = admin.getOrganization();
-//        if (org == null) {
-//            throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
-//        }
-//
-//        OrganizationSubscriptionHistory currentHistory =
-//                organizationSubscriptionHistoryRepository
-//                        .findTopByOrganization_OrganizationIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanOrderByStartDateDesc(
-//                                org.getOrganizationId(),
-//                                SubscriptionStatus.ACTIVE,
-//                                LocalDateTime.now(),
-//                                LocalDateTime.now()
-//                        )
-//                        .orElse(null);
-//        return OrganizationReResponse.from(org, currentHistory);
-//    }
+    public Organization getMyOrganization(Admin admin) {
+        if (admin.getOrganization() == null) {
+            throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
+        }
+        return admin.getOrganization();
+    }
 
     /**
      *  관리자 등록
@@ -135,7 +118,7 @@ public class AdminService {
     }
 
     /**
-     *  관리자 비밀번호 변경 
+     *  관리자 비밀번호 변경
      */
     @Transactional
     public void adminModifyPassword(HttpServletRequest httpServletRequest, AdminModifyPasswordRequest request){
@@ -239,19 +222,4 @@ public class AdminService {
                 .userList(userList.getContent())
                 .build();
     }
-
-    /** 일반관리자 - 기관등록 */
-//    @Transactional
-//    public void assignCurrentAdminToOrganization(Organization organization) {
-//
-//        Long adminId = jwtTokenUtil.getCurrentAdminId();
-//        Admin admin = adminRepository.findById(adminId)
-//                .orElseThrow(() -> new IllegalStateException("관리자 없음"));
-//
-//        if (admin.getOrganization() != null) {
-//            throw new IllegalStateException("이미 기관에 소속됨");
-//        }
-//
-//        admin.setOrganization(organization);
-//    }
 }

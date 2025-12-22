@@ -1,15 +1,17 @@
 package com.kaii.dentix.domain.userServiceAgreement.domain;
 
-import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.global.common.entity.TimeEntity;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
+
+import jakarta.persistence.*;
 import java.util.Date;
 
+import lombok.Getter;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.global.common.entity.TimeEntity;
 @Entity
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor

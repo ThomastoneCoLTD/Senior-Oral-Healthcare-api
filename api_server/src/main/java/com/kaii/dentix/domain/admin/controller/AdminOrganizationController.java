@@ -10,11 +10,7 @@ import com.kaii.dentix.domain.organization.application.OrganizationService;
 import com.kaii.dentix.domain.organization.application.OrganizationUsageService;
 import com.kaii.dentix.domain.organization.dao.OrganizationHistoryRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
-import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.dto.*;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.dto.OrganizationSubscriptionHistoryResponse;
-import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
 import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -135,10 +131,4 @@ public class AdminOrganizationController {
                 )
         );
     }
-//    @GetMapping("/usage/my")
-//    public DataResponse<OrganizationUsageResponse> getMyUsage(HttpServletRequest request) {
-//        Long adminId = adminService.getTokenAdmin(request).getAdminId();
-//        return new DataResponse<>(200, "기관 사용량 조회 성공",
-//                organizationUsageService.getMyOrganizationUsage(adminId));
-//    }
 }

@@ -2,7 +2,7 @@ package com.kaii.dentix.domain.billing.event;
 
 import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.global.common.EmailService;
+import com.kaii.dentix.global.common.mail.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
