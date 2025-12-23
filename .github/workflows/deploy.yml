@@ -69,3 +69,14 @@ jobs:
         aws s3 cp "env" "s3://${{ secrets.S3_BUCKET_NAME }}/latest/.env" --acl private
         
         echo "Upload completed!"
+
+    # 10. ASG Instance Refresh 시작 (무중단 롤링 배포)
+    - name: Start ASG Instance Refresh
+      run: |
+        echo "Starting ASG Instance Refresh..."
+        aws autoscaling start-instance-refresh \
+          --auto-scaling-group-name ${{ secrets.ASG_NAME }} \
+          --preferences '{
+            "InstanceWarmup": 300,
+            "MinHealthyPercentage": 90
+          }'
