@@ -16,6 +16,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -29,8 +30,6 @@ import java.util.List;
 public class WebSecurityConfig {
 
     private final JwtTokenUtil jwtTokenUtil;
-
-//    private final UserDeviceTypeService userDeviceTypeService;
 
     public static String[] EXCLUDE_URLS = {
             "/actuator/health",
@@ -49,15 +48,11 @@ public class WebSecurityConfig {
             "/admin/auto-login"
     };
 
-    /**
-     *  비밀번호 암호화
-     */
     @Bean
     public PasswordEncoder PasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // 2. FilterChain 설정 변경
     @Bean
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         http
@@ -65,23 +60,41 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // [수정 1] 보안 헤더 설정 (Native DSL 사용)
                 .headers(headers -> headers
-                        .addHeaderWriter((request, response) -> {
-                            response.setHeader("X-XSS-Protection", "1; mode=block");
-                            response.setHeader("X-Content-Type-Options", "nosniff");
-                            response.setHeader("X-Frame-Options", "DENY");
-                            response.setHeader("Content-Security-Policy",
-                                    "default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'");
-                            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-                            response.setHeader("Pragma", "no-cache");
-                            response.setHeader("Expires", "0");
-                        })
+                        // 1. X-Frame-Options: Clickjacking 방어 (SAMEORIGIN 권장, 기존 DENY 유지 시 프레임 사용 불가)
+                        .frameOptions(frame -> frame.sameOrigin())
+
+                        // 2. XSS Protection: 브라우저 XSS 필터 활성화
+                        .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
+
+                        // 3. CSP (Content Security Policy): 스크립트 실행 출처 제한
+                        // 보고서에 언급된 도메인(*.denti.thomabio.com)을 허용 목록에 추가
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives("default-src 'self'; " +
+                                        "script-src 'self' 'unsafe-inline' *.denti.thomabio.com; " +
+                                        "style-src 'self' 'unsafe-inline'; " +
+                                        "img-src 'self' data:; " +
+                                        "object-src 'none'; " +
+                                        "base-uri 'self';")
+                        )
+
+                        // 4. HSTS (HTTP Strict Transport Security): HTTPS 강제 (보고서 62번 항목 해결)
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000) // 1년
+                        )
+
+                        // 5. Cache Control: 민감 정보 캐싱 방지 (기본값: no-cache, no-store, max-age=0, must-revalidate)
+                        .cacheControl(cache -> {})
                 )
+
                 .authorizeHttpRequests(auth -> auth
-                        //CORS Preflight
+                        // CORS Preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        //인증 제외 URL
+                        // 인증 제외 URL
                         .requestMatchers(
                                 "/admin/billing/export/excel/**",
                                 "/admin/user/bulk-upload/template/**",
@@ -90,36 +103,38 @@ public class WebSecurityConfig {
                         ).permitAll()
                         .requestMatchers(EXCLUDE_URLS).permitAll()
 
-                        //관리자 API
+                        // 관리자 API
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
-                        //일반 API - 허용 메소드만 인증 요구
+                        // 일반 API - 허용 메소드만 인증 요구
                         .requestMatchers(HttpMethod.GET, "/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/**").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/**").authenticated()
 
-                        //임의 HTTP 메소드 차단
+                        // [수정 2] 불필요한 HTTP 메소드 차단 (TRACE, HEAD 등)
                         .anyRequest().denyAll()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil),
                         UsernamePasswordAuthenticationFilter.class);
-        log.error("AUTH = {}", SecurityContextHolder.getContext().getAuthentication());
+
+        // 디버깅용 로그 (필요 시 유지)
+        // log.error("AUTH = {}", SecurityContextHolder.getContext().getAuthentication());
+
         return http.build();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:8080",
-                "https://denti.thomabio.com"
+                "https://denti.thomabio.com" // 운영 도메인 명시
         ));
 
-        // 2. 메서드 허용
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
-        // 3. 헤더 허용 (중복 제거 및 명시)
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
@@ -128,16 +143,11 @@ public class WebSecurityConfig {
                 "Origin"
         ));
 
-        // 4. 프론트에서 인증 정보(쿠키/헤더)를 보낼 수 있도록 허용
         configuration.setAllowCredentials(true);
-
-        // 5. Preflight 요청을 브라우저에 캐싱 (매번 OPTIONS 요청을 보내지 않도록)
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
-
 }
