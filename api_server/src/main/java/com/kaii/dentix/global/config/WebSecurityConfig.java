@@ -94,26 +94,30 @@ public class WebSecurityConfig {
                         // CORS Preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 인증 제외 URL
+                        // 인증 제외 URL (여기에 /login 추가 필수)
                         .requestMatchers(
+                                "/login",                               // [추가] 로그인 경로는 누구나 접근 가능해야 함
                                 "/admin/billing/export/excel/**",
                                 "/admin/user/bulk-upload/template/**",
                                 "/actuator/health",
                                 "/actuator/health/**"
                         ).permitAll()
+
+                        // 기존 EXCLUDE_URLS에 /login이 없다면 위처럼 따로 적어주거나, 배열에 추가해야 합니다.
                         .requestMatchers(EXCLUDE_URLS).permitAll()
 
                         // 관리자 API
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
 
                         // 일반 API - 허용 메소드만 인증 요구
+                        // (로그인 /login 은 위에서 통과되었으므로 여기 검사에 걸리지 않게 됩니다)
                         .requestMatchers(HttpMethod.GET, "/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/**").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/**").authenticated()
 
-                        // [수정 2] 불필요한 HTTP 메소드 차단 (TRACE, HEAD 등)
+                        // 불필요한 HTTP 메소드 차단
                         .anyRequest().denyAll()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil),

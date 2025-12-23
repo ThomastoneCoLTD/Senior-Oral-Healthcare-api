@@ -1,8 +1,5 @@
 package com.kaii.dentix.domain.jwt;
 
-import com.kaii.dentix.global.common.error.ErrorResponse;
-import com.kaii.dentix.global.common.error.exception.TokenExpiredException;
-import com.kaii.dentix.global.common.response.ResponseMessage;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -11,9 +8,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -26,64 +23,33 @@ import static com.kaii.dentix.global.config.WebSecurityConfig.EXCLUDE_URLS;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenUtil jwtTokenUtil;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
+    // [최적화] 로그인 등 인증이 필요 없는 경로는 필터 로직 자체를 실행하지 않음
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String uri = request.getRequestURI();
+        String requestURI = request.getRequestURI();
 
-        // nginx 하위 경로 대응
-        if (uri.startsWith("/dentix")) {
-            uri = uri.substring("/dentix".length());
+        // Nginx 등 프록시 경로 제거 (필요한 경우 유지)
+        if (requestURI.startsWith("/dentix")) {
+            requestURI = requestURI.substring("/dentix".length());
         }
 
-        return uri.equals("/actuator/health")
-                || uri.startsWith("/actuator/health/");
+        String finalUri = requestURI;
+        return Arrays.stream(EXCLUDE_URLS)
+                .anyMatch(pattern -> pathMatcher.match(pattern, finalUri));
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // OPTIONS 요청은 JWT 검증 없이 바로 통과시켜야 CORS가 동작합니다.
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        //실제 요청 경로 추출
-        String projectName = "/dentix"; // nginx나 프록시 하위 경로 대응
-        String requestURI = request.getRequestURI();
-        if (requestURI.startsWith(projectName)) {
-            requestURI = requestURI.substring(projectName.length());
-        }
-
-        final String uri = requestURI;
-
-        //2) EXCLUDE_URLS 와 완전 일치 매칭 (prefix 기반)
-        boolean permitAll = Arrays.stream(EXCLUDE_URLS)
-                .anyMatch(url -> uri.startsWith(url.replace("*", "")));
-
-        // 추가 허용 케이스
-        if (uri.startsWith("/admin/user/bulk-upload/template")) {
-            permitAll = true;
-        }
-
-        if (uri.startsWith("/admin/billing/export/excel")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        log.info("[JWT Filter] requestURI={}, permitAll={}", requestURI, permitAll);
-
-        //3) 인증 필요 없는 경우 → JWT 검사 없이 다음 필터로
-        if (permitAll) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        // shouldNotFilter에서 걸러지지 않은 요청만 여기로 옴 (즉, 인증이 필요한 요청들)
 
         try {
             String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-            // 1. 토큰이 아예 없는 경우: 그냥 통과시킨다 (SecurityConfig의 permitAll이 결정하도록)
+            // 토큰이 없으면 SecurityConfig에서 처리하도록 넘김
             if (StringUtils.isBlank(accessToken)) {
                 filterChain.doFilter(request, response);
                 return;
@@ -93,21 +59,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 accessToken = accessToken.substring(7);
             }
 
-            // 2. 토큰이 있지만 유효하지 않은 경우: 로그만 남기고 통과시킨다
+            // 토큰 검증
             if (jwtTokenUtil.isExpired(accessToken, TokenType.AccessToken) ||
                     jwtTokenUtil.isUnauthorized(accessToken, TokenType.AccessToken)) {
-                log.warn("유효하지 않은 토큰 접근");
+                log.warn("[JWT Filter] 유효하지 않은 토큰입니다.");
+                // 여기서 예외를 던지거나, 그냥 넘겨서 401/403 처리를 유도할 수 있음
+                // 여기서는 흐름을 끊지 않고 다음 필터로 넘깁니다.
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            // 3. 유효한 토큰인 경우: 인증 객체 등록
+            // 인증 객체 생성 및 저장
             Authentication authentication = jwtTokenUtil.getAuthentication(accessToken, TokenType.AccessToken);
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (Exception e) {
-            log.error("JWT 필터 오류: {}", e.getMessage());
-            // 에러 발생 시에도 응답을 직접 끝내지(return) 말고 다음 필터로 넘깁니다.
+            log.error("[JWT Filter] 인증 오류 발생: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
