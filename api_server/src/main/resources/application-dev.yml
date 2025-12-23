@@ -22,6 +22,8 @@ spring:
         prepStmtCacheSize: 250
         prepStmtCacheSqlLimit: 2048
         useServerPrepStmts: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   servlet:
     multipart:
       max-file-size: 500MB
@@ -67,6 +69,7 @@ jwt:
   expiration: 604800000
 
 server:
+  shutdown: graceful
   tomcat:
     connection-timeout: 120000ms  # 요청 대기 시간 (기본 20000ms = 20초)
     keep-alive-timeout: 120000ms  # KeepAlive 연결 유지 시간
@@ -86,6 +89,7 @@ server:
     multipart:
       max-file-size: 500MB
       max-request-size: 500MB
+
 
 
 
