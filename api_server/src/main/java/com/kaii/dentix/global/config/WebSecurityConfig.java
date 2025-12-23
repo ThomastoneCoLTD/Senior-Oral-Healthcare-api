@@ -16,7 +16,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,6 +29,8 @@ import java.util.List;
 public class WebSecurityConfig {
 
     private final JwtTokenUtil jwtTokenUtil;
+
+//    private final UserDeviceTypeService userDeviceTypeService;
 
     public static String[] EXCLUDE_URLS = {
             "/actuator/health",
@@ -48,11 +49,15 @@ public class WebSecurityConfig {
             "/admin/auto-login"
     };
 
+    /**
+     *  비밀번호 암호화
+     */
     @Bean
     public PasswordEncoder PasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // 2. FilterChain 설정 변경
     @Bean
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         http
@@ -60,85 +65,50 @@ public class WebSecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // [수정 1] 보안 헤더 설정 (Native DSL 사용)
                 .headers(headers -> headers
-                        // 1. X-Frame-Options: Clickjacking 방어 (SAMEORIGIN 권장, 기존 DENY 유지 시 프레임 사용 불가)
-                        .frameOptions(frame -> frame.sameOrigin())
-
-                        // 2. XSS Protection: 브라우저 XSS 필터 활성화
-                        .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
-
-                        // 3. CSP (Content Security Policy): 스크립트 실행 출처 제한
-                        // 보고서에 언급된 도메인(*.denti.thomabio.com)을 허용 목록에 추가
-                        .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; " +
-                                        "script-src 'self' 'unsafe-inline' *.denti.thomabio.com; " +
-                                        "style-src 'self' 'unsafe-inline'; " +
-                                        "img-src 'self' data:; " +
-                                        "object-src 'none'; " +
-                                        "base-uri 'self';")
-                        )
-
-                        // 4. HSTS (HTTP Strict Transport Security): HTTPS 강제 (보고서 62번 항목 해결)
-                        .httpStrictTransportSecurity(hsts -> hsts
-                                .includeSubDomains(true)
-                                .maxAgeInSeconds(31536000) // 1년
-                        )
-
-                        // 5. Cache Control: 민감 정보 캐싱 방지 (기본값: no-cache, no-store, max-age=0, must-revalidate)
-                        .cacheControl(cache -> {})
+                        .addHeaderWriter((request, response) -> {
+                            response.setHeader("X-XSS-Protection", "1; mode=block");
+                            response.setHeader("X-Content-Type-Options", "nosniff");
+                            response.setHeader("X-Frame-Options", "DENY");
+                            response.setHeader("Content-Security-Policy",
+                                    "default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'");
+                        })
                 )
-
                 .authorizeHttpRequests(auth -> auth
-                        // CORS Preflight
+                        // 1. OPTIONS 메서드는 무조건 가장 먼저 허용 (CORS 해결)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 인증 제외 URL (여기에 /login 추가 필수)
+                        // 2. 엑셀 및 템플릿 경로를 명확하게 최상단 배치
+                        .requestMatchers("/admin/billing/export/excel/**").permitAll()
+                        .requestMatchers("/admin/user/bulk-upload/template/**").permitAll()
                         .requestMatchers(
-                                "/login",                               // [추가] 로그인 경로는 누구나 접근 가능해야 함
-                                "/admin/billing/export/excel/**",
-                                "/admin/user/bulk-upload/template/**",
                                 "/actuator/health",
                                 "/actuator/health/**"
                         ).permitAll()
-
-                        // 기존 EXCLUDE_URLS에 /login이 없다면 위처럼 따로 적어주거나, 배열에 추가해야 합니다.
+                        // 3. 기존 배열 적용
                         .requestMatchers(EXCLUDE_URLS).permitAll()
 
-                        // 관리자 API
+                        // 4. 나머지 권한 검사
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-
-                        // 일반 API - 허용 메소드만 인증 요구
-                        // (로그인 /login 은 위에서 통과되었으므로 여기 검사에 걸리지 않게 됩니다)
-                        .requestMatchers(HttpMethod.GET, "/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/**").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/**").authenticated()
-                        .requestMatchers(HttpMethod.PATCH, "/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/**").authenticated()
-
-                        // 불필요한 HTTP 메소드 차단
-                        .anyRequest().denyAll()
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil),
                         UsernamePasswordAuthenticationFilter.class);
-
-        // 디버깅용 로그 (필요 시 유지)
-        // log.error("AUTH = {}", SecurityContextHolder.getContext().getAuthentication());
-
+        log.error("AUTH = {}", SecurityContextHolder.getContext().getAuthentication());
         return http.build();
     }
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:8080",
-                "https://denti.thomabio.com" // 운영 도메인 명시
+                "https://denti.thomabio.com"
         ));
 
+        // 2. 메서드 허용
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
+        // 3. 헤더 허용 (중복 제거 및 명시)
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
@@ -147,11 +117,16 @@ public class WebSecurityConfig {
                 "Origin"
         ));
 
+        // 4. 프론트에서 인증 정보(쿠키/헤더)를 보낼 수 있도록 허용
         configuration.setAllowCredentials(true);
+
+        // 5. Preflight 요청을 브라우저에 캐싱 (매번 OPTIONS 요청을 보내지 않도록)
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
+
 }
