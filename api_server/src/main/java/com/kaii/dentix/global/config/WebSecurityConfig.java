@@ -67,11 +67,21 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers
                         .addHeaderWriter((request, response) -> {
+                            // 1. 기존 보안 헤더
                             response.setHeader("X-XSS-Protection", "1; mode=block");
                             response.setHeader("X-Content-Type-Options", "nosniff");
-                            response.setHeader("X-Frame-Options", "DENY");
+                            response.setHeader("X-Frame-Options", "DENY"); // iframe 사용 시 'SAMEORIGIN'으로 변경 필요
                             response.setHeader("Content-Security-Policy",
-                                    "default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'");
+                                    "default-src 'self'; script-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'");
+
+                            // 2. [추가] HSTS (HTTPS 강제) - 보고서 'Strict-Transport-Security Header Not Set' 해결 [cite: 559, 562]
+                            // max-age=31536000 (1년), includeSubDomains (서브도메인 포함)
+                            response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+
+                            // 3. [추가] 캐시 제어 (민감정보 저장 방지) - 보고서 'Re-examine Cache-control Directives' 해결 [cite: 618, 626]
+                            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+                            response.setHeader("Pragma", "no-cache");
+                            response.setHeader("Expires", "0");
                         })
                 )
                 .authorizeHttpRequests(auth -> auth
