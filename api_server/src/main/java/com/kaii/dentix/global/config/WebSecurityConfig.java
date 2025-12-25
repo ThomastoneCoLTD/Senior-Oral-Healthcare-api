@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -16,21 +17,20 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-@Slf4j
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class WebSecurityConfig {
 
     private final JwtTokenUtil jwtTokenUtil;
-
-//    private final UserDeviceTypeService userDeviceTypeService;
 
     public static String[] EXCLUDE_URLS = {
             "/actuator/health",
@@ -49,76 +49,95 @@ public class WebSecurityConfig {
             "/admin/auto-login"
     };
 
-    /**
-     *  비밀번호 암호화
-     */
     @Bean
-    public PasswordEncoder PasswordEncoder() {
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // 2. FilterChain 설정 변경
     @Bean
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         http
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(headers -> headers
-                        .addHeaderWriter((request, response) -> {
-                            // 1. 기존 보안 헤더
-                            response.setHeader("X-XSS-Protection", "1; mode=block");
-                            response.setHeader("X-Content-Type-Options", "nosniff");
-                            response.setHeader("X-Frame-Options", "DENY"); // iframe 사용 시 'SAMEORIGIN'으로 변경 필요
-                            response.setHeader("Content-Security-Policy",
-                                    "default-src 'self'; script-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'");
-
-                            // 2. [추가] HSTS (HTTPS 강제) - 보고서 'Strict-Transport-Security Header Not Set' 해결 [cite: 559, 562]
-                            // max-age=31536000 (1년), includeSubDomains (서브도메인 포함)
-                            response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
-
-                            // 3. [추가] 캐시 제어 (민감정보 저장 방지) - 보고서 'Re-examine Cache-control Directives' 해결 [cite: 618, 626]
-                            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-                            response.setHeader("Pragma", "no-cache");
-                            response.setHeader("Expires", "0");
-                        })
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .authorizeHttpRequests(auth -> auth
-                        // 1. OPTIONS 메서드는 무조건 가장 먼저 허용 (CORS 해결)
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 2. 엑셀 및 템플릿 경로를 명확하게 최상단 배치
-                        .requestMatchers("/admin/billing/export/excel/**").permitAll()
-                        .requestMatchers("/admin/user/bulk-upload/template/**").permitAll()
+                /* =============================
+                 * 🔐 보안 헤더 (ZAP 대응 핵심)
+                 * ============================= */
+                .headers(headers -> headers
+                        // CSP (XSS / Clickjacking 방어)
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives(
+                                        "default-src 'self'; " +
+                                                "script-src 'self' 'unsafe-inline'; " +
+                                                "style-src 'self' 'unsafe-inline'; " +
+                                                "img-src 'self' data:; " +
+                                                "font-src 'self'; " +
+                                                "connect-src 'self'; " +
+                                                "object-src 'none'; " +
+                                                "frame-ancestors 'none';"
+                                )
+                        )
+
+                        // 클릭재킹 방어
+                        .frameOptions(frame -> frame.deny())
+
+                        // MIME Sniffing 방지
+                        .contentTypeOptions(Customizer.withDefaults())
+
+                        // HTTPS 강제 (HSTS)
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000)
+                                .preload(true)
+                        )
+
+                        // Referrer 최소화
+                        .referrerPolicy(referrer ->
+                                referrer.policy(
+                                        ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER
+                                )
+                        )
+                )
+
+                /* =============================
+                 * 🔑 인증 / 인가
+                 * ============================= */
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/actuator/health",
-                                "/actuator/health/**"
+                                "/actuator/health/**",
+                                "/admin/billing/export/excel/**",
+                                "/admin/user/bulk-upload/template/**"
                         ).permitAll()
-                        // 3. 기존 배열 적용
                         .requestMatchers(EXCLUDE_URLS).permitAll()
-
-                        // 4. 나머지 권한 검사
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil),
-                        UsernamePasswordAuthenticationFilter.class);
-        log.error("AUTH = {}", SecurityContextHolder.getContext().getAuthentication());
+
+                .addFilterBefore(
+                        new JwtAuthenticationFilter(jwtTokenUtil),
+                        UsernamePasswordAuthenticationFilter.class
+                );
+
         return http.build();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:8080",
                 "https://denti.thomabio.com"
         ));
-
-        // 2. 메서드 허용
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-
-        // 3. 헤더 허용 (중복 제거 및 명시)
+        configuration.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        );
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
@@ -126,17 +145,12 @@ public class WebSecurityConfig {
                 "Accept",
                 "Origin"
         ));
-
-        // 4. 프론트에서 인증 정보(쿠키/헤더)를 보낼 수 있도록 허용
         configuration.setAllowCredentials(true);
-
-        // 5. Preflight 요청을 브라우저에 캐싱 (매번 OPTIONS 요청을 보내지 않도록)
         configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
-
 }
