@@ -65,7 +65,7 @@ public class WebSecurityConfig {
                 )
 
                 /* =============================
-                 * 🔐 보안 헤더 (ZAP 대응 핵심)
+                 * 보안 헤더 (ZAP 대응 핵심)
                  * ============================= */
                 .headers(headers -> headers
                         // CSP (XSS / Clickjacking 방어)
