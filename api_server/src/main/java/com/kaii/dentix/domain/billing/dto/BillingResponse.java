@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
- * ✅ 기관 Billing 내역 응답 DTO
+ * 기관 Billing 내역 응답 DTO
  */
 @Getter
 @Builder

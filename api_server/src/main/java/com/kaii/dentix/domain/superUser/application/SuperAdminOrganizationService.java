@@ -73,15 +73,15 @@ public class SuperAdminOrganizationService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
-    public List<SuperAdminBillingDto> getOrganizationBillings(Long organizationId) {
-
-        List<Billing> billings = billingRepository.findAllWithOrganizationAndPlan(organizationId);
-
-        return billings.stream()
-                .map(SuperAdminBillingDto::new)
-                .toList();
-    }
+//    @Transactional(readOnly = true)
+//    public List<SuperAdminBillingDto> getOrganizationBillings(Long organizationId) {
+//
+//        List<Billing> billings = billingRepository.findAllWithOrganizationAndPlan(organizationId);
+//
+//        return billings.stream()
+//                .map(SuperAdminBillingDto::new)
+//                .toList();
+//    }
 
     /**
      * 슈퍼관리자 - 특정 기관의 사용자 사용량 조회
@@ -186,7 +186,6 @@ public class SuperAdminOrganizationService {
                 .findByOrganizationAndBillingTypeInOrderByBilledAtDesc(
                         org,
                         List.of(
-                                BillingType.MONTHLY,
                                 BillingType.SUBSCRIPTION,
                                 BillingType.REGULAR
                         )

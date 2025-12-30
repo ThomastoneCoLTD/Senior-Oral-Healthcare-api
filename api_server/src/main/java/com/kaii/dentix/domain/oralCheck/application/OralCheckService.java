@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static com.kaii.dentix.domain.type.oral.OralCheckDivisionCommentType.*;
@@ -83,7 +84,7 @@ public class OralCheckService {
     private final BillingService billingService;
     
     @Value("${spring.profiles.active}")
-    private String active;
+    private String activeProfile;
 
     @Value("${s3.folderPath.oralCheck}")
     private String folderPath;
@@ -112,8 +113,9 @@ public class OralCheckService {
             throw new BadRequestApiException("기관 정보를 찾을 수 없습니다.");
         }
 
-        OrganizationSubscription subscription = organization.getOrganizationSubscription();
-        if (subscription == null) {
+        OrganizationSubscriptionHistory activeHistory =
+                organizationSubscriptionHistoryService.getActiveHistory(organization);
+        if (activeHistory == null) {
             throw new BadRequestApiException("기관의 구독 정보가 없습니다.");
         }
 
@@ -122,20 +124,18 @@ public class OralCheckService {
         if (StringUtils.isBlank(uploadedUrl)) {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
-        OrganizationSubscriptionHistory activeHistory =
-                organizationSubscriptionHistoryService.getActiveHistory(organization);
+
         //3. AI 분석 요청
         OralCheckAnalysisResponse analysisData;
         try {
-            analysisData = aiModelService.getPyDentalAiModel(file).join();
+            analysisData = aiModelService.getPyDentalAiModel(file).get();
             log.info("업로드된 이미지 URL: {}", uploadedUrl);
-        } catch (Exception e) {
-            log.error("AI 모델 연동 실패: {}", e.getMessage(), e);
-            log.info("uploadedUrl: {}", uploadedUrl);
 
-            // ⚙️ 개발 서버 테스트용 임시 데이터
-            if (Objects.equals(active, "dev")) {
-                log.warn("AI 모델 연동 실패 → 테스트 데이터 사용");
+        } catch (ExecutionException e) {
+            log.error("AI 모델 실행 실패", e.getCause());
+
+            if ("dev".equals(activeProfile)) {
+                log.warn("AI 모델 실패 → 개발용 더미 데이터 사용");
                 Random random = new Random();
                 analysisData = new OralCheckAnalysisResponse(
                         new OralCheckAnalysisDivisionDto(
@@ -146,79 +146,70 @@ public class OralCheckService {
                         )
                 );
             } else {
-                return new DataResponse<>(411, "AI 모델 연동에 실패했어요.\n관리자에게 문의해 주세요.", null);
+                return new DataResponse<>(502, "AI 분석 서버 오류가 발생했습니다.", null);
             }
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("AI 모델 요청 인터럽트", e);
+            return new DataResponse<>(500, "요청 처리 중 오류가 발생했습니다.", null);
         }
 
         //4. 분석 결과 저장
         OralCheck oralCheck;
-        int resultCode = 500;
+        boolean success = false;
 
-//        switch (analysisData.getStatusCode()) {
-//            case 200 -> oralCheck = registAnalysisSuccessData(user.getUserId(), uploadedUrl, analysisData);
-//            case 402, 403, 404 -> {
-//                oralCheck = registAnalysisFailedData(user.getUserId(), uploadedUrl, analysisData);
-//                resultCode = 410;
-//            }
-//            default -> {
-//                oralCheck = registAnalysisFailedData(user.getUserId(), uploadedUrl, analysisData);
-//                resultCode = 411;
-//            }
-//        }
+        int statusCode = analysisData.getStatusCode();
 
-
-        switch (analysisData.getStatusCode()) {
-            case 200 -> oralCheck =
+        if (statusCode == 200) {
+            oralCheck =
                     registAnalysisSuccessData(
                             user.getUserId(),
                             uploadedUrl,
                             analysisData,
-                            activeHistory   // ⭐ 추가
+                            activeHistory
                     );
-            case 402, 403, 404 -> {
-                oralCheck =
-                        registAnalysisFailedData(
-                                user.getUserId(),
-                                uploadedUrl,
-                                analysisData,
-                                activeHistory // ⭐ 추가
-                        );
-                resultCode = 410;
+            success = true;
+        } else {
+            if (statusCode == 402 || statusCode == 403 || statusCode == 404) {
+                log.warn("AI 분석 실패 (비정상 응답): status={}", statusCode);
+            } else {
+                log.error("AI 분석 실패 (알 수 없는 상태): status={}", statusCode);
             }
-            default -> {
-                oralCheck =
-                        registAnalysisFailedData(
-                                user.getUserId(),
-                                uploadedUrl,
-                                analysisData,
-                                activeHistory // ⭐ 추가
-                        );
-                resultCode = 411;
-            }
+
+            oralCheck =
+                    registAnalysisFailedData(
+                            user.getUserId(),
+                            uploadedUrl,
+                            analysisData,
+                            activeHistory
+                    );
         }
 
         if (oralCheck == null) {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        //5. 사용량 / 과금 처리
-        if (activeHistory.isOverused()) {
-            log.warn("기관 [{}] 사용량 초과 감지 → 자동 과금 생성", organization.getOrganizationId());
-            billingService.createOveruseBatchBilling(organization);
-        } else {
+        /* ===== 사용량 / 과금 처리 (핵심) ===== */
+        if (success) {
+            // 성공한 요청만 카운트
             activeHistory.increaseSuccessCount();
+
+            // 증가 후 초과 여부 판단
+            if (activeHistory.isOverused()) {
+                log.warn("기관 [{}] 사용량 초과 감지 → 자동 과금 생성", organization.getOrganizationId());
+                billingService.createOveruseBatchBilling(organization);
+            }
         }
 
-        //남은 응답 계산
         int remaining = Math.max(activeHistory.getRemainingResponses(), 0);
 
-        //사용자 응답 반환
         return new DataResponse<>(
                 200,
-                "AI 분석이 완료되었습니다.",
+                success ? "AI 분석이 완료되었습니다." : "AI 분석에 실패했습니다.",
                 OralCheckPhotoDto.builder()
                         .oralCheckId(oralCheck.getOralCheckId())
-                        .success(true)
+                        .success(success)
                         .remainingResponses(remaining)
                         .organizationId(organization.getOrganizationId())
                         .build()

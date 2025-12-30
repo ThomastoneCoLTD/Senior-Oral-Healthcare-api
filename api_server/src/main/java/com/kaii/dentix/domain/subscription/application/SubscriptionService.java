@@ -1,6 +1,5 @@
 package com.kaii.dentix.domain.subscription.application;
 
-import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.billing.dao.BillingRepository;
 import com.kaii.dentix.domain.billing.domain.Billing;
@@ -13,12 +12,10 @@ import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSu
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
-import com.kaii.dentix.domain.subscription.dao.SubscriptionUsageRepository;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
-import com.kaii.dentix.domain.type.BillingStatus;
 import com.kaii.dentix.domain.type.BillingType;
-import com.kaii.dentix.domain.type.SubscriptionStatus;
+import com.kaii.dentix.domain.type.BillingStatus;
+
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.persistence.EntityNotFoundException;
@@ -28,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -37,10 +33,8 @@ public class SubscriptionService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final BillingRepository billingRepository;
     private final OrganizationRepository organizationRepository;
-    private final SubscriptionHistoryRepository subscriptionHistoryRepository;
     private final OrganizationSubscriptionRepository organizationSubscriptionRepository;
     private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
-
 
     @Transactional
     public SuccessResponse updateMyOrganizationSubscription(
@@ -49,95 +43,58 @@ public class SubscriptionService {
     ) {
         LocalDateTime now = LocalDateTime.now();
 
-        // 1️⃣ 기관 조회
+        //기관 조회
         Organization organization = organizationRepository.findById(
                 admin.getOrganization().getOrganizationId()
         ).orElseThrow(() -> new EntityNotFoundException("기관을 찾을 수 없습니다."));
 
-        // 2️⃣ 변경할 플랜 조회
+        //변경할 플랜 조회
         SubscriptionPlan newPlan = subscriptionPlanRepository.findById(
                 dto.getNewSubscriptionPlanId()
         ).orElseThrow(() -> new EntityNotFoundException("구독상품을 찾을 수 없습니다."));
 
-        // 3️⃣ 현재 구독 조회 (없으면 생성)
-        OrganizationSubscription currentSubscription =
-                organizationSubscriptionRepository.findByOrganization(organization)
-                        .orElseGet(() -> {
-                            OrganizationSubscription s = new OrganizationSubscription();
-                            s.setOrganization(organization);
-                            return organizationSubscriptionRepository.save(s);
-                        });
-
-        // ✅ 2️⃣ 같은 플랜 변경 방어
-        if (currentSubscription.getSubscriptionPlan() != null &&
-                currentSubscription.getSubscriptionPlan().getId().equals(newPlan.getId())) {
-            return new SuccessResponse(200, "이미 적용된 구독입니다.");
-        }
-
-        //기존 ACTIVE 히스토리 → EXPIRED 처리 (1개만 존재하도록 보장)
+        //기존 활성 구독 이력 종료
         organizationSubscriptionHistoryRepository
-                .findByOrganizationAndStatus(organization, SubscriptionStatus.ACTIVE)
+                .findByOrganization_OrganizationIdAndEndDateIsNull(
+                        organization.getOrganizationId()
+                )
                 .ifPresent(active -> {
-                    active.setEndDate(now);
-                    active.setStatus(SubscriptionStatus.EXPIRED);
+                    if (active.getSubscriptionPlan().getId().equals(newPlan.getId())) {
+                        throw new IllegalStateException("이미 적용된 구독입니다.");
+                    }
+                    active.expire(now);
                 });
 
-
-        //현재 구독 갱신
-        currentSubscription.setSubscriptionPlan(newPlan);
-
-        //  initializeSubscription 안전성
-        // 이 메서드는 "기간 계산만" 해야 한다 (plan 변경 금지)
-        currentSubscription.initializeSubscription();
-
-        organizationSubscriptionRepository.save(currentSubscription);
-
-        // 7️⃣ 새 ACTIVE 히스토리 생성
-        int activeSuccessCount =
-                currentSubscription.getSuccessCount() != null
-                        ? currentSubscription.getSuccessCount()
-                        : 0;
-
-        int activeMax =
-                newPlan.getMaxSuccessResponses() != null
-                        ? newPlan.getMaxSuccessResponses()
-                        : 0;
-
-        int activeRemaining = Math.max(activeMax - activeSuccessCount, 0);
-
-        OrganizationSubscriptionHistory activeHistory =
+        //새 구독 이력 생성
+        OrganizationSubscriptionHistory newHistory =
                 OrganizationSubscriptionHistory.builder()
                         .organization(organization)
                         .subscriptionPlan(newPlan)
-                        .startDate(currentSubscription.getSubscriptionStartDate())
-                        .endDate(currentSubscription.getSubscriptionEndDate())
-                        .status(SubscriptionStatus.ACTIVE)
+                        .startDate(now)
+                        .endDate(null) // 활성
                         .reason("구독상품 변경")
-                        .successCount(activeSuccessCount)
-                        .remainingResponses(activeRemaining)
+                        .successCount(0)
+                        .remainingResponses(newPlan.getMaxSuccessResponses())
                         .build();
 
-        organizationSubscriptionHistoryRepository.save(activeHistory);
+        organizationSubscriptionHistoryRepository.save(newHistory);
 
-        // 8️⃣ Billing 생성
+        //Billing 생성 (history 기준)
         Billing billing = new Billing();
         billing.setOrganization(organization);
         billing.setSubscriptionPlan(newPlan);
-        billing.setSubscription(currentSubscription);
         billing.setBillingType(BillingType.SUBSCRIPTION);
         billing.setBillingStatus(BillingStatus.PENDING);
         billing.setAmount(newPlan.getPrice());
         billing.setBilledAt(now);
-        billing.setPeriodStart(currentSubscription.getSubscriptionStartDate());
-        billing.setPeriodEnd(currentSubscription.getSubscriptionEndDate());
+        billing.setPeriodStart(now);
+        billing.setPeriodEnd(null);
         billing.setDescription("구독상품 변경");
 
         billingRepository.save(billing);
 
         return new SuccessResponse(200, "구독상품 변경 완료");
     }
-
-
 
 
     @Transactional
@@ -148,50 +105,4 @@ public class SubscriptionService {
         return organizationSubscriptionRepository.findByOrganization(organization)
                 .orElseThrow(() -> new NotFoundDataException("현재 구독 정보가 없습니다."));
     }
-
-
 }
-//    @Transactional
-//    public SubscriptionResponse changeSubscriptionPlan(Long orgId, Long newPlanId) {
-//        Organization org = organizationRepository.findById(orgId)
-//                .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
-//
-//        SubscriptionPlan newPlan = subscriptionPlanRepository.findById(newPlanId)
-//                .orElseThrow(() -> new NotFoundDataException("플랜을 찾을 수 없습니다."));
-//
-//        // ✅ 1. 기존 usage 비활성화
-//        subscriptionUsageRepository.deactivateActiveUsage(orgId);
-//
-//        // ✅ 2. 새 usage 주기 생성
-//        LocalDateTime start = LocalDateTime.now();
-//        LocalDateTime end = "monthly".equalsIgnoreCase(newPlan.getPlanCycle())
-//                ? start.plusMonths(1)
-//                : start.plusYears(1);
-//
-//        SubscriptionResponseDto.SubscriptionCycle usage = SubscriptionResponseDto.SubscriptionCycle.builder()
-//                .organization(org)
-//                .subscriptionPlan(newPlan)
-//                .periodStart(start)
-//                .periodEnd(end)
-//                .successCount(0)
-//                .active(true)
-//                .build();
-//        subscriptionUsageRepository.save(usage);
-//
-//        // ✅ 3. Organization 엔티티도 갱신
-//        org.setSubscriptionPlan(newPlan);
-//        org.setSubscriptionStartDate(start);
-//        org.setUsageResetDate(end);
-//        organizationRepository.save(org);
-//
-//        return SubscriptionResponse.builder()
-//                .organizationId(org.getOrganizationId())
-//                .organizationName(org.getOrganizationName())
-//                .subscriptionPlanId(newPlan.getId())
-//                .subscriptionPlanName(newPlan.getPlanName())
-//                .subscriptionStartDate(start)
-//                .usageResetDate(end)
-//                .successCount(usage.getSuccessCount())
-//                .build();
-//    }
-//}

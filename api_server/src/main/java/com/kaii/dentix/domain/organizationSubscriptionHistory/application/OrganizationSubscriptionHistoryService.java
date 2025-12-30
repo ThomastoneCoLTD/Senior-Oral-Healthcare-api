@@ -78,17 +78,13 @@ public class OrganizationSubscriptionHistoryService {
     @Transactional(readOnly = true)
     public OrganizationSubscriptionHistory getActiveHistory(Organization organization) {
 
-        LocalDateTime now = LocalDateTime.now();
-
-        List<OrganizationSubscriptionHistory> histories =
-                historyRepository.findActiveHistories(organization, now);
-
-        if (histories.isEmpty()) {
-            throw new BadRequestApiException("현재 활성화된 구독 이력이 없습니다.");
-        }
-
-        // 가장 최근 시작한 구독 이력 1건
-        return histories.get(0);
+        return historyRepository
+                .findByOrganization_OrganizationIdAndEndDateIsNull(
+                        organization.getOrganizationId()
+                )
+                .orElseThrow(() ->
+                        new BadRequestApiException("현재 활성화된 구독 이력이 없습니다.")
+                );
     }
 //    @Transactional
 //    public BillingListResponse getBillingsForAdmin(Admin admin) {

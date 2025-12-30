@@ -104,7 +104,7 @@ public class WebSecurityConfig {
                 )
 
                 /* =============================
-                 * 🔑 인증 / 인가
+                 * 인증 / 인가
                  * ============================= */
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

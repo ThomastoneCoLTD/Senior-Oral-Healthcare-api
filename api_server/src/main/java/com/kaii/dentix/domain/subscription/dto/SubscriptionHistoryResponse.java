@@ -30,7 +30,6 @@ public record SubscriptionHistoryResponse(
                 .startDate(h.getStartDate() != null ? h.getStartDate().toString() : null)
                 .endDate(h.getEndDate() != null ? h.getEndDate().toString() : null)
                 .reason(h.getReason())
-                .status(h.getStatus() != null ? h.getStatus().name() : null)
                 .build();
     }
 }
