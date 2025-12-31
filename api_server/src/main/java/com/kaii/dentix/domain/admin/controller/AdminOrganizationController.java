@@ -39,6 +39,18 @@ public class AdminOrganizationController {
     private final OrganizationHistoryRepository organizationHistoryRepository;
     private final JwtTokenUtil jwtTokenUtil;
 
+    /**
+     * 기관등록
+     */
+//    @PostMapping
+//    public ResponseEntity<OrganizationResponse> create(@RequestBody OrganizationRequest request) {
+//        log.info("▶ 기관 등록 요청 body: name={}, phone={}, plan={}",
+//                request.getOrganizationName(),
+//                request.getOrganizationPhoneNumber(),
+//                request.getSubscriptionPlanId());
+//        return ResponseEntity.ok(organizationService.createOrganization(request));
+//    }
+
     /** 일반관리자 - 기관등록 */
     @PostMapping
     public ResponseEntity<OrganizationResponse> createOrganization(

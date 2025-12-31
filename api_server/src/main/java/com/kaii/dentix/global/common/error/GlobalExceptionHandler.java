@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     @ResponseStatus(HttpStatus.OK)
     public ErrorResponse UnauthorizedException(HttpServletRequest request, UnauthorizedException e) {
-        //파일 다운로드 요청 중 예외 발생 시 JSON으로 응답하지 않음
+        // ✅ 파일 다운로드 요청 중 예외 발생 시 JSON으로 응답하지 않음
         if (request.getRequestURI().contains("/bulk-upload/template")) {
             return null;
         }

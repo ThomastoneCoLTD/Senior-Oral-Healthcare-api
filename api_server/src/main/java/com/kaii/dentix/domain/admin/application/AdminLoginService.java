@@ -1,28 +1,27 @@
 package com.kaii.dentix.domain.admin.application;
 
-import com.kaii.dentix.domain.admin.dao.AdminRepository;
-import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.admin.dto.AdminFindPasswordDto;
-import com.kaii.dentix.domain.admin.dto.AdminLoginDto;
-import com.kaii.dentix.domain.admin.dto.request.AdminFindPasswordRequest;
-import com.kaii.dentix.domain.admin.dto.request.AdminLoginRequest;
-import com.kaii.dentix.domain.jwt.JwtTokenUtil;
-import com.kaii.dentix.domain.jwt.TokenType;
-import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
-import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
-import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionResponse;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
-import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
-import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.LocalDate;
-
+import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.domain.jwt.TokenType;
+import com.kaii.dentix.domain.jwt.JwtTokenUtil;
+import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.admin.dto.AdminLoginDto;
+import com.kaii.dentix.domain.admin.dao.AdminRepository;
+import com.kaii.dentix.domain.admin.dto.AdminFindPasswordDto;
+import com.kaii.dentix.domain.admin.dto.request.AdminLoginRequest;
+import com.kaii.dentix.domain.admin.dto.request.AdminFindPasswordRequest;
+import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
+import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionResponse;
+import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
+import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
+import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +44,7 @@ public class AdminLoginService {
         //최초 로그인 여부 확인
         YnType isFirstLogin = admin.getAdminLastLoginDate() == null ? YnType.Y : YnType.N;
 
-        //비밀번호 검증
+        // 비밀번호 검증
         if (!passwordEncoder.matches(request.getAdminPassword(), admin.getAdminPassword())) {
             throw new UnauthorizedException("입력하신 정보가 일치하지 않습니다. 다시 확인해주세요.");
         }
