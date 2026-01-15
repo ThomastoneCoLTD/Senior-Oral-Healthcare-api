@@ -1,10 +1,9 @@
 package com.kaii.dentix.domain.user.domain;
 
-import com.kaii.dentix.domain.appService.domain.AppService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
+import com.kaii.dentix.domain.appService.domain.UserToAppService;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
 import lombok.*;

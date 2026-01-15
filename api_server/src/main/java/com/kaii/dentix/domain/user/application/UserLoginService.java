@@ -22,8 +22,8 @@ import com.kaii.dentix.domain.user.dto.*;
 import com.kaii.dentix.domain.user.dto.request.*;
 import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepository;
 import com.kaii.dentix.domain.userServiceAgreement.domain.UserServiceAgreement;
-import com.kaii.dentix.domain.userToAppService.dao.UserToAppServiceRepository;
-import com.kaii.dentix.domain.userToAppService.domain.UserToAppService;
+import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
+import com.kaii.dentix.domain.appService.domain.UserToAppService;
 import com.kaii.dentix.global.common.error.exception.*;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -209,55 +209,50 @@ public class  UserLoginService {
     }
 
     /**
-     *  사용자 로그인
+     * 사용자 로그인 (수정됨)
      */
     @Transactional
-    public UserLoginDto userLogin(HttpServletRequest httpServletRequest, UserLoginRequest request) {
-        //사용자 조회
-        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
+    public UserAuthDto.LoginResponse userLogin(UserAuthDto.LoginRequest request) { // Request DTO 변경
+        // 1. 사용자 조회
+        User user = userRepository.findByUserLoginIdentifier(request.getLoginId())
                 .orElseThrow(() -> new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다."));
 
-        //비밀번호 확인
-        if (!passwordEncoder.matches(request.getUserPassword(), user.getUserPassword())) {
+        // 2. 비밀번호 확인
+        if (!passwordEncoder.matches(request.getPassword(), user.getUserPassword())) {
             throw new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다.");
         }
 
-        //관리자 승인 여부 체크 추가 (핵심)
+        // 3. 관리자 승인 여부 체크
         if (user.getIsVerify() == null || user.getIsVerify() != YnType.Y) {
             throw new UnauthorizedException("관리자 승인 후 이용 가능합니다.");
         }
 
-        //기관 및 구독 정보 추출
+        // 4. 기관 및 구독 정보 추출
         Organization organization = user.getOrganization();
-        log.info("organization:{}",organization);
-
         SubscriptionPlan plan = null;
+
         String planName = null;
         Boolean customSurveyEnabled = false;
 
         if (organization != null && organization.getOrganizationSubscription() != null) {
             plan = organization.getOrganizationSubscription().getSubscriptionPlan();
-
             if (plan != null) {
                 planName = plan.getPlanName().name();
                 customSurveyEnabled = plan.getCustomSurveyEnabled();
             }
         }
 
-        //JWT 토큰 발급
+        // 5. JWT 토큰 발급
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
-
-        //로그인 갱신
         user.updateLogin(refreshToken);
 
-        //서비스 목록 조회
+        // 6. 서비스 목록 조회
         List<UserToAppService> mappings = userToAppServiceRepository.findByUser(user);
-
-        List<UserLoginDto.AppServiceInfo> userServices = mappings.stream()
-                .map(uta -> UserLoginDto.AppServiceInfo.builder()
+        List<UserAuthDto.AppServiceInfo> userServices = mappings.stream()
+                .map(uta -> UserAuthDto.AppServiceInfo.builder()
                         .serviceId(uta.getAppService().getAppServiceId())
-                        .name(uta.getAppService().getName())
+                        .name(uta.getAppService().getName()) // AppService 엔티티 필드명 확인 필요
                         .serviceType(uta.getAppService().getServiceType())
                         .build())
                 .toList();
@@ -265,7 +260,8 @@ public class  UserLoginService {
         Long mainServiceId = userServices.isEmpty() ? null : userServices.get(0).getServiceId();
         String mainServiceName = userServices.isEmpty() ? null : userServices.get(0).getName();
 
-        return UserLoginDto.builder()
+        // 7. Response 빌드
+        return UserAuthDto.LoginResponse.builder()
                 .userId(user.getUserId())
                 .userName(user.getUserName())
                 .accessToken(accessToken)

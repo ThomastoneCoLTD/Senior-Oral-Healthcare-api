@@ -11,7 +11,7 @@ import java.util.Properties;
 public class MailConfig {
 
     /**
-     * ✅ JavaMailSender Bean 강제 등록
+     *JavaMailSender Bean 강제 등록
      * - spring-boot-starter-mail 의존성이 추가되어 있어야 정상 동작
      * - 설정 파일(application.yml)의 spring.mail.* 값을 자동으로 읽어감
      */
@@ -19,7 +19,7 @@ public class MailConfig {
     public JavaMailSender javaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
 
-        // ✅ 기본 설정 (application.yml이 없을 때 대비)
+        //기본 설정 (application.yml이 없을 때 대비)
         mailSender.setHost("smtp.sendgrid.net");
         mailSender.setPort(587);
         mailSender.setUsername("apikey");

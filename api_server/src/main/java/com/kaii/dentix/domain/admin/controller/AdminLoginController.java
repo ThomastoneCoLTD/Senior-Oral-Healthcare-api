@@ -1,8 +1,7 @@
 package com.kaii.dentix.domain.admin.controller;
 
 import com.kaii.dentix.domain.admin.application.AdminLoginService;
-import com.kaii.dentix.domain.admin.dto.AdminFindPasswordDto;
-import com.kaii.dentix.domain.admin.dto.request.AdminFindPasswordRequest;
+import com.kaii.dentix.domain.admin.dto.AdminAuthDto;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +16,9 @@ public class AdminLoginController {
     private final AdminLoginService adminLoginService;
 
     @PostMapping(value = "/find-password", name = "어드민 비밀번호 찾기")
-    public DataResponse<AdminFindPasswordDto> adminFindPassword(
-            @Valid @RequestBody AdminFindPasswordRequest request) {
-
+    public DataResponse<AdminAuthDto.FindPasswordResponse> adminFindPassword( // 리턴 타입 변경
+                                                                              @Valid @RequestBody AdminAuthDto.FindPasswordRequest request // 요청 DTO 변경
+    ) {
         return new DataResponse<>(adminLoginService.adminFindPassword(request));
     }
 

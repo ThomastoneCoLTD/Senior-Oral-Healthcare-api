@@ -11,8 +11,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Date;
 
 @Entity
-@Getter @Builder
+@Getter
 @Setter
+@Builder
 @AllArgsConstructor @NoArgsConstructor
 @Table(name = "admin")
 @Where(clause = "deleted IS NULL")
@@ -51,12 +52,10 @@ public class Admin extends TimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = true)
     private Organization organization;
+
     public boolean isSuperAdmin() {
         return this.adminIsSuper == YnType.Y;
     }
-//    private Integer idlePeriod;
-
-//    private String planId;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date deleted;
@@ -83,4 +82,7 @@ public class Admin extends TimeEntity {
         this.deleted = new Date();
     }
 
+    public boolean isFirstLogin() {
+        return this.adminLastLoginDate == null;
+    }
 }

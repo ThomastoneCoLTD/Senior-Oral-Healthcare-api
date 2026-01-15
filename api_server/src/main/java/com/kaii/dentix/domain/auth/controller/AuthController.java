@@ -1,19 +1,19 @@
 package com.kaii.dentix.domain.auth.controller;
 
 import com.kaii.dentix.domain.admin.application.AdminLoginService;
-import com.kaii.dentix.domain.admin.dto.AdminLoginDto;
-import com.kaii.dentix.domain.admin.dto.request.AdminLoginRequest;
-import com.kaii.dentix.domain.auth.dto.LoginDto;
-import com.kaii.dentix.domain.auth.dto.LoginRequestDto;
+import com.kaii.dentix.domain.admin.dto.AdminAuthDto;
+import com.kaii.dentix.domain.auth.dto.AuthDto;
 import com.kaii.dentix.domain.user.application.UserLoginService;
-import com.kaii.dentix.domain.user.dto.UserLoginDto;
-import com.kaii.dentix.domain.user.dto.request.UserLoginRequest;
+import com.kaii.dentix.domain.user.dto.UserAuthDto;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/login")
@@ -27,31 +27,37 @@ public class AuthController {
     @PostMapping
     public ResponseEntity<?> login(
             HttpServletRequest request,
-            @Valid @RequestBody LoginRequestDto loginRequest
+            @Valid @RequestBody AuthDto.IntegratedLoginRequest loginRequest
     ) {
         String userType = loginRequest.getUserType().toLowerCase();
 
         switch (userType) {
             case "admin":
-                AdminLoginRequest adminReq = new AdminLoginRequest();
-                adminReq.setAdminLoginIdentifier(loginRequest.getLoginId());
-                adminReq.setAdminPassword(loginRequest.getPassword());
+                // 1. Admin DTO로 변환
+                AdminAuthDto.LoginRequest adminReq = AdminAuthDto.LoginRequest.builder()
+                        .loginId(loginRequest.getLoginId())
+                        .password(loginRequest.getPassword())
+                        .build();
 
-                AdminLoginDto adminDto = adminLoginService.login(adminReq);
-                return ResponseEntity.ok(adminDto);
+                // 2. Admin Service 호출 및 응답
+                return ResponseEntity.ok(
+                        new DataResponse<>(adminLoginService.login(adminReq))
+                );
 
             case "user":
-                UserLoginRequest userReq = new UserLoginRequest();
-                userReq.setUserLoginIdentifier(loginRequest.getLoginId());
-                userReq.setUserPassword(loginRequest.getPassword());
-                System.out.println(">>> loginId: " + loginRequest.getLoginId());
-                System.out.println(">>> mapped userLoginIdentifier: " + userReq.getUserLoginIdentifier());
-                UserLoginDto userDto = userLoginService.userLogin(request, userReq);
-                return ResponseEntity.ok(userDto);
+                // 1. User DTO로 변환
+                UserAuthDto.LoginRequest userReq = UserAuthDto.LoginRequest.builder()
+                        .loginId(loginRequest.getLoginId())
+                        .password(loginRequest.getPassword())
+                        .build();
+
+                // 2. User Service 호출 및 응답
+                return ResponseEntity.ok(
+                        new DataResponse<>(userLoginService.userLogin(userReq))
+                );
 
             default:
-                return ResponseEntity.badRequest()
-                        .body("지원하지 않는 userType입니다: " + loginRequest.getUserType());
+                throw new IllegalArgumentException("지원하지 않는 사용자 타입입니다: " + userType);
         }
     }
 }

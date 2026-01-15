@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 /**
- * ✅ 기관 + 구독 정보 DTO
+ *기관 + 구독 정보 DTO
  *  - 기관 기본 정보
  *  - 구독 상품 정보
  *  - 사용 현황
@@ -22,35 +22,35 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class OrganizationSubscriptionResponse {
 
-    /** ✅ 기관 기본 정보 */
+    /**기관 기본 정보 */
     private Long organizationId;
     private String organizationName;
     private String organizationPhoneNumber;
 
-    /** ✅ 구독 상품 정보 */
+    /**구독 상품 정보 */
     private Long subscriptionPlanId;
     private String subscriptionPlanName;
     private String planCycle;           // monthly / yearly
     private Long price;               // 구독 요금
     private int maxSuccessResponses;    // 기본 제공량 (최대 응답수)
 
-    /** ✅ 사용 현황 */
+    /**사용 현황 */
     private int successCount;           // 총 사용 횟수
     private int remainingCount;         // 남은 횟수
     private double usageRate;           // 사용률 (%)
 
-    /** ✅ 날짜 정보 */
+    /**날짜 정보 */
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "Asia/Seoul")
     private LocalDate subscriptionStartDate;
 
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "Asia/Seoul")
-    private LocalDate subscriptionEndDate; // ✅ 추가 (구독 종료일)
+    private LocalDate subscriptionEndDate; //추가 (구독 종료일)
 
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "Asia/Seoul")
     private LocalDate usageResetDate;
 
     /**
-     * ✅ Entity → DTO 변환 메서드
+     *Entity → DTO 변환 메서드
      */
     public static OrganizationSubscriptionResponse fromEntity(
             Long organizationId,
@@ -95,4 +95,6 @@ public class OrganizationSubscriptionResponse {
                 .usageResetDate(usageResetDate)
                 .build();
     }
+
+
 }

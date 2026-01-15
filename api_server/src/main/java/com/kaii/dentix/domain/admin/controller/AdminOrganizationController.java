@@ -29,27 +29,15 @@ import java.util.Map;
 @RequestMapping("/admin/organization")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AdminOrganizationController {
-
-    private final AdminOrganizationService adminOrganizationService;
     private final AdminService adminService;
     private final OrganizationService organizationService;
+    private final AdminOrganizationService adminOrganizationService;
+    private final OrganizationUsageService organizationUsageService;
+
+    private final JwtTokenUtil jwtTokenUtil;
     private final OralCheckService oralCheckService;
     private final AdminUserService adminUserService;
-    private final OrganizationUsageService organizationUsageService;
     private final OrganizationHistoryRepository organizationHistoryRepository;
-    private final JwtTokenUtil jwtTokenUtil;
-
-    /**
-     * 기관등록
-     */
-//    @PostMapping
-//    public ResponseEntity<OrganizationResponse> create(@RequestBody OrganizationRequest request) {
-//        log.info("▶ 기관 등록 요청 body: name={}, phone={}, plan={}",
-//                request.getOrganizationName(),
-//                request.getOrganizationPhoneNumber(),
-//                request.getSubscriptionPlanId());
-//        return ResponseEntity.ok(organizationService.createOrganization(request));
-//    }
 
     /** 일반관리자 - 기관등록 */
     @PostMapping
@@ -76,8 +64,6 @@ public class AdminOrganizationController {
     ) {
         //로그인한 관리자 정보 가져오기
         Admin admin = adminService.getTokenAdmin(httpServletRequest);
-
-        //adminId까지 같이 넘김 (3개 인자)
         organizationService.updateOrganization(organizationId, request, admin.getAdminId());
 
         return new SuccessResponse(200, "기관 정보 수정 완료");
@@ -106,19 +92,15 @@ public class AdminOrganizationController {
      */
     @GetMapping("/super")
     public ResponseEntity<List<OrganizationResponse>> getAllOrganizations() {
-        log.info("🧾 [슈퍼관리자] 전체 기관 정보 조회 요청");
-
+        log.info("[슈퍼관리자] 전체 기관 정보 조회 요청");
         List<OrganizationResponse> organizations = organizationService.getAllOrganizations();
 
         return ResponseEntity.ok(organizations);
     }
 
-
-
     @GetMapping("/usage/my")
     public ResponseEntity<?> getMyOrganizationUsage(HttpServletRequest request) {
         Long adminId = adminService.getTokenAdmin(request).getAdminId();
-//        Admin admin = adminService.getTokenAdmin(request);
 
         OrganizationUsageResponse data =
                 organizationUsageService.getMyOrganizationUsage(adminId);

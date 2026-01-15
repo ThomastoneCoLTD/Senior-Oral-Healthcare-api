@@ -1,19 +1,19 @@
 package com.kaii.dentix.domain.admin.application;
 
-import java.util.List;
-import lombok.RequiredArgsConstructor;
-import jakarta.transaction.Transactional;
-import org.springframework.stereotype.Service;
 import com.kaii.dentix.domain.admin.domain.Admin;
-import jakarta.persistence.EntityNotFoundException;
-
+import com.kaii.dentix.domain.organization.dao.OrganizationHistoryRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationHistory;
-import com.kaii.dentix.domain.organization.dto.OrganizationReResponse;
 import com.kaii.dentix.domain.organization.dto.OrganizationHistoryResponse;
-import com.kaii.dentix.domain.organization.dao.OrganizationHistoryRepository;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
+import com.kaii.dentix.domain.organization.dto.OrganizationReResponse;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
+import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor

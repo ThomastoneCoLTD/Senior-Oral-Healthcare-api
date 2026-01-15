@@ -1,20 +1,16 @@
 package com.kaii.dentix.domain.admin.application;
 
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
-import com.kaii.dentix.domain.admin.dao.user.AdminUserCustomRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.admin.dto.*;
-import com.kaii.dentix.domain.admin.dto.request.AdminModifyPasswordRequest;
-import com.kaii.dentix.domain.admin.dto.request.AdminSignUpRequest;
-import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
+import com.kaii.dentix.domain.admin.dto.AdminAccountDto;
+import com.kaii.dentix.domain.admin.dto.AdminAuthDto;
+import com.kaii.dentix.domain.admin.dto.AdminDto;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
-import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import com.kaii.dentix.global.common.dto.PagingDTO;
 import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
@@ -29,23 +25,19 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class AdminService {
 
-    private final AdminRepository adminRepository;
-
+    private final ModelMapper modelMapper;
     private final JwtTokenUtil jwtTokenUtil;
-
+    private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final FindPwdQuestionRepository findPwdQuestionRepository;
 
-    private final ModelMapper modelMapper;
-    private AdminService adminService;
-    private AdminUserCustomRepository adminUserCustomRepository;
-    private final OrganizationRepository organizationRepository;
     /**
      * 토큰에서 Admin 추출
      */
@@ -54,7 +46,7 @@ public class AdminService {
         String token = jwtTokenUtil.getAccessToken(servletRequest);
         UserRole role = jwtTokenUtil.getRoles(token, TokenType.AccessToken);
 
-        //관리자 또는 슈퍼관리자만 접근 가능
+        // 관리자 또는 슈퍼관리자만 접근 가능
         if (!(role == UserRole.ROLE_ADMIN || role == UserRole.ROLE_SUPER_ADMIN)) {
             throw new UnauthorizedException("관리자 권한이 필요합니다.");
         }
@@ -66,7 +58,7 @@ public class AdminService {
     }
 
     /**
-     *로그인한 관리자의 기관 정보 조회
+     * 로그인한 관리자의 기관 정보 조회
      */
     public Organization getMyOrganization(Admin admin) {
         if (admin.getOrganization() == null) {
@@ -76,150 +68,112 @@ public class AdminService {
     }
 
     /**
-     *  관리자 등록
+     * 관리자 등록
      */
     @Transactional
-    public AdminSignUpDto adminSignUp(AdminSignUpRequest request) {
-
-        //연락처 중복 확인
-        Optional<Admin> existAdmin = adminRepository.findByAdminPhoneNumber(request.getAdminPhoneNumber());
+    public AdminAuthDto.SignUpResponse adminSignUp(AdminAuthDto.SignUpRequest request) {
+        // 연락처 중복 확인
+        Optional<Admin> existAdmin = adminRepository.findByAdminPhoneNumber(request.getPhoneNumber());
         if (existAdmin.isPresent()) {
-            if (existAdmin.get().getAdminName().equals(request.getAdminName()))
+            if (existAdmin.get().getAdminName().equals(request.getName())) {
                 throw new AlreadyDataException("이미 가입한 관리자입니다.");
+            }
             throw new BadRequestApiException("이미 사용중인 번호에요. 번호를 다시 확인해 주세요.");
         }
 
-        //아이디 중복 확인
-        if (adminRepository.findByAdminLoginIdentifier(request.getAdminLoginIdentifier()).isPresent())
+        // 아이디 중복 확인
+        if (adminRepository.findByAdminLoginIdentifier(request.getLoginId()).isPresent()) {
             throw new AlreadyDataException("이미 존재하는 아이디입니다.");
+        }
 
-        //비밀번호 찾기 질문 유효성 검사
+        // 비밀번호 찾기 질문 유효성 검사
         if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
             throw new NotFoundDataException("존재하지 않는 비밀번호 찾기 질문입니다.");
         }
 
-        //관리자 저장
+        // 관리자 저장
         Admin admin = adminRepository.save(Admin.builder()
-                .adminName(request.getAdminName())
-                .adminLoginIdentifier(request.getAdminLoginIdentifier())
-                .adminPhoneNumber(request.getAdminPhoneNumber())
-                .adminPassword(passwordEncoder.encode(request.getAdminPassword())) // 입력된 비밀번호 저장
-                .findPwdQuestionId(request.getFindPwdQuestionId()) // 질문 ID
-                .findPwdAnswer(request.getFindPwdAnswer())         //질문 답변
+                .adminName(request.getName())
+                .adminLoginIdentifier(request.getLoginId())
+                .adminPhoneNumber(request.getPhoneNumber())
+                .adminPassword(passwordEncoder.encode(request.getPassword()))
+                .findPwdQuestionId(request.getFindPwdQuestionId())
+                .findPwdAnswer(request.getFindPwdAnswer())
                 .adminIsSuper(YnType.N)
                 .organization(null)
                 .build());
 
-        //응답 반환
-        return AdminSignUpDto.builder()
-                .adminId(admin.getAdminId())
-                .adminName(admin.getAdminName())
-                .build();
+        // DTO의 정적 팩토리 메서드 사용
+        return AdminAuthDto.SignUpResponse.of(admin);
     }
 
     /**
-     *  관리자 비밀번호 변경
+     * 관리자 비밀번호 변경
      */
     @Transactional
-    public void adminModifyPassword(HttpServletRequest httpServletRequest, AdminModifyPasswordRequest request){
+    public void adminModifyPassword(HttpServletRequest httpServletRequest, AdminAuthDto.ModifyPasswordRequest request) {
         Admin admin = this.getTokenAdmin(httpServletRequest);
-
-        admin.updatePassword(passwordEncoder, request.getAdminPassword());
+        admin.updatePassword(passwordEncoder, request.getPassword());
     }
 
-    @Transactional
-    public void adminResetPassword(AdminResetPasswordRequest request){
-        Admin admin = adminRepository.findById(request.getAdminId())
-                .orElseThrow(() -> new NotFoundDataException("관리자를 찾을 수 없습니다."));
-
-        admin.updatePassword(passwordEncoder, request.getNewPassword());
-    }
     /**
-     *  관리자 삭제
+     * 관리자 삭제
      */
     @Transactional
-    public void adminDelete(Long adminId){
-        Admin admin = adminRepository.findById(adminId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
+    public void adminDelete(Long adminId) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
         admin.deleteAdmin();
     }
 
     /**
-     *  관리자 비밀번호 초기화
+     * 관리자 비밀번호 초기화
      */
     @Transactional
-    public AdminPasswordResetDto adminPasswordReset(Long adminId){
-        Admin admin = adminRepository.findById(adminId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
+    public AdminAuthDto.ModifyPasswordRequest adminPasswordReset(Long adminId) {
+        Admin admin = adminRepository.findById(adminId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
+
+        // 기본 비밀번호로 초기화
         admin.updatePassword(passwordEncoder, SecurityUtil.defaultPassword);
 
-        return AdminPasswordResetDto.builder()
-                .adminPassword(SecurityUtil.defaultPassword)
-                .build();
+        // 초기화된 비밀번호 반환 (임시로 ModifyPasswordRequest 활용하거나 별도 Response 생성 권장)
+        AdminAuthDto.ModifyPasswordRequest response = new AdminAuthDto.ModifyPasswordRequest();
+        response.setPassword(SecurityUtil.defaultPassword);
+        return response;
     }
 
     /**
-     *  관리자 목록 조회
+     * 관리자 목록 조회
+     * (AdminListDto, AdminAccountDto는 아직 통합되지 않았으므로 기존 유지)
      */
-    public AdminListDto adminList(PageAndSizeRequest request){
-        Page<AdminAccountDto> adminList = adminRepository.findAllByNotSuper(request);
+    @Transactional(readOnly = true)
+    public AdminDto.ListResponse adminList(AdminDto.SearchRequest request) {
+        Page<AdminAccountDto> pageResult = adminRepository.findAllByNotSuper(request);
+        List<AdminDto.Summary> summaryList = pageResult.getContent().stream()
+                .map(a -> AdminDto.Summary.builder()
+                        .adminId(a.getAdminId())
+                        .loginId(a.getAdminLoginIdentifier())
+                        .name(a.getAdminName())
+                        .phoneNumber(a.getAdminPhoneNumber())
+                        .createdDate(a.getCreated())
+                        .build())
+                .toList();
 
-        PagingDTO pagingDTO = modelMapper.map(adminList, PagingDTO.class);
+        PagingDTO pagingDTO = modelMapper.map(pageResult, PagingDTO.class);
 
-        return AdminListDto.builder()
-                .paging(pagingDTO)
-                .adminList(adminList.getContent())
-                .build();
+        return AdminDto.ListResponse.of(pagingDTO, summaryList);
     }
 
     /**
-     *  관리자 자동 로그인
+     * 관리자 자동 로그인
      */
-    public AdminAutoLoginDto adminAutoLogin(HttpServletRequest httpServletRequest){
+    public AdminAuthDto.AutoLoginResponse adminAutoLogin(HttpServletRequest httpServletRequest) {
         Admin admin = this.getTokenAdmin(httpServletRequest);
-
         String accessToken = jwtTokenUtil.createToken(admin, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(admin, TokenType.RefreshToken);
-
         admin.updateAdminLogin(refreshToken);
 
-        return AdminAutoLoginDto.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .adminId(admin.getAdminId())
-                .adminName(admin.getAdminName())
-                .adminIsSuper(admin.getAdminIsSuper())
-                .build();
-    }
-
-    @Transactional(readOnly = true)
-    public AdminUserListDto userList(AdminUserListRequest request, HttpServletRequest servletRequest) {
-
-        //현재 로그인한 관리자 정보 가져오기
-        Admin admin = adminService.getTokenAdmin(servletRequest);
-
-        //권한 판단
-        boolean isSuperAdmin = admin.getAdminIsSuper() == YnType.Y;
-
-        Page<AdminUserInfoDto> userList;
-
-        //슈퍼관리자면 전체 사용자 조회
-        if (isSuperAdmin) {
-            userList = adminUserCustomRepository.findAll(request); // 모든 기관 포함
-        }
-        //일반관리자면 자신의 기관 사용자만 조회
-        else {
-            if (admin.getOrganization() == null) {
-                throw new BadRequestApiException("소속 기관이 없습니다.");
-            }
-            Long orgId = admin.getOrganization().getOrganizationId();
-            request.setOrganizationId(orgId);
-            userList = adminUserCustomRepository.findAll(request);
-        }
-
-        PagingDTO pagingDTO = modelMapper.map(userList, PagingDTO.class);
-
-        return AdminUserListDto.builder()
-                .paging(pagingDTO)
-                .userList(userList.getContent())
-                .build();
+        return AdminAuthDto.AutoLoginResponse.from(admin, accessToken, refreshToken);
     }
 }

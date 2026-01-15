@@ -1,12 +1,12 @@
 package com.kaii.dentix.domain.oralCheck.dao;
 
+import com.kaii.dentix.domain.admin.dto.AdminStatisticDto;
 import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
-import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
 
 public interface OralCheckCustomRepository {
 
-    OralCheckResultTypeCount userOralCheckList(AdminStatisticRequest request);
+    OralCheckResultTypeCount userOralCheckList(AdminStatisticDto.SearchRequest request);
 
-    Integer allUserOralCheckCount(AdminStatisticRequest request);
+    Integer allUserOralCheckCount(AdminStatisticDto.SearchRequest request);
 
 }

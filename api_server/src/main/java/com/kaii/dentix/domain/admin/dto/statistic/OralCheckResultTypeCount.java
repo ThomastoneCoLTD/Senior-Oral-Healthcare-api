@@ -1,7 +1,10 @@
 package com.kaii.dentix.domain.admin.dto.statistic;
 
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter @Builder
 @AllArgsConstructor @NoArgsConstructor

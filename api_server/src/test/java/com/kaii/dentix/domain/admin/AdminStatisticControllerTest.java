@@ -2,13 +2,9 @@ package com.kaii.dentix.domain.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.common.ControllerTest;
-import com.kaii.dentix.admin.application.AdminStatisticService;
-import com.kaii.dentix.admin.controller.AdminStatisticController;
-import com.kaii.dentix.admin.dto.AdminUserSignUpCountDto;
-import com.kaii.dentix.admin.dto.request.AdminStatisticRequest;
-import com.kaii.dentix.admin.dto.statistic.AdminUserStatisticResponse;
-import com.kaii.dentix.admin.dto.statistic.AllQuestionnaireResultTypeCount;
-import com.kaii.dentix.admin.dto.statistic.OralCheckResultTypeCount;
+import com.kaii.dentix.domain.admin.application.AdminStatisticService;
+import com.kaii.dentix.domain.admin.controller.AdminStatisticController;
+import com.kaii.dentix.domain.admin.dto.AdminStatisticDto; //통합 DTO Import
 import com.kaii.dentix.domain.type.DatePeriodType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,48 +55,40 @@ public class AdminStatisticControllerTest extends ControllerTest {
     private AdminStatisticService adminStatisticService;
 
     /**
-     *  사용자 통계
+     * 관리자 통계 조회 (기관용)
      */
     @Test
-    public void userStatistic() throws Exception {
+    public void getOrgStatistics() throws Exception {
 
         // given
-        AdminUserStatisticResponse response = AdminUserStatisticResponse.builder()
-                .userSignUpCount(AdminUserSignUpCountDto.builder()
-                        .countAll(30L)
-                        .countMan(20L)
-                        .countWoman(10L)
-                        .build())
+        //통합 DTO(MainResponse)로 변경
+        AdminStatisticDto.MainResponse response = AdminStatisticDto.MainResponse.builder()
+                .userSignUpCount(new AdminStatisticDto.SignUpCount(30L, 20L, 10L)) // record 생성자 사용
                 .averageState(OralCheckResultType.ATTENTION)
                 .oralCheckCount(100)
                 .oralCheckAverage(4)
-                .oralCheckResultTypeCount(OralCheckResultTypeCount.builder()
+                .oralCheckResultTypeCount(AdminStatisticDto.OralCheckStats.builder() // OralCheckStats 사용
                         .countHealthy(10)
                         .countGood(30)
                         .countAttention(50)
                         .countDanger(10)
                         .build())
                 .questionnaireAllCount(50)
-                .allQuestionnaireResultTypeCount(AllQuestionnaireResultTypeCount.builder()
-                        .countA(10)
-                        .countB(2)
-                        .countC(3)
-                        .countD(5)
-                        .countE(10)
-                        .countF(3)
-                        .countG(2)
-                        .countH(5)
-                        .countI(5)
-                        .countJ(3)
-                        .countK(2)
+                .allQuestionnaireResultTypeCount(AdminStatisticDto.QuestionnaireStats.builder() // QuestionnaireStats 사용
+                        .countA(10).countB(2).countC(3).countD(5).countE(10)
+                        .countF(3).countG(2).countH(5).countI(5).countJ(3).countK(2)
                         .build())
                 .build();
 
-        given(adminStatisticService.userStatistic(any(AdminStatisticRequest.class))).willReturn(response);
+        //파라미터 타입 변경 (AdminStatisticDto.SearchRequest)
+        given(adminStatisticService.getOrgStatistics(any(AdminStatisticDto.SearchRequest.class), any()))
+                .willReturn(response);
 
         // when
+        //파라미터명 변경 (allDatePeriod -> datePeriodType)
         ResultActions result = mockMvc.perform(
-                RestDocumentationRequestBuilders.get("/admin/statistic?allDatePeriod={allDatePeriod}&startDate={startDate}&endDate={endDate}", DatePeriodType.MONTH1, "2023-01-01", "2023-09-01")
+                RestDocumentationRequestBuilders.get("/admin/statistic?datePeriodType={datePeriodType}&startDate={startDate}&endDate={endDate}",
+                                DatePeriodType.MONTH1, "2023-01-01", "2023-09-01")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, "admin-statistic.고유경.AccessToken")
@@ -115,7 +103,8 @@ public class AdminStatisticControllerTest extends ControllerTest {
                         getDocumentRequest(),
                         getDocumentResponse(),
                         queryParameters(
-                                parameterWithName("allDatePeriod").optional().attributes(datePeriodTypeFormat()).description("기간 설정 타입 (구강 촬영일 or 문진표 검사일)"),
+                                //파라미터명 변경 반영
+                                parameterWithName("datePeriodType").optional().attributes(datePeriodTypeFormat()).description("기간 설정 타입 (구강 촬영일 or 문진표 검사일)"),
                                 parameterWithName("startDate").optional().attributes(dateFormat()).description("기간 검색 시작일"),
                                 parameterWithName("endDate").optional().attributes(dateFormat()).description("기간 검색 종료일")
                         ),
@@ -151,8 +140,6 @@ public class AdminStatisticControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(adminStatisticService).userStatistic(any(AdminStatisticRequest.class));
-
+        verify(adminStatisticService).getOrgStatistics(any(AdminStatisticDto.SearchRequest.class), any());
     }
-
 }

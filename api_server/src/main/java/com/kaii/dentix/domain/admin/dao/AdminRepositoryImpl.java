@@ -23,7 +23,6 @@ import java.util.Optional;
 public class AdminRepositoryImpl implements AdminCustomRepository {
 
     private final JPAQueryFactory queryFactory;
-
     private final QAdmin admin = QAdmin.admin;
 
     /**
@@ -52,7 +51,5 @@ public class AdminRepositoryImpl implements AdminCustomRepository {
                 .fetch() : new ArrayList<>();
 
         return new PageImpl<>(result, paging, total);
-
     }
-
 }

@@ -1,6 +1,6 @@
 package com.kaii.dentix.domain.questionnaire.dao;
 
-import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
+import com.kaii.dentix.domain.admin.dto.AdminStatisticDto;
 import com.kaii.dentix.domain.admin.dto.statistic.QuestionnaireStatisticDto;
 import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireAndStatusDto;
 
@@ -10,9 +10,9 @@ public interface QuestionnaireCustomRepository {
 
     QuestionnaireAndStatusDto getLatestQuestionnaireAndHigherStatus(Long userId);
 
-    List<QuestionnaireStatisticDto> questionnaireList(AdminStatisticRequest request);
+    List<QuestionnaireStatisticDto> questionnaireList(AdminStatisticDto.SearchRequest request);
 
-    int allQuestionnaireCount(AdminStatisticRequest request);
+    int allQuestionnaireCount(AdminStatisticDto.SearchRequest request);
 
 }
 

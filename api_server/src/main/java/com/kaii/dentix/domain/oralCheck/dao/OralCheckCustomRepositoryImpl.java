@@ -1,7 +1,7 @@
 package com.kaii.dentix.domain.oralCheck.dao;
 
+import com.kaii.dentix.domain.admin.dto.AdminStatisticDto;
 import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
-import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
 import com.kaii.dentix.domain.oralCheck.domain.QOralCheck;
 import com.kaii.dentix.domain.type.DatePeriodType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
@@ -33,7 +33,7 @@ public class OralCheckCustomRepositoryImpl implements OralCheckCustomRepository 
      *  구강검진 결과 타입별 횟수
      */
     @Override
-    public OralCheckResultTypeCount userOralCheckList(AdminStatisticRequest request){
+    public OralCheckResultTypeCount userOralCheckList(AdminStatisticDto.SearchRequest request){
         return queryFactory.select(Projections.constructor(OralCheckResultTypeCount.class,
                 new CaseBuilder()
                         .when(oralCheck.oralCheckResultTotalType.eq(OralCheckResultType.HEALTHY))
@@ -60,7 +60,7 @@ public class OralCheckCustomRepositoryImpl implements OralCheckCustomRepository 
                 .join(user).on(oralCheck.user.userId.eq(user.userId))
                 .where(
                         user.deleted.isNull(),
-                        whereAllDatePeriod(request.getAllDatePeriod()),
+                        whereAllDatePeriod(request.getDatePeriodType()),
                         whereStartDate(request.getStartDate()),
                         whereEndDate(request.getEndDate())
                 )
@@ -71,7 +71,8 @@ public class OralCheckCustomRepositoryImpl implements OralCheckCustomRepository 
      *  구강검진을 한 총 사용자 수
      */
     @Override
-    public Integer allUserOralCheckCount(AdminStatisticRequest request){
+    public Integer allUserOralCheckCount(AdminStatisticDto.SearchRequest request) { // 타입 변경
+
         return queryFactory.select(
                         user.userId.countDistinct().intValue()
                 )
@@ -79,7 +80,11 @@ public class OralCheckCustomRepositoryImpl implements OralCheckCustomRepository 
                 .join(user).on(oralCheck.user.userId.eq(user.userId))
                 .where(
                         user.deleted.isNull(),
-                        whereAllDatePeriod(request.getAllDatePeriod()),
+                        // 기관 ID 필터링이 필요하다면 추가 (AdminStatisticService 로직에 따라 필수일 수 있음)
+                        // request.getOrganizationId() != null ? user.organization.organizationId.eq(request.getOrganizationId()) : null,
+
+                        // 필드명 변경 반영 (getAllDatePeriod -> getDatePeriodType)
+                        whereAllDatePeriod(request.getDatePeriodType()),
                         whereStartDate(request.getStartDate()),
                         whereEndDate(request.getEndDate())
                 )

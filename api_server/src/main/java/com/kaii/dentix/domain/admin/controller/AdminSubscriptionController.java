@@ -27,14 +27,13 @@ import java.util.List;
 @RequestMapping("/admin/subscriptions")
 @RequiredArgsConstructor
 public class AdminSubscriptionController {
-    private final SubscriptionInfoService subscriptionInfoService;
-    private final SubscriptionService subscriptionService;
-    private final AdminRepository adminRepository;
-    private final JwtTokenUtil jwtTokenUtil;
-    private final OrganizationSubscriptionService organizationSubscriptionService;
     private final AdminService adminService;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final AdminRepository adminRepository;
+    private final SubscriptionService subscriptionService;
+    private final SubscriptionInfoService subscriptionInfoService;
+    private final OrganizationSubscriptionService organizationSubscriptionService;
     private final OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
-
 
     @GetMapping("/all")
     public ResponseEntity<List<SubscriptionInfoResponse>> getAllPlans() {
@@ -62,7 +61,7 @@ public class AdminSubscriptionController {
             HttpServletRequest request,
             @RequestBody OrganizationSubscriptionChangeRequest dto
     ) {
-        Admin admin = adminService.getTokenAdmin(request);   //Admin 인증
+        Admin admin = adminService.getTokenAdmin(request);
         SuccessResponse response = subscriptionService.updateMyOrganizationSubscription(admin, dto);
         return ResponseEntity.ok(response);
     }

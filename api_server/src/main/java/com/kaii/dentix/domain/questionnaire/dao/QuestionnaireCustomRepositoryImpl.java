@@ -1,6 +1,6 @@
 package com.kaii.dentix.domain.questionnaire.dao;
 
-import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
+import com.kaii.dentix.domain.admin.dto.AdminStatisticDto;
 import com.kaii.dentix.domain.admin.dto.statistic.AllQuestionnaireCount;
 import com.kaii.dentix.domain.admin.dto.statistic.QuestionnaireStatisticDto;
 import com.kaii.dentix.domain.oralStatus.domain.QOralStatus;
@@ -57,7 +57,7 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
      * 모든 문진표 리스트
      */
     @Override
-    public List<QuestionnaireStatisticDto> questionnaireList(AdminStatisticRequest request) {
+    public List<QuestionnaireStatisticDto> questionnaireList(AdminStatisticDto.SearchRequest request) {
         return queryFactory.select(Projections.constructor(QuestionnaireStatisticDto.class,
                         user.userId, userOralStatus.oralStatus.oralStatusType
                 ))
@@ -66,7 +66,7 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
                 .join(userOralStatus).on(questionnaire.questionnaireId.eq(userOralStatus.questionnaire.questionnaireId))
                 .where(
                         user.deleted.isNull(),
-                        whereAllDatePeriod(request.getAllDatePeriod()),
+                        whereAllDatePeriod(request.getDatePeriodType()),
                         whereStartDate(request.getStartDate()),
                         whereEndDate(request.getEndDate())
                 )
@@ -77,7 +77,7 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
      * 전체 문진표 검진 횟수
      */
     @Override
-    public int allQuestionnaireCount(AdminStatisticRequest request) {
+    public int allQuestionnaireCount(AdminStatisticDto.SearchRequest  request) {
         return Objects.requireNonNull(queryFactory.select(Projections.constructor(AllQuestionnaireCount.class,
                         Wildcard.count.intValue().as("questionnaireAllCount")
                 ))
@@ -85,7 +85,7 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
                 .join(user).on(questionnaire.userId.eq(user.userId))
                 .where(
                         user.deleted.isNull(),
-                        whereAllDatePeriod(request.getAllDatePeriod()),
+                        whereAllDatePeriod(request.getDatePeriodType()),
                         whereStartDate(request.getStartDate()),
                         whereEndDate(request.getEndDate())
                 )

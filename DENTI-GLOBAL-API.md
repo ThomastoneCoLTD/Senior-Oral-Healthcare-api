@@ -446,12 +446,6 @@
 **POST** `{{host}}/login`
 ### Request Body
 ```json
-// {
-//     "userType":"admin",
-//     "loginId" : "admin",
-//     "password" : "test1234!"
-// }
-
 {
     "userType":"admin",
     "loginId" : "test1",
@@ -493,7 +487,6 @@ import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.dao.user.AdminUserCustomRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.*;
-import com.kaii.dentix.domain.admin.dto.request.AdminStatisticRequest;
 import com.kaii.dentix.domain.admin.dto.statistic.*;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;

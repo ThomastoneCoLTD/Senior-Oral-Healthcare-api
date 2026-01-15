@@ -4,8 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.admin.application.AdminLoginService;
 import com.kaii.dentix.domain.admin.controller.AdminLoginController;
-import com.kaii.dentix.domain.admin.dto.AdminLoginDto;
-import com.kaii.dentix.domain.admin.dto.request.AdminLoginRequest;
+import com.kaii.dentix.domain.admin.dto.AdminAuthDto; //통합 DTO Import
 import com.kaii.dentix.domain.type.YnType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,38 +53,45 @@ public class AdminLoginControllerTest extends ControllerTest {
     @MockBean
     private AdminLoginService adminLoginService;
 
-    public AdminLoginDto adminLoginDto(){
-        return AdminLoginDto.builder()
+    //DTO 생성 헬퍼 메서드 수정
+    public AdminAuthDto.LoginResponse adminLoginResponse() {
+        return AdminAuthDto.LoginResponse.builder()
                 .adminId(1L)
                 .isFirstLogin(YnType.Y)
-                .adminName("홍길동")
+                .adminName("홍길동") // adminName -> name
                 .accessToken("AccessToken")
                 .refreshToken("RefreshToken")
-                .adminIsSuper(YnType.N)
+                .adminIsSuper(YnType.N) // adminIsSuper -> isSuper
                 .organizationId(10L)
+                .organizationName("테스트 치과")
+                .organizationSubscription(null) // 테스트용 null 처리
                 .build();
     }
 
     /**
-     *  관리자 로그인
+     * 관리자 로그인
      */
     @Test
-    public void adminLogin() throws Exception{
+    public void adminLogin() throws Exception {
 
         // given
-        given(adminLoginService.login(any(AdminLoginRequest.class))).willReturn(adminLoginDto());
+        //파라미터 타입 및 리턴 타입 변경
+        given(adminLoginService.login(any(AdminAuthDto.LoginRequest.class))).willReturn(adminLoginResponse());
 
         String password = "dentix2023!";
-        AdminLoginRequest adminLoginRequest = AdminLoginRequest.builder()
-                .adminLoginIdentifier("adminhong")
-                .adminPassword(password)
+
+        //Request DTO 변경 (빌더 필드명 변경 확인)
+        AdminAuthDto.LoginRequest request = AdminAuthDto.LoginRequest.builder()
+                .loginId("adminhong") // adminLoginIdentifier -> loginId
+                .password(password)   // adminPassword -> password
                 .build();
+
         given(passwordEncoder.encode(any(String.class))).willReturn(password);
 
         // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.post("/admin/login")
-                        .content(objectMapper.writeValueAsString(adminLoginRequest))
+                        .content(objectMapper.writeValueAsString(request))
                         .contentType(MediaType.APPLICATION_JSON)
         );
 
@@ -97,24 +103,30 @@ public class AdminLoginControllerTest extends ControllerTest {
                         getDocumentRequest(),
                         getDocumentResponse(),
                         requestFields(
-                                fieldWithPath("adminLoginIdentifier").type(JsonFieldType.STRING).description("관리자 아이디"),
-                                fieldWithPath("adminPassword").type(JsonFieldType.STRING).description("관리자 비밀번호")
+                                //요청 필드명 변경 반영
+                                fieldWithPath("loginId").type(JsonFieldType.STRING).description("관리자 아이디"),
+                                fieldWithPath("password").type(JsonFieldType.STRING).description("관리자 비밀번호")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
+
+                                //응답 필드명 변경 반영
                                 fieldWithPath("response.adminId").type(JsonFieldType.NUMBER).description("관리자 고유 번호"),
-                                fieldWithPath("response.adminName").type(JsonFieldType.STRING).description("관리자 이름"),
+                                fieldWithPath("response.name").type(JsonFieldType.STRING).description("관리자 이름"), // adminName -> name
                                 fieldWithPath("response.accessToken").type(JsonFieldType.STRING).description("Access Token"),
                                 fieldWithPath("response.refreshToken").type(JsonFieldType.STRING).description("Refresh Token"),
                                 fieldWithPath("response.isFirstLogin").type(JsonFieldType.STRING).attributes(yesNoFormat()).description("최초 로그인 여부"),
-                                fieldWithPath("response.adminIsSuper").type(JsonFieldType.STRING).attributes(yesNoFormat()).description("관리자 슈퍼계정 여부")
+                                fieldWithPath("response.isSuper").type(JsonFieldType.STRING).attributes(yesNoFormat()).description("관리자 슈퍼계정 여부"), // adminIsSuper -> isSuper
+
+                                //추가된 필드 (DTO 정의에 따라 optional 처리)
+                                fieldWithPath("response.organizationId").type(JsonFieldType.NUMBER).optional().description("기관 ID"),
+                                fieldWithPath("response.organizationName").type(JsonFieldType.STRING).optional().description("기관명"),
+                                fieldWithPath("response.organizationSubscription").type(JsonFieldType.OBJECT).optional().description("기관 구독 정보")
                         )
                 ));
 
-        verify(adminLoginService).login(any(AdminLoginRequest.class));
-
+        verify(adminLoginService).login(any(AdminAuthDto.LoginRequest.class));
     }
-
 }

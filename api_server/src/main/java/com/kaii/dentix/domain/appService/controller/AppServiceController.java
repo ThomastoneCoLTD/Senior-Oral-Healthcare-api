@@ -1,27 +1,50 @@
 package com.kaii.dentix.domain.appService.controller;
 
 import com.kaii.dentix.domain.appService.application.AppServiceUsageService;
+import com.kaii.dentix.domain.appService.dto.AppServiceDto;
+import com.kaii.dentix.domain.jwt.JwtTokenUtil;
+import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.user.dto.UserServiceUsageDto;
+import com.kaii.dentix.global.common.response.DataResponse;
+import com.kaii.dentix.global.common.response.SuccessResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/admin/users/usage")
+@RequestMapping("/app-service")
 public class AppServiceController {
-    private final AppServiceUsageService serviceUserUsageService;
-    @GetMapping
-    public ResponseEntity<List<UserServiceUsageDto>> getServiceUserUsage(
-            @RequestParam(required = false) String serviceName
+
+    private final AppServiceUsageService appServiceUsageService;
+    private final JwtTokenUtil jwtTokenUtil;
+
+    /**
+     * 앱 서비스 목록 및 연동 현황 조회
+     */
+    @GetMapping("/list")
+    public DataResponse<List<AppServiceDto.UsageStatus>> getAppServiceList(
+            HttpServletRequest request
     ) {
-        List<UserServiceUsageDto> result = serviceUserUsageService.getServiceUserUsage(serviceName);
-        return ResponseEntity.ok(result);
+        Long userId = jwtTokenUtil.getUserId(request.getHeader("Authorization"), TokenType.AccessToken);
+        return new DataResponse<>(appServiceUsageService.getAppServiceUsageList(userId));
+    }
+
+    /**
+     * 앱 서비스 연동하기
+     */
+    @PostMapping("/connect")
+    public SuccessResponse connectAppService(
+            HttpServletRequest request,
+            @RequestBody @Valid AppServiceDto.ConnectRequest connectRequest
+    ) {
+        Long userId = jwtTokenUtil.getUserId(request.getHeader("Authorization"), TokenType.AccessToken);
+        appServiceUsageService.connectAppService(userId, connectRequest);
+        return new SuccessResponse();
     }
 }

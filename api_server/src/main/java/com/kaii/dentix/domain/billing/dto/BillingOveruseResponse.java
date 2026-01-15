@@ -42,7 +42,7 @@ public class BillingOveruseResponse {
                 .totalOveruseCount(overuseList.size())
                 .overuseList(
                         overuseList.stream()
-                                .map(Item::from)   // ✅ Item 안의 static from
+                                .map(Item::from)   // Item 안의 static from
                                 .toList()
                 )
                 .build();

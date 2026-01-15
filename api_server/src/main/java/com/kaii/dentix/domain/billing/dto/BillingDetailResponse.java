@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
- * ✅ Billing 상세 응답 DTO
+ * Billing 상세 응답 DTO
  */
 @Getter
 @Builder

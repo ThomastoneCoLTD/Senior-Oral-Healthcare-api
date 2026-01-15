@@ -1,27 +1,18 @@
 package com.kaii.dentix.domain.admin.controller;
 
-import com.kaii.dentix.domain.admin.application.AdminUserBulkService;
+import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.application.AdminUserService;
-import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.admin.dto.AdminUserListDto;
-import com.kaii.dentix.domain.admin.dto.AdminUserModifyInfoDto;
-import com.kaii.dentix.domain.admin.dto.request.AdminUserListRequest;
-import com.kaii.dentix.domain.admin.dto.request.AdminUserModifyRequest;
+import com.kaii.dentix.domain.admin.dto.AdminUserDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
-import com.kaii.dentix.domain.jwt.TokenType;
-import com.kaii.dentix.domain.type.UserRole;
-import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
-import io.micrometer.core.instrument.MultiGauge;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,64 +26,83 @@ import java.util.Map;
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AdminUserController {
 
+    private final AdminService adminService; //토큰/권한 처리용 서비스 추가
     private final AdminUserService adminUserService;
-    private final AdminRepository adminRepository;
-    private final AdminUserBulkService bulkUploadService;
     private final JwtTokenUtil jwtTokenUtil;
+    // 불필요한 Repository, JwtTokenUtil 의존성 제거 (AdminService가 담당)
 
-    /** 일반관리자 - 본인 기관의 사용자 사용자 목록 조회 */
+    /**
+     * 일반관리자 - 본인 기관의 사용자 목록 조회
+     */
     @GetMapping(name = "사용자 목록 조회")
-    public ResponseEntity<DataResponse<AdminUserListDto>> userList(
-            @ModelAttribute AdminUserListRequest request,
+    public ResponseEntity<DataResponse<AdminUserDto.ListResponse>> userList(
+            @ModelAttribute AdminUserDto.SearchRequest request, //DTO 교체
             HttpServletRequest servletRequest
-    ){
-        AdminUserListDto response = adminUserService.userList(request, servletRequest);
-        return ResponseEntity.ok(new DataResponse<>(200, "사용자 목록 조회 성공", response));
+    ) {
+        // Service가 변경된 DTO(ListResponse)를 반환하므로 그대로 응답
+        return ResponseEntity.ok(
+                new DataResponse<>(200, "사용자 목록 조회 성공",
+                        adminUserService.userList(request, servletRequest))
+        );
     }
 
-    /** 일반관리자 - 본인 기관의 사용자 인증 */
+    /**
+     * 일반관리자 - 본인 기관의 사용자 인증
+     */
     @PutMapping(value = "/verify", name = "사용자 인증")
-    public SuccessResponse userVerify(@RequestParam Long userId){
+    public SuccessResponse userVerify(@RequestParam Long userId) {
         adminUserService.userVerify(userId);
         return new SuccessResponse();
     }
 
-    /** 일반관리자 - 본인 기관의 사용자 인증 취소*/
+    /**
+     * 일반관리자 - 본인 기관의 사용자 인증 취소
+     */
     @PutMapping(value = "/unverify", name = "사용자 인증 취소")
-    public SuccessResponse userUnverify(@RequestParam Long userId){
+    public SuccessResponse userUnverify(@RequestParam Long userId) {
         adminUserService.userUnverify(userId);
         return new SuccessResponse();
     }
 
-    /** 일반관리자 - 본인 기관의 사용자 정보 조회 */
+    /**
+     * 일반관리자 - 본인 기관의 사용자 정보 조회
+     */
     @GetMapping(value = "/info", name = "사용자 정보 조회")
-    public DataResponse<AdminUserModifyInfoDto> userInfo(@RequestParam Long userId) {
-        DataResponse<AdminUserModifyInfoDto> response = new DataResponse<>(adminUserService.userInfo(userId));
-        return response;
+    public DataResponse<AdminUserDto.DetailResponse> userInfo(@RequestParam Long userId) {
+        //리턴 타입 변경 (AdminUserModifyInfoDto -> AdminUserDto.DetailResponse)
+        return new DataResponse<>(adminUserService.userInfo(userId));
     }
 
-    /** 일반관리자 - 본인 기관의 사용자 정보 수정 */
+    /**
+     * 일반관리자 - 본인 기관의 사용자 정보 수정
+     */
     @PutMapping(name = "사용자 정보 수정")
-    public SuccessResponse userModify(@Valid @RequestBody AdminUserModifyRequest request){
+    public SuccessResponse userModify(@Valid @RequestBody AdminUserDto.ModifyRequest request) { //DTO 교체
         adminUserService.userModify(request);
         return new SuccessResponse();
     }
-    
-    /** 일반관리자 - 본인 기관의 사용자 삭제 */
+
+    /**
+     * 일반관리자 - 본인 기관의 사용자 삭제
+     */
     @DeleteMapping(name = "사용자 삭제")
-    public SuccessResponse userDelete(@RequestParam Long userId){
+    public SuccessResponse userDelete(@RequestParam Long userId) {
         adminUserService.userDelete(userId);
         return new SuccessResponse();
     }
 
-    /** 일반관리자 - 기관 사용자 사용량 조회 */
-    @GetMapping("/usage")
+    /**
+     * 일반관리자 - 기관 사용자 사용량 조회
+     */
+    @GetMapping(value = "/usage", name = "사용자 사용량 조회")
     public ResponseEntity<DataResponse<Map<String, Object>>> getUsage(HttpServletRequest request) {
         return ResponseEntity.ok(adminUserService.getOrganizationUserUsage(request));
     }
 
-    /** 일반관리자 - 기관 사용자 일괄등록 엑셀 양식 다운로드 */
-    @GetMapping("/bulk-upload/template")
+    /**
+     * 일반관리자 - 기관 사용자 일괄등록 엑셀 양식 다운로드
+     */
+    @GetMapping(value = "/bulk-upload/template", name = "기관 사용자 일괄등록 엑셀 양식 다운로드")
     public void downloadUserTemplate(HttpServletResponse response) throws IOException {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("UserTemplate");
@@ -140,28 +150,19 @@ public class AdminUserController {
         workbook.close();
     }
 
-    /** 일반관리자 - 기관 사용자 일괄등록 업로드 */
-    @PostMapping("/bulk-upload")
-    public DataResponse<String> uploadUsers(@RequestParam("file") MultipartFile file,
-                                            HttpServletRequest request) {
-        //토큰 추출
-        String token = jwtTokenUtil.getAccessToken(request);
-        UserRole role = jwtTokenUtil.getRoles(token, TokenType.AccessToken);
+    /**
+     * 일반관리자 - 기관 사용자 일괄등록 업로드
+     */
+    @PostMapping(value = "/bulk-upload", name = "기관 사용자 일괄등록 업로드")
+    public DataResponse<String> uploadUsers(
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest request
+    ) {
+        //중복 로직 제거: AdminService를 통해 토큰 검증 및 Admin 객체 획득
+        Admin admin = adminService.getTokenAdmin(request);
 
-        //관리자 권한 검증
-        if (!(role == UserRole.ROLE_ADMIN || role == UserRole.ROLE_SUPER_ADMIN)) {
-            throw new UnauthorizedException("관리자 권한이 필요합니다.");
-        }
-
-        //JWT에서 관리자 ID 추출
-        Long adminId = jwtTokenUtil.getUserId(token, TokenType.AccessToken);
-
-        //관리자 조회
-        Admin admin = adminRepository.findById(adminId)
-                .orElseThrow(() -> new RuntimeException("관리자 정보를 찾을 수 없습니다."));
-
-        //서비스 호출
-        String result = bulkUploadService.processExcelUpload(file, admin);
+        // 서비스 호출
+        String result = adminUserService.processExcelUpload(file, admin);
 
         return new DataResponse<>(result);
     }
