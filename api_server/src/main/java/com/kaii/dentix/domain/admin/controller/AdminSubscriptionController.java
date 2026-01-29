@@ -5,14 +5,11 @@ import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
-import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionChangeRequest;
-import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionResponse;
+import com.kaii.dentix.domain.organization.dto.OrganizationDto;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.dto.OrganizationSubscriptionHistoryResponse;
-import com.kaii.dentix.domain.subscription.application.SubscriptionInfoService;
 import com.kaii.dentix.domain.subscription.application.SubscriptionService;
-import com.kaii.dentix.domain.subscription.dto.SubscriptionHistoryResponse;
-import com.kaii.dentix.domain.subscription.dto.SubscriptionInfoResponse;
+import com.kaii.dentix.domain.subscription.dto.SubscriptionDto;
+import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -31,25 +28,26 @@ public class AdminSubscriptionController {
     private final JwtTokenUtil jwtTokenUtil;
     private final AdminRepository adminRepository;
     private final SubscriptionService subscriptionService;
-    private final SubscriptionInfoService subscriptionInfoService;
+//    private final SubscriptionInfoService subscriptionInfoService;
     private final OrganizationSubscriptionService organizationSubscriptionService;
     private final OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
 
     @GetMapping("/all")
-    public ResponseEntity<List<SubscriptionInfoResponse>> getAllPlans() {
-        List<SubscriptionInfoResponse> plans = subscriptionInfoService.getAllPlans();
-        return ResponseEntity.ok(plans);
+    public ResponseEntity<DataResponse<List<SubscriptionDto.PlanResponse>>> getAllPlans() {
+        return ResponseEntity.ok(
+                new DataResponse<>(200, "전체 구독플랜 조회 성공", subscriptionService.getAllPlans())
+        );
     }
 
     /** 일반관리자 - 본인 기관 구독 정보 조회 */
     @GetMapping("/my")
-    public ResponseEntity<OrganizationSubscriptionResponse> getMySubscription() {
+    public ResponseEntity<OrganizationDto.SubscriptionResponse> getMySubscription() {
         Long adminId = jwtTokenUtil.getCurrentAdminId();
 
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new IllegalArgumentException("관리자 계정을 찾을 수 없습니다."));
 
-        OrganizationSubscriptionResponse response =
+        OrganizationDto.SubscriptionResponse response =
                 organizationSubscriptionService.getMySubscription(adminId);
 
         return ResponseEntity.ok(response);
@@ -59,7 +57,7 @@ public class AdminSubscriptionController {
     @PutMapping("/my")
     public ResponseEntity<SuccessResponse> updateMySubscription(
             HttpServletRequest request,
-            @RequestBody OrganizationSubscriptionChangeRequest dto
+            @RequestBody OrganizationDto.SubscriptionChangeRequest dto
     ) {
         Admin admin = adminService.getTokenAdmin(request);
         SuccessResponse response = subscriptionService.updateMyOrganizationSubscription(admin, dto);
@@ -68,10 +66,10 @@ public class AdminSubscriptionController {
 
     /** 일반관리자 - 본인 기관의 구독 이력 조회 */
     @GetMapping("/history")
-    public ResponseEntity<List<OrganizationSubscriptionHistoryResponse>> getMySubscriptionHistory() {
+    public ResponseEntity<List<OrganizationDto.SubscriptionHistoryResponse>> getMySubscriptionHistory() {
         Long adminId = jwtTokenUtil.getCurrentAdminId();
 
-        List<OrganizationSubscriptionHistoryResponse> histories =
+        List<OrganizationDto.SubscriptionHistoryResponse> histories =
                 organizationSubscriptionHistoryService.getMySubscriptionHistory(adminId);
 
         return ResponseEntity.ok(histories);
@@ -79,11 +77,12 @@ public class AdminSubscriptionController {
 
     /** ???기관별 구독 이력 조회 */
     @GetMapping("/{organizationId}/subscription-history")
-    public ResponseEntity<List<SubscriptionHistoryResponse>> getSubscriptionHistory(
+    public ResponseEntity<List<OrganizationDto.SubscriptionHistoryResponse>> getSubscriptionHistory(
             @PathVariable Long organizationId
     ) {
-        List<SubscriptionHistoryResponse> historyList =
+        List<OrganizationDto.SubscriptionHistoryResponse> historyList =
                 organizationSubscriptionHistoryService.getSubscriptionHistoryByOrganization(organizationId);
+
         return ResponseEntity.ok(historyList);
     }
 }

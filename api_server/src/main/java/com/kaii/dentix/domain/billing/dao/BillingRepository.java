@@ -22,6 +22,11 @@ import java.util.Optional;
 
 @Repository
 public interface BillingRepository extends JpaRepository<Billing, Long> {
+    //특정 기관의 전체 빌링 내역 조회 (페이징)
+    Page<Billing> findByOrganization(Organization organization, Pageable pageable);
+
+    //특정 기관의 상태별 빌링 내역 조회 (페이징)
+    Page<Billing> findByOrganizationAndBillingStatus(Organization organization, BillingStatus billingStatus, Pageable pageable);
 
     boolean existsByOrganizationAndBillingTypeAndBillingStatus(
             Organization organization,

@@ -3,8 +3,8 @@ package com.kaii.dentix.domain.admin.application;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.dao.user.AdminUserCustomRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.admin.dto.AdminStatisticDto; //
-import com.kaii.dentix.domain.admin.dto.statistic.QuestionnaireStatisticDto; // (이건 DTO 내부로 옮기거나 임시 유지)
+import com.kaii.dentix.domain.admin.dto.AdminStatisticDto;
+import com.kaii.dentix.domain.admin.dto.statistic.QuestionnaireStatisticDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.oralCheck.application.OralCheckService;

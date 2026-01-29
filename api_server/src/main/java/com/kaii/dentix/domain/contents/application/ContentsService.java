@@ -5,15 +5,13 @@ import com.kaii.dentix.domain.contents.dao.ContentsCategoryRepository;
 import com.kaii.dentix.domain.contents.dao.ContentsCustomRepository;
 import com.kaii.dentix.domain.contents.dao.ContentsRepository;
 import com.kaii.dentix.domain.contents.domain.Contents;
-import com.kaii.dentix.domain.contents.dto.*;
+import com.kaii.dentix.domain.contents.dto.ContentsDto;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
 import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import io.micrometer.common.util.StringUtils;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
@@ -23,103 +21,114 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ContentsService {
 
     private final ContentsCategoryRepository contentsCategoryRepository;
-
     private final ContentsRepository contentsRepository;
-
-    private final UserService userService;
-
     private final ContentsCardRepository contentsCardRepository;
-
     private final ContentsCustomRepository contentsCustomRepository;
-
     private final QuestionnaireRepository questionnaireRepository;
 
-
     /**
-     *  콘텐츠 카테고리 조회
+     * 콘텐츠 카테고리 목록 생성 (내부 헬퍼 메서드)
      */
-    public List<ContentsCategoryDto> getCategoryList(String userName) {
-        List<ContentsCategoryDto> categoryList = contentsCategoryRepository.findAll(Sort.by(Sort.Direction.ASC, "contentsCategorySort")).stream()
-            .map(contentsCategory ->
-                ContentsCategoryDto.builder()
-                    .id(contentsCategory.getContentsCategoryId())
-                    .sort(contentsCategory.getContentsCategorySort())
-                    .name(contentsCategory.getContentsCategoryName())
-                    .color(contentsCategory.getContentsCategoryColor())
-                    .build()
-            ).toList();
+    private List<ContentsDto.Category> getCategoryList(String userName) {
+        // 1. 기본 카테고리 조회
+        List<ContentsDto.Category> categoryList = contentsCategoryRepository.findAll(Sort.by(Sort.Direction.ASC, "contentsCategorySort"))
+                .stream()
+                .map(c -> ContentsDto.Category.builder()
+                        .id(c.getContentsCategoryId())
+                        .sort(c.getContentsCategorySort())
+                        .name(c.getContentsCategoryName())
+                        .color(c.getContentsCategoryColor())
+                        .build()
+                ).toList();
 
-        List<ContentsCategoryDto> userCategoryList = new ArrayList<>(categoryList);
+        List<ContentsDto.Category> resultList = new ArrayList<>(categoryList);
 
-        // 사용자 맞춤 카테고리 추가
+        // 2. 사용자 맞춤 카테고리 추가 (인증된 사용자일 경우)
         if (StringUtils.isNotBlank(userName)) {
-            ContentsCategoryDto userCategory = ContentsCategoryDto.builder()
-                .id(0)
-                .sort(1)
-                .name((userName.length() > 6 ? userName.substring(0, 6) + "・・・" : userName) + "님 맞춤")
-                .color(null)
-                .build();
-            userCategoryList.add(0, userCategory);
+            String displayName = (userName.length() > 6 ? userName.substring(0, 6) + "・・・" : userName) + "님 맞춤";
 
-            for (int i = 0; i < userCategoryList.size(); i++) {
-                userCategoryList.get(i).setSort(i + 1);
+            ContentsDto.Category userCategory = ContentsDto.Category.builder()
+                    .id(0) // 맞춤 카테고리 ID는 0으로 고정
+                    .sort(1)
+                    .name(displayName)
+                    .color(null)
+                    .build();
+
+            resultList.add(0, userCategory);
+
+            // 순서 재정렬
+            for (int i = 0; i < resultList.size(); i++) {
+                resultList.get(i).setSort(i + 1);
             }
         }
 
-        return userCategoryList;
+        return resultList;
     }
 
     /**
-     *  콘텐츠 조회
+     * 콘텐츠 목록 조회
      */
-    @Transactional
-    public ContentsListDto contentsList(HttpServletRequest httpServletRequest){
+    @Transactional(readOnly = true)
+    public ContentsDto.ListResponse getContentsList(User user) {
 
-        User user = userService.getTokenUserNullable(httpServletRequest);
-        log.info("user", user);
-        boolean isVerifiedUser = user != null && user.getIsVerify().equals(YnType.Y);
+        boolean isVerifiedUser = (user != null && user.getIsVerify() == YnType.Y);
+        String userName = isVerifiedUser ? user.getUserName() : null;
 
-        // 카테고리 리스트 (인증된 사용자의 경우 사용자 맞춤 카테고리 추가)
-        List<ContentsCategoryDto> categoryList = this.getCategoryList(isVerifiedUser ? user.getUserName() : null);
+        // 1. 카테고리 리스트 준비
+        List<ContentsDto.Category> categoryList = this.getCategoryList(userName);
 
-        // 콘텐츠 리스트
-        List<ContentsDto> userContentsList = contentsCustomRepository.getContents();
+        // 2. 전체 콘텐츠 리스트 조회
+        List<ContentsDto.Summary> allContents = contentsCustomRepository.getContents();
 
-        // 사용자 맞춤 카테고리 추가 - 인증된 사용자의 경우
+        // 3. 맞춤 콘텐츠 태깅 (인증된 사용자)
         if (isVerifiedUser) {
             Optional<Questionnaire> questionnaireOpt = questionnaireRepository.findTopByUserIdOrderByCreatedDesc(user.getUserId());
+
             if (questionnaireOpt.isPresent()) {
-                List<Long> customizedContentsIdList = contentsCustomRepository.getCustomizedContentsIdList(questionnaireOpt.get().getQuestionnaireId());
-                customizedContentsIdList.forEach(id -> {
-                    userContentsList.stream().filter(o -> o.getId() == id).findAny().ifPresent(contentsDto -> {
-                        contentsDto.getCategoryIds().add(0, 0);
-                    });
-                });
+                List<Long> customizedIds = contentsCustomRepository.getCustomizedContentsIdList(questionnaireOpt.get().getQuestionnaireId());
+
+                // 맞춤 콘텐츠 ID에 해당하는 항목의 categoryIds 맨 앞에 0 추가
+                customizedIds.forEach(targetId ->
+                        allContents.stream()
+                                .filter(c -> c.getId().equals(targetId))
+                                .findFirst()
+                                .ifPresent(c -> c.getCategoryIds().add(0, 0))
+                );
             }
         }
 
-        return new ContentsListDto(categoryList, userContentsList);
+        return ContentsDto.ListResponse.builder()
+                .categories(categoryList)
+                .contents(allContents)
+                .build();
     }
 
     /**
-     *  콘텐츠 카드뉴스
+     * 콘텐츠 카드뉴스 상세 조회
      */
-    @Transactional
-    public ContentsCardListDto contentsCard(Long contentsId){
-        Contents contents = contentsRepository.findById(contentsId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 콘텐츠입니다."));
+    @Transactional(readOnly = true)
+    public ContentsDto.CardListResponse getContentsCard(Long contentsId) {
+        Contents contents = contentsRepository.findById(contentsId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 콘텐츠입니다."));
 
-        List<ContentsCardDto> contentsCardList = contentsCardRepository.findAllByContents_ContentsId(contents.getContentsId()).stream()
-                .map(contentsList -> new ContentsCardDto(contentsList.getContentsCardNumber(), contentsList.getContentsCardPath()))
-                .collect(Collectors.toList());
+        List<ContentsDto.Card> cards = contentsCardRepository.findAllByContents_ContentsId(contents.getContentsId())
+                .stream()
+                .map(c -> ContentsDto.Card.builder()
+                        .number(c.getContentsCardNumber())
+                        .path(c.getContentsCardPath())
+                        .build())
+                .toList();
 
-        return new ContentsCardListDto(contents.getContentsTitle(), contentsCardList);
+        return ContentsDto.CardListResponse.builder()
+                .title(contents.getContentsTitle())
+                .cardList(cards)
+                .build();
     }
-
 }

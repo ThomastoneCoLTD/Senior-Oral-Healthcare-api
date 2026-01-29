@@ -5,7 +5,7 @@ import com.kaii.dentix.domain.admin.dto.statistic.AllQuestionnaireCount;
 import com.kaii.dentix.domain.admin.dto.statistic.QuestionnaireStatisticDto;
 import com.kaii.dentix.domain.oralStatus.domain.QOralStatus;
 import com.kaii.dentix.domain.questionnaire.domain.QQuestionnaire;
-import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireAndStatusDto;
+import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireDto;
 import com.kaii.dentix.domain.type.DatePeriodType;
 import com.kaii.dentix.domain.user.domain.QUser;
 import com.kaii.dentix.domain.userOralStatus.domain.QUserOralStatus;
@@ -39,11 +39,13 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
      * 최근 문진표 및 해당 문진표의 높은 우선순위 구강 상태 조회
      */
     @Override
-    public QuestionnaireAndStatusDto getLatestQuestionnaireAndHigherStatus(Long userId) {
-
+    public QuestionnaireDto.Summary getLatestQuestionnaireAndHigherStatus(Long userId) {
         return queryFactory
-                .select(Projections.constructor(QuestionnaireAndStatusDto.class,
-                        questionnaire.questionnaireId, questionnaire.created, oralStatus.oralStatusType, oralStatus.oralStatusTitle
+                .select(Projections.constructor(QuestionnaireDto.Summary.class, //내부 클래스 사용
+                        questionnaire.questionnaireId,
+                        questionnaire.created,
+                        oralStatus.oralStatusType,
+                        oralStatus.oralStatusTitle
                 ))
                 .from(questionnaire)
                 .join(userOralStatus).on(userOralStatus.questionnaire.questionnaireId.eq(questionnaire.questionnaireId))

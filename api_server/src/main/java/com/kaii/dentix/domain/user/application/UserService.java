@@ -69,17 +69,43 @@ public class UserService {
     /**
      * 토큰에서 User 추출
      */
-    public User getTokenUser(HttpServletRequest servletRequest) {
-
-        String token = jwtTokenUtil.getAccessToken(servletRequest);
-
-        UserRole roles = jwtTokenUtil.getRoles(token, TokenType.AccessToken);
-        if (!roles.equals(UserRole.ROLE_USER)) throw new UnauthorizedException("권한이 없는 사용자입니다.");
-
+    private User getTokenUser(HttpServletRequest request) {
+        String token = jwtTokenUtil.getAccessToken(request);
+        if (jwtTokenUtil.getRoles(token, TokenType.AccessToken) != UserRole.ROLE_USER) {
+            throw new UnauthorizedException("권한이 없는 사용자입니다.");
+        }
         Long userId = jwtTokenUtil.getUserId(token, TokenType.AccessToken);
-        return userRepository.findById(userId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
-
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
     }
+//    public User getTokenUser(HttpServletRequest servletRequest) {
+//
+//        String token = jwtTokenUtil.getAccessToken(servletRequest);
+//
+//        UserRole roles = jwtTokenUtil.getRoles(token, TokenType.AccessToken);
+//        if (!roles.equals(UserRole.ROLE_USER)) throw new UnauthorizedException("권한이 없는 사용자입니다.");
+//
+//        Long userId = jwtTokenUtil.getUserId(token, TokenType.AccessToken);
+//        return userRepository.findById(userId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+//
+//    }
+
+    /**
+     * 사용자 자동 로그인 (토큰 갱신)
+     */
+    @Transactional
+    public UserDto.TokenResponse userAutoLogin(HttpServletRequest request) {
+        User user = this.getTokenUser(request);
+
+        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
+        String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
+        user.updateLogin(refreshToken);
+
+        publisher.publishEvent(new UserModifyDeviceInfoEvent(user.getUserId(), request));
+
+        return new UserDto.TokenResponse(accessToken, refreshToken);
+    }
+
 
     /**
      * 토큰에서 User 추출 - 토큰 NULL 허용
@@ -219,26 +245,53 @@ public class UserService {
     /**
      *  사용자 회원정보 조회
      */
+//    @Transactional(readOnly = true)
+//    public UserInfoDto userInfo(HttpServletRequest request) {
+//        //JWT에서 사용자 정보 가져오기
+//        User user = this.getTokenUser(request);
+//
+//        //User + UserToAppService + AppService fetch join 조회
+//        User fullUser = userRepository.findByUserIdWithServices(user.getUserId())
+//                .orElseThrow(() -> new NotFoundDataException("사용자를 찾을 수 없습니다."));
+//
+//        //사용자와 연결된 서비스 목록 매핑
+//        List<UserInfoDto.ServiceInfo> services = userToAppServiceRepository.findByUser(fullUser).stream()
+//                .map(rel -> UserInfoDto.ServiceInfo.builder()
+//                        .serviceId(rel.getAppService().getAppServiceId())
+//                        .name(rel.getAppService().getName())
+//                        .serviceType(rel.getAppService().getServiceType().name())
+//                        .build())
+//                .toList();
+//
+//        //최종 DTO 반환
+//        return UserInfoDto.builder()
+//                .userName(fullUser.getUserName())
+//                .userLoginIdentifier(fullUser.getUserLoginIdentifier())
+//                .userGender(fullUser.getUserGender())
+//                .services(services)
+//                .build();
+//    }
+
+    /**
+     * 사용자 정보 조회
+     */
     @Transactional(readOnly = true)
-    public UserInfoDto userInfo(HttpServletRequest request) {
-        //JWT에서 사용자 정보 가져오기
+    public UserDto.InfoResponse getUserInfo(HttpServletRequest request) {
         User user = this.getTokenUser(request);
 
-        //User + UserToAppService + AppService fetch join 조회
+        // Fetch Join 사용 권장
         User fullUser = userRepository.findByUserIdWithServices(user.getUserId())
                 .orElseThrow(() -> new NotFoundDataException("사용자를 찾을 수 없습니다."));
 
-        //사용자와 연결된 서비스 목록 매핑
-        List<UserInfoDto.ServiceInfo> services = userToAppServiceRepository.findByUser(fullUser).stream()
-                .map(rel -> UserInfoDto.ServiceInfo.builder()
+        List<UserDto.ServiceInfo> services = userToAppServiceRepository.findByUser(fullUser).stream()
+                .map(rel -> UserDto.ServiceInfo.builder()
                         .serviceId(rel.getAppService().getAppServiceId())
                         .name(rel.getAppService().getName())
-                        .serviceType(rel.getAppService().getServiceType().name())
+                        .serviceType(rel.getAppService().getServiceType())
                         .build())
                 .toList();
 
-        //최종 DTO 반환
-        return UserInfoDto.builder()
+        return UserDto.InfoResponse.builder()
                 .userName(fullUser.getUserName())
                 .userLoginIdentifier(fullUser.getUserLoginIdentifier())
                 .userGender(fullUser.getUserGender())

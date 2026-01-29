@@ -1,8 +1,9 @@
 package com.kaii.dentix.domain.contents.controller;
 
 import com.kaii.dentix.domain.contents.application.ContentsService;
-import com.kaii.dentix.domain.contents.dto.ContentsCardListDto;
-import com.kaii.dentix.domain.contents.dto.ContentsListDto;
+import com.kaii.dentix.domain.contents.dto.ContentsDto;
+import com.kaii.dentix.domain.user.application.UserService;
+import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -17,24 +18,24 @@ import org.springframework.web.bind.annotation.RestController;
 public class ContentsController {
 
     private final ContentsService contentsService;
+    private final UserService userService;
 
     /**
-     *  콘텐츠 조회
+     * 콘텐츠 목록 조회
      */
-    @GetMapping(name = "콘텐츠 조회")
-    public DataResponse<ContentsListDto> contentsList(HttpServletRequest httpServletRequest){
-        DataResponse<ContentsListDto> response = new DataResponse<>(contentsService.contentsList(httpServletRequest));
-        return response;
+    @GetMapping
+    public DataResponse<ContentsDto.ListResponse> getContentsList(HttpServletRequest request) {
+        // 컨트롤러에서 User 추출 (토큰이 없거나 만료시 null 반환 가능성 있음 - 로직에 따라 처리)
+        User user = userService.getTokenUserNullable(request);
+
+        return new DataResponse<>(contentsService.getContentsList(user));
     }
 
     /**
-     *  콘텐츠 카드뉴스
+     * 콘텐츠 카드뉴스 조회
      */
-    @GetMapping(value = "/card", name = "콘텐츠 카드뉴스")
-    public DataResponse<ContentsCardListDto> contentsCard(@RequestParam Long contentsId){
-        DataResponse<ContentsCardListDto> response = new DataResponse<>(contentsService.contentsCard(contentsId));
-        return response;
+    @GetMapping("/card")
+    public DataResponse<ContentsDto.CardListResponse> getContentsCard(@RequestParam Long contentsId) {
+        return new DataResponse<>(contentsService.getContentsCard(contentsId));
     }
-
-
 }

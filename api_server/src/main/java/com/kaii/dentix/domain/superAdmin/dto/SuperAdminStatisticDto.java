@@ -7,7 +7,7 @@ import java.util.List;
 public class SuperAdminStatisticDto {
 
     // =================================================================
-    // 슈퍼관리자용 기관별 사용자 통계 요약 (기존 SuperAdminUserStatisticResponse 대체)
+    // 슈퍼관리자용 기관별 사용자 통계 요약
     // =================================================================
     @Getter @Builder
     @NoArgsConstructor
@@ -31,7 +31,7 @@ public class SuperAdminStatisticDto {
     }
 
     // =================================================================
-    // (신규) 2. 슈퍼관리자용 전체 사용자 통계 (기존 SuperAdminAllUserStatisticsResponse 대체)
+    // (신규) 2. 슈퍼관리자용 전체 사용자 통계
     // =================================================================
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor

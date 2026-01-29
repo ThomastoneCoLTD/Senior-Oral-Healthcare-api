@@ -2,34 +2,33 @@ package com.kaii.dentix.domain.superAdmin.application;
 
 import com.kaii.dentix.domain.admin.dao.user.AdminUserCustomRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.superAdmin.dto.SuperAdminStatisticDto;
 import com.kaii.dentix.domain.billing.dao.BillingRepository;
 import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.billing.dto.BillingOveruseResponse;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
-import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
-import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionHistoryResponse;
+import com.kaii.dentix.domain.organization.dto.OrganizationDto;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
-import com.kaii.dentix.domain.superAdmin.dto.*;
+import com.kaii.dentix.domain.superAdmin.dto.SuperAdminDto;
+import com.kaii.dentix.domain.superAdmin.dto.SuperAdminStatisticDto;
 import com.kaii.dentix.domain.type.BillingType;
 import com.kaii.dentix.domain.type.GenderType;
-import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
-import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -42,126 +41,129 @@ public class SuperAdminOrganizationService {
     private final UserRepository userRepository;
     private final AdminUserCustomRepository adminUserCustomRepository;
 
-    /**1. 전체 기관 목록 조회 */
-    @Transactional(readOnly = true)
-    public List<OrganizationListResponse> getAllOrganizations() {
+    /** 1. 전체 기관 목록 조회 */
+    public List<SuperAdminDto.OrganizationListResponse> getAllOrganizations() {
         return organizationRepository.findAll()
                 .stream()
-                .map(OrganizationListResponse::fromEntity)
+                .map(SuperAdminDto.OrganizationListResponse::fromEntity) // 내부 클래스 사용
                 .toList();
     }
 
-    /**2. 기관 상세 정보 조회 */
-    @Transactional(readOnly = true)
-    public OrganizationDetailResponse getOrganizationDetail(Long organizationId) {
+    /** 2. 기관 상세 정보 조회 */
+    public SuperAdminDto.OrganizationDetailResponse getOrganizationDetail(Long organizationId) {
         Organization org = organizationRepository.findById(organizationId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 기관을 찾을 수 없습니다."));
-        return OrganizationDetailResponse.fromEntity(org);
+                .orElseThrow(() -> new NotFoundDataException("해당 기관을 찾을 수 없습니다."));
+        return SuperAdminDto.OrganizationDetailResponse.fromEntity(org);
     }
 
-    /**3. 기관별 구독이력 조회 */
-    @Transactional(readOnly = true)
-    public List<OrganizationSubscriptionHistoryResponse> getOrganizationSubscriptions(Long organizationId) {
+    /** 3. 기관별 구독이력 조회 */
+    public List<OrganizationDto.SubscriptionHistoryResponse> getOrganizationSubscriptions(Long organizationId) {
 
+        // 1. DB 조회
         List<OrganizationSubscriptionHistory> histories =
                 organizationSubscriptionHistoryRepository
                         .findAllByOrganization_OrganizationIdOrderByStartDateDesc(organizationId);
 
+        // 2. OrganizationDto 내부 클래스를 사용하여 변환
         return histories.stream()
-                .map(OrganizationSubscriptionHistoryResponse::fromEntity)
+                .map(OrganizationDto.SubscriptionHistoryResponse::fromEntity)
                 .toList();
     }
 
-//    @Transactional(readOnly = true)
-//    public List<SuperAdminBillingDto> getOrganizationBillings(Long organizationId) {
-//
-//        List<Billing> billings = billingRepository.findAllWithOrganizationAndPlan(organizationId);
-//
-//        return billings.stream()
-//                .map(SuperAdminBillingDto::new)
-//                .toList();
-//    }
-
     /**
-     * 슈퍼관리자 - 특정 기관의 사용자 사용량 조회
+     * 4. 슈퍼관리자 - 특정 기관의 사용자 사용량 상세 조회
      */
-    @Transactional
-    public OrganizationUsageResponse getOrganizationUsageByOrgId(Long organizationId) {
-
-        // 1) 기관 조회
+    public OrganizationDto.UsageResponse getOrganizationUsageByOrgId(Long organizationId) {
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new NotFoundDataException("기관 정보를 찾을 수 없습니다."));
 
-        // 2) 현재 구독 정보 (OrganizationSubscription 기반)
         OrganizationSubscription subscription = organization.getOrganizationSubscription();
-        if (subscription == null) {
-            throw new NotFoundDataException("현재 활성 구독이 없습니다.");
-        }
 
-        // 3) 구독 플랜 정보
-        int max = subscription.getSubscriptionPlan().getMaxSuccessResponses();
+        // 구독 정보가 없는 경우에 대한 방어 로직 (Null Safe)
+        String planName = (subscription != null && subscription.getSubscriptionPlan() != null)
+                ? subscription.getSubscriptionPlan().getPlanName().name()
+                : "미구독";
 
-        // 4) 성공횟수, 사용량 계산
+        int max = (subscription != null && subscription.getSubscriptionPlan() != null)
+                ? subscription.getSubscriptionPlan().getMaxSuccessResponses()
+                : 0;
+
+        // Repository 통계 메서드 호출
         Long successCount = oralCheckRepository.countSuccessByOrganization(organizationId);
-        Long remaining = max - successCount;
-        double usageRate = (max == 0) ? 0 : (double) successCount / max;
+        Long remaining = (max > 0) ? (max - successCount) : 0;
+        double usageRate = (max > 0) ? ((double) successCount / max) * 100.0 : 0.0;
 
-        // 5) 응답 생성
-        return OrganizationUsageResponse.builder()
-                .subscriptionPlanName(subscription.getSubscriptionPlan().getPlanName().name())
+        //Pageable 자동 처리
+        List<OrganizationDto.TopUser> topUsers = oralCheckRepository.findTopUsers(organizationId);
+        List<OrganizationDto.RecentUsage> recentUsages = oralCheckRepository.findRecentUsages(organizationId);
+
+        return OrganizationDto.UsageResponse.builder()
+                .subscriptionPlanName(planName)
                 .maxSuccessResponses(max)
                 .successCount(successCount)
                 .remainingResponses(remaining)
-                .usageRate(usageRate)
-
-                // 일/주/월 사용량
+                .usageRate(usageRate) // 퍼센트 or 소수점 (프론트 협의 필요, 여기선 소수점)
                 .dailyUsage(oralCheckRepository.countTodayUsage(organizationId))
                 .weeklyUsage(oralCheckRepository.countThisWeekUsage(organizationId))
                 .monthlyUsage(oralCheckRepository.countThisMonthUsage(organizationId))
-
-                // 분석 사용자 / 최근 분석
-                .topUsers(oralCheckRepository.findTopUsers(organizationId))
-                .recentUsages(oralCheckRepository.findRecentUsages(organizationId))
-
+                .topUsers(topUsers)
+                .recentUsages(recentUsages)
                 .build();
     }
 
-    @Transactional(readOnly = true)
-    // 1. 리턴 타입 변경 (SuperAdminAllUserStatisticsResponse -> SuperAdminStatisticDto.TotalUserStats)
+    /**
+     * 5. 슈퍼관리자 - 전체 사용자 통계 조회 (전체 + 기관별 상세)
+     */
     public SuperAdminStatisticDto.TotalUserStats getSuperAdminTotalUserStatistics(Admin admin) {
 
-        // 슈퍼관리자 권한 체크
-        if (admin.getAdminIsSuper() != YnType.Y) {
-            throw new BadRequestApiException("슈퍼관리자만 접근할 수 있습니다.");
-        }
-
-        // 기관별 사용자 통계 (이미 신규 DTO 사용 중)
-        List<SuperAdminStatisticDto.OrgUserStats> orgStats = adminUserCustomRepository.getAllOrganizationUserStats();
-
-        // 전체 사용자 수
+        // --- 1. 전체 통계 (Global Stats) ---
         long totalUsers = userRepository.count();
-
         long maleUsers = userRepository.countByUserGender(GenderType.M);
         long femaleUsers = userRepository.countByUserGender(GenderType.W);
 
-        // 최근 7일 신규 가입자
-        LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
+        // Date 변환 (LocalDateTime -> Date)
+        LocalDateTime sevenDaysAgoLdt = LocalDateTime.now().minusDays(7);
+        Date sevenDaysAgo = Date.from(sevenDaysAgoLdt.atZone(ZoneId.systemDefault()).toInstant());
 
-        // (Entity가 java.util.Date를 쓴다면 변환 필요, LocalDateTime이면 그대로 사용)
-        Date oneWeekAgoDate = java.sql.Timestamp.valueOf(oneWeekAgo);
+        long newUsers7Days = userRepository.countByCreatedAfter(sevenDaysAgo);
 
-        long newUsers = userRepository.countByCreatedAfter(oneWeekAgoDate);
+        // --- 2. 기관별 통계 (Organization Stats) ---
+        List<Organization> organizations = organizationRepository.findAll();
 
-        // 2. 신규 DTO 빌더 사용
+        LocalDateTime oneMonthAgoLdt = LocalDateTime.now().minusMonths(1);
+        Date oneMonthAgo = Date.from(oneMonthAgoLdt.atZone(ZoneId.systemDefault()).toInstant());
+
+        List<SuperAdminStatisticDto.OrgUserStats> orgStatsList = organizations.stream()
+                .map(org -> {
+                    // 유저 리포지토리 메서드가 필요함 (기존 코드 유지 가정)
+                    long orgTotal = userRepository.countByOrganization(org);
+                    long orgMale = userRepository.countByOrganizationAndUserGender(org, GenderType.M);
+                    long orgFemale = userRepository.countByOrganizationAndUserGender(org, GenderType.W);
+                    long orgNewUsers = userRepository.countByOrganizationAndCreatedAfter(org, oneMonthAgo);
+
+                    return SuperAdminStatisticDto.OrgUserStats.builder()
+                            .organizationId(org.getOrganizationId())
+                            .organizationName(org.getOrganizationName())
+                            .totalUsers(orgTotal)
+                            .maleUsers(orgMale)
+                            .femaleUsers(orgFemale)
+                            .newUsers(orgNewUsers)
+                            .build();
+                })
+                .toList();
+
+        // --- 3. 최종 응답 생성 ---
         return SuperAdminStatisticDto.TotalUserStats.builder()
                 .totalUsers(totalUsers)
                 .maleUsers(maleUsers)
                 .femaleUsers(femaleUsers)
-                .newUsers7Days(newUsers)
-                .organizationStats(orgStats)
+                .newUsers7Days(newUsers7Days)
+                .organizationStats(orgStatsList)
                 .build();
     }
-    public SuperAdminCurrentSubscriptionDto getCurrentSubscription(Long orgId) {
+
+    /** 6. 기관 현재 구독 정보 (단건) */
+    public SuperAdminDto.CurrentSubscriptionResponse getCurrentSubscription(Long orgId) {
         Organization org = organizationRepository.findByOrganizationId(orgId)
                 .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
 
@@ -169,7 +171,7 @@ public class SuperAdminOrganizationService {
             throw new NotFoundDataException("현재 구독 상품이 없습니다.");
         }
 
-        return SuperAdminCurrentSubscriptionDto.builder()
+        return SuperAdminDto.CurrentSubscriptionResponse.builder()
                 .organizationId(org.getOrganizationId())
                 .organizationName(org.getOrganizationName())
                 .subscriptionPlanId(org.getSubscriptionPlan().getId())
@@ -179,25 +181,25 @@ public class SuperAdminOrganizationService {
                 .build();
     }
 
-    public SuperAdminBillingListResponse getOrganizationBillingForSuperAdmin(Long organizationId) {
+    /** 7. 기관별 결제 내역 조회 (구독+일반) */
+    public SuperAdminDto.BillingListResponse getOrganizationBillingForSuperAdmin(Long organizationId) {
         Organization org = organizationRepository.findById(organizationId)
-                .orElseThrow(() -> new EntityNotFoundException("기관 없음"));
+                .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
 
         List<Billing> billings = billingRepository
                 .findByOrganizationAndBillingTypeInOrderByBilledAtDesc(
                         org,
-                        List.of(
-                                BillingType.SUBSCRIPTION,
-                                BillingType.REGULAR
-                        )
+                        List.of(BillingType.SUBSCRIPTION, BillingType.REGULAR)
                 );
 
-        return SuperAdminBillingListResponse.from(org, billings);
+        // 내부 클래스의 from 메서드 사용
+        return SuperAdminDto.BillingListResponse.from(org, billings);
     }
 
+    /** 8. 초과 과금 상세 조회 */
     public BillingOveruseResponse getOveruseDetail(Long billingId) {
         Billing baseBilling = billingRepository.findById(billingId)
-                .orElseThrow(() -> new EntityNotFoundException("Billing 없음"));
+                .orElseThrow(() -> new NotFoundDataException("결제 내역을 찾을 수 없습니다."));
 
         if (!(baseBilling.getBillingType() == BillingType.SUBSCRIPTION ||
                 baseBilling.getBillingType() == BillingType.REGULAR ||
@@ -205,6 +207,7 @@ public class SuperAdminOrganizationService {
             throw new IllegalArgumentException("구독 관련 Billing만 조회 가능합니다.");
         }
 
+        // BillingRepository에 추가한 메서드 사용
         List<Billing> overuseList = billingRepository.findByOrganizationAndBillingTypeAndBilledAtBetween(
                 baseBilling.getOrganization(),
                 BillingType.OVERUSE,
@@ -212,7 +215,7 @@ public class SuperAdminOrganizationService {
                 baseBilling.getPeriodEnd()
         );
 
-        Long totalAmount = overuseList.stream().mapToLong(Billing::getAmount).sum();
+        long totalAmount = overuseList.stream().mapToLong(Billing::getAmount).sum();
 
         return BillingOveruseResponse.builder()
                 .billingId(baseBilling.getId())
@@ -229,5 +232,4 @@ public class SuperAdminOrganizationService {
                 )
                 .build();
     }
-
 }

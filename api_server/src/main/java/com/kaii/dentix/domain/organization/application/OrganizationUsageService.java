@@ -3,38 +3,27 @@ package com.kaii.dentix.domain.organization.application;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
-import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
-import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
-import com.kaii.dentix.domain.organization.dao.OrganizationUsageResponse;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
-import com.kaii.dentix.domain.subscription.application.SubscriptionService;
-import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.organization.dto.OrganizationDto;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.reactivestreams.Subscription;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
 public class OrganizationUsageService {
-    private final OrganizationRepository organizationRepository;
     private final AdminRepository adminRepository;
     private final OralCheckRepository oralCheckRepository;
-    private final SubscriptionPlanRepository subscriptionPlanRepository;
-    private final SubscriptionService subscriptionService;
     private final OrganizationSubscriptionRepository organizationSubscriptionRepository;
 
     @Transactional
-    public OrganizationUsageResponse getMyOrganizationUsage(Long adminId) {
+    public OrganizationDto.UsageResponse getMyOrganizationUsage(Long adminId) {
 
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new NotFoundDataException("관리자를 찾을 수 없습니다."));
@@ -51,7 +40,7 @@ public class OrganizationUsageService {
         //LocalDateTime → Date 변환 (Asia/Seoul 기준)
         ZoneId zone = ZoneId.of("Asia/Seoul");
         Date startDate = Date.from(sub.getSubscriptionStartDate().atZone(zone).toInstant());
-        Date endDate   = Date.from(sub.getSubscriptionEndDate().atZone(zone).toInstant());
+        Date endDate = Date.from(sub.getSubscriptionEndDate().atZone(zone).toInstant());
 
         //구독 기간 동안 사용량
         Long successCount = oralCheckRepository.countSubscriptionPeriodUsage(
@@ -67,22 +56,24 @@ public class OrganizationUsageService {
                 ? (double) successCount / max
                 : 0.0;
 
-        return OrganizationUsageResponse.builder()
+        return OrganizationDto.UsageResponse.builder()
                 .subscriptionPlanName(sub.getSubscriptionPlan().getPlanName().name())
                 .maxSuccessResponses(max)
                 .successCount(successCount)
-                .remainingResponses(remaining)   // 초과 시 -값
+                .remainingResponses(remaining)
                 .usageRate(usageRate)
 
                 .dailyUsage(oralCheckRepository.countTodayUsage(organizationId))
                 .weeklyUsage(oralCheckRepository.countThisWeekUsage(organizationId))
                 .monthlyUsage(oralCheckRepository.countThisMonthUsage(organizationId))
 
+                // Repository 반환 타입 수정 필요 (아래 Repository 섹션 참조)
                 .topUsers(oralCheckRepository.findTopUsers(organizationId))
                 .recentUsages(oralCheckRepository.findRecentUsages(organizationId))
 
                 .build();
     }
+}
     /**
      * 성공 응답 기록 및 남은 횟수 반환
      */
@@ -130,4 +121,4 @@ public class OrganizationUsageService {
 //        }
 //    }
 
-}
+//}

@@ -60,22 +60,22 @@ public class AppServiceAgreementControllerTest extends ControllerTest {
     public void serviceAgreement() throws Exception{
 
         // given
-        List<ServiceAgreementDto> serviceAgreementList = Arrays.asList(
-                ServiceAgreementDto.builder()
+        List<ServiceAgreementDto.Response> mockList = List.of(
+                ServiceAgreementDto.Response.builder()
                         .id(1L)
                         .name("서비스 이용약관 동의")
                         .menuName("서비스 이용약관")
                         .isServiceAgreeRequired(YnType.Y)
                         .path("https://dthi-dev.kai-i.com/")
                         .build(),
-                ServiceAgreementDto.builder()
+                ServiceAgreementDto.Response.builder()
                         .id(2L)
                         .name("개인정보 수집 및 이용 동의")
                         .menuName("개인정보 수집 및 이용")
                         .isServiceAgreeRequired(YnType.Y)
                         .path("https://dtroka-dev.kai-i.com/")
                         .build(),
-                ServiceAgreementDto.builder()
+                ServiceAgreementDto.Response.builder()
                         .id(3L)
                         .name("마케팅 정보 수신 동의")
                         .menuName("마케팅 정보 수신")
@@ -84,7 +84,8 @@ public class AppServiceAgreementControllerTest extends ControllerTest {
                         .build()
         );
 
-        given(serviceAgreementService.serviceAgreementList()).willReturn(new ServiceAgreementListDto(serviceAgreementList));
+        given(serviceAgreementService.serviceAgreementList())
+                .willReturn(new ServiceAgreementDto.ListResponse(mockList));
 
         // when
         ResultActions resultActions = mockMvc.perform(

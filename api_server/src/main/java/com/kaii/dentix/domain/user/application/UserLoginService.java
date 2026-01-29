@@ -63,95 +63,53 @@ public class  UserLoginService {
     private final AdminRepository adminRepository;
     private final AppServiceRepository appServiceRepository;
     private final OrganizationRepository organizationRepository;
-    /**
-     * 사용자 서비스 이용동의 여부 확인 및 저장
-     */
-    public void userServiceAgreeCheckAndSave(List<Long> request, Long userId){
-        List<ServiceAgreementDto> serviceAgreementList = serviceAgreementService.serviceAgreementList().getServiceAgreement();
 
-        if (request.stream().anyMatch(serviceAgreementId -> serviceAgreementList.stream().noneMatch(requestId -> requestId.getId().equals(serviceAgreementId)))) {
-            throw new NotFoundDataException("존재하지 않는 서비스 이용 동의입니다.");
-        }
-
-        Date now = new Date();
-
-        serviceAgreementList.forEach(serviceAgreementDTO -> {
-            if (serviceAgreementDTO.getIsServiceAgreeRequired().equals(YnType.Y) && !request.contains(serviceAgreementDTO.getId())) {
-                throw new BadRequestApiException(serviceAgreementDTO.getName() + "는(은) 필수 항목입니다.");
-            }
-
-            userServiceAgreementRepository.save(UserServiceAgreement.builder()
-                    .userId(userId)
-                    .serviceAgreeId(serviceAgreementDTO.getId())
-                    .isUserServiceAgree(request.contains(serviceAgreementDTO.getId()) ? YnType.Y : YnType.N)
-                    .userServiceAgreeDate(now)
-                    .build());
-        });
-    }
 
     /**
-     *  사용자 회원 확인
+     * 사용자 회원 인증 (가입 여부 확인)
      */
     @Transactional(rollbackFor = Exception.class)
-    public UserVerifyDto userVerify(UserVerifyRequest request){
-        // 1. 이름 & 전화번호 모두 일치하는 유저 조회
+    public UserDto.VerifyResponse userVerify(UserDto.VerifyRequest request) {
         List<User> users = userRepository.findByUserPhoneNumberOrUserName(
-                request.getUserPhoneNumber(),
-                request.getUserName()
-        );
+                request.getUserPhoneNumber(), request.getUserName());
 
-        // 1. 이름 + 전화번호 모두 일치 → 이미 가입
+        // 1. 이름 + 전화번호 일치 -> 이미 가입됨
         User exactUser = users.stream()
                 .filter(u -> u.getUserName().equals(request.getUserName())
                         && u.getUserPhoneNumber().equals(request.getUserPhoneNumber()))
-                .findFirst()
-                .orElse(null);
+                .findFirst().orElse(null);
 
         if (exactUser != null) {
             throw new AlreadyDataException("이미 가입한 사용자입니다.");
         }
 
-        // 2. 전화번호만 일치 → 번호 중복
-        boolean phoneExists = users.stream()
-                .anyMatch(u -> u.getUserPhoneNumber().equals(request.getUserPhoneNumber()));
-
-        if (phoneExists) {
+        // 2. 전화번호 중복 체크
+        if (users.stream().anyMatch(u -> u.getUserPhoneNumber().equals(request.getUserPhoneNumber()))) {
             throw new BadRequestApiException("이미 사용중인 번호에요.\n번호를 다시 확인해 주세요.");
         }
 
-        // 3. 이름만 일치 → 이름 중복 but 다른 번호
-        boolean nameExists = users.stream()
-                .anyMatch(u -> u.getUserName().equals(request.getUserName()));
-
-        if (nameExists) {
+        // 3. 이름 중복 체크 (선택 사항)
+        if (users.stream().anyMatch(u -> u.getUserName().equals(request.getUserName()))) {
             throw new UnauthorizedException("회원 정보가 일치하지 않아요.\n다시 확인해 주세요.");
         }
 
-        // 4. 신규 사용자
-        return UserVerifyDto.builder()
-                .userId(null) // 아직 가입 전
-                .build();
+        return new UserDto.VerifyResponse(null);
     }
-
-
     /**
-     *  사용자 회원가입
+     * 사용자 회원가입
      */
     @Transactional
-    public UserSignUpDto userSignUp(HttpServletRequest httpServletRequest, UserSignUpRequest request) {
-        //아이디 중복 확인
+    public UserDto.SignUpResponse userSignUp(UserDto.SignUpRequest request) {
         this.loginIdCheck(request.getUserLoginIdentifier());
 
-        //비밀번호 찾기 질문 유효성 검사
         if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
             throw new NotFoundDataException("존재하지 않는 질문입니다.");
         }
 
-        //기관 전화번호로 조회
         Organization organization = organizationRepository.findById(request.getOrganizationId())
                 .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
 
-        //사용자 정보 저장
+        // 사용자 저장
         User user = userRepository.save(User.builder()
                 .userLoginIdentifier(request.getUserLoginIdentifier())
                 .userName(request.getUserName())
@@ -164,182 +122,182 @@ public class  UserLoginService {
                 .isVerify(YnType.N)
                 .build());
 
-        //서비스 정보 연결
+        // 앱 서비스 연결
         List<AppService> appServices = appServiceRepository.findAllById(request.getAppServiceIds());
-        if (appServices.isEmpty()) {
-            throw new NotFoundDataException("선택한 서비스가 존재하지 않습니다.");
-        }
+        if (appServices.isEmpty()) throw new NotFoundDataException("선택한 서비스가 존재하지 않습니다.");
 
         for (AppService appService : appServices) {
-            userToAppServiceRepository.save(UserToAppService.builder()
-                    .user(user)
-                    .appService(appService)
-                    .build());
+            userToAppServiceRepository.save(UserToAppService.builder().user(user).appService(appService).build());
         }
 
-        //토큰 생성 및 로그인 처리
+        // 토큰 발급
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
 
-        //서비스 이용 약관 동의 저장
-        this.userServiceAgreeCheckAndSave(request.getUserServiceAgreementRequest(), user.getUserId());
+        // 약관 동의 저장
+        this.saveServiceAgreements(request.getUserServiceAgreementRequest(), user.getUserId());
 
-        //최종 반환 DTO
-        return UserSignUpDto.builder()
+        return UserDto.SignUpResponse.builder()
                 .userId(user.getUserId())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .userLoginIdentifier(request.getUserLoginIdentifier())
-                .userName(request.getUserName())
-                .userGender(request.getUserGender())
+                .userLoginIdentifier(user.getUserLoginIdentifier())
+                .userName(user.getUserName())
+                .userGender(user.getUserGender())
                 .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())
                 .build();
     }
 
-     /**
-      * 아이디 중복 확인
-     */
-    @Transactional(readOnly = true)
-    public void loginIdCheck(String userLoginIdentifier){
-        if (userRepository.findByUserLoginIdentifier(userLoginIdentifier).isPresent()){
-            throw new AlreadyDataException("이미 사용 중인 아이디입니다.");
-        }
-    }
-
     /**
-     * 사용자 로그인 (수정됨)
+     * 사용자 로그인
      */
     @Transactional
-    public UserAuthDto.LoginResponse userLogin(UserAuthDto.LoginRequest request) { // Request DTO 변경
-        // 1. 사용자 조회
-        User user = userRepository.findByUserLoginIdentifier(request.getLoginId())
+    public UserDto.LoginResponse userLogin(UserDto.LoginRequest request) {
+        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
                 .orElseThrow(() -> new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다."));
 
-        // 2. 비밀번호 확인
-        if (!passwordEncoder.matches(request.getPassword(), user.getUserPassword())) {
+        if (!passwordEncoder.matches(request.getUserPassword(), user.getUserPassword())) {
             throw new UnauthorizedException("아이디 혹은 비밀번호가 올바르지 않습니다.");
         }
 
-        // 3. 관리자 승인 여부 체크
-        if (user.getIsVerify() == null || user.getIsVerify() != YnType.Y) {
+        if (user.getIsVerify() != YnType.Y) {
             throw new UnauthorizedException("관리자 승인 후 이용 가능합니다.");
         }
 
-        // 4. 기관 및 구독 정보 추출
-        Organization organization = user.getOrganization();
-        SubscriptionPlan plan = null;
-
+        // 구독/기관 정보
+        Organization org = user.getOrganization();
         String planName = null;
-        Boolean customSurveyEnabled = false;
+        Boolean customSurvey = false;
 
-        if (organization != null && organization.getOrganizationSubscription() != null) {
-            plan = organization.getOrganizationSubscription().getSubscriptionPlan();
+        if (org != null && org.getOrganizationSubscription() != null) {
+            SubscriptionPlan plan = org.getOrganizationSubscription().getSubscriptionPlan();
             if (plan != null) {
                 planName = plan.getPlanName().name();
-                customSurveyEnabled = plan.getCustomSurveyEnabled();
+                customSurvey = plan.getCustomSurveyEnabled();
             }
         }
 
-        // 5. JWT 토큰 발급
+        // 토큰 발급
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
 
-        // 6. 서비스 목록 조회
-        List<UserToAppService> mappings = userToAppServiceRepository.findByUser(user);
-        List<UserAuthDto.AppServiceInfo> userServices = mappings.stream()
-                .map(uta -> UserAuthDto.AppServiceInfo.builder()
+        // 서비스 목록
+        List<UserDto.ServiceInfo> services = userToAppServiceRepository.findByUser(user).stream()
+                .map(uta -> UserDto.ServiceInfo.builder()
                         .serviceId(uta.getAppService().getAppServiceId())
-                        .name(uta.getAppService().getName()) // AppService 엔티티 필드명 확인 필요
+                        .name(uta.getAppService().getName())
                         .serviceType(uta.getAppService().getServiceType())
                         .build())
                 .toList();
 
-        Long mainServiceId = userServices.isEmpty() ? null : userServices.get(0).getServiceId();
-        String mainServiceName = userServices.isEmpty() ? null : userServices.get(0).getName();
+        Long mainServiceId = services.isEmpty() ? null : services.get(0).getServiceId();
+        String mainServiceName = services.isEmpty() ? null : services.get(0).getName();
 
-        // 7. Response 빌드
-        return UserAuthDto.LoginResponse.builder()
+        return UserDto.LoginResponse.builder()
                 .userId(user.getUserId())
                 .userName(user.getUserName())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .serviceId(mainServiceId)
                 .name(mainServiceName)
-                .services(userServices)
-                .organizationId(organization != null ? organization.getOrganizationId() : null)
-                .organizationName(organization != null ? organization.getOrganizationName() : null)
+                .services(services)
+                .organizationId(org != null ? org.getOrganizationId() : null)
+                .organizationName(org != null ? org.getOrganizationName() : null)
                 .organizationPlanName(planName)
-                .organizationCustomSurveyEnabled(customSurveyEnabled)
+                .organizationCustomSurveyEnabled(customSurvey)
                 .build();
     }
 
     /**
-     *  사용자 비밀번호 찾기
+     * 비밀번호 찾기 (질문/답변 확인)
      */
     @Transactional
-    public UserFindPasswordDto userFindPassword(UserFindPasswordRequest request){
+    public UserDto.FindPasswordResponse userFindPassword(UserDto.FindPasswordRequest request) {
+        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 아이디입니다."));
 
-        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 아이디입니다."));
-
-        if (user.getFindPwdQuestionId().equals(request.getFindPwdQuestionId())){ // 입력받은 질문과 DB 정보가 일치하는 경우
-            if (!user.getFindPwdAnswer().equals(request.getFindPwdAnswer())){ // 입력받은 답변과 DB 정보가 일치하지 않는 경우
-                throw new UnauthorizedException("질문 혹은 답변이 일치하지 않습니다.");
-            }
-        } else { // 입력받은 질문과 DB 정보가 일치하지 않는 경우
+        if (!user.getFindPwdQuestionId().equals(request.getFindPwdQuestionId()) ||
+                !user.getFindPwdAnswer().equals(request.getFindPwdAnswer())) {
             throw new UnauthorizedException("질문 혹은 답변이 일치하지 않습니다.");
         }
 
-        return UserFindPasswordDto.builder()
+        return UserDto.FindPasswordResponse.builder()
                 .userId(user.getUserId())
                 .userName(user.getUserName())
                 .userLoginIdentifier(user.getUserLoginIdentifier())
                 .build();
-
-    }
-
-
-    @Transactional
-    public void userModifyPassword(UserModifyPasswordRequest request) {
-
-        //사용자 조회
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
-
-        //새 비밀번호로 변경
-        user.setUserPassword(passwordEncoder.encode(request.getUserPassword()));
-        userRepository.save(user);
     }
 
     /**
-     *  AccessToken 재발급
+     * 비밀번호 재설정 (비로그인 상태)
      */
-    public AccessTokenDto accessTokenReissue(HttpServletRequest request) {
+    @Transactional
+    public void userModifyPassword(Long userId, UserDto.ModifyPasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+        user.setUserPassword(passwordEncoder.encode(request.getUserPassword()));
+    }
+
+    /**
+     * 아이디 중복 확인
+     */
+    @Transactional(readOnly = true)
+    public void loginIdCheck(String userLoginIdentifier) {
+        if (userRepository.findByUserLoginIdentifier(userLoginIdentifier).isPresent()) {
+            throw new AlreadyDataException("이미 사용 중인 아이디입니다.");
+        }
+    }
+
+    /**
+     * AccessToken 재발급
+     */
+    public UserDto.AccessTokenResponse accessTokenReissue(HttpServletRequest request) {
         String refreshToken = jwtTokenUtil.getRefreshToken(request);
 
         if (jwtTokenUtil.isExpired(refreshToken, TokenType.RefreshToken)) throw new TokenExpiredException();
         Long roleId = jwtTokenUtil.getUserId(refreshToken, TokenType.RefreshToken);
         UserRole roles = jwtTokenUtil.getRoles(refreshToken, TokenType.RefreshToken);
 
-        switch (roles) {
-            case ROLE_USER:
-                User user = userRepository.findById(roleId).orElseThrow(TokenExpiredException::new);
-                if (StringUtils.isBlank(user.getUserRefreshToken()) || !user.getUserRefreshToken().equals(refreshToken))
-                    throw new UnauthorizedException();
-
-                return AccessTokenDto.builder().accessToken(jwtTokenUtil.createToken(user, TokenType.AccessToken)).build();
-            case ROLE_ADMIN:
-                Admin admin = adminRepository.findById(roleId).orElseThrow(TokenExpiredException::new);
-                if (StringUtils.isBlank(admin.getAdminRefreshToken()) || !admin.getAdminRefreshToken().equals(refreshToken))
-                    throw new UnauthorizedException();
-
-                return AccessTokenDto.builder().accessToken(jwtTokenUtil.createToken(admin, TokenType.AccessToken)).build();
-
-            default:
-                throw new TokenExpiredException();
+        String newToken;
+        if (roles == UserRole.ROLE_USER) {
+            User user = userRepository.findById(roleId).orElseThrow(TokenExpiredException::new);
+            if (StringUtils.isBlank(user.getUserRefreshToken()) || !user.getUserRefreshToken().equals(refreshToken))
+                throw new UnauthorizedException();
+            newToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
+        } else if (roles == UserRole.ROLE_ADMIN) {
+            Admin admin = adminRepository.findById(roleId).orElseThrow(TokenExpiredException::new);
+            if (StringUtils.isBlank(admin.getAdminRefreshToken()) || !admin.getAdminRefreshToken().equals(refreshToken))
+                throw new UnauthorizedException();
+            newToken = jwtTokenUtil.createToken(admin, TokenType.AccessToken);
+        } else {
+            throw new TokenExpiredException();
         }
+
+        return new UserDto.AccessTokenResponse(newToken);
     }
 
+    // 내부 메서드: 서비스 약관 저장
+    private void saveServiceAgreements(List<Long> request, Long userId) {
+        List<ServiceAgreementDto.Response> list = serviceAgreementService.serviceAgreementList().getServiceAgreement();
+
+        if (request.stream().anyMatch(reqId -> list.stream().noneMatch(d -> d.getId().equals(reqId)))) {
+            throw new NotFoundDataException("존재하지 않는 서비스 이용 동의입니다.");
+        }
+
+        Date now = new Date();
+        list.forEach(agree -> {
+            if (agree.getIsServiceAgreeRequired() == YnType.Y && !request.contains(agree.getId())) {
+                throw new BadRequestApiException(agree.getName() + "는(은) 필수 항목입니다.");
+            }
+            userServiceAgreementRepository.save(UserServiceAgreement.builder()
+                    .userId(userId)
+                    .serviceAgreeId(agree.getId())
+                    .isUserServiceAgree(request.contains(agree.getId()) ? YnType.Y : YnType.N)
+                    .userServiceAgreeDate(now)
+                    .build());
+        });
+    }
 }

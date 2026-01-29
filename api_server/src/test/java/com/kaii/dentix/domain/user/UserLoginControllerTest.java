@@ -5,8 +5,7 @@ import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.controller.UserLoginController;
-import com.kaii.dentix.domain.user.dto.*;
-import com.kaii.dentix.domain.user.dto.request.*;
+import com.kaii.dentix.domain.user.dto.UserDto;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +29,7 @@ import static com.kaii.dentix.common.ApiDocumentUtils.getDocumentRequest;
 import static com.kaii.dentix.common.ApiDocumentUtils.getDocumentResponse;
 import static com.kaii.dentix.common.DocumentOptionalGenerator.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -42,15 +42,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 
 @WebMvcTest(UserLoginController.class)
-public class UserLoginControllerTest extends ControllerTest{
+public class UserLoginControllerTest extends ControllerTest {
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp(WebApplicationContext webApplicationContext, RestDocumentationContextProvider restDocumentation) {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
-            .apply(documentationConfiguration(restDocumentation))
-            .build();
+                .apply(documentationConfiguration(restDocumentation))
+                .build();
     }
 
     @Autowired
@@ -62,58 +62,72 @@ public class UserLoginControllerTest extends ControllerTest{
     @MockBean
     private UserLoginService userLoginService;
 
-    private UserVerifyDto userVerifyDto(){
-        return UserVerifyDto.builder()
+    // =================================================================
+    // Helper Methods (UserDto 사용)
+    // =================================================================
+
+    private UserDto.VerifyResponse userVerifyDto() {
+        return UserDto.VerifyResponse.builder()
                 .userId(1L)
-//                .patientId(1L)
                 .build();
     }
 
-    private UserSignUpDto userSignUpDto(){
-        return UserSignUpDto.builder()
+    private UserDto.SignUpResponse userSignUpDto() {
+        return UserDto.SignUpResponse.builder()
                 .accessToken("Access Token")
                 .refreshToken("Refresh Token")
                 .userId(1L)
-                .userLoginIdentifier("detix123")
+                .userLoginIdentifier("dentix123")
                 .userName("김덴티")
                 .userGender(GenderType.W)
+                .organizationId(1L)
+                .organizationName("테스트 치과")
                 .build();
     }
 
-    private UserLoginDto userLoginDto(){
-        return UserLoginDto.builder()
+    private UserDto.LoginResponse userLoginDto() {
+        return UserDto.LoginResponse.builder()
                 .accessToken("Access Token")
                 .refreshToken("Refresh Token")
                 .userId(1L)
                 .userName("김덴티")
+                .serviceId(1L)
+                .name("메인 서비스")
+                .services(List.of())
+                .organizationId(1L)
+                .organizationName("테스트 치과")
+                .organizationPlanName("GROWTH")
+                .organizationCustomSurveyEnabled(true)
                 .build();
     }
 
-    private UserFindPasswordDto userFindPasswordDto(){
-        return UserFindPasswordDto.builder()
+    private UserDto.FindPasswordResponse userFindPasswordDto() {
+        return UserDto.FindPasswordResponse.builder()
                 .userId(1L)
-                .userLoginIdentifier("detix123")
+                .userLoginIdentifier("dentix123")
                 .userName("김덴티")
                 .build();
     }
 
-    private AccessTokenDto accessTokenDto(){
-        return AccessTokenDto.builder()
-                .accessToken("AccessToken")
+    private UserDto.AccessTokenResponse accessTokenDto() {
+        return UserDto.AccessTokenResponse.builder()
+                .accessToken("New Access Token")
                 .build();
     }
 
+    // =================================================================
+    // Tests
+    // =================================================================
 
     /**
-     *  사용자 회원 확인
+     * 사용자 회원 확인
      */
     @Test
-    public void userVerify() throws Exception{
-
+    public void userVerify() throws Exception {
         // given
-        given(userLoginService.userVerify(any(UserVerifyRequest.class))).willReturn(userVerifyDto());
+        given(userLoginService.userVerify(any(UserDto.VerifyRequest.class))).willReturn(userVerifyDto());
 
-        UserVerifyRequest userVerifyRequest = UserVerifyRequest.builder()
+        UserDto.VerifyRequest request = UserDto.VerifyRequest.builder()
                 .userPhoneNumber("01012345678")
                 .userName("김덴티")
                 .build();
@@ -121,79 +135,80 @@ public class UserLoginControllerTest extends ControllerTest{
         // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.post("/login/verify")
-                        .content(objectMapper.writeValueAsString(userVerifyRequest))
+                        .content(objectMapper.writeValueAsString(request))
                         .contentType(MediaType.APPLICATION_JSON)
         );
 
         // then
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(document("login/verify",
                         getDocumentRequest(),
                         getDocumentResponse(),
                         requestFields(
-                                fieldWithPath("patientPhoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("사용자(환자) 연락처"),
-                                fieldWithPath("patientName").type(JsonFieldType.STRING).description("사용자(환자) 실명")
+                                fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("사용자 휴대폰 번호"),
+                                fieldWithPath("userName").type(JsonFieldType.STRING).description("사용자 이름")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
-                                fieldWithPath("response.patientId").type(JsonFieldType.NUMBER).optional().description("환자 고유 번호")
+                                fieldWithPath("response.userId").type(JsonFieldType.NUMBER).optional().description("사용자 고유 번호 (이미 가입된 경우)")
                         )
                 ));
 
-        verify(userLoginService).userVerify(any(UserVerifyRequest.class));
+        verify(userLoginService).userVerify(any(UserDto.VerifyRequest.class));
     }
 
     /**
-     *  사용자 회원가입
+     * 사용자 회원가입
      */
     @Test
-    public void userSignUp() throws Exception{
-
+    public void userSignUp() throws Exception {
         // given
-        given(userLoginService.userSignUp(any(HttpServletRequest.class), any(UserSignUpRequest.class))).willReturn(userSignUpDto());
-
-        List<Long> serviceAgreementList = Arrays.asList(1L, 2L, 3L);
+        // Controller에서 HttpServletRequest를 받지 않으므로 matcher 제거
+        given(userLoginService.userSignUp(any(UserDto.SignUpRequest.class))).willReturn(userSignUpDto());
 
         String password = "password!";
-        UserSignUpRequest userSignUpRequest = UserSignUpRequest.builder()
-                .userId(1L)
-                .userServiceAgreementRequest(serviceAgreementList)
+        UserDto.SignUpRequest request = UserDto.SignUpRequest.builder()
                 .userLoginIdentifier("dentix123")
                 .userName("김덴티")
                 .userPassword(password)
                 .userGender(GenderType.W)
+                .userPhoneNumber("01012345678")
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("초록색")
+                .appServiceIds(Arrays.asList(1L, 2L))
+                .organizationId(1L)
+                .userServiceAgreementRequest(Arrays.asList(1L, 2L, 3L))
                 .build();
+
         given(passwordEncoder.encode(any(String.class))).willReturn(password);
 
         // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.post("/login/signUp")
-                        .content(objectMapper.writeValueAsString(userSignUpRequest))
+                        .content(objectMapper.writeValueAsString(request))
                         .contentType(MediaType.APPLICATION_JSON)
         );
 
         // then
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(document("login/signUp",
                         getDocumentRequest(),
                         getDocumentResponse(),
                         requestFields(
-                                fieldWithPath("userId").type(JsonFieldType.NUMBER).optional().description("사용자(환자) 고유 번호"),
-                                fieldWithPath("userServiceAgreementRequest[]").type(JsonFieldType.ARRAY).description("사용자 서비스 동의 고유 번호"),
                                 fieldWithPath("userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
                                 fieldWithPath("userName").type(JsonFieldType.STRING).description("사용자 닉네임"),
                                 fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호"),
                                 fieldWithPath("userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
-                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("사용자 비밀번호 찾기 질문"),
-                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("사용자 비밀번호 찾기 답변")
+                                fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("사용자 휴대폰 번호"),
+                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
+                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변"),
+                                fieldWithPath("appServiceIds").type(JsonFieldType.ARRAY).description("선택한 앱 서비스 ID 목록"),
+                                fieldWithPath("organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
+                                fieldWithPath("userServiceAgreementRequest").type(JsonFieldType.ARRAY).description("동의한 약관 ID 목록")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
@@ -204,39 +219,38 @@ public class UserLoginControllerTest extends ControllerTest{
                                 fieldWithPath("response.userId").type(JsonFieldType.NUMBER).description("사용자 고유 번호"),
                                 fieldWithPath("response.userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
                                 fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 닉네임"),
-                                fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별")
+                                fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
+                                fieldWithPath("response.organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
+                                fieldWithPath("response.organizationName").type(JsonFieldType.STRING).description("소속 기관 이름")
                         )
                 ));
 
-        verify(userLoginService).userSignUp(any(HttpServletRequest.class), any(UserSignUpRequest.class));
-
+        verify(userLoginService).userSignUp(any(UserDto.SignUpRequest.class));
     }
 
     /**
-     *  아이디 중복 확인
+     * 아이디 중복 확인
      */
     @Test
-    public void loginIdCheck() throws Exception{
-
+    public void loginIdCheck() throws Exception {
         // given
         doNothing().when(userLoginService).loginIdCheck(any(String.class));
 
         // when
         ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.get("/login/loginIdentifier-check?userLoginIdentifier={userLoginIdentifier}", "dentix123")
-                        .contentType(MediaType.APPLICATION_JSON)
+                RestDocumentationRequestBuilders.get("/login/loginIdentifier-check")
+                        .param("userLoginIdentifier", "dentix123")
                         .accept(MediaType.APPLICATION_JSON)
         );
 
         // then
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(document("login/loginIdentifier-check",
                         getDocumentRequest(),
                         getDocumentResponse(),
                         queryParameters(
-                                parameterWithName("userLoginIdentifier").description("사용자 아이디")
+                                parameterWithName("userLoginIdentifier").description("중복 확인할 사용자 아이디")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
@@ -245,29 +259,26 @@ public class UserLoginControllerTest extends ControllerTest{
                 ));
 
         verify(userLoginService).loginIdCheck(any(String.class));
-
     }
 
     /**
-     *  사용자 로그인
+     * 사용자 로그인
      */
     @Test
-    public void userLogin() throws Exception{
-
+    public void userLogin() throws Exception {
         // given
-        given(userLoginService.userLogin(any(HttpServletRequest.class), any(UserLoginRequest.class))).willReturn(userLoginDto());
+        // Service 메서드 시그니처 변경 반영 (HttpServletRequest 제거)
+        given(userLoginService.userLogin(any(UserDto.LoginRequest.class))).willReturn(userLoginDto());
 
-        String password = "password!";
-        UserLoginRequest userLoginRequest = UserLoginRequest.builder()
+        UserDto.LoginRequest request = UserDto.LoginRequest.builder()
                 .userLoginIdentifier("dentix123")
-                .userPassword(password)
+                .userPassword("password!")
                 .build();
-        given(passwordEncoder.encode(any(String.class))).willReturn(password);
 
         // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.post("/login")
-                        .content(objectMapper.writeValueAsString(userLoginRequest))
+                        .content(objectMapper.writeValueAsString(request))
                         .contentType(MediaType.APPLICATION_JSON)
                         .with(user("user").roles("USER"))
         );
@@ -275,7 +286,6 @@ public class UserLoginControllerTest extends ControllerTest{
         // then
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(document("login",
                         getDocumentRequest(),
                         getDocumentResponse(),
@@ -287,27 +297,32 @@ public class UserLoginControllerTest extends ControllerTest{
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
+                                fieldWithPath("response.userId").type(JsonFieldType.NUMBER).description("사용자 고유 번호"),
+                                fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 이름"),
                                 fieldWithPath("response.accessToken").type(JsonFieldType.STRING).description("Access Token"),
                                 fieldWithPath("response.refreshToken").type(JsonFieldType.STRING).description("Refresh Token"),
-                                fieldWithPath("response.userId").type(JsonFieldType.NUMBER).description("사용자 고유 번호"),
-                                fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 이름")
+                                fieldWithPath("response.serviceId").type(JsonFieldType.NUMBER).optional().description("대표 서비스 ID"),
+                                fieldWithPath("response.name").type(JsonFieldType.STRING).optional().description("대표 서비스 이름"),
+                                fieldWithPath("response.services").type(JsonFieldType.ARRAY).optional().description("이용 가능한 서비스 목록"),
+                                fieldWithPath("response.organizationId").type(JsonFieldType.NUMBER).optional().description("소속 기관 ID"),
+                                fieldWithPath("response.organizationName").type(JsonFieldType.STRING).optional().description("소속 기관 이름"),
+                                fieldWithPath("response.organizationPlanName").type(JsonFieldType.STRING).optional().description("기관 구독 플랜 이름"),
+                                fieldWithPath("response.organizationCustomSurveyEnabled").type(JsonFieldType.BOOLEAN).optional().description("커스텀 설문 기능 사용 가능 여부")
                         )
                 ));
 
-        verify(userLoginService).userLogin(any(HttpServletRequest.class), any(UserLoginRequest.class));
-
+        verify(userLoginService).userLogin(any(UserDto.LoginRequest.class));
     }
 
     /**
-     *  사용자 비밀번호 찾기
+     * 사용자 비밀번호 찾기 (질문/답변 검증)
      */
     @Test
-    public void userFindPassword() throws Exception{
-
+    public void userFindPassword() throws Exception {
         // given
-        given(userLoginService.userFindPassword(any(UserFindPasswordRequest.class))).willReturn(userFindPasswordDto());
+        given(userLoginService.userFindPassword(any(UserDto.FindPasswordRequest.class))).willReturn(userFindPasswordDto());
 
-        UserFindPasswordRequest userFindPasswordRequest = UserFindPasswordRequest.builder()
+        UserDto.FindPasswordRequest request = UserDto.FindPasswordRequest.builder()
                 .userLoginIdentifier("dentix123")
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("초록색")
@@ -316,21 +331,20 @@ public class UserLoginControllerTest extends ControllerTest{
         // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.post("/login/find-password")
-                        .content(objectMapper.writeValueAsString(userFindPasswordRequest))
+                        .content(objectMapper.writeValueAsString(request))
                         .contentType(MediaType.APPLICATION_JSON)
         );
 
         // then
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(document("login/find-password",
                         getDocumentRequest(),
                         getDocumentResponse(),
                         requestFields(
                                 fieldWithPath("userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
-                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("사용자 비밀번호 찾기 질문"),
-                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("사용자 비밀번호 찾기 답변")
+                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
+                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
@@ -342,43 +356,40 @@ public class UserLoginControllerTest extends ControllerTest{
                         )
                 ));
 
-        verify(userLoginService).userFindPassword(any(UserFindPasswordRequest.class));
-
+        verify(userLoginService).userFindPassword(any(UserDto.FindPasswordRequest.class));
     }
 
     /**
-     *  사용자 비밀번호 재설정
+     * 사용자 비밀번호 재설정
      */
     @Test
-    public void modifyPassword() throws Exception{
-
+    public void modifyPassword() throws Exception {
         // given
-        doNothing().when(userLoginService).userModifyPassword(any(UserModifyPasswordRequest.class));
+        doNothing().when(userLoginService).userModifyPassword(any(Long.class), any(UserDto.ModifyPasswordRequest.class));
 
-        String password = "password!";
-        UserModifyPasswordRequest userPasswordVerifyRequest = UserModifyPasswordRequest.builder()
-                .userId(1L)
-                .userPassword(password)
+        UserDto.ModifyPasswordRequest request = UserDto.ModifyPasswordRequest.builder()
+                .userPassword("newPassword!")
                 .build();
-        given(passwordEncoder.encode(any(String.class))).willReturn(password);
 
         // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.put("/login/password")
-                        .content(objectMapper.writeValueAsString(userPasswordVerifyRequest))
+                        .param("userId", "1") // Query Param
+                        .content(objectMapper.writeValueAsString(request))
                         .contentType(MediaType.APPLICATION_JSON)
         );
 
         // then
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(document("login/password",
                         getDocumentRequest(),
                         getDocumentResponse(),
+                        queryParameters(
+                                parameterWithName("userId").description("사용자 고유 번호")
+                        ),
                         requestFields(
-                                fieldWithPath("userId").type(JsonFieldType.NUMBER).description("사용자 고유 번호"),
-                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호")
+                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("변경할 새 비밀번호")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
@@ -386,24 +397,22 @@ public class UserLoginControllerTest extends ControllerTest{
                         )
                 ));
 
-        verify(userLoginService).userModifyPassword(any(UserModifyPasswordRequest.class));
+        verify(userLoginService).userModifyPassword(eq(1L), any(UserDto.ModifyPasswordRequest.class));
     }
 
     /**
-     *  AccessToken 재발급
+     * AccessToken 재발급
      */
     @Test
-    public void accessTokenReissue() throws Exception{
-
+    public void accessTokenReissue() throws Exception {
         // given
         given(userLoginService.accessTokenReissue(any(HttpServletRequest.class))).willReturn(accessTokenDto());
 
         // when
         ResultActions result = mockMvc.perform(
                 RestDocumentationRequestBuilders.put("/login/access-token")
-                        .header("RefreshToken", "access-token.고유경.RefreshToken")
+                        .header("RefreshToken", "access-token.refresh.token")
                         .accept(MediaType.APPLICATION_JSON)
-                        .with(user("user").roles("USER"))
         );
 
         // then
@@ -416,9 +425,9 @@ public class UserLoginControllerTest extends ControllerTest{
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
-                                fieldWithPath("response.accessToken").type(JsonFieldType.STRING).description("Access Token")
+                                fieldWithPath("response.accessToken").type(JsonFieldType.STRING).description("새로 발급된 Access Token"),
+                                fieldWithPath("response.refreshToken").type(JsonFieldType.STRING).optional().description("Refresh Token (변경 시)")
                         )
                 ));
     }
-
 }

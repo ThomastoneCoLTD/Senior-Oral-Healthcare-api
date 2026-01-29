@@ -5,7 +5,7 @@ import com.kaii.dentix.domain.admin.dao.user.AdminUserRepositoryImpl;
 import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.AdminUserDto;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
-import com.kaii.dentix.domain.oralCheck.dto.OralCheckUsageDto;
+import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
@@ -94,7 +94,6 @@ public class AdminUserService {
     public AdminUserDto.DetailResponse userInfo(Long userId) {
         User user = getUser(userId);
 
-        // ✅ 정적 팩토리 메서드로 DTO 생성 (깔끔)
         return AdminUserDto.DetailResponse.from(
                 user.getUserLoginIdentifier(),
                 user.getUserName(),
@@ -106,7 +105,7 @@ public class AdminUserService {
      * 일반관리자 - 본인 기관의 사용자 정보 수정
      */
     @Transactional
-    public void userModify(AdminUserDto.ModifyRequest request) { // ✅ DTO 교체
+    public void userModify(AdminUserDto.ModifyRequest request) {
         User user = getUser(request.getUserId());
 
         // 아이디 변경 시 중복 체크
@@ -161,12 +160,11 @@ public class AdminUserService {
         Date startDate = toDate(activeSubscription.getSubscriptionStartDate());
         Date endDate = toDate(activeSubscription.getUsageResetDate());
 
-        List<OralCheckUsageDto> usageList = oralcheckRepository.findUserUsageByOrganizationAndPeriod(
+        List<OralCheckDto.Usage> usageList = oralcheckRepository.findUserUsageByOrganizationAndPeriod(
                 org.getOrganizationId(), startDate, endDate
         );
 
-        long total = usageList.stream().mapToLong(OralCheckUsageDto::getSuccessCount).sum();
-
+        long total = usageList.stream().mapToLong(OralCheckDto.Usage::getSuccessCount).sum();
         return new DataResponse<>(200, "기관 사용자 사용량 조회 성공", Map.of("totalCount", total, "users", usageList));
     }
 
@@ -264,7 +262,7 @@ public class AdminUserService {
         user.setOrganization(org);
         user.setSuccessCount(0); // 기존 코드에 있던 초기화 복구
 
-        // ✅ [복구 완료] 비밀번호 찾기 질문 & 답변 매핑
+        //비밀번호 찾기 질문 & 답변 매핑
         String qIdStr = getStringValue(row.getCell(6), formatter);
         if (!qIdStr.isEmpty()) {
             user.setFindPwdQuestionId(Long.parseLong(qIdStr));

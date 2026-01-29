@@ -2,7 +2,7 @@ package com.kaii.dentix.domain.organization.dao;
 
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
+//import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.type.SubscriptionStatus;
 import org.reactivestreams.Subscription;
 import org.springframework.data.jpa.repository.JpaRepository;

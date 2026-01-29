@@ -4,11 +4,9 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.organization.dao.OrganizationHistoryRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationHistory;
-import com.kaii.dentix.domain.organization.dto.OrganizationHistoryResponse;
-import com.kaii.dentix.domain.organization.dto.OrganizationReResponse;
+import com.kaii.dentix.domain.organization.dto.OrganizationDto;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,39 +22,43 @@ public class AdminOrganizationService {
 
     /** 일반관리자 - 본인 기관 정보 조회 */
     @Transactional
-    public OrganizationReResponse getMyOrganization(Admin admin) {
+    public OrganizationDto.Response getMyOrganization(Admin admin) {
 
         Organization org = admin.getOrganization();
         if (org == null) {
             throw new IllegalArgumentException("해당 관리자는 기관에 소속되어 있지 않습니다.");
         }
-
         Long organizationId = org.getOrganizationId();
 
-        // 현재 구독 = 활성 구독 이력
-        OrganizationSubscriptionHistory activeHistory =
-                organizationSubscriptionHistoryRepository
-                        .findByOrganization_OrganizationIdAndEndDateIsNull(organizationId)
-                        .orElseThrow(() -> new EntityNotFoundException("활성 구독 이력이 없습니다."));
+        // 1. 기본 기관 정보 + 현재 구독 상태 매핑
+        OrganizationDto.Response response = OrganizationDto.Response.from(org);
 
-        // 전체 구독 이력 (과거 + 현재)
+        // 2. 전체 구독 이력 조회 (복구됨)
         List<OrganizationSubscriptionHistory> histories =
                 organizationSubscriptionHistoryRepository
                         .findAllByOrganization_OrganizationIdOrderByStartDateDesc(organizationId);
 
-        return OrganizationReResponse.from(org, activeHistory, histories);
+        // 3. 이력 엔티티 -> DTO 변환
+        List<OrganizationDto.SubscriptionHistoryResponse> historyDtos = histories.stream()
+                .map(OrganizationDto.SubscriptionHistoryResponse::fromEntity)
+                .toList();
+
+        // 4. 응답 객체에 이력 리스트 주입
+        response.setSubscriptionHistories(historyDtos);
+
+        return response;
     }
 
     /** 일반관리자 - 본인 기관 수정 이력 조회 */
     @Transactional
-    public List<OrganizationHistoryResponse> getOrganizationHistory(Long organizationId) {
+    public List<OrganizationDto.HistoryResponse> getOrganizationHistory(Long organizationId) {
 
         List<OrganizationHistory> historyList =
                 organizationHistoryRepository
                         .findAllByOrganization_OrganizationIdOrderByModifiedAtDesc(organizationId);
 
         return historyList.stream()
-                .map(h -> OrganizationHistoryResponse.builder()
+                .map(h -> OrganizationDto.HistoryResponse.builder()
                         .historyId(h.getHistoryId())
                         .fieldName(h.getFieldName())
                         .beforeValue(h.getBeforeValue())

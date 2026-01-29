@@ -33,19 +33,25 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
 
     /**
      * 구강교육 조회
+     * (Return Type 변경: ContentsDto -> ContentsDto.Summary)
      */
     @Override
-    public List<ContentsDto> getContents() {
-
-        // transform 사용 시 JPQLTemplates.DEFAULT 필요
+    public List<ContentsDto.Summary> getContents() {
         return new JPAQueryFactory(JPQLTemplates.DEFAULT, entityManager)
-            .from(contents)
-            .leftJoin(contentsToCategory).on(contentsToCategory.contents.eq(contents))
-            .orderBy(contents.contentsSort.asc())
-            .distinct()
-            .transform(groupBy(contents.contentsId).list(Projections.constructor(ContentsDto.class,
-                contents.contentsId, contents.contentsTitle, contents.contentsSort, contents.contentsType, contents.contentsTypeColor, contents.contentsThumbnail, contents.contentsPath, list(contentsToCategory.contentsCategoryId)
-            )));
+                .from(contents)
+                .leftJoin(contentsToCategory).on(contentsToCategory.contents.eq(contents))
+                .orderBy(contents.contentsSort.asc())
+                .distinct()
+                .transform(groupBy(contents.contentsId).list(Projections.constructor(ContentsDto.Summary.class, //
+                        contents.contentsId,
+                        contents.contentsTitle,
+                        contents.contentsSort,
+                        contents.contentsType,
+                        contents.contentsTypeColor,
+                        contents.contentsThumbnail,
+                        contents.contentsPath, // DTO의 videoURL 매핑
+                        list(contentsToCategory.contentsCategoryId)
+                )));
     }
 
     /**
@@ -54,32 +60,36 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
     @Override
     public List<Long> getCustomizedContentsIdList(Long questionnaireId) {
         return queryFactory
-            .selectDistinct(contents.contentsId)
-            .from(contents)
-            .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
-            .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
-            .where(userOralStatus.questionnaire.questionnaireId.eq(questionnaireId))
-            .fetch();
+                .selectDistinct(contents.contentsId)
+                .from(contents)
+                .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
+                .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
+                .where(userOralStatus.questionnaire.questionnaireId.eq(questionnaireId))
+                .fetch();
     }
 
     /**
      * 맞춤형 구강교육 조회
      */
     @Override
-    public List<ContentsDto> getCustomizedContents(Long questionnaireId) {
-
-        // transform 사용 시 JPQLTemplates.DEFAULT 필요
+    public List<ContentsDto.Summary> getCustomizedContents(Long questionnaireId) {
         return new JPAQueryFactory(JPQLTemplates.DEFAULT, entityManager)
-            .from(contents)
-            .leftJoin(contentsToCategory).on(contentsToCategory.contents.eq(contents))
-            .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
-            .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
-            .where(userOralStatus.questionnaire.questionnaireId.eq(questionnaireId))
-            .orderBy(contents.contentsSort.asc())
-            .distinct()
-            .transform(groupBy(contents.contentsId).list(Projections.constructor(ContentsDto.class,
-                contents.contentsId, contents.contentsTitle, contents.contentsSort, contents.contentsType, contents.contentsTypeColor, contents.contentsThumbnail, contents.contentsPath, list(contentsToCategory.contentsCategoryId)
-            )));
+                .from(contents)
+                .leftJoin(contentsToCategory).on(contentsToCategory.contents.eq(contents))
+                .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
+                .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
+                .where(userOralStatus.questionnaire.questionnaireId.eq(questionnaireId))
+                .orderBy(contents.contentsSort.asc())
+                .distinct()
+                .transform(groupBy(contents.contentsId).list(Projections.constructor(ContentsDto.Summary.class,
+                        contents.contentsId,
+                        contents.contentsTitle,
+                        contents.contentsSort,
+                        contents.contentsType,
+                        contents.contentsTypeColor,
+                        contents.contentsThumbnail,
+                        contents.contentsPath,
+                        list(contentsToCategory.contentsCategoryId)
+                )));
     }
 }
-

@@ -1,7 +1,7 @@
 package com.kaii.dentix.domain.findPwdQuestion.controller;
 
 import com.kaii.dentix.domain.findPwdQuestion.application.FindPwdService;
-import com.kaii.dentix.domain.findPwdQuestion.dto.FindPwdQuestionListDto;
+import com.kaii.dentix.domain.findPwdQuestion.dto.FindPwdQuestionDto;
 import com.kaii.dentix.global.common.response.DataResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,9 +19,8 @@ public class FindPwdController {
      *  사용자 비밀번호 찾기 질문 리스트
      */
     @GetMapping(value = "/questions", name = "사용자 비밀번호 찾기 질문 리스트")
-    public DataResponse<FindPwdQuestionListDto> userFindPwdQuestions(){
-        DataResponse<FindPwdQuestionListDto> response = new DataResponse<>(findPwdService.userFindPwdQuestions());
-        return response;
+    public DataResponse<FindPwdQuestionDto.Response> userFindPwdQuestions() {
+        return new DataResponse<>(findPwdService.userFindPwdQuestions());
     }
 
 }

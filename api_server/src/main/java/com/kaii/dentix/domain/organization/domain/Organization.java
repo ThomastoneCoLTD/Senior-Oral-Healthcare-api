@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.organization.domain;
 
 import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionHistory;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
@@ -77,9 +76,9 @@ public class Organization extends TimeEntity {
         this.active = false;
         this.deleted = LocalDateTime.now();
     }
-    /** 구독이력 (선택사항) */
-    @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<SubscriptionHistory> subscriptionHistories = new ArrayList<>();
+//    /** 구독이력 (선택사항) */
+//    @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<SubscriptionHistory> subscriptionHistories = new ArrayList<>();
 
     @Transient
     public SubscriptionPlan getCurrentSubscriptionPlan() {

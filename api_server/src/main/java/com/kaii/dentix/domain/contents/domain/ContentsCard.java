@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class ContentsCard extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int contentsCardId;
+    private Long contentsCardId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "contents_id", nullable = false)

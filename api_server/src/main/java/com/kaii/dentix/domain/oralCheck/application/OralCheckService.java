@@ -6,19 +6,18 @@ import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
 import com.kaii.dentix.domain.billing.application.BillingService;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
-import com.kaii.dentix.domain.oralCheck.dto.*;
+import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
 import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
+import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
 import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
-import com.kaii.dentix.domain.questionnaire.dto.OralStatusTypeDto;
-import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireAndStatusDto;
+import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireDto;
 import com.kaii.dentix.domain.toothBrushing.dao.ToothBrushingCustomRepository;
 import com.kaii.dentix.domain.toothBrushing.dao.ToothBrushingRepository;
 import com.kaii.dentix.domain.toothBrushing.domain.ToothBrushing;
@@ -66,23 +65,21 @@ import static com.kaii.dentix.domain.type.oral.OralCheckDivisionCommentType.*;
 public class OralCheckService {
 
     private final UserService userService;
-
     private final AWSS3Service awss3Service;
-
-    private final AiModelService aiModelService;
-
-    private final OralCheckRepository oralCheckRepository;
-    private final ToothBrushingRepository toothBrushingRepository;
-    private final ToothBrushingCustomRepository toothBrushingCustomRepository;
-    private final QuestionnaireRepository questionnaireRepository;
-    private final QuestionnaireCustomRepository questionnaireCustomRepository;
-    private final OralStatusRepository oralStatusRepository;
-    private final UserOralStatusRepository userOralStatusRepository;
-    private final UserRepository userRepository;
-    private final OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
     private final ObjectMapper objectMapper;
+    private final AiModelService aiModelService;
     private final BillingService billingService;
-    
+    private final UserRepository userRepository;
+    private final OralCheckRepository oralCheckRepository;
+    private final OralStatusRepository oralStatusRepository;
+    private final ToothBrushingRepository toothBrushingRepository;
+    private final QuestionnaireRepository questionnaireRepository;
+    private final UserOralStatusRepository userOralStatusRepository;
+    private final ToothBrushingCustomRepository toothBrushingCustomRepository;
+    private final QuestionnaireCustomRepository questionnaireCustomRepository;
+    private final OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
+
+
     @Value("${spring.profiles.active}")
     private String activeProfile;
 
@@ -90,14 +87,14 @@ public class OralCheckService {
     private String folderPath;
 
     /**
-     *구강검진 사진 촬영 + AI 분석 + 과금 처리
+     * 구강검진 사진 촬영 + AI 분석 + 과금 처리
      */
     @Transactional
     @CacheEvict(
             value = "dashboard",
             key = "@userService.getTokenUser(#p0).getUserId() + '_' + T(java.time.LocalDate).now()"
     )
-    public DataResponse<OralCheckPhotoDto> oralCheckPhoto(
+    public DataResponse<OralCheckDto.PhotoResponse> oralCheckPhoto(
             HttpServletRequest request,
             MultipartFile file,
             String type
@@ -105,7 +102,7 @@ public class OralCheckService {
 
         log.info("요청 URI: {}", request.getRequestURI());
 
-        //1. 사용자 인증 및 기관 확인
+        // 1. 사용자 인증 및 기관 확인
         User user = userService.getTokenUser(request);
         Organization organization = user.getOrganization();
 
@@ -119,17 +116,29 @@ public class OralCheckService {
             throw new BadRequestApiException("기관의 구독 정보가 없습니다.");
         }
 
-        //2. 파일 업로드
+        // 2. 파일 업로드
         String uploadedUrl = awss3Service.upload(file, folderPath, true);
         if (StringUtils.isBlank(uploadedUrl)) {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        //3. AI 분석 요청
-        OralCheckAnalysisResponse analysisData;
+        // 3. AI 분석 요청 및 데이터 변환 (Old DTO -> New DTO)
+        OralCheckDto.AnalysisResponse analysisData;
+
         try {
-            analysisData = aiModelService.getPyDentalAiModel(file).get();
+            OralCheckAnalysisResponse oldResponse = aiModelService.getPyDentalAiModel(file).get();
             log.info("업로드된 이미지 URL: {}", uploadedUrl);
+
+            analysisData = OralCheckDto.AnalysisResponse.builder()
+                    .statusCode(oldResponse.getStatusCode())
+                    .statusMsg(oldResponse.getStatusMsg())
+                    .plaqueStats(OralCheckDto.AnalysisDivision.builder()
+                            .topRight(oldResponse.getPlaqueStats().getTopRight())
+                            .topLeft(oldResponse.getPlaqueStats().getTopLeft())
+                            .btmRight(oldResponse.getPlaqueStats().getBtmRight())
+                            .btmLeft(oldResponse.getPlaqueStats().getBtmLeft())
+                            .build())
+                    .build();
 
         } catch (ExecutionException e) {
             log.error("AI 모델 실행 실패", e.getCause());
@@ -137,14 +146,15 @@ public class OralCheckService {
             if ("dev".equals(activeProfile)) {
                 log.warn("AI 모델 실패 → 개발용 더미 데이터 사용");
                 Random random = new Random();
-                analysisData = new OralCheckAnalysisResponse(
-                        new OralCheckAnalysisDivisionDto(
-                                random.nextFloat(50),
-                                random.nextFloat(50),
-                                random.nextFloat(50),
-                                random.nextFloat(50)
-                        )
-                );
+                analysisData = OralCheckDto.AnalysisResponse.builder()
+                        .statusCode(200)
+                        .plaqueStats(OralCheckDto.AnalysisDivision.builder()
+                                .topRight(random.nextFloat(50))
+                                .topLeft(random.nextFloat(50))
+                                .btmRight(random.nextFloat(50))
+                                .btmLeft(random.nextFloat(50))
+                                .build())
+                        .build();
             } else {
                 return new DataResponse<>(502, "AI 분석 서버 오류가 발생했습니다.", null);
             }
@@ -155,20 +165,18 @@ public class OralCheckService {
             return new DataResponse<>(500, "요청 처리 중 오류가 발생했습니다.", null);
         }
 
-        //4. 분석 결과 저장
+        // 4. 분석 결과 저장
         OralCheck oralCheck;
         boolean success = false;
-
         int statusCode = analysisData.getStatusCode();
 
         if (statusCode == 200) {
-            oralCheck =
-                    registAnalysisSuccessData(
-                            user.getUserId(),
-                            uploadedUrl,
-                            analysisData,
-                            activeHistory
-                    );
+            oralCheck = registAnalysisSuccessData(
+                    user.getUserId(),
+                    uploadedUrl,
+                    analysisData,
+                    activeHistory
+            );
             success = true;
         } else {
             if (statusCode == 402 || statusCode == 403 || statusCode == 404) {
@@ -177,25 +185,21 @@ public class OralCheckService {
                 log.error("AI 분석 실패 (알 수 없는 상태): status={}", statusCode);
             }
 
-            oralCheck =
-                    registAnalysisFailedData(
-                            user.getUserId(),
-                            uploadedUrl,
-                            analysisData,
-                            activeHistory
-                    );
+            oralCheck = registAnalysisFailedData(
+                    user.getUserId(),
+                    uploadedUrl,
+                    analysisData,
+                    activeHistory
+            );
         }
 
         if (oralCheck == null) {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        /* ===== 사용량 / 과금 처리 (핵심) ===== */
+        // 5. 과금 처리
         if (success) {
-            // 성공한 요청만 카운트
             activeHistory.increaseSuccessCount();
-
-            // 증가 후 초과 여부 판단
             if (activeHistory.isOverused()) {
                 log.warn("기관 [{}] 사용량 초과 감지 → 자동 과금 생성", organization.getOrganizationId());
                 billingService.createOveruseBatchBilling(organization);
@@ -207,7 +211,7 @@ public class OralCheckService {
         return new DataResponse<>(
                 200,
                 success ? "AI 분석이 완료되었습니다." : "AI 분석에 실패했습니다.",
-                OralCheckPhotoDto.builder()
+                OralCheckDto.PhotoResponse.builder()
                         .oralCheckId(oralCheck.getOralCheckId())
                         .success(success)
                         .remainingResponses(remaining)
@@ -239,7 +243,7 @@ public class OralCheckService {
 
         // 모든 부위의 플라그 수치가 동일한 경우 true
         boolean allEquals = (oralCheck.getOralCheckUpRightRange().equals(oralCheck.getOralCheckUpLeftRange())) &&
-                        (oralCheck.getOralCheckUpLeftRange().equals(oralCheck.getOralCheckDownRightRange()) &&
+                (oralCheck.getOralCheckUpLeftRange().equals(oralCheck.getOralCheckDownRightRange()) &&
                         (oralCheck.getOralCheckDownRightRange().equals(oralCheck.getOralCheckDownLeftRange())));
 
         if (allEquals && oralCheck.getOralCheckResultTotalType().equals(OralCheckResultType.HEALTHY)) { // 모든 부위의 플라그 비율이 동일하고 , '건강'인 경우
@@ -276,8 +280,13 @@ public class OralCheckService {
      * @throws JsonProcessingException : Json to String 시 예외
      */
     @Transactional
-    public OralCheck registAnalysisSuccessData(Long userId, String filePath, OralCheckAnalysisResponse resource, OrganizationSubscriptionHistory subscriptionHistory) throws JsonProcessingException {
-        OralCheckAnalysisDivisionDto tDivision = resource.getPlaqueStats();
+    public OralCheck registAnalysisSuccessData(
+            Long userId,
+            String filePath,
+            OralCheckDto.AnalysisResponse resource,
+            OrganizationSubscriptionHistory subscriptionHistory
+    ) throws JsonProcessingException {
+        OralCheckDto.AnalysisDivision tDivision = resource.getPlaqueStats();
 
         Float upRightRange = Utils.getDeleteDecimalValue(tDivision.getTopRight(), 1);
         Float upLeftRange = Utils.getDeleteDecimalValue(tDivision.getTopLeft(), 1);
@@ -287,7 +296,6 @@ public class OralCheckService {
         Float totalGroupRatio = (tDivision.getTopRight() + tDivision.getTopLeft() + tDivision.getBtmRight() + tDivision.getBtmLeft()) / 4;
         Float totalRange = Utils.getDeleteDecimalValue(totalGroupRatio, 1);
 
-        // 점수 유형
         OralCheckResultType upRightScoreType = this.calcDivisionScoreType(upRightRange);
         OralCheckResultType upLeftScoreType = this.calcDivisionScoreType(upLeftRange);
         OralCheckResultType downRightScoreType = this.calcDivisionScoreType(downRightRange);
@@ -298,9 +306,9 @@ public class OralCheckService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("유저 없음"));
-        
+
         OralCheck insertData = OralCheck.builder()
-                .user(user) //
+                .user(user)
                 .oralCheckPicturePath(filePath)
                 .subscriptionHistory(subscriptionHistory)
                 .oralCheckAnalysisState(OralCheckAnalysisState.SUCCESS)
@@ -319,7 +327,6 @@ public class OralCheckService {
 
         return oralCheckRepository.save(insertData);
     }
-
     /**
      * 구강 사진 분석 실패
      */
@@ -327,7 +334,7 @@ public class OralCheckService {
     public OralCheck registAnalysisFailedData(
             Long userId,
             String filePath,
-            OralCheckAnalysisResponse resource,
+            OralCheckDto.AnalysisResponse resource,
             OrganizationSubscriptionHistory subscriptionHistory
     ) throws JsonProcessingException {
 
@@ -338,7 +345,7 @@ public class OralCheckService {
 
         OralCheck insertData = OralCheck.builder()
                 .user(user)
-                .subscriptionHistory(subscriptionHistory) // ⭐ 핵심 추가
+                .subscriptionHistory(subscriptionHistory)
                 .oralCheckPicturePath(filePath)
                 .oralCheckAnalysisState(OralCheckAnalysisState.FAIL)
                 .oralCheckResultJsonData(resultJsonData)
@@ -346,25 +353,28 @@ public class OralCheckService {
 
         return oralCheckRepository.save(insertData);
     }
+
     /**
      *  구강 검진 결과
      */
     @Transactional(readOnly = true)
-    public OralCheckResultDto oralCheckResult(HttpServletRequest httpServletRequest, Long oralCheckId){
+    public OralCheckDto.ResultResponse oralCheckResult(HttpServletRequest httpServletRequest, Long oralCheckId) {
         User user = userService.getTokenUser(httpServletRequest);
 
         OralCheck oralCheck = oralCheckRepository.findById(oralCheckId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강 검진입니다."));
 
-        //userId → user.getUserId()
         if (!oralCheck.getUser().getUserId().equals(user.getUserId())) {
             throw new BadRequestApiException("회원 정보와 구강 검진 정보가 일치하지 않습니다.");
         }
 
         List<String> oralCheckCommentList = this.calcDivisionCommentType(oralCheck);
 
-        return OralCheckResultDto.builder()
+        // [수정] 통합 DTO의 내부 클래스(ResultResponse) 빌더 사용
+        return OralCheckDto.ResultResponse.builder()
                 .userId(user.getUserId())
+                .organizationId(user.getOrganization().getOrganizationId())
+                .success(oralCheck.getOralCheckAnalysisState() == OralCheckAnalysisState.SUCCESS)
                 .oralCheckResultTotalType(oralCheck.getOralCheckResultTotalType())
                 .created(oralCheck.getCreated())
                 .oralCheckTotalRange(oralCheck.getOralCheckTotalRange())
@@ -377,6 +387,7 @@ public class OralCheckService {
                 .oralCheckDownRightRange(oralCheck.getOralCheckDownRightRange())
                 .oralCheckDownRightScoreType(oralCheck.getOralCheckDownRightScoreType())
                 .oralCheckCommentList(oralCheckCommentList)
+                // 필요하다면 remainingResponses 값도 설정 (구독 정보 등에서 조회 필요 시)
                 .build();
     }
 
@@ -384,7 +395,7 @@ public class OralCheckService {
      *  구강 상태 조회
      */
     @Transactional(readOnly = true)
-    public OralCheckDto oralCheck(HttpServletRequest httpServletRequest){
+    public OralCheckDto.TimelineResponse oralCheck(HttpServletRequest httpServletRequest) {
         User user = userService.getTokenUser(httpServletRequest);
 
         List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
@@ -394,168 +405,151 @@ public class OralCheckService {
         List<OralStatus> oralStatusList = oralStatusRepository.findAll();
 
         final String datePattern = "yyyy-MM-dd";
-
         Calendar calendar = Calendar.getInstance();
-
         Date today = calendar.getTime();
         String todayString = DateFormatUtil.dateToString(datePattern, today);
 
-        // 구강 상태 화면 최상단 섹션 순서
-        List<OralCheckSectionListDto> sectionList = new ArrayList<>();
-        // 구강 촬영
-        OralCheck latestOralCheck = oralCheckList.size() > 0 ? oralCheckList.get(0) : null;
-        sectionList.add(OralCheckSectionListDto.builder()
-            .sectionType(OralSectionType.ORAL_CHECK)
-            .date(latestOralCheck != null ? latestOralCheck.getCreated() : null)
-            .timeInterval(latestOralCheck != null ? (today.getTime() - latestOralCheck.getCreated().getTime()) / 1000 : null)
-            .build());
+        // 상단 섹션
+        List<OralCheckDto.Section> sectionList = new ArrayList<>();
 
-        // 권장 촬영 기간
+        // 1. 구강 촬영
+        OralCheck latestOralCheck = !oralCheckList.isEmpty() ? oralCheckList.get(0) : null;
+        sectionList.add(OralCheckDto.Section.builder()
+                .sectionType(OralSectionType.ORAL_CHECK)
+                .date(latestOralCheck != null ? latestOralCheck.getCreated() : null)
+                .timeInterval(latestOralCheck != null ? (today.getTime() - latestOralCheck.getCreated().getTime()) / 1000 : null)
+                .build());
+
+        // 권장 촬영 기간 계산
         String oralCheckPeriodBefore = null;
         String oralCheckPeriodAfter = null;
         if (latestOralCheck != null) {
-            calendar.setTime(latestOralCheck.getCreated());
-            calendar.add(Calendar.DATE, 6);
-            oralCheckPeriodBefore = DateFormatUtil.dateToString(datePattern, calendar.getTime());
-            calendar.add(Calendar.DATE, 2);
-            oralCheckPeriodAfter = DateFormatUtil.dateToString(datePattern, calendar.getTime());
+            Calendar c = Calendar.getInstance();
+            c.setTime(latestOralCheck.getCreated());
+            c.add(Calendar.DATE, 6);
+            oralCheckPeriodBefore = DateFormatUtil.dateToString(datePattern, c.getTime());
+            c.add(Calendar.DATE, 2);
+            oralCheckPeriodAfter = DateFormatUtil.dateToString(datePattern, c.getTime());
         }
 
         calendar.setTime(today);
-        calendar.add(Calendar.DATE, -30); // 30일 전 기준
+        calendar.add(Calendar.DATE, -30);
 
-        // 양치질
-        ToothBrushing latestToothBrushing = toothBrushingList.size() > 0 ? toothBrushingList.get(0) : null;
-        sectionList.add(OralCheckSectionListDto.builder()
-            .sectionType(OralSectionType.TOOTH_BRUSHING)
-            .date(latestToothBrushing != null ? latestToothBrushing.getCreated() : null)
-            .timeInterval(latestToothBrushing != null ? (today.getTime() - latestToothBrushing.getCreated().getTime()) / 1000 : null)
-            .toothBrushingList(toothBrushingList.stream()
-                .filter(toothBrushing -> DateFormatUtil.dateToString(datePattern, toothBrushing.getCreated())
-                    .equals(DateFormatUtil.dateToString(datePattern, today)))
-                .map(toothBrushing -> ToothBrushingDto.builder()
-                    .toothBrushingId(toothBrushing.getToothBrushingId())
-                    .created(toothBrushing.getCreated())
-                    .build())
-                .sorted(Comparator.comparing(ToothBrushingDto::getCreated))
-                .collect(Collectors.toList())
-            )
-            .build());
-        // 문진표
-        Questionnaire latestQuestionnaire = questionnaireList.size() > 0 ? questionnaireList.get(0) : null;
-        // 문진표 작성 이력이 없거나 30일이 지난 경우 두번째 아니면 세번째
-        sectionList.add(latestQuestionnaire == null || latestQuestionnaire.getCreated().before(calendar.getTime()) ? 1 : 2, OralCheckSectionListDto.builder()
-            .sectionType(OralSectionType.QUESTIONNAIRE)
-            .date(latestQuestionnaire != null ? latestQuestionnaire.getCreated() : null)
-            .timeInterval(latestQuestionnaire != null ? (today.getTime() - latestQuestionnaire.getCreated().getTime()) / 1000 : null)
-            .build());
+        // 2. 양치질
+        ToothBrushing latestToothBrushing = !toothBrushingList.isEmpty() ? toothBrushingList.get(0) : null;
+        sectionList.add(OralCheckDto.Section.builder()
+                .sectionType(OralSectionType.TOOTH_BRUSHING)
+                .date(latestToothBrushing != null ? latestToothBrushing.getCreated() : null)
+                .timeInterval(latestToothBrushing != null ? (today.getTime() - latestToothBrushing.getCreated().getTime()) / 1000 : null)
+                .toothBrushingList(toothBrushingList.stream()
+                        .filter(tb -> DateFormatUtil.dateToString(datePattern, tb.getCreated()).equals(todayString))
+                        .map(tb -> ToothBrushingDto.builder().toothBrushingId(tb.getToothBrushingId()).created(tb.getCreated()).build())
+                        .sorted(Comparator.comparing(ToothBrushingDto::getCreated))
+                        .collect(Collectors.toList()))
+                .build());
 
-        // sectionList에 sort 값 추가
+        // 3. 문진표
+        Questionnaire latestQuestionnaire = !questionnaireList.isEmpty() ? questionnaireList.get(0) : null;
+        sectionList.add(latestQuestionnaire == null || latestQuestionnaire.getCreated().before(calendar.getTime()) ? 1 : 2,
+                OralCheckDto.Section.builder()
+                        .sectionType(OralSectionType.QUESTIONNAIRE)
+                        .date(latestQuestionnaire != null ? latestQuestionnaire.getCreated() : null)
+                        .timeInterval(latestQuestionnaire != null ? (today.getTime() - latestQuestionnaire.getCreated().getTime()) / 1000 : null)
+                        .build());
+
         for (int i = 0; i < sectionList.size(); i++) {
             sectionList.get(i).setSort(i + 1);
         }
 
-        // 요일별 나의 구강 상태
-        List<OralCheckDailyDto> dailyList = new ArrayList<>();
-        calendar.add(Calendar.DATE, 1 - calendar.get(Calendar.DAY_OF_WEEK)); // 30일 전날이 포함된 일요일부터 시작
+        // 일별 상세 (Daily)
+        List<OralCheckDto.Daily> dailyList = new ArrayList<>();
+        calendar.add(Calendar.DATE, 1 - calendar.get(Calendar.DAY_OF_WEEK));
 
         while (true) {
-            List<OralCheckListDto> detailList = new ArrayList<>();
+            List<OralCheckDto.Detail> detailList = new ArrayList<>();
             String dateString = DateFormatUtil.dateToString(datePattern, calendar.getTime());
 
-            // 구강 촬영
+            // 구강 촬영 상세
             detailList.addAll(oralCheckList.stream()
-                .filter(oralCheck -> DateFormatUtil.dateToString(datePattern, oralCheck.getCreated()).equals(dateString))
-                .map(oralCheck -> OralCheckListDto.builder()
-                    .sectionType(OralSectionType.ORAL_CHECK)
-                    .date(oralCheck.getCreated())
-                    .identifier(oralCheck.getOralCheckId())
-                    .oralCheckResultTotalType(oralCheck.getOralCheckResultTotalType())
-                    .build()
-                ).toList());
+                    .filter(oc -> DateFormatUtil.dateToString(datePattern, oc.getCreated()).equals(dateString))
+                    .map(oc -> OralCheckDto.Detail.builder()
+                            .sectionType(OralSectionType.ORAL_CHECK)
+                            .date(oc.getCreated())
+                            .identifier(oc.getOralCheckId())
+                            .oralCheckResultTotalType(oc.getOralCheckResultTotalType())
+                            .build())
+                    .toList());
 
-            // 양치질
+            // 양치질 상세
             List<ToothBrushing> dailyToothBrushingList = toothBrushingList.stream()
-                .filter(toothBrushing -> DateFormatUtil.dateToString(datePattern, toothBrushing.getCreated()).equals(dateString)).toList();
+                    .filter(tb -> DateFormatUtil.dateToString(datePattern, tb.getCreated()).equals(dateString)).toList();
             for (int i = 0; i < dailyToothBrushingList.size(); i++) {
-                ToothBrushing toothBrushing = dailyToothBrushingList.get(i);
-                detailList.add(OralCheckListDto.builder()
-                    .sectionType(OralSectionType.TOOTH_BRUSHING)
-                    .date(toothBrushing.getCreated())
-                    .identifier(toothBrushing.getToothBrushingId())
-                    .toothBrushingCount(dailyToothBrushingList.size() - i) // 역순
-                    .build()
-                );
+                detailList.add(OralCheckDto.Detail.builder()
+                        .sectionType(OralSectionType.TOOTH_BRUSHING)
+                        .date(dailyToothBrushingList.get(i).getCreated())
+                        .identifier(dailyToothBrushingList.get(i).getToothBrushingId())
+                        .toothBrushingCount(dailyToothBrushingList.size() - i)
+                        .build());
             }
 
-            // 문진표
+            // 문진표 상세
+            // 1. 해당 날짜의 문진표 필터링
             List<Questionnaire> dailyQuestionnaireList = questionnaireList.stream()
-                .filter(questionnaire -> DateFormatUtil.dateToString(datePattern, questionnaire.getCreated()).equals(dateString)).toList();
+                    .filter(q -> DateFormatUtil.dateToString(datePattern, q.getCreated()).equals(dateString))
+                    .toList();
+
+            // 2. DTO 변환 및 리스트 추가
             detailList.addAll(dailyQuestionnaireList.stream()
-                .map(questionnaire -> OralCheckListDto.builder()
-                    .sectionType(OralSectionType.QUESTIONNAIRE)
-                    .date(questionnaire.getCreated())
-                    .identifier(questionnaire.getQuestionnaireId())
-                    .oralStatusList(userOralStatusList.stream()
-                        .filter(userOralStatus -> userOralStatus.getQuestionnaire().equals(questionnaire))
-                        .map(userOralStatus -> {
-                            OralStatus oralStatus = oralStatusList.stream()
-                                .filter(o -> o.equals(userOralStatus.getOralStatus()))
-                                .findAny().orElseThrow(() -> new NotFoundDataException("구강 상태 결과 정보가 없습니다."));
+                    .map(q -> OralCheckDto.Detail.builder()
+                            .sectionType(OralSectionType.QUESTIONNAIRE)
+                            .date(q.getCreated())
+                            .identifier(q.getQuestionnaireId())
+                            // [수정 포인트] 복잡한 Builder 대신 from() 메서드 사용
+                            .oralStatusList(userOralStatusList.stream()
+                                    .filter(uos -> uos.getQuestionnaire().getQuestionnaireId().equals(q.getQuestionnaireId())) // ID 비교가 더 안전함
+                                    .map(uos -> OralStatusDto.OralStatusType.from(uos.getOralStatus())) // from 메서드로 깔끔하게 변환
+                                    .toList())
+                            .build())
+                    .toList());
 
-                            return OralStatusTypeDto.builder()
-                                .type(oralStatus.getOralStatusType())
-                                .title(oralStatus.getOralStatusTitle())
-                                .build();
-                        })
-                        .toList())
-                    .build()
-                ).toList());
+            detailList.sort(Comparator.comparing(OralCheckDto.Detail::getDate).reversed());
 
-            // 전체 목록을 역순으로 정렬
-            detailList.sort(Comparator.comparing(OralCheckListDto::getDate).reversed());
-
+            // 일별 상태 계산
             OralDateStatusType dailyStatusType = null;
             if (dateString.equals(todayString)) {
-                // 오늘인 경우 오늘 상태값 적용
                 dailyStatusType = OralDateStatusType.TODAY;
             } else if (!detailList.isEmpty()) {
-                // 양치를 제외한 가장 최신의 상태값 적용
-                for (OralCheckListDto dto : detailList) {
-                    switch (dto.getSectionType()) {
-                        case ORAL_CHECK -> {
-                            switch (dto.getOralCheckResultTotalType()) {
-                                case HEALTHY -> dailyStatusType = OralDateStatusType.HEALTHY;
-                                case GOOD -> dailyStatusType = OralDateStatusType.GOOD;
-                                case ATTENTION -> dailyStatusType = OralDateStatusType.ATTENTION;
-                                case DANGER -> dailyStatusType = OralDateStatusType.DANGER;
-                            }
+                for (OralCheckDto.Detail dto : detailList) {
+                    if (dto.getSectionType() == OralSectionType.ORAL_CHECK) {
+                        switch (dto.getOralCheckResultTotalType()) {
+                            case HEALTHY -> dailyStatusType = OralDateStatusType.HEALTHY;
+                            case GOOD -> dailyStatusType = OralDateStatusType.GOOD;
+                            case ATTENTION -> dailyStatusType = OralDateStatusType.ATTENTION;
+                            case DANGER -> dailyStatusType = OralDateStatusType.DANGER;
                         }
-                        case QUESTIONNAIRE -> dailyStatusType = OralDateStatusType.QUESTIONNAIRE;
-                        default -> {
-                            continue;
-                        }
+                        break;
+                    } else if (dto.getSectionType() == OralSectionType.QUESTIONNAIRE) {
+                        dailyStatusType = OralDateStatusType.QUESTIONNAIRE;
+                        break;
                     }
-                    break;
                 }
             }
             if (dailyStatusType == null && latestOralCheck != null && dateString.compareTo(oralCheckPeriodBefore) >= 0 && dateString.compareTo(oralCheckPeriodAfter) <= 0) {
-                // 권장 촬영기간
                 dailyStatusType = OralDateStatusType.ORAL_CHECK_PERIOD;
             }
 
-            dailyList.add(OralCheckDailyDto.builder()
-                .date(calendar.getTime())
-                .status(dailyStatusType)
-                .questionnaire(dailyQuestionnaireList.size() > 0)
-                .detailList(detailList)
-                .build());
+            dailyList.add(OralCheckDto.Daily.builder()
+                    .date(calendar.getTime())
+                    .status(dailyStatusType)
+                    .questionnaire(!dailyQuestionnaireList.isEmpty())
+                    .detailList(detailList)
+                    .build());
 
-            if (dateString.compareTo(todayString) >= 0 && calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) break; // 이번 주 토요일까지
+            if (dateString.compareTo(todayString) >= 0 && calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) break;
             calendar.add(Calendar.DATE, 1);
         }
 
-        return OralCheckDto.builder()
+        return OralCheckDto.TimelineResponse.builder()
                 .sectionList(sectionList)
                 .dailyList(dailyList)
                 .build();
@@ -565,84 +559,61 @@ public class OralCheckService {
      * 대시보드 조회
      */
     @Cacheable(value = "dashboard", key = "@userService.getTokenUser(#p0).getUserId() + '_' + T(java.time.LocalDate).now()")
-    public DashboardDto dashboard(HttpServletRequest httpServletRequest) {
+    public OralCheckDto.DashboardResponse dashboard(HttpServletRequest httpServletRequest) {
         User user = userService.getTokenUser(httpServletRequest);
-
         List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
 
-        // 구강 촬영을 한 번이라도 하지 않으면 아무 데이터도 보이지 않음
-        if (oralCheckList.size() == 0) {
-            return new DashboardDto();
+        if (oralCheckList.isEmpty()) {
+            return OralCheckDto.DashboardResponse.builder().build();
         }
 
         OralCheck latestOralCheck = oralCheckList.get(0);
-
         List<ToothBrushingDailyCountDto> toothBrushingDailyCountList = toothBrushingCustomRepository.getDailyCount(user.getUserId());
-        // 양치 수
         int toothBrushingTotalCount = toothBrushingDailyCountList.stream().mapToInt(ToothBrushingDailyCountDto::getCount).sum();
 
-        QuestionnaireAndStatusDto latestQuestionnaire = questionnaireCustomRepository.getLatestQuestionnaireAndHigherStatus(user.getUserId());
+        QuestionnaireDto.Summary latestQuestionnaire = questionnaireCustomRepository.getLatestQuestionnaireAndHigherStatus(user.getUserId());
 
-        Calendar calendar = Calendar.getInstance();
-        Date today = calendar.getTime();
-
-        int oralCheckHealthyCount = 0;
-        int oralCheckGoodCount = 0;
-        int oralCheckAttentionCount = 0;
-        int oralCheckDangerCount = 0;
-        List<OralCheckDailyChangeDto> oralCheckDailyChangeList = new ArrayList<>();
-
+        int healthy = 0, good = 0, attention = 0, danger = 0;
+        List<OralCheckDto.DailyChange> changeList = new ArrayList<>();
         String beforeDate = "";
+
         for (int i = 0; i < oralCheckList.size(); i++) {
-            OralCheck oralCheck = oralCheckList.get(i);
-            // 구강 상태값 카운트
-            switch (oralCheck.getOralCheckResultTotalType()) {
-                case HEALTHY -> oralCheckHealthyCount++;
-                case GOOD -> oralCheckGoodCount++;
-                case ATTENTION -> oralCheckAttentionCount++;
-                case DANGER -> oralCheckDangerCount++;
+            OralCheck oc = oralCheckList.get(i);
+            switch (oc.getOralCheckResultTotalType()) {
+                case HEALTHY -> healthy++;
+                case GOOD -> good++;
+                case ATTENTION -> attention++;
+                case DANGER -> danger++;
             }
+            if (changeList.size() >= 10) continue;
+            String dateString = DateFormatUtil.dateToString("yyyy-MM-dd", oc.getCreated());
+            if (beforeDate.equals(dateString)) continue;
 
-            // 구강 상태 변화 추이
-            if (oralCheckDailyChangeList.size() >= 10) {
-                continue;
-            }
-            String dateString = DateFormatUtil.dateToString("yyyy-MM-dd", oralCheck.getCreated());
-            if (beforeDate.equals(dateString)) {
-                continue;
-            }
-
-            oralCheckDailyChangeList.add(0, new OralCheckDailyChangeDto(oralCheckList.size() - i, oralCheck.getOralCheckResultTotalType()));
+            changeList.add(0, new OralCheckDto.DailyChange(oralCheckList.size() - i, oc.getOralCheckResultTotalType()));
             beforeDate = dateString;
         }
 
-        // 5개 미만인 경우 미노출
-        if (oralCheckDailyChangeList.isEmpty()) {
-            oralCheckDailyChangeList = new ArrayList<>();
-        }
-
-        return DashboardDto.builder()
-            .latestOralCheckId(latestOralCheck.getOralCheckId())
-            .oralCheckTimeInterval((today.getTime() - latestOralCheck.getCreated().getTime()) / 1000)
-            .oralCheckTotalCount(oralCheckList.size())
-            .oralCheckHealthyCount(oralCheckHealthyCount)
-            .oralCheckGoodCount(oralCheckGoodCount)
-            .oralCheckAttentionCount(oralCheckAttentionCount)
-            .oralCheckDangerCount(oralCheckDangerCount)
-            .toothBrushingTotalCount(toothBrushingTotalCount)
-            .toothBrushingAverage(Utils.getDeleteDecimalValue((float) toothBrushingTotalCount / toothBrushingDailyCountList.size(), 1))
-            .oralStatus(latestQuestionnaire != null ? new OralStatusTypeDto(latestQuestionnaire.getOralStatusType(), latestQuestionnaire.getOralStatusTitle()) : null)
-            .questionnaireCreated(latestQuestionnaire != null ? latestQuestionnaire.getQuestionnaireCreated() : null)
-            .oralCheckCreated(latestOralCheck.getCreated())
-            .oralCheckResultTotalType(latestOralCheck.getOralCheckResultTotalType())
-            .oralCheckUpRightScoreType(latestOralCheck.getOralCheckUpRightScoreType())
-            .oralCheckUpLeftScoreType(latestOralCheck.getOralCheckUpLeftScoreType())
-            .oralCheckDownLeftScoreType(latestOralCheck.getOralCheckDownLeftScoreType())
-            .oralCheckDownRightScoreType(latestOralCheck.getOralCheckDownRightScoreType())
-            .oralCheckDailyList(oralCheckDailyChangeList)
-            .build();
+        return OralCheckDto.DashboardResponse.builder()
+                .latestOralCheckId(latestOralCheck.getOralCheckId())
+                .oralCheckTimeInterval((new Date().getTime() - latestOralCheck.getCreated().getTime()) / 1000)
+                .oralCheckTotalCount(oralCheckList.size())
+                .oralCheckHealthyCount(healthy)
+                .oralCheckGoodCount(good)
+                .oralCheckAttentionCount(attention)
+                .oralCheckDangerCount(danger)
+                .toothBrushingTotalCount(toothBrushingTotalCount)
+                .toothBrushingAverage(toothBrushingDailyCountList.isEmpty() ? 0 : Utils.getDeleteDecimalValue((float) toothBrushingTotalCount / toothBrushingDailyCountList.size(), 1))
+                .oralStatus(latestQuestionnaire != null ? new OralStatusDto.OralStatusType(latestQuestionnaire.getOralStatusType(), latestQuestionnaire.getOralStatusTitle()) : null)
+                .questionnaireCreated(latestQuestionnaire != null ? latestQuestionnaire.getCreated() : null)
+                .oralCheckCreated(latestOralCheck.getCreated())
+                .oralCheckResultTotalType(latestOralCheck.getOralCheckResultTotalType())
+                .oralCheckUpRightScoreType(latestOralCheck.getOralCheckUpRightScoreType())
+                .oralCheckUpLeftScoreType(latestOralCheck.getOralCheckUpLeftScoreType())
+                .oralCheckDownLeftScoreType(latestOralCheck.getOralCheckDownLeftScoreType())
+                .oralCheckDownRightScoreType(latestOralCheck.getOralCheckDownRightScoreType())
+                .oralCheckDailyList(changeList)
+                .build();
     }
-
     /**
      *  전체 평균 구강 상태
      */

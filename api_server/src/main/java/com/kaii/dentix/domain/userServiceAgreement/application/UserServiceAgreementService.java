@@ -1,4 +1,4 @@
-//package com.kaii.dentix.domain.userServiceAgreement.application;
+package com.kaii.dentix.domain.userServiceAgreement.application;//package com.kaii.dentix.domain.userServiceAgreement.application;
 //
 //import com.kaii.dentix.domain.user.application.UserService;
 //import com.kaii.dentix.domain.user.domain.User;

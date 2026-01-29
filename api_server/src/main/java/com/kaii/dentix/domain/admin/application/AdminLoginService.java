@@ -8,7 +8,7 @@ import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
-import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionResponse;
+import com.kaii.dentix.domain.organization.dto.OrganizationDto;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
@@ -29,19 +29,19 @@ public class AdminLoginService {
     private final OrganizationSubscriptionRepository subscriptionRepository;
 
     /**
-     *  관리자 로그인
+     * 관리자 로그인
      */
     @Transactional
-    public AdminAuthDto.LoginResponse login(AdminAuthDto.LoginRequest request) { // DTO 교체
+    public AdminAuthDto.LoginResponse login(AdminAuthDto.LoginRequest request) {
 
-        // 1. 관리자 조회 (필드명 변경: adminLoginIdentifier -> loginId)
+        // 1. 관리자 조회
         Admin admin = adminRepository.findByAdminLoginIdentifier(request.getLoginId())
                 .orElseThrow(() -> new UnauthorizedException("입력하신 정보가 일치하지 않습니다. 다시 확인해주세요."));
 
         // 2. 최초 로그인 여부 확인
         YnType isFirstLogin = admin.getAdminLastLoginDate() == null ? YnType.Y : YnType.N;
 
-        // 3. 비밀번호 검증 (필드명 변경: adminPassword -> password)
+        // 3. 비밀번호 검증
         if (!passwordEncoder.matches(request.getPassword(), admin.getAdminPassword())) {
             throw new UnauthorizedException("입력하신 정보가 일치하지 않습니다. 다시 확인해주세요.");
         }
@@ -50,12 +50,14 @@ public class AdminLoginService {
         String accessToken = jwtTokenUtil.createToken(admin, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(admin, TokenType.RefreshToken);
 
-        // 5. 리프레시 토큰 저장 (DB 업데이트)
+        // 5. 리프레시 토큰 저장
         admin.updateAdminLogin(refreshToken);
 
         // 6. 기관 및 구독 정보 조회
         Organization org = admin.getOrganization();
-        OrganizationSubscriptionResponse subscriptionResponse = null;
+
+        // [수정 1] 변수 타입 변경
+        OrganizationDto.SubscriptionResponse subscriptionResponse = null;
         Long organizationId = null;
         String organizationName = null;
 
@@ -70,13 +72,13 @@ public class AdminLoginService {
             if (subscription != null) {
                 SubscriptionPlan plan = subscription.getSubscriptionPlan();
 
-                // 날짜 변환 (LocalDateTime -> LocalDate)
+                // 날짜 변환 (toLocalDate 메서드가 내부에 있다고 가정)
                 LocalDate startDate = toLocalDate(subscription.getSubscriptionStartDate());
                 LocalDate endDate = toLocalDate(subscription.getSubscriptionEndDate());
                 LocalDate resetDate = toLocalDate(subscription.getUsageResetDate());
 
-                // 구독 정보 DTO 생성
-                subscriptionResponse = OrganizationSubscriptionResponse.fromEntity(
+                // [수정 2] 클래스명 변경 (OrganizationDto 내부 클래스 사용)
+                subscriptionResponse = OrganizationDto.SubscriptionResponse.fromEntity(
                         org.getOrganizationId(),
                         org.getOrganizationName(),
                         org.getOrganizationPhoneNumber(),
@@ -89,23 +91,23 @@ public class AdminLoginService {
             }
         }
 
-        // 7. 최종 응답 DTO 생성 (AdminAuthDto.LoginResponse)
+        // 7. 최종 응답 DTO 생성
         return AdminAuthDto.LoginResponse.builder()
                 .isFirstLogin(isFirstLogin)
                 .adminId(admin.getAdminId())
-                .adminName(admin.getAdminName())       // 필드명 변경 (adminName -> name)
-                .adminIsSuper(admin.getAdminIsSuper()) // 필드명 변경 (adminIsSuper -> isSuper)
+                .adminName(admin.getAdminName())
+                .adminIsSuper(admin.getAdminIsSuper())
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .organizationId(organizationId)
                 .organizationName(organizationName)
-                .organizationSubscription(subscriptionResponse) // 필요 시 DTO에 필드 추가 필요
+                .organizationSubscription(subscriptionResponse) // 수정된 객체 주입
                 .build();
     }
     /**
      * 관리자 비밀번호 찾기 (본인 확인)
      */
-    @Transactional(readOnly = true) // 조회만 하므로 readOnly 권장
+    @Transactional(readOnly = true)
     public AdminAuthDto.FindPasswordResponse adminFindPassword(AdminAuthDto.FindPasswordRequest request) { // DTO 교체
 
         // 1. 아이디로 관리자 조회
@@ -113,8 +115,8 @@ public class AdminLoginService {
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 아이디입니다."));
 
         // 2. 질문/답변 검증
-        if (!admin.getFindPwdQuestionId().equals(request.getQuestionId()) || // 필드명 변경 (findPwdQuestionId -> questionId)
-                !admin.getFindPwdAnswer().equals(request.getAnswer())) {         // 필드명 변경 (findPwdAnswer -> answer)
+        if (!admin.getFindPwdQuestionId().equals(request.getQuestionId()) ||
+                !admin.getFindPwdAnswer().equals(request.getAnswer())) {
             throw new UnauthorizedException("질문 혹은 답변이 일치하지 않습니다.");
         }
 
@@ -124,8 +126,6 @@ public class AdminLoginService {
                 .loginId(admin.getAdminLoginIdentifier())
                 .build();
     }
-
-    // --- Helper Methods ---
 
     // 날짜 변환 헬퍼 (null safe)
     private LocalDate toLocalDate(java.time.LocalDateTime dateTime) {

@@ -19,58 +19,41 @@ public class UserLoginController {
 
     private final UserLoginService userLoginService;
 
-    /**
-     *  사용자 회원인증
-     */
-    @PostMapping(value = "/verify", name = "사용자 회원 인증")
-    public DataResponse<UserVerifyDto> userVerify(@Valid @RequestBody UserVerifyRequest request){
-        DataResponse<UserVerifyDto> response = new DataResponse<>(userLoginService.userVerify(request));
-        return response;
+    /** 회원 인증 (가입 여부 확인) */
+    @PostMapping("/verify")
+    public DataResponse<UserDto.VerifyResponse> userVerify(@Valid @RequestBody UserDto.VerifyRequest request) {
+        return new DataResponse<>(userLoginService.userVerify(request));
     }
 
-    /**
-     * 사용자 회원가입
-     */
-    @PostMapping(value = "/signUp", name = "사용자 회원가입")
-    public DataResponse<UserSignUpDto> userSignUp(HttpServletRequest httpServletRequest, @Valid @RequestBody UserSignUpRequest request){
-        DataResponse<UserSignUpDto> response = new DataResponse<>(userLoginService.userSignUp(httpServletRequest, request));
-        return response;
+    /** 회원가입 */
+    @PostMapping("/signUp")
+    public DataResponse<UserDto.SignUpResponse> userSignUp(@Valid @RequestBody UserDto.SignUpRequest request) {
+        return new DataResponse<>(userLoginService.userSignUp(request));
     }
 
-    /**
-     *  아이디 중복 확인
-     */
-    @GetMapping(value = "/loginIdentifier-check", name = "아이디 중복 확인")
-    public SuccessResponse loginIdCheck(@RequestParam @NotBlank @Size(min = 4, max = 12) String userLoginIdentifier){
+    /** 아이디 중복 확인 */
+    @GetMapping("/loginIdentifier-check")
+    public SuccessResponse loginIdCheck(@RequestParam @NotBlank String userLoginIdentifier) {
         userLoginService.loginIdCheck(userLoginIdentifier);
         return new SuccessResponse();
     }
 
-    /**
-     *  사용자 비밀번호 찾기
-     */
-    @PostMapping(value = "/find-password", name = "사용자 비밀번호 찾기")
-    public DataResponse<UserFindPasswordDto> userFindPassword(@Valid @RequestBody UserFindPasswordRequest request){
-        DataResponse<UserFindPasswordDto> response = new DataResponse<>(userLoginService.userFindPassword(request));
-        return response;
+    /** 비밀번호 찾기 (질문/답변 검증) */
+    @PostMapping("/find-password")
+    public DataResponse<UserDto.FindPasswordResponse> userFindPassword(@Valid @RequestBody UserDto.FindPasswordRequest request) {
+        return new DataResponse<>(userLoginService.userFindPassword(request));
     }
 
-    /**
-     *  사용자 비밀번호 재설정
-     */
-    @PutMapping(value = "/password", name = "사용자 비밀번호 재설정")
-    public SuccessResponse userModifyPassword(@Valid @RequestBody UserModifyPasswordRequest request){
-        userLoginService.userModifyPassword(request);
+    /** 비밀번호 재설정 (인증 후) */
+    @PutMapping("/password")
+    public SuccessResponse userModifyPassword(@RequestBody UserDto.ModifyPasswordRequest request, @RequestParam Long userId) {
+        userLoginService.userModifyPassword(userId, request);
         return new SuccessResponse();
     }
 
-    /**
-     * AccessToken 재발급
-     */
-    @PutMapping(value = "/access-token", name = "AccessToken 재발급")
-    @CrossOrigin(origins = "*", allowedHeaders = "*")
-    public DataResponse<AccessTokenDto> accessTokenReissue(HttpServletRequest httpServletRequest) {
-        DataResponse<AccessTokenDto> response = new DataResponse<>(userLoginService.accessTokenReissue(httpServletRequest));
-        return response;
+    /** AccessToken 재발급 */
+    @PutMapping("/access-token")
+    public DataResponse<UserDto.AccessTokenResponse> accessTokenReissue(HttpServletRequest request) {
+        return new DataResponse<>(userLoginService.accessTokenReissue(request));
     }
 }

@@ -23,6 +23,7 @@ import java.util.List;
 public class Contents extends TimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "contents_id")
     private Long contentsId;
 
     @Column(nullable = false)

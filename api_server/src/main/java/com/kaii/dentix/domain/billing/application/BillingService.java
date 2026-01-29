@@ -48,6 +48,7 @@ public class BillingService {
     private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
 
     /** 일반관리자 - 본인 기관의 미납 청구 목록 조회 */
+    @Transactional
     public List<BillingDto.Summary> findAllUnpaidBillings() {
         return billingRepository.findAllByBillingStatus(BillingStatus.PENDING)
                 .stream()
@@ -56,6 +57,7 @@ public class BillingService {
     }
 
     /** 일반관리자 - 본인 기관의 빌링 내역 조회 */
+    @Transactional
     public BillingDto.ListResponse getBillingsForAdmin(Admin admin) {
         Organization org = admin.getOrganization();
         if (org == null) {
@@ -109,6 +111,7 @@ public class BillingService {
     }
 
     /** 결제 완료 처리 (markPaid) */
+    @Transactional
     public BillingDto.Detail markBillingAsPaid(Long billingId, String paymentRef) {
         Billing billing = billingRepository.findById(billingId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 청구 내역입니다."));
@@ -285,24 +288,24 @@ public class BillingService {
                 .billings(billings.stream().map(BillingDto.Summary::from).toList())
                 .build();
     }
+
     /**
      * 기관별 빌링 내역 조회 (페이지네이션)
      */
     @Transactional(readOnly = true)
     public BillingDto.PagedResponse getBillingList(Long orgId, String status, String sort, PagingRequest pagingRequest) {
-
-        // 1. 정렬 조건 설정
+        //정렬 조건 설정 (기간 시작일 기준)
         Sort pageableSort = "ASC".equalsIgnoreCase(sort)
                 ? Sort.by("periodStart").ascending()
                 : Sort.by("periodStart").descending();
 
         Pageable pageable = PageRequest.of(pagingRequest.getPage() - 1, pagingRequest.getSize(), pageableSort);
 
-        // 2. 검색 조건(Status)에 따라 조회
-        Page<Billing> result;
+        //검색 조건(Status)에 따라 조회
         Organization org = organizationRepository.findById(orgId)
                 .orElseThrow(() -> new EntityNotFoundException("기관을 찾을 수 없습니다."));
 
+        Page<Billing> result;
         if ("ALL".equalsIgnoreCase(status)) {
             // 전체 조회
             result = billingRepository.findByOrganization(org, pageable);
@@ -316,14 +319,12 @@ public class BillingService {
             }
         }
 
-        // 3. DTO 변환
         List<BillingDto.Summary> content = result.getContent().stream()
                 .map(BillingDto.Summary::from)
                 .toList();
 
         PagingDTO pagingInfo = PagingDTO.builder()
-                .number(result.getNumber() + 1) // 1-based page index로 변환
-                .size(result.getSize())
+                .number(result.getNumber())
                 .totalPages(result.getTotalPages())
                 .totalElements(result.getTotalElements())
                 .build();
@@ -333,4 +334,17 @@ public class BillingService {
                 .content(content)
                 .build();
     }
+
+    /**
+     * 특정 Billing의 상태 변경 이력 목록
+     */
+    @Transactional(readOnly = true)
+    public List<BillingDto.StatusHistoryResponse> getBillingStatusHistories(Long billingId) {
+        return billingHistoryRepository
+                .findAllByBilling_IdOrderByCreatedDesc(billingId)
+                .stream()
+                .map(BillingDto.StatusHistoryResponse::from)
+                .toList();
+    }
+
 }

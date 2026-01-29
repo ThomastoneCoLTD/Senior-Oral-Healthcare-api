@@ -4,8 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.findPwdQuestion.application.FindPwdService;
 import com.kaii.dentix.domain.findPwdQuestion.controller.FindPwdController;
-import com.kaii.dentix.domain.findPwdQuestion.dto.FindPwdQuestionListDto;
-import com.kaii.dentix.domain.findPwdQuestion.dto.UserFindPwdQuestionsDto;
+import com.kaii.dentix.domain.findPwdQuestion.dto.FindPwdQuestionDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +19,6 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static com.kaii.dentix.common.ApiDocumentUtils.getDocumentResponse;
@@ -54,25 +52,25 @@ public class FindPwdControllerTest extends ControllerTest {
     public void userFindPwdQuestions() throws Exception{
 
         // given
-        List<UserFindPwdQuestionsDto> questionsList = Arrays.asList(
-                UserFindPwdQuestionsDto.builder()
+        List<FindPwdQuestionDto.Question> questionsList = List.of(
+                FindPwdQuestionDto.Question.builder()
                         .id(1L)
                         .sort(1L)
                         .title("내가 가장 좋아하는 색은?")
                         .build(),
-                UserFindPwdQuestionsDto.builder()
+                FindPwdQuestionDto.Question.builder()
                         .id(2L)
                         .sort(2L)
                         .title("내가 졸업한 초등학교의 이름은?")
                         .build(),
-                UserFindPwdQuestionsDto.builder()
+                FindPwdQuestionDto.Question.builder()
                         .id(3L)
                         .sort(3L)
                         .title("내가 가장 소중하게 생각하는 것은?")
                         .build()
         );
 
-        given(findPwdService.userFindPwdQuestions()).willReturn(new FindPwdQuestionListDto(questionsList));
+        given(findPwdService.userFindPwdQuestions()).willReturn(new FindPwdQuestionDto.Response(questionsList));
 
         // when
         ResultActions result = mockMvc.perform(

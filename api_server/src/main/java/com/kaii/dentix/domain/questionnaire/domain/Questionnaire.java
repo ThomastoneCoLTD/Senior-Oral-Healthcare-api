@@ -35,7 +35,7 @@ public class Questionnaire extends TimeEntity {
     private List<UserOralStatus> userOralStatusList = new ArrayList<>();
 
     /**
-     * ✅ 기존: oralStatusTypeList를 함께 저장하는 생성자
+     * 기존: oralStatusTypeList를 함께 저장하는 생성자
      */
     public Questionnaire(Long userId, String questionnaireVersion, String form, List<String> oralStatusTypeList) {
         this.userId = userId;
@@ -45,14 +45,4 @@ public class Questionnaire extends TimeEntity {
                 .map(oralStatusType -> new UserOralStatus(this, new OralStatus(oralStatusType)))
                 .collect(Collectors.toList());
     }
-
-    /**
-     * ✅ 추가: oralStatusTypeList 없이 기본 생성 (이번 Service 코드용)
-     */
-//    public Questionnaire(Long userId, String questionnaireVersion, String form) {
-//        this.userId = userId;
-//        this.questionnaireVersion = questionnaireVersion;
-//        this.form = form;
-//        this.userOralStatusList = new ArrayList<>();
-//    }
 }

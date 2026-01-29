@@ -2,10 +2,10 @@ package com.kaii.dentix.domain.admin.dto;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.kaii.dentix.domain.admin.domain.Admin;
-import com.kaii.dentix.domain.user.dto.TokenDto;
 import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.organization.dto.OrganizationSubscriptionResponse;
+import com.kaii.dentix.domain.organization.dto.OrganizationDto;
 import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.domain.user.dto.TokenDto;
 import com.kaii.dentix.global.config.PasswordSerializer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -41,10 +41,10 @@ public class AdminAuthDto {
         // 기관 정보
         private Long organizationId;
         private String organizationName;
-        private OrganizationSubscriptionResponse organizationSubscription;
+        private OrganizationDto.SubscriptionResponse organizationSubscription;
 
         //정적 팩토리 메서드: Service 로직을 깔끔하게 만듦
-        public static LoginResponse from(Admin admin, String accessToken, String refreshToken, OrganizationSubscriptionResponse subResponse) {
+        public static LoginResponse from(Admin admin, String accessToken, String refreshToken, OrganizationDto.SubscriptionResponse subResponse) {
             Organization org = admin.getOrganization();
 
             return LoginResponse.builder()

@@ -7,23 +7,15 @@ import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.organization.dao.OrganizationHistoryRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
-import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationHistory;
-import com.kaii.dentix.domain.organization.dto.OrganizationRequest;
-import com.kaii.dentix.domain.organization.dto.OrganizationResponse;
-import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
-import com.kaii.dentix.domain.organization.dto.OrganizationUpdateRequest;
+import com.kaii.dentix.domain.organization.dto.OrganizationDto;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSubscriptionHistoryRepository;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
-import com.kaii.dentix.domain.subscription.dao.SubscriptionUsageRepository;
-import com.kaii.dentix.domain.subscription.dao.SubscriptionHistoryRepository;
 import com.kaii.dentix.domain.subscription.dao.SubscriptionPlanRepository;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.BillingStatus;
 import com.kaii.dentix.domain.type.BillingType;
-import com.kaii.dentix.domain.type.SubscriptionStatus;
-import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
@@ -51,8 +43,7 @@ public class OrganizationService {
 
     /** 일반관리자 - 기관등록 */
     @Transactional
-    public OrganizationResponse createOrganization(OrganizationRequest request) {
-
+    public OrganizationDto.Response createOrganization(OrganizationDto.Request request) {
         //필수값 체크
         if (request.getSubscriptionPlanId() == null) {
             throw new BadRequestApiException("구독 플랜을 선택해 주세요.");
@@ -132,7 +123,7 @@ public class OrganizationService {
         admin.setOrganization(organization);
 
         //응답 (history 기준)
-        return OrganizationResponse.builder()
+        return OrganizationDto.Response.builder()
                 .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())
                 .organizationEmail(organization.getOrganizationEmail())
@@ -143,19 +134,16 @@ public class OrganizationService {
                 .subscriptionEndDate(null)
                 .build();
     }
-    /**
-     *기관 단건 조회 (기관별 상세 정보)_슈퍼관리자
-     */
+
+    /** 기관 단건 조회 */
     @Transactional
-    public OrganizationResponse getOrganizationById(Long organizationId) {
+    public OrganizationDto.Response getOrganizationById(Long organizationId) {
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 기관입니다."));
-        return OrganizationResponse.from(organization);
+        return OrganizationDto.Response.from(organization); // from 메서드 사용
     }
 
-    /**
-     * 기관 ID로 기관 단건 조회
-     */
+    /** 기관 ID로 기관 단건 조회 */
     @Transactional
     public Organization getOrganization(Long organizationId) {
         return organizationRepository.findById(organizationId)
@@ -163,48 +151,34 @@ public class OrganizationService {
                         new IllegalArgumentException("해당 기관을 찾을 수 없습니다. ID=" + organizationId));
     }
 
-    /**
-     * 모든 기관 조회
-     */
-
+    /** 모든 기관 조회 */
     @Transactional
-    public List<OrganizationResponse> getAllOrganizations() {
+    public List<OrganizationDto.Response> getAllOrganizations() {
         List<Organization> organizations = organizationRepository.findAllWithSubscription();
 
         return organizations.stream()
-                .map(org -> OrganizationResponse.builder()
+                .map(org -> OrganizationDto.Response.builder()
                         .organizationId(org.getOrganizationId())
                         .organizationName(org.getOrganizationName())
                         .organizationEmail(org.getOrganizationEmail())
                         .organizationPhoneNumber(org.getOrganizationPhoneNumber())
-                        .subscriptionPlanId(
-                                org.getOrganizationSubscription() != null ?
-                                        org.getOrganizationSubscription().getSubscriptionPlan().getId() : null)
-                        .subscriptionPlanName(
-                                org.getOrganizationSubscription() != null ?
-                                        org.getOrganizationSubscription().getSubscriptionPlan().getPlanName().name() : null)
+                        // ... 필요한 필드 매핑 (from 메서드 사용 권장)
+                        .subscriptionPlanId(org.getOrganizationSubscription() != null ? org.getOrganizationSubscription().getSubscriptionPlan().getId() : null)
+                        .subscriptionPlanName(org.getOrganizationSubscription() != null ? org.getOrganizationSubscription().getSubscriptionPlan().getPlanName().name() : null)
                         .subscriptionStartDate(org.getSubscriptionStartDate())
                         .subscriptionEndDate(org.getSubscriptionEndDate())
                         .build())
                 .toList();
     }
-//
-//    @Transactional
-//    public Organization findByPhoneOrThrow(String phoneNumber) {
-//        return organizationRepository.findByPhoneWithPlan(phoneNumber)
-//                .orElseThrow(() -> new IllegalArgumentException("해당 전화번호로 등록된 기관이 없습니다."));
-//    }
 
     @Transactional
-    public OrganizationResponse findByPhoneNumber(String phoneNumber) {
+    public OrganizationDto.Response findByPhoneNumber(String phoneNumber) {
         Organization organization = organizationRepository.findByPhoneWithPlan(phoneNumber)
                 .orElseThrow(() -> new IllegalArgumentException("해당 전화번호로 등록된 기관이 없습니다."));
-
-        return OrganizationResponse.from(organization);
+        return OrganizationDto.Response.from(organization);
     }
 
-
-    //    @Transactional
+//    @Transactional
     private void saveHistory(Organization org, String field, String beforeValue, String afterValue, Long adminId) {
         OrganizationHistory history = OrganizationHistory.builder()
                 .organization(org)
@@ -220,8 +194,7 @@ public class OrganizationService {
 
     /** 일반관리자 - 본인 기관 정보 수정 */
     @Transactional
-    public void updateOrganization(Long organizationId, OrganizationUpdateRequest request, Long adminId) {
-
+    public void updateOrganization(Long organizationId, OrganizationDto.UpdateRequest request, Long adminId) { // 타입 변경
         Organization organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 기관입니다."));
 
