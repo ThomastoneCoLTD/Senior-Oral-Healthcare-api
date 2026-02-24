@@ -228,4 +228,18 @@ public class UserDto {
         private String userName;
         private List<ServiceInfo> services;
     }
+
+    // =================================================================
+    // 7. 서비스 사용 통계 (Usage)
+    // =================================================================
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class ServiceUsageResponse {
+        private Long userId;
+        private String userName;
+        private String userPhoneNumber;
+        private String organizationName;
+        private String serviceName;
+        private Long successCount;
+    }
 }

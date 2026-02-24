@@ -1,9 +1,9 @@
 package com.kaii.dentix.domain.appService.dao;
 
 import com.kaii.dentix.domain.appService.domain.AppService;
-import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.user.dto.UserServiceUsageDto;
 import com.kaii.dentix.domain.appService.domain.UserToAppService;
+import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.domain.user.dto.UserDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,7 +21,7 @@ public interface UserToAppServiceRepository extends JpaRepository<UserToAppServi
     boolean existsByUserAndAppService(User user, AppService appService);
     //전체 목록 + 특정 서비스 필터 둘 다 가능
     @Query("""
-        SELECT new com.kaii.dentix.domain.user.dto.UserServiceUsageDto(
+        SELECT new com.kaii.dentix.domain.user.dto.UserDto.ServiceUsageResponse(
             u.userId, u.userName, u.userPhoneNumber, o.organizationName, s.name, COUNT(uas.id)
         )
         FROM UserToAppService uas
@@ -31,5 +31,5 @@ public interface UserToAppServiceRepository extends JpaRepository<UserToAppServi
         WHERE (:serviceName IS NULL OR s.name = :serviceName)
         GROUP BY u.userId, u.userName, u.userPhoneNumber, o.organizationName, s.name
     """)
-    List<UserServiceUsageDto> findUsageByServiceName(@Param("serviceName") String serviceName);
+    List<UserDto.ServiceUsageResponse> findUsageByServiceName(@Param("serviceName") String serviceName);
 }

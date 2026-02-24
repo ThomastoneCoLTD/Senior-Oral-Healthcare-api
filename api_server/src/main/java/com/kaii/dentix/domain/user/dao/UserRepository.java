@@ -16,8 +16,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUserLoginIdentifier(String userLoginIdentifier);
     List<User> findByOrganization_OrganizationId(Long organizationId);
     List<User> findByUserPhoneNumberOrUserName(String userPhoneNumber, String userName);
-
-    // Fetch Join을 이용해 N+1 문제 해결 (서비스 목록까지 한 번에 조회)
+    
     @Query("""
         SELECT DISTINCT u
         FROM User u

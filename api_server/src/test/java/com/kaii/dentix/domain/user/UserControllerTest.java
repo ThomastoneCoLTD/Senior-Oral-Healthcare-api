@@ -3,13 +3,11 @@ package com.kaii.dentix.domain.user;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.type.GenderType;
+import com.kaii.dentix.domain.type.ServiceType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.controller.UserController;
-import com.kaii.dentix.domain.user.dto.UserInfoDto;
-import com.kaii.dentix.domain.user.dto.UserInfoModifyDto;
-import com.kaii.dentix.domain.user.dto.UserInfoModifyQnADto;
-import com.kaii.dentix.domain.user.dto.UserLoginDto;
+import com.kaii.dentix.domain.user.dto.*;
 import com.kaii.dentix.domain.user.dto.request.*;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
 import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreeList;
@@ -78,17 +76,14 @@ public class UserControllerTest extends ControllerTest {
                 .build();
     }
 
-    private UserInfoModifyQnADto userInfoModifyQnADto(){
-        return UserInfoModifyQnADto.builder()
-                .findPwdQuestionId(2L)
-                .findPwdAnswer("덴티엑스초등학교")
-                .build();
-    }
-
-    private UserInfoModifyDto userInfoModifyDto(){
-        return UserInfoModifyDto.builder()
-                .userName("강덴티")
+    private UserDto.InfoResponse userInfoResponse() {
+        return UserDto.InfoResponse.builder()
+                .userName("강덴티") // 혹은 "김덴티"
+                .userLoginIdentifier("dentix123")
                 .userGender(GenderType.W)
+                .services(List.of(
+                        new UserDto.ServiceInfo(1L, "구강 검진", ServiceType.PLAQUE_DETECTION)
+                ))
                 .build();
     }
 
@@ -100,24 +95,13 @@ public class UserControllerTest extends ControllerTest {
                 .date(date)
                 .build();
     }
-
-    private UserInfoDto userInfoDto(){
-        Date date = new Date();
-        List<UserServiceAgreeList> userServiceAgreeLists = Arrays.asList(
-                UserServiceAgreeList.builder()
-                        .serviceAgreeId(3L)
-                        .isUserServiceAgree(YnType.Y)
-                        .date(date).build()
-        );
-
-        return UserInfoDto.builder()
-                .userName("김덴티")
-                .userLoginIdentifier("detix123")
-                .patientPhoneNumber("01012345678")
-                .userServiceAgreeLists(userServiceAgreeLists)
-                .userGender(GenderType.W)
+    private UserDto.ModifyQnAResponse modifyQnAResponse() {
+        return UserDto.ModifyQnAResponse.builder()
+                .findPwdQuestionId(1L)
+                .findPwdAnswer("수정된 답변")
                 .build();
     }
+
 
     /**
      *  사용자 자동 로그인
@@ -170,10 +154,10 @@ public class UserControllerTest extends ControllerTest {
     public void userPasswordVerify() throws Exception{
 
         // given
-        doNothing().when(userService).userPasswordVerify(any(HttpServletRequest.class), any(UserPasswordVerifyRequest.class));
+        doNothing().when(userService).userPasswordVerify(any(HttpServletRequest.class), any(UserDto.PasswordVerifyRequest.class));
 
         String password = "password";
-        UserPasswordVerifyRequest userPasswordVerifyRequest = UserPasswordVerifyRequest.builder()
+        UserDto.PasswordVerifyRequest userPasswordVerifyRequest = UserDto.PasswordVerifyRequest.builder()
                 .userPassword(password)
                 .build();
         given(passwordEncoder.encode(any(String.class))).willReturn(password);
@@ -203,7 +187,7 @@ public class UserControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(userService).userPasswordVerify(any(HttpServletRequest.class), any(UserPasswordVerifyRequest.class));
+        verify(userService).userPasswordVerify(any(HttpServletRequest.class), any(UserDto.PasswordVerifyRequest.class));
 
     }
 
@@ -214,10 +198,10 @@ public class UserControllerTest extends ControllerTest {
     public void userModifyPassword() throws Exception{
 
         // given
-        doNothing().when(userService).userModifyPassword(any(HttpServletRequest.class), any(UserInfoModifyPasswordRequest.class));
+        doNothing().when(userService).userModifyPassword(any(HttpServletRequest.class), any(UserDto.ModifyPasswordRequest.class));
 
         String password = "password!";
-        UserInfoModifyPasswordRequest userInfoModifyPasswordRequest = UserInfoModifyPasswordRequest.builder()
+        UserDto.ModifyPasswordRequest userInfoModifyPasswordRequest = UserDto.ModifyPasswordRequest.builder()
                 .userPassword(password)
                 .build();
         given(passwordEncoder.encode(any(String.class))).willReturn(password);
@@ -247,7 +231,7 @@ public class UserControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(userService).userModifyPassword(any(HttpServletRequest.class), any(UserInfoModifyPasswordRequest.class));
+        verify(userService).userModifyPassword(any(HttpServletRequest.class), any(UserDto.ModifyPasswordRequest.class));
 
     }
 
@@ -259,9 +243,9 @@ public class UserControllerTest extends ControllerTest {
 
 
         // given
-        given(userService.userModifyQnA(any(HttpServletRequest.class), any(UserInfoModifyQnARequest.class))).willReturn(userInfoModifyQnADto());
-
-        UserInfoModifyQnARequest userInfoModifyQnARequest = UserInfoModifyQnARequest.builder()
+        given(userService.userModifyQnA(any(HttpServletRequest.class), any(UserDto.ModifyQnARequest.class)))
+                .willReturn(modifyQnAResponse());
+        UserDto.ModifyQnARequest userInfoModifyQnARequest = UserDto.ModifyQnARequest.builder()
                 .findPwdQuestionId(2L)
                 .findPwdAnswer("덴티엑스초등학교")
                 .build();
@@ -295,20 +279,20 @@ public class UserControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(userService).userModifyQnA(any(HttpServletRequest.class), any(UserInfoModifyQnARequest.class));
+        verify(userService).userModifyQnA(any(HttpServletRequest.class), any(UserDto.ModifyQnARequest.class));
 
     }
-
     /**
-     *  사용자 회원정보 수정
+     * 사용자 회원정보 수정
      */
     @Test
     public void userModifyInfo() throws Exception{
 
         // given
-        given(userService.userModifyInfo(any(HttpServletRequest.class), any(UserInfoModifyRequest.class))).willReturn(userInfoModifyDto());
+        given(userService.userModifyInfo(any(HttpServletRequest.class), any(UserDto.ModifyInfoRequest.class)))
+                .willReturn(userInfoResponse());
 
-        UserInfoModifyRequest userInfoModifyRequest = UserInfoModifyRequest.builder()
+        UserDto.ModifyInfoRequest requestDto = UserDto.ModifyInfoRequest.builder()
                 .userName("강덴티")
                 .userGender(GenderType.W)
                 .build();
@@ -316,7 +300,7 @@ public class UserControllerTest extends ControllerTest {
         // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.put("/user")
-                        .content(objectMapper.writeValueAsString(userInfoModifyRequest))
+                        .content(objectMapper.writeValueAsString(requestDto)) // [수정] requestDto 사용
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
                         .with(user("user").roles("USER"))
@@ -326,23 +310,28 @@ public class UserControllerTest extends ControllerTest {
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(document("user",
+                .andDo(document("user/modify-info", // 문서명 구분을 위해 이름 변경 추천 (선택)
                         getDocumentRequest(),
                         getDocumentResponse(),
                         requestFields(
                                 fieldWithPath("userName").type(JsonFieldType.STRING).description("사용자 이름"),
                                 fieldWithPath("userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별")
                         ),
+                        // [수정] userInfoResponse()에 맞춰서 responseFields 보완 (에러 방지)
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
                                 fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 닉네임"),
-                                fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별")
+                                fieldWithPath("response.userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
+                                fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
+                                fieldWithPath("response.services").type(JsonFieldType.ARRAY).optional().description("이용 중인 서비스 목록"),
+                                fieldWithPath("response.services[].serviceId").type(JsonFieldType.NUMBER).optional().description("서비스 고유 번호"),
+                                fieldWithPath("response.services[].name").type(JsonFieldType.STRING).optional().description("서비스 이름"),
+                                fieldWithPath("response.services[].serviceType").type(JsonFieldType.STRING).optional().description("서비스 타입")
                         )
                 ));
-
-        verify(userService).userModifyInfo(any(HttpServletRequest.class), any(UserInfoModifyRequest.class));
+        verify(userService).userModifyInfo(any(HttpServletRequest.class), any(UserDto.ModifyInfoRequest.class));
 
     }
 
@@ -469,8 +458,7 @@ public class UserControllerTest extends ControllerTest {
     public void userInfo() throws Exception{
 
         // given
-        given(userService.userInfo(any(HttpServletRequest.class))).willReturn(userInfoDto());
-
+        given(userService.getUserInfo(any(HttpServletRequest.class))).willReturn(userInfoResponse());
         // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.get("/user")
@@ -501,9 +489,7 @@ public class UserControllerTest extends ControllerTest {
 
                         )
                 ));
-
-        verify(userService).userInfo(any(HttpServletRequest.class));
-
+        verify(userService).getUserInfo(any(HttpServletRequest.class));
     }
 
 }

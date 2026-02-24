@@ -4,7 +4,7 @@ import com.kaii.dentix.domain.admin.application.AdminLoginService;
 import com.kaii.dentix.domain.admin.dto.AdminAuthDto;
 import com.kaii.dentix.domain.auth.dto.AuthDto;
 import com.kaii.dentix.domain.user.application.UserLoginService;
-import com.kaii.dentix.domain.user.dto.UserAuthDto;
+import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -45,85 +45,20 @@ public class AuthController {
                 );
 
             case "user":
-                // 1. User DTO로 변환
-                UserAuthDto.LoginRequest userReq = UserAuthDto.LoginRequest.builder()
-                        .loginId(loginRequest.getLoginId())
-                        .password(loginRequest.getPassword())
+                // 1. 통합 DTO(UserDto.LoginRequest)로 변환
+                // 주의: UserDto.LoginRequest의 필드명(userLoginIdentifier, userPassword)에 맞춰서 매핑합니다.
+                UserDto.LoginRequest userReq = UserDto.LoginRequest.builder()
+                        .userLoginIdentifier(loginRequest.getLoginId()) // loginId -> userLoginIdentifier
+                        .userPassword(loginRequest.getPassword())       // password -> userPassword
                         .build();
 
                 // 2. User Service 호출 및 응답
+                // userLoginService.userLogin()은 UserDto.LoginResponse를 반환합니다.
                 return ResponseEntity.ok(
                         new DataResponse<>(userLoginService.userLogin(userReq))
                 );
-
             default:
                 throw new IllegalArgumentException("지원하지 않는 사용자 타입입니다: " + userType);
         }
     }
 }
-//    @PostMapping(value = "/login", name = "관리자 로그인")
-//    public DataResponse<AdminLoginDto> adminLogin(@Valid @RequestBody AdminLoginRequest request) {
-//        DataResponse<AdminLoginDto> response = new DataResponse<>(adminLoginService.adminLogin(request));
-//        return response;
-//    }
-//
-//    /**
-//     *  사용자 로그인
-//     */
-//    @PostMapping(name = "사용자 로그인")
-//    public DataResponse<UserLoginDto> userLogin(HttpServletRequest httpServletRequest, @Valid @RequestBody UserLoginRequest request){
-//        DataResponse<UserLoginDto> response = new DataResponse<>(userLoginService.userLogin(httpServletRequest, request));
-//        return response;
-//    }
-//    @PostMapping("/login")
-//    public DataResponse<LoginDto> login(
-//            HttpServletRequest httpServletRequest,
-//            @Valid @RequestBody LoginRequestDto dto
-//    ) {
-//        if ("ADMIN".equalsIgnoreCase(dto.getUserType())) {
-//            // 관리자 로그인 처리
-//            AdminLoginRequest adminReq = AdminLoginRequest.builder()
-//                    .adminLoginIdentifier(dto.getLoginIdentifier())
-//                    .adminPassword(dto.getPassword())
-//                    .build();
-//
-//            AdminLoginDto adminLoginDto = adminLoginService.adminLogin(adminReq);
-//
-//            // AdminLoginDto → LoginDto 변환
-//            LoginDto loginDto = LoginDto.builder()
-//                    .id(adminLoginDto.getAdminId())
-//                    .name(adminLoginDto.getAdminName())
-//                    .userType("ADMIN")
-//                    .isFirstLogin(adminLoginDto.getIsFirstLogin())
-//                    .adminIsSuper(adminLoginDto.getAdminIsSuper())
-//                    .accessToken(adminLoginDto.getAccessToken())
-//                    .refreshToken(adminLoginDto.getRefreshToken())
-//                    .build();
-//
-//            return new DataResponse<>(loginDto);
-//
-//        } else if ("USER".equalsIgnoreCase(dto.getUserType())) {
-//            // 사용자 로그인 처리
-//            UserLoginRequest userReq = UserLoginRequest.builder()
-//                    .userLoginIdentifier(dto.getLoginIdentifier())
-//                    .userPassword(dto.getPassword())
-//                    .build();
-//
-//            UserLoginDto userLoginDto = userLoginService.userLogin(httpServletRequest, userReq);
-//
-//            // UserLoginDto → LoginDto 변환
-//            LoginDto loginDto = LoginDto.builder()
-//                    .id(userLoginDto.getUserId())
-//                    .name(userLoginDto.getUserName())
-//                    .userType("USER")
-//                    .accessToken(userLoginDto.getAccessToken())
-//                    .refreshToken(userLoginDto.getRefreshToken())
-//                    .build();
-//
-//            return new DataResponse<>(loginDto);
-//
-//        } else {
-//            throw new IllegalArgumentException("userType은 USER 또는 ADMIN만 허용됩니다.");
-//        }
-//    }
-//}

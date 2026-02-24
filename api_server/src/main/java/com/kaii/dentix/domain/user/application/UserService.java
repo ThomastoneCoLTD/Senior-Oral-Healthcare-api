@@ -69,7 +69,7 @@ public class UserService {
     /**
      * 토큰에서 User 추출
      */
-    private User getTokenUser(HttpServletRequest request) {
+    public User getTokenUser(HttpServletRequest request) {
         String token = jwtTokenUtil.getAccessToken(request);
         if (jwtTokenUtil.getRoles(token, TokenType.AccessToken) != UserRole.ROLE_USER) {
             throw new UnauthorizedException("권한이 없는 사용자입니다.");
@@ -157,56 +157,58 @@ public class UserService {
     }
 
     /**
-     *  사용자 비밀번호 확인
+     * 사용자 비밀번호 확인
      */
     @Transactional
-    public void userPasswordVerify(HttpServletRequest httpServletRequest, UserPasswordVerifyRequest request){
+    public void userPasswordVerify(HttpServletRequest httpServletRequest, UserDto.PasswordVerifyRequest request) {
         User user = this.getTokenUser(httpServletRequest);
 
         if (!passwordEncoder.matches(request.getUserPassword(), user.getUserPassword())){
             throw new UnauthorizedException("비밀번호가 일치하지 않습니다.");
         }
-
     }
 
     /**
      *  사용자 보안정보수정 - 비밀번호 변경
      */
     @Transactional
-    public void userModifyPassword(HttpServletRequest httpServletRequest, UserInfoModifyPasswordRequest request){
+    public void userModifyPassword(HttpServletRequest httpServletRequest, UserDto.ModifyPasswordRequest request){
         User user = this.getTokenUser(httpServletRequest);
         user.modifyUserPassword(passwordEncoder, request.getUserPassword());
     }
 
     /**
-     *  사용자 보안정보수정 - 질문과 답변 수정
+     * 사용자 보안정보수정 - 질문과 답변 수정
      */
     @Transactional
-    public UserInfoModifyQnADto userModifyQnA(HttpServletRequest httpServletRequest, UserInfoModifyQnARequest request) {
+    public UserDto.ModifyQnAResponse userModifyQnA(HttpServletRequest httpServletRequest, UserDto.ModifyQnARequest request) {
         User user = this.getTokenUser(httpServletRequest);
 
         // 올바르지 않은 findPwdQuestionId 인 경우
-        if (!findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isPresent()) throw new NotFoundDataException("존재하지 않는 질문입니다.");
+        if (!findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isPresent()) {
+            throw new NotFoundDataException("존재하지 않는 질문입니다.");
+        }
 
         user.modifyQnA(request.getFindPwdQuestionId(), request.getFindPwdAnswer());
 
-        return UserInfoModifyQnADto.builder()
+        return UserDto.ModifyQnAResponse.builder()
                 .findPwdQuestionId(user.getFindPwdQuestionId())
                 .findPwdAnswer(user.getFindPwdAnswer())
                 .build();
-
     }
 
     /**
-     *  사용자 회원 정보 수정
+     * 사용자 회원 정보 수정
      */
     @Transactional
-    public UserInfoModifyDto userModifyInfo(HttpServletRequest httpServletRequest, UserInfoModifyRequest request){
+    public UserDto.InfoResponse userModifyInfo(HttpServletRequest httpServletRequest, UserDto.ModifyInfoRequest request) {
         User user = this.getTokenUser(httpServletRequest);
 
+        // 정보 수정
         user.modifyInfo(request.getUserName(), request.getUserGender());
 
-        return UserInfoModifyDto.builder()
+        // 통합 DTO인 UserDto.InfoResponse 로 반환
+        return UserDto.InfoResponse.builder()
                 .userName(user.getUserName())
                 .userGender(user.getUserGender())
                 .build();
@@ -242,35 +244,6 @@ public class UserService {
                 .build();
     }
 
-    /**
-     *  사용자 회원정보 조회
-     */
-//    @Transactional(readOnly = true)
-//    public UserInfoDto userInfo(HttpServletRequest request) {
-//        //JWT에서 사용자 정보 가져오기
-//        User user = this.getTokenUser(request);
-//
-//        //User + UserToAppService + AppService fetch join 조회
-//        User fullUser = userRepository.findByUserIdWithServices(user.getUserId())
-//                .orElseThrow(() -> new NotFoundDataException("사용자를 찾을 수 없습니다."));
-//
-//        //사용자와 연결된 서비스 목록 매핑
-//        List<UserInfoDto.ServiceInfo> services = userToAppServiceRepository.findByUser(fullUser).stream()
-//                .map(rel -> UserInfoDto.ServiceInfo.builder()
-//                        .serviceId(rel.getAppService().getAppServiceId())
-//                        .name(rel.getAppService().getName())
-//                        .serviceType(rel.getAppService().getServiceType().name())
-//                        .build())
-//                .toList();
-//
-//        //최종 DTO 반환
-//        return UserInfoDto.builder()
-//                .userName(fullUser.getUserName())
-//                .userLoginIdentifier(fullUser.getUserLoginIdentifier())
-//                .userGender(fullUser.getUserGender())
-//                .services(services)
-//                .build();
-//    }
 
     /**
      * 사용자 정보 조회
@@ -321,9 +294,10 @@ public class UserService {
      *사용자 서비스 업데이트
      */
     @Transactional
-    public UserServiceChangeDto updateUserServices(HttpServletRequest httpServletRequest, UserServiceUpdateRequest request) {
-
+    public UserDto.ServiceUpdateResponse updateUserServices(HttpServletRequest httpServletRequest, UserDto.ServiceUpdateRequest request) {
         User user = this.getTokenUser(httpServletRequest);
+
+//        User user = this.getTokenUser(httpServletRequest);
 
         List<UserToAppService> currentRelations = userToAppServiceRepository.findByUser(user);
 
@@ -367,16 +341,15 @@ public class UserService {
         }
 
         // 최신 목록 반환
-        List<UserServiceChangeDto.ServiceInfo> services =
-                userToAppServiceRepository.findByUser(user).stream()
-                        .map(rel -> UserServiceChangeDto.ServiceInfo.builder()
-                                .serviceId(rel.getAppService().getAppServiceId())        // ★ 수정됨
-                                .serviceName(rel.getAppService().getName())
-                                .serviceType(rel.getAppService().getServiceType().name())
-                                .build())
-                        .toList();
+        List<UserDto.ServiceInfo> services = userToAppServiceRepository.findByUser(user).stream()
+                .map(rel -> UserDto.ServiceInfo.builder()
+                        .serviceId(rel.getAppService().getAppServiceId())
+                        .name(rel.getAppService().getName())
+                        .serviceType(rel.getAppService().getServiceType())
+                        .build())
+                .toList();
 
-        return UserServiceChangeDto.builder()
+        return UserDto.ServiceUpdateResponse.builder()
                 .userName(user.getUserName())
                 .services(services)
                 .build();
