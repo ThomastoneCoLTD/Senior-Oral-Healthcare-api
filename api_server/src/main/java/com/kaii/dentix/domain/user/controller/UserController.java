@@ -2,9 +2,6 @@ package com.kaii.dentix.domain.user.controller;
 
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dto.UserDto;
-import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
-import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreementResponse;
-import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
 import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,8 +9,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -65,17 +60,7 @@ public class UserController {
         return ResponseEntity.ok(new DataResponse<>(userService.updateUserServices(request, dto)));
     }
 
-    /** 서비스 이용 동의 수정 */
-    @PutMapping("/service-agreement")
-    public DataResponse<UserModifyServiceAgreeDto> userModifyServiceAgree(HttpServletRequest request, @Valid @RequestBody UserModifyServiceAgreeRequest dto) {
-        return new DataResponse<>(userService.userModifyServiceAgree(request, dto));
-    }
 
-    /** 서비스 동의 내역 조회 */
-    @GetMapping("/serviceAgreement")
-    public DataResponse<List<UserServiceAgreementResponse>> getUserServiceAgreements(HttpServletRequest request) {
-        return new DataResponse<>(userService.getUserServiceAgreements(request));
-    }
 
     /** 로그아웃 */
     @PutMapping("/logout")
@@ -90,4 +75,5 @@ public class UserController {
         userService.userRevoke(request);
         return new SuccessResponse();
     }
+
 }

@@ -1,29 +1,25 @@
 package com.kaii.dentix.domain.user.application;
 
-import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
-import com.kaii.dentix.domain.appService.domain.AppService;
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
+import com.kaii.dentix.domain.agreement.application.ServiceAgreementService;
+import com.kaii.dentix.domain.agreement.dao.ServiceAgreementConsentRepository;
+import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
+import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
+import com.kaii.dentix.domain.appService.domain.AppService;
+import com.kaii.dentix.domain.appService.domain.UserToAppService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementDto;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
-//import com.kaii.dentix.domain.patient.dao.PatientRepository;
-//import com.kaii.dentix.domain.patient.domain.Patient;
-import com.kaii.dentix.domain.serviceAgreement.application.ServiceAgreementService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.user.dto.*;
-import com.kaii.dentix.domain.user.dto.request.*;
-import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepository;
-import com.kaii.dentix.domain.userServiceAgreement.domain.UserServiceAgreement;
-import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
-import com.kaii.dentix.domain.appService.domain.UserToAppService;
+import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.error.exception.*;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,14 +30,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
 import java.util.List;
 
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class  UserLoginService {
+public class UserLoginService {
 
 //    private final PatientRepository patientRepository;
 
@@ -50,7 +45,7 @@ public class  UserLoginService {
 
     private final ServiceAgreementService serviceAgreementService;
 
-    private final UserServiceAgreementRepository userServiceAgreementRepository;
+    private final ServiceAgreementConsentRepository serviceAgreementConsentRepository;
 
     private final JwtTokenUtil jwtTokenUtil;
 
@@ -63,7 +58,7 @@ public class  UserLoginService {
     private final AdminRepository adminRepository;
     private final AppServiceRepository appServiceRepository;
     private final OrganizationRepository organizationRepository;
-
+    private final ServiceAgreementConsentService serviceAgreementConsentService;
 
     /**
      * 사용자 회원 인증 (가입 여부 확인)
@@ -136,7 +131,11 @@ public class  UserLoginService {
         user.updateLogin(refreshToken);
 
         // 약관 동의 저장
-        this.saveServiceAgreements(request.getUserServiceAgreementRequest(), user.getUserId());
+        serviceAgreementConsentService.saveUserServiceAgreements(
+                user.getUserId(),
+                request.getUserServiceAgreementRequest()
+        );
+//        this.saveServiceAgreements(request.getUserServiceAgreementRequest(), user.getUserId());
 
         return UserDto.SignUpResponse.builder()
                 .userId(user.getUserId())
@@ -279,25 +278,25 @@ public class  UserLoginService {
         return new UserDto.AccessTokenResponse(newToken);
     }
 
-    // 내부 메서드: 서비스 약관 저장
-    private void saveServiceAgreements(List<Long> request, Long userId) {
-        List<ServiceAgreementDto.Response> list = serviceAgreementService.serviceAgreementList().getServiceAgreement();
-
-        if (request.stream().anyMatch(reqId -> list.stream().noneMatch(d -> d.getId().equals(reqId)))) {
-            throw new NotFoundDataException("존재하지 않는 서비스 이용 동의입니다.");
-        }
-
-        Date now = new Date();
-        list.forEach(agree -> {
-            if (agree.getIsServiceAgreeRequired() == YnType.Y && !request.contains(agree.getId())) {
-                throw new BadRequestApiException(agree.getName() + "는(은) 필수 항목입니다.");
-            }
-            userServiceAgreementRepository.save(UserServiceAgreement.builder()
-                    .userId(userId)
-                    .serviceAgreeId(agree.getId())
-                    .isUserServiceAgree(request.contains(agree.getId()) ? YnType.Y : YnType.N)
-                    .userServiceAgreeDate(now)
-                    .build());
-        });
-    }
+//    // 내부 메서드: 서비스 약관 저장
+//    private void saveServiceAgreements(List<Long> request, Long userId) {
+//        List<ServiceAgreementDto.Response> list = serviceAgreementService.serviceAgreementList().getServiceAgreement();
+//
+//        if (request.stream().anyMatch(reqId -> list.stream().noneMatch(d -> d.getId().equals(reqId)))) {
+//            throw new NotFoundDataException("존재하지 않는 서비스 이용 동의입니다.");
+//        }
+//
+//        Date now = new Date();
+//        list.forEach(agree -> {
+//            if (agree.getIsServiceAgreeRequired() == YnType.Y && !request.contains(agree.getId())) {
+//                throw new BadRequestApiException(agree.getName() + "는(은) 필수 항목입니다.");
+//            }
+//            userServiceAgreementRepository.save(UserServiceAgreement.builder()
+//                    .userId(userId)
+//                    .serviceAgreeId(agree.getId())
+//                    .isUserServiceAgree(request.contains(agree.getId()) ? YnType.Y : YnType.N)
+//                    .userServiceAgreeDate(now)
+//                    .build());
+//        });
+//    }
 }

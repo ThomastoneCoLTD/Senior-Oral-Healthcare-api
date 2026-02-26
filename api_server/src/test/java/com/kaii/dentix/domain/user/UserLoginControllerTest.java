@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.user;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.controller.UserLoginController;
@@ -42,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 
 @WebMvcTest(UserLoginController.class)
-public class UserLoginControllerTest extends ControllerTest {
+public class UserLoginControllerTest {
 
     private MockMvc mockMvc;
 

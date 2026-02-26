@@ -1,17 +1,16 @@
 package com.kaii.dentix.domain.user;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
+import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
+import com.kaii.dentix.domain.agreement.dto.ServiceAgreementConsentDto;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.ServiceType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.controller.UserController;
-import com.kaii.dentix.domain.user.dto.*;
-import com.kaii.dentix.domain.user.dto.request.*;
-import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
-import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreeList;
-import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
+import com.kaii.dentix.domain.user.dto.UserDto;
+import com.kaii.dentix.domain.user.dto.UserLoginDto;
+import com.kaii.dentix.domain.user.dto.request.UserAutoLoginRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +28,6 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -47,7 +45,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
-public class UserControllerTest extends ControllerTest {
+public class UserControllerTest {
 
     private MockMvc mockMvc;
 
@@ -66,6 +64,9 @@ public class UserControllerTest extends ControllerTest {
 
     @MockBean
     private UserService userService;
+
+    @MockBean
+    private ServiceAgreementConsentService serviceAgreementConsentService;
 
     private UserLoginDto userLoginDto(){
         return UserLoginDto.builder()
@@ -87,9 +88,9 @@ public class UserControllerTest extends ControllerTest {
                 .build();
     }
 
-    private UserModifyServiceAgreeDto userModifyServiceAgreeDto(){
+    private ServiceAgreementConsentDto.ModifyResponse userModifyServiceAgreeDto(){
         Date date = new Date();
-        return UserModifyServiceAgreeDto.builder()
+        return ServiceAgreementConsentDto.ModifyResponse.builder()
                 .serviceAgreeId(3L)
                 .isUserServiceAgree(YnType.Y)
                 .date(date)
@@ -410,9 +411,9 @@ public class UserControllerTest extends ControllerTest {
     public void userModifyServiceAgree() throws Exception{
 
         // given
-        given(userService.userModifyServiceAgree(any(HttpServletRequest.class), any(UserModifyServiceAgreeRequest.class))).willReturn(userModifyServiceAgreeDto());
+        given(serviceAgreementConsentService.userModifyServiceAgree(any(HttpServletRequest.class), any(ServiceAgreementConsentDto.ModifyRequest.class))).willReturn(userModifyServiceAgreeDto());
 
-        UserModifyServiceAgreeRequest userModifyServiceAgreeRequest = UserModifyServiceAgreeRequest.builder()
+        ServiceAgreementConsentDto.ModifyRequest userModifyServiceAgreeRequest = ServiceAgreementConsentDto.ModifyRequest.builder()
                 .serviceAgreeId(3L)
                 .isUserServiceAgree(YnType.Y)
                 .build();
@@ -447,7 +448,7 @@ public class UserControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(userService).userModifyServiceAgree(any(HttpServletRequest.class), any(UserModifyServiceAgreeRequest.class));
+        verify(serviceAgreementConsentService).userModifyServiceAgree(any(HttpServletRequest.class), any(ServiceAgreementConsentDto.ModifyRequest.class));
 
     }
 

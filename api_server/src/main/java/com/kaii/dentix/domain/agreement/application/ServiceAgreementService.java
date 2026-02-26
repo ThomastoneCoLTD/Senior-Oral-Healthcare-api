@@ -1,7 +1,7 @@
-package com.kaii.dentix.domain.serviceAgreement.application;
+package com.kaii.dentix.domain.agreement.application;
 
-import com.kaii.dentix.domain.serviceAgreement.dao.ServiceAgreementRepository;
-import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementDto;
+import com.kaii.dentix.domain.agreement.dao.ServiceAgreementRepository;
+import com.kaii.dentix.domain.agreement.dto.ServiceAgreementDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;

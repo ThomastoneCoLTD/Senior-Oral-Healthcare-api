@@ -1,6 +1,6 @@
-package com.kaii.dentix.domain.serviceAgreement.dao;
+package com.kaii.dentix.domain.agreement.dao;
 
-import com.kaii.dentix.domain.serviceAgreement.domain.ServiceAgreement;
+import com.kaii.dentix.domain.agreement.domain.ServiceAgreement;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 

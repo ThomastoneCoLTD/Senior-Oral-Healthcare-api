@@ -1,7 +1,5 @@
 package com.kaii.dentix.domain.toothBrushingController;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.toothBrushing.application.ToothBrushingService;
 import com.kaii.dentix.domain.toothBrushing.controller.ToothBrushingController;
 import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingDto;
@@ -9,7 +7,6 @@ import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRegisterDto;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
@@ -40,7 +37,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ToothBrushingController.class)
-public class ToothBrushingControllerTest extends ControllerTest {
+public class ToothBrushingControllerTest {
 
     private MockMvc mockMvc;
 

@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.oralCheck;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.controller.OralCheckController;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
@@ -50,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(OralCheckController.class)
-public class OralCheckControllerTest extends ControllerTest {
+public class OralCheckControllerTest {
 
     private MockMvc mockMvc;
 

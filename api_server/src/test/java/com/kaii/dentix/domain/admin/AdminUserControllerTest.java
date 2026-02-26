@@ -1,11 +1,9 @@
 package com.kaii.dentix.domain.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.admin.application.AdminUserService;
 import com.kaii.dentix.domain.admin.controller.AdminUserController;
 import com.kaii.dentix.domain.admin.dto.AdminUserDto; //통합 DTO Import
-import com.kaii.dentix.domain.type.DatePeriodType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
@@ -26,7 +24,6 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -46,7 +43,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AdminUserController.class)
-public class AdminUserControllerTest extends ControllerTest {
+public class AdminUserControllerTest {
 
     private MockMvc mockMvc;
 

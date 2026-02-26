@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.questionnaire;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.contents.dto.ContentsDto;
 import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
 import com.kaii.dentix.domain.questionnaire.application.QuestionnaireService;
@@ -45,7 +44,7 @@ import static org.springframework.restdocs.request.RequestDocumentation.queryPar
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(QuestionnaireController.class)
-public class QuestionnaireControllerTest extends ControllerTest {
+public class QuestionnaireControllerTest {
 
     private MockMvc mockMvc;
 

@@ -20,16 +20,4 @@ public interface UserToAppServiceRepository extends JpaRepository<UserToAppServi
     //중복 연동 방지 체크용 메서드
     boolean existsByUserAndAppService(User user, AppService appService);
     //전체 목록 + 특정 서비스 필터 둘 다 가능
-    @Query("""
-        SELECT new com.kaii.dentix.domain.user.dto.UserDto.ServiceUsageResponse(
-            u.userId, u.userName, u.userPhoneNumber, o.organizationName, s.name, COUNT(uas.id)
-        )
-        FROM UserToAppService uas
-        JOIN uas.user u
-        JOIN u.organization o
-        JOIN uas.appService s
-        WHERE (:serviceName IS NULL OR s.name = :serviceName)
-        GROUP BY u.userId, u.userName, u.userPhoneNumber, o.organizationName, s.name
-    """)
-    List<UserDto.ServiceUsageResponse> findUsageByServiceName(@Param("serviceName") String serviceName);
 }

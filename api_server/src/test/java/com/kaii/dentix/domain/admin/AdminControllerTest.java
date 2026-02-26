@@ -1,11 +1,8 @@
 package com.kaii.dentix.domain.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
-import com.kaii.dentix.domain.admin.application.AdminService;
 import com.kaii.dentix.domain.admin.dto.*;
 import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import com.kaii.dentix.global.common.dto.PagingDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +21,6 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static com.kaii.dentix.common.ApiDocumentUtils.getDocumentRequest;
@@ -44,7 +40,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(com.kaii.dentix.domain.admin.controller.AdminController.class)
-public class AdminControllerTest extends ControllerTest {
+public class AdminControllerTest {
 
     private MockMvc mockMvc;
 

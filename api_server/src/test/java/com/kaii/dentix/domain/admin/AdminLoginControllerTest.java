@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.admin.application.AdminLoginService;
 import com.kaii.dentix.domain.admin.controller.AdminLoginController;
 import com.kaii.dentix.domain.admin.dto.AdminAuthDto; //통합 DTO Import
@@ -33,7 +32,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AdminLoginController.class)
-public class AdminLoginControllerTest extends ControllerTest {
+public class AdminLoginControllerTest {
 
     private MockMvc mockMvc;
 

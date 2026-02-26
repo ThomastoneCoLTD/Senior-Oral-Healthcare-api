@@ -232,14 +232,25 @@ public class UserDto {
     // =================================================================
     // 7. 서비스 사용 통계 (Usage)
     // =================================================================
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class ServiceUsageResponse {
+    @Getter
+    @NoArgsConstructor
+    public class ServiceUsageResponse {
+
         private Long userId;
         private String userName;
         private String userPhoneNumber;
         private String organizationName;
         private String serviceName;
         private Long successCount;
+
+        public ServiceUsageResponse(Long userId, String userName, String userPhoneNumber,
+                                    String organizationName, String serviceName, Long successCount) {
+            this.userId = userId;
+            this.userName = userName;
+            this.userPhoneNumber = userPhoneNumber;
+            this.organizationName = organizationName;
+            this.serviceName = serviceName;
+            this.successCount = successCount;
+        }
     }
 }

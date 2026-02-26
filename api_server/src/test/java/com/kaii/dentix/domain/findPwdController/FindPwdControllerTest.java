@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.findPwdController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.findPwdQuestion.application.FindPwdService;
 import com.kaii.dentix.domain.findPwdQuestion.controller.FindPwdController;
 import com.kaii.dentix.domain.findPwdQuestion.dto.FindPwdQuestionDto;
@@ -31,7 +30,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.response
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(FindPwdController.class)
-public class FindPwdControllerTest extends ControllerTest {
+public class FindPwdControllerTest {
 
     private MockMvc mockMvc;
 

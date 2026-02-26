@@ -1,7 +1,7 @@
-package com.kaii.dentix.domain.serviceAgreement.controller;
+package com.kaii.dentix.domain.agreement.controller;
 
-import com.kaii.dentix.domain.serviceAgreement.application.ServiceAgreementService;
-import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementDto;
+import com.kaii.dentix.domain.agreement.application.ServiceAgreementService;
+import com.kaii.dentix.domain.agreement.dto.ServiceAgreementDto;
 import com.kaii.dentix.global.common.response.DataResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -17,7 +17,7 @@ public class ServiceAgreementController {
 
     private final ServiceAgreementService serviceAgreementService;
 
-    /**s
+    /**
      * 약관 전체 조회
      */
     @GetMapping(name = "약관 전체 조회")

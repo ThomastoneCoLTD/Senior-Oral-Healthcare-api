@@ -1,11 +1,9 @@
 package com.kaii.dentix.domain.serviceAgreement;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
-import com.kaii.dentix.domain.serviceAgreement.application.ServiceAgreementService;
-import com.kaii.dentix.domain.serviceAgreement.controller.ServiceAgreementController;
-import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementDto;
-import com.kaii.dentix.domain.serviceAgreement.dto.ServiceAgreementListDto;
+import com.kaii.dentix.domain.agreement.application.ServiceAgreementService;
+import com.kaii.dentix.domain.agreement.controller.ServiceAgreementController;
+import com.kaii.dentix.domain.agreement.dto.ServiceAgreementDto;
 import com.kaii.dentix.domain.type.YnType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,7 +19,6 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static com.kaii.dentix.common.ApiDocumentUtils.getDocumentRequest;
@@ -36,7 +33,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.response
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ServiceAgreementController.class)
-public class AppServiceAgreementControllerTest extends ControllerTest {
+public class AppServiceAgreementControllerTest {
 
     private MockMvc mockMvc;
 

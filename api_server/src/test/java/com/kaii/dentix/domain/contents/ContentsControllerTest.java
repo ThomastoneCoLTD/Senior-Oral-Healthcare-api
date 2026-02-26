@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.contents;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.contents.application.ContentsService;
 import com.kaii.dentix.domain.contents.controller.ContentsController;
 import com.kaii.dentix.domain.contents.dto.*;
@@ -40,7 +39,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ContentsController.class)
-public class ContentsControllerTest extends ControllerTest {
+public class ContentsControllerTest {
 
     private MockMvc mockMvc;
 
@@ -64,20 +63,20 @@ public class ContentsControllerTest extends ControllerTest {
     public void contentsList() throws Exception{
 
         // given
-        List<ContentsCategoryDto> categories = Arrays.asList(
-                ContentsCategoryDto.builder()
+        List<ContentsDto.Category> categories = Arrays.asList(
+                ContentsDto.Category.builder()
                         .id(0)
                         .name("김덴티님 맞춤")
                         .color(null)
                         .sort(0)
                         .build(),
-                ContentsCategoryDto.builder()
+                ContentsDto.Category.builder()
                         .id(1)
                         .name("질병")
                         .color("#98B4ED")
                         .sort(1)
                         .build(),
-                ContentsCategoryDto.builder()
+                ContentsDto.Category.builder()
                         .id(2)
                         .name("양치")
                         .color("#4B79EC")
@@ -87,9 +86,9 @@ public class ContentsControllerTest extends ControllerTest {
 
         List<Integer> contentsLists = Arrays.asList(1, 2);
 
-        List<ContentsDto> contents = Arrays.asList(
-                ContentsDto.builder()
-                        .id(1)
+        List<ContentsDto.Summary> contents = Arrays.asList(
+                ContentsDto.Summary.builder()
+                        .id(1L)
                         .sort(1)
                         .title("백살도 거뜬한 건강한 치아관리 방법")
                         .type(ContentsType.CARD)
@@ -101,8 +100,11 @@ public class ContentsControllerTest extends ControllerTest {
         );
 
 
-        given(contentsService.contentsList(any(HttpServletRequest.class))).willReturn(new ContentsListDto(categories, contents));
-
+        given(contentsService.getContentsList(any()))
+                .willReturn(ContentsDto.ListResponse.builder()
+                        .categories(categories)   // 아래에서 categories 타입도 바꿀 거야
+                        .contents(contents)
+                        .build());
         // when
         ResultActions result = mockMvc.perform(
                 RestDocumentationRequestBuilders.get("/contents")
@@ -140,7 +142,7 @@ public class ContentsControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(contentsService).contentsList(any(HttpServletRequest.class));
+        verify(contentsService).getContentsList(any());
 
     }
 
@@ -166,8 +168,15 @@ public class ContentsControllerTest extends ControllerTest {
                         .build()
         );
 
-        given(contentsService.contentsCard(any(Long.class))).willReturn(new ContentsCardListDto("백살도 거뜬한 건강한 치아관리 방법", contentsCardList));
-
+        given(contentsService.getContentsCard(any(Long.class)))
+                .willReturn(ContentsDto.CardListResponse.builder()
+                        .title("백살도 거뜬한 건강한 치아관리 방법")
+                        .cardList(Arrays.asList(
+                                ContentsDto.Card.builder().number(1).path("https://www.naver.com/").build(),
+                                ContentsDto.Card.builder().number(2).path("https://www.google.com/").build(),
+                                ContentsDto.Card.builder().number(3).path("https://www.daum.net/").build()
+                        ))
+                        .build());
         // when
         ResultActions result = mockMvc.perform(
                 RestDocumentationRequestBuilders.get("/contents/card?contentsId={contentsId}", "1")
@@ -196,8 +205,7 @@ public class ContentsControllerTest extends ControllerTest {
                         )
                 ));
 
-        verify(contentsService).contentsCard(any(Long.class));
-
+        verify(contentsService).getContentsCard(any(Long.class));
     }
 
 }

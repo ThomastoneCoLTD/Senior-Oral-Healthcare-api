@@ -28,8 +28,8 @@ public class BillingScheduler {
 
     private final OrganizationSubscriptionRepository organizationSubscriptionRepository;
     private final BillingRepository billingRepository;
+//    private final OrganizationRepository organizationRdepository;
     private final OrganizationRepository organizationRepository;
-
     /**
      * 매일 자정마다 실행
      * - 만료된 구독(autoRenew=true) 조회

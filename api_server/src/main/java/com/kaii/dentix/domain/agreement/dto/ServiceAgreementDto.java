@@ -1,6 +1,6 @@
-package com.kaii.dentix.domain.serviceAgreement.dto;
+package com.kaii.dentix.domain.agreement.dto;
 
-import com.kaii.dentix.domain.serviceAgreement.domain.ServiceAgreement;
+import com.kaii.dentix.domain.agreement.domain.ServiceAgreement;
 import com.kaii.dentix.domain.type.YnType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

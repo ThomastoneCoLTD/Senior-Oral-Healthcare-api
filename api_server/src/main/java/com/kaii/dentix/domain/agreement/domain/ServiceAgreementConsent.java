@@ -1,24 +1,26 @@
-package com.kaii.dentix.domain.userServiceAgreement.domain;
-
-
-
-import jakarta.persistence.*;
-import java.util.Date;
-
-import lombok.Getter;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+package com.kaii.dentix.domain.agreement.domain;
 
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.entity.TimeEntity;
-@Entity
-@Getter @Builder
-@AllArgsConstructor @NoArgsConstructor
-@Table(name = "user_service_agreement")
-public class UserServiceAgreement extends TimeEntity {
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+import java.util.Date;
+
+
+@Entity
+@Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@Table(name = "user_service_agreement")
+public class ServiceAgreementConsent extends TimeEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userServiceAgreeId;
 
     @Column(nullable = false)

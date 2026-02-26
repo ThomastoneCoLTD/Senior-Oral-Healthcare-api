@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.admin;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.common.ControllerTest;
 import com.kaii.dentix.domain.admin.application.AdminStatisticService;
 import com.kaii.dentix.domain.admin.controller.AdminStatisticController;
 import com.kaii.dentix.domain.admin.dto.AdminStatisticDto; //통합 DTO Import
@@ -37,7 +36,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AdminStatisticController.class)
-public class AdminStatisticControllerTest extends ControllerTest {
+public class AdminStatisticControllerTest {
 
     private MockMvc mockMvc;
 

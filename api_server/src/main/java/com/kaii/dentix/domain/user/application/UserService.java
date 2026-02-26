@@ -1,28 +1,21 @@
 package com.kaii.dentix.domain.user.application;
 
+import com.kaii.dentix.domain.agreement.dao.ServiceAgreementCustomRepository;
+import com.kaii.dentix.domain.agreement.dao.ServiceAgreementRepository;
 import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
+import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
 import com.kaii.dentix.domain.appService.domain.AppService;
+import com.kaii.dentix.domain.appService.domain.UserToAppService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
-import com.kaii.dentix.domain.serviceAgreement.dao.ServiceAgreementCustomRepository;
-import com.kaii.dentix.domain.serviceAgreement.dao.ServiceAgreementRepository;
-import com.kaii.dentix.domain.serviceAgreement.domain.ServiceAgreement;
 import com.kaii.dentix.domain.type.UserRole;
-import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.user.dto.*;
-import com.kaii.dentix.domain.user.dto.request.*;
+import com.kaii.dentix.domain.user.dto.UserDto;
+import com.kaii.dentix.domain.user.dto.UserLoginDto;
+import com.kaii.dentix.domain.user.dto.request.UserAutoLoginRequest;
 import com.kaii.dentix.domain.user.event.UserModifyDeviceInfoEvent;
-import com.kaii.dentix.domain.userServiceAgreement.dao.UserServiceAgreementRepository;
-import com.kaii.dentix.domain.userServiceAgreement.domain.UserServiceAgreement;
-import com.kaii.dentix.domain.userServiceAgreement.dto.UserModifyServiceAgreeDto;
-import com.kaii.dentix.domain.userServiceAgreement.dto.UserServiceAgreementResponse;
-import com.kaii.dentix.domain.userServiceAgreement.dto.request.UserModifyServiceAgreeRequest;
-import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
-import com.kaii.dentix.domain.appService.domain.UserToAppService;
-import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.TokenExpiredException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
@@ -51,7 +44,7 @@ public class UserService {
     private final JwtTokenUtil jwtTokenUtil;
 
     private final ApplicationEventPublisher publisher;
-    private final UserServiceAgreementRepository userServiceAgreementRepository;
+//    private final UserServiceAgreementRepository userServiceAgreementRepository;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -78,17 +71,6 @@ public class UserService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
     }
-//    public User getTokenUser(HttpServletRequest servletRequest) {
-//
-//        String token = jwtTokenUtil.getAccessToken(servletRequest);
-//
-//        UserRole roles = jwtTokenUtil.getRoles(token, TokenType.AccessToken);
-//        if (!roles.equals(UserRole.ROLE_USER)) throw new UnauthorizedException("권한이 없는 사용자입니다.");
-//
-//        Long userId = jwtTokenUtil.getUserId(token, TokenType.AccessToken);
-//        return userRepository.findById(userId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
-//
-//    }
 
     /**
      * 사용자 자동 로그인 (토큰 갱신)
@@ -99,7 +81,7 @@ public class UserService {
 
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
-        user.updateLogin(refreshToken);
+        userRepository.updateLoginInfo(user.getUserId(), refreshToken, new Date());
 
         publisher.publishEvent(new UserModifyDeviceInfoEvent(user.getUserId(), request));
 
@@ -214,35 +196,7 @@ public class UserService {
                 .build();
     }
 
-    /**
-     *  사용자 서비스 이용동의 여부 수정
-     */
-    @Transactional
-    public UserModifyServiceAgreeDto userModifyServiceAgree(HttpServletRequest httpServletRequest, UserModifyServiceAgreeRequest request){
-        User user = this.getTokenUser(httpServletRequest);
 
-        ServiceAgreement serviceAgreement = serviceAgreementRepository.findById(request.getServiceAgreeId()).orElseThrow(() -> new NotFoundDataException("존재하지 않는 서비스 이용 동의입니다."));
-        if (serviceAgreement.getIsServiceAgreeRequired().equals(YnType.Y)) throw new BadRequestApiException("필수 항목은 수정할 수 없습니다.");
-
-        UserServiceAgreement userServiceAgreement = userServiceAgreementRepository.findByServiceAgreeIdAndUserId(serviceAgreement.getServiceAgreeId(), user.getUserId()).orElse(null);
-
-        if (userServiceAgreement == null) {
-            userServiceAgreement = userServiceAgreementRepository.save(UserServiceAgreement.builder()
-                    .userId(user.getUserId())
-                    .serviceAgreeId(serviceAgreement.getServiceAgreeId())
-                    .isUserServiceAgree(request.getIsUserServiceAgree())
-                    .userServiceAgreeDate(new Date())
-                    .build());
-        } else {
-            userServiceAgreement.modifyServiceAgree(request.getIsUserServiceAgree());
-        }
-
-        return UserModifyServiceAgreeDto.builder()
-                .serviceAgreeId(userServiceAgreement.getServiceAgreeId())
-                .isUserServiceAgree(userServiceAgreement.getIsUserServiceAgree())
-                .date(userServiceAgreement.getUserServiceAgreeDate())
-                .build();
-    }
 
 
     /**
@@ -296,9 +250,6 @@ public class UserService {
     @Transactional
     public UserDto.ServiceUpdateResponse updateUserServices(HttpServletRequest httpServletRequest, UserDto.ServiceUpdateRequest request) {
         User user = this.getTokenUser(httpServletRequest);
-
-//        User user = this.getTokenUser(httpServletRequest);
-
         List<UserToAppService> currentRelations = userToAppServiceRepository.findByUser(user);
 
         Set<Long> newServiceIds = new HashSet<>(request.getServiceIds());
@@ -353,13 +304,5 @@ public class UserService {
                 .userName(user.getUserName())
                 .services(services)
                 .build();
-    }
-
-    @Transactional(readOnly = true)
-    public List<UserServiceAgreementResponse> getUserServiceAgreements(HttpServletRequest httpServletRequest) {
-        User user = this.getTokenUser(httpServletRequest);
-        Long currentUserId = user.getUserId();
-
-        return userServiceAgreementRepository.findAllByUserIdWithServiceName(currentUserId);
     }
 }
