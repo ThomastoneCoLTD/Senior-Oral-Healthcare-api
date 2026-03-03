@@ -161,7 +161,12 @@ public class OralCheckService {
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("AI 모델 요청 인터럽트", e);
+            Throwable cause = e.getCause();
+//            log.error("AI 모델 요청 인터럽트", e);
+            log.error("AI 모델 실행 실패. type={}, message={}",
+                    cause != null ? cause.getClass().getName() : "null",
+                    cause != null ? cause.getMessage() : "null",
+                    cause);
             return new DataResponse<>(500, "요청 처리 중 오류가 발생했습니다.", null);
         }
 
