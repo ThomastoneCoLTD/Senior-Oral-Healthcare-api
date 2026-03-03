@@ -17,6 +17,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -45,38 +46,38 @@ public class AiModelService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
 
         MultiValueMap<String, Object> params = new LinkedMultiValueMap<>();
 
         ByteArrayResource fileResource = new ByteArrayResource(picture.getBytes()) {
             @Override
             public String getFilename() {
-                return picture.getOriginalFilename();
+                String name = picture.getOriginalFilename();
+                return (name == null || name.isBlank()) ? "oralcheck.jpg" : name;
+            }
+            @Override
+            public long contentLength() {
+                return picture.getSize();
             }
         };
 
-        params.add("picture", fileResource);
+        //AI 서버가 기대하는 키로 맞추기 (대부분 file)
+        params.add("file", fileResource);
 
-        HttpEntity<MultiValueMap<String, Object>> entity =
-                new HttpEntity<>(params, headers);
+        HttpEntity<MultiValueMap<String, Object>> entity = new HttpEntity<>(params, headers);
 
         try {
             OralCheckAnalysisResponse response =
-                    restTemplate.postForObject(
-                            oralCheckAiModelApiUrl,
-                            entity,
-                            OralCheckAnalysisResponse.class
-                    );
+                    restTemplate.postForObject(oralCheckAiModelApiUrl, entity, OralCheckAnalysisResponse.class);
 
             return CompletableFuture.completedFuture(response);
 
         } catch (org.springframework.web.client.HttpStatusCodeException e) {
             log.error("AI 서버 호출 실패. url={}, status={}, body={}",
                     oralCheckAiModelApiUrl, e.getStatusCode(), e.getResponseBodyAsString(), e);
-            throw e; // 기존 흐름 유지 (OralCheckService에서 502 처리됨)
+            throw e;
         }
-
-//        return CompletableFuture.completedFuture(response);
     }
 
     /**

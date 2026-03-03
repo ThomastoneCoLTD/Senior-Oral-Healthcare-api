@@ -87,13 +87,6 @@ server:
       max-file-size: 500MB
       max-request-size: 500MB
 
-
-
-
-#aws:
-#  account:
-#    accessKey: 'AKIAXXXXXXXXXXXXXXXX'
-#    secretKey: 'ABCDEFGHIJKLMNOPQRSTUVXYZ12345678'
 aiModel:
   apiUrl:
     oralCheck: 'https://gpu-api.thomabio.com/denti/api/plaque_navy'
@@ -109,6 +102,10 @@ s3:
 
 aws:
   region: ap-southeast-1
+  #aws:
+  #  account:
+  #    accessKey: 'AKIAXXXXXXXXXXXXXXXX'
+  #    secretKey: 'ABCDEFGHIJKLMNOPQRSTUVXYZ12345678'
 #  access-key: ${AWS_ACCESS_KEY_ID}
 #  secret-key: ${AWS_SECRET_ACCESS_KEY}
 
