@@ -3,6 +3,7 @@ package com.kaii.dentix.global.common.util;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
 import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireAnalysisResponse;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.io.ByteArrayResource;
@@ -19,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @Service
 public class AiModelService {
 
@@ -58,14 +60,23 @@ public class AiModelService {
         HttpEntity<MultiValueMap<String, Object>> entity =
                 new HttpEntity<>(params, headers);
 
-        OralCheckAnalysisResponse response =
-                restTemplate.postForObject(
-                        oralCheckAiModelApiUrl,
-                        entity,
-                        OralCheckAnalysisResponse.class
-                );
+        try {
+            OralCheckAnalysisResponse response =
+                    restTemplate.postForObject(
+                            oralCheckAiModelApiUrl,
+                            entity,
+                            OralCheckAnalysisResponse.class
+                    );
 
-        return CompletableFuture.completedFuture(response);
+            return CompletableFuture.completedFuture(response);
+
+        } catch (org.springframework.web.client.HttpStatusCodeException e) {
+            log.error("AI 서버 호출 실패. url={}, status={}, body={}",
+                    oralCheckAiModelApiUrl, e.getStatusCode(), e.getResponseBodyAsString(), e);
+            throw e; // 기존 흐름 유지 (OralCheckService에서 502 처리됨)
+        }
+
+//        return CompletableFuture.completedFuture(response);
     }
 
     /**
