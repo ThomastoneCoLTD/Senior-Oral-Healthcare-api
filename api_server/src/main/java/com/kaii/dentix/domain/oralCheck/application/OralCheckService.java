@@ -156,6 +156,12 @@ public class OralCheckService {
                                 .build())
                         .build();
             } else {
+                Throwable cause = e.getCause();
+//            log.error("AI 모델 요청 인터럽트", e);
+                log.error("AI 모델 실행 실패. type={}, message={}",
+                        cause != null ? cause.getClass().getName() : "null",
+                        cause != null ? cause.getMessage() : "null",
+                        cause);
                 return new DataResponse<>(502, "AI 분석 서버 오류가 발생했습니다.", null);
             }
 
