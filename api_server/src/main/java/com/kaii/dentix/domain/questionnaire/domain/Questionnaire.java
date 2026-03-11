@@ -1,7 +1,7 @@
 package com.kaii.dentix.domain.questionnaire.domain;
 
 import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
-import com.kaii.dentix.domain.userOralStatus.domain.UserOralStatus;
+import com.kaii.dentix.domain.oralStatusAssignment.domain.OralStatusAssignment;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,10 +33,10 @@ public class Questionnaire extends TimeEntity {
 
     @Builder.Default
     @OneToMany(mappedBy = "questionnaire", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
-    private List<UserOralStatus> userOralStatusList = new ArrayList<>();
+    private List<OralStatusAssignment> oralStatusAssignments = new ArrayList<>();
 
     /**
-     * 기존: oralStatusTypeList를 함께 저장하는 생성자
+     * 문진표 생성과 함께 구강 상태 할당 목록을 초기화한다.
      */
     public Questionnaire(Long userId, String questionnaireVersion, String form, List<String> oralStatusTypeList) {
         this.userId = userId;
@@ -46,14 +46,14 @@ public class Questionnaire extends TimeEntity {
     }
 
     public void assignOralStatuses(List<String> oralStatusTypeList) {
-        this.userOralStatusList = oralStatusTypeList.stream()
-                .map(oralStatusType -> UserOralStatus.forQuestionnaire(this, oralStatusType))
+        this.oralStatusAssignments = oralStatusTypeList.stream()
+                .map(oralStatusType -> OralStatusAssignment.forQuestionnaire(this, oralStatusType))
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public List<OralStatus> getOralStatuses() {
-        return userOralStatusList.stream()
-                .map(UserOralStatus::getOralStatus)
+        return oralStatusAssignments.stream()
+                .map(OralStatusAssignment::getOralStatus)
                 .toList();
     }
 }

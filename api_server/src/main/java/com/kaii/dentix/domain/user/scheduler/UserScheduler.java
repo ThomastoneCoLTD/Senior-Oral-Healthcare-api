@@ -11,8 +11,8 @@ import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.userOralStatus.dao.UserOralStatusRepository;
-import com.kaii.dentix.domain.userOralStatus.domain.UserOralStatus;
+import com.kaii.dentix.domain.oralStatusAssignment.dao.OralStatusAssignmentRepository;
+import com.kaii.dentix.domain.oralStatusAssignment.domain.OralStatusAssignment;
 import com.kaii.dentix.global.common.util.DateFormatUtil;
 import com.kaii.dentix.global.common.util.Utils;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,7 @@ public class UserScheduler {
 
     private final UserRepository userRepository;
     private final OralCheckRepository oralCheckRepository;
-    private final UserOralStatusRepository userOralStatusRepository;
+    private final OralStatusAssignmentRepository oralStatusAssignmentRepository;
     private final QuestionnaireRepository questionnaireRepository;
     private final ToothBrushingRepository toothBrushingRepository;
 
@@ -48,10 +48,10 @@ public class UserScheduler {
         List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
         List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
-        List<UserOralStatus> userOralStatusList = userOralStatusRepository.findAllByQuestionnaireIn(questionnaireList);
+        List<OralStatusAssignment> oralStatusAssignments = oralStatusAssignmentRepository.findAllByQuestionnaireIn(questionnaireList);
 
         toothBrushingRepository.deleteAllInBatch(toothBrushingList);
-        userOralStatusRepository.deleteAllInBatch(userOralStatusList);
+        oralStatusAssignmentRepository.deleteAllInBatch(oralStatusAssignments);
         questionnaireRepository.deleteAllInBatch(questionnaireList);
         oralCheckRepository.deleteAllInBatch(oralCheckList);
 
@@ -106,7 +106,7 @@ public class UserScheduler {
                     typeList.add(chars[randomIndex]);
                 }
 
-                typeList.forEach(type -> userOralStatusRepository.nativeInsert(questionnaire.getQuestionnaireId(), type, calendar.getTime()));
+        typeList.forEach(type -> oralStatusAssignmentRepository.nativeInsert(questionnaire.getQuestionnaireId(), type, calendar.getTime()));
             }
 
             for (int j = 0; j < random.nextInt(4); j++) { // 0 ~ 3

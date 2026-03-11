@@ -3,9 +3,9 @@ package com.kaii.dentix.domain.contents.dao;
 import com.kaii.dentix.domain.contents.domain.QContents;
 import com.kaii.dentix.domain.contents.domain.QContentsToCategory;
 import com.kaii.dentix.domain.contents.dto.ContentsDto;
+import com.kaii.dentix.domain.oralStatusAssignment.domain.QOralStatusAssignment;
 import com.kaii.dentix.domain.oralStatusToContents.domain.QOralStatusToContents;
 import com.kaii.dentix.domain.type.OralSectionType;
-import com.kaii.dentix.domain.userOralStatus.domain.QUserOralStatus;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.JPQLTemplates;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -27,7 +27,7 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
     private EntityManager entityManager;
 
     private final JPAQueryFactory queryFactory;
-    private final QUserOralStatus userOralStatus = QUserOralStatus.userOralStatus;
+    private final QOralStatusAssignment oralStatusAssignment = QOralStatusAssignment.oralStatusAssignment;
     private final QOralStatusToContents oralStatusToContents = QOralStatusToContents.oralStatusToContents;
     private final QContents contents = QContents.contents;
     private final QContentsToCategory contentsToCategory = QContentsToCategory.contentsToCategory;
@@ -64,8 +64,8 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
                 .selectDistinct(contents.contentsId)
                 .from(contents)
                 .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
-                .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
-                .where(userOralStatus.questionnaire.questionnaireId.eq(questionnaireId))
+                .join(oralStatusAssignment).on(oralStatusAssignment.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
+                .where(oralStatusAssignment.questionnaire.questionnaireId.eq(questionnaireId))
                 .fetch();
     }
 
@@ -78,8 +78,8 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
                 .from(contents)
                 .leftJoin(contentsToCategory).on(contentsToCategory.contents.eq(contents))
                 .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
-                .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
-                .where(userOralStatus.questionnaire.questionnaireId.eq(questionnaireId))
+                .join(oralStatusAssignment).on(oralStatusAssignment.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
+                .where(oralStatusAssignment.questionnaire.questionnaireId.eq(questionnaireId))
                 .orderBy(contents.contentsSort.asc())
                 .distinct()
                 .transform(groupBy(contents.contentsId).list(Projections.constructor(ContentsDto.Summary.class,
@@ -100,8 +100,8 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
                 .selectDistinct(contents.contentsId)
                 .from(contents)
                 .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
-                .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
-                .where(userOralStatus.oralCheck.oralCheckId.eq(oralCheckId))
+                .join(oralStatusAssignment).on(oralStatusAssignment.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
+                .where(oralStatusAssignment.oralCheck.oralCheckId.eq(oralCheckId))
                 .fetch();
     }
 
@@ -123,8 +123,8 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
                 .from(contents)
                 .leftJoin(contentsToCategory).on(contentsToCategory.contents.eq(contents))
                 .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
-                .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
-                .where(userOralStatus.oralCheck.oralCheckId.eq(oralCheckId))
+                .join(oralStatusAssignment).on(oralStatusAssignment.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
+                .where(oralStatusAssignment.oralCheck.oralCheckId.eq(oralCheckId))
                 .orderBy(contents.contentsSort.asc())
                 .distinct()
                 .transform(groupBy(contents.contentsId).list(Projections.constructor(ContentsDto.Summary.class,

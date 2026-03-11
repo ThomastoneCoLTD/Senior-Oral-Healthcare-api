@@ -14,7 +14,7 @@ import com.kaii.dentix.domain.type.DatePeriodType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.domain.QUser;
 import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.userOralStatus.domain.QUserOralStatus;
+import com.kaii.dentix.domain.oralStatusAssignment.domain.QOralStatusAssignment;
 import com.kaii.dentix.domain.appService.domain.QUserToAppService;
 import com.kaii.dentix.global.common.dto.PagingRequest;
 import com.kaii.dentix.global.common.util.DateFormatUtil;
@@ -46,7 +46,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
     private final QUser user = QUser.user;
     private final QOralCheck oralCheck = QOralCheck.oralCheck;
     private final QQuestionnaire questionnaire = QQuestionnaire.questionnaire;
-    private final QUserOralStatus userOralStatus = QUserOralStatus.userOralStatus;
+    private final QOralStatusAssignment oralStatusAssignment = QOralStatusAssignment.oralStatusAssignment;
     private final QOralStatus oralStatus = QOralStatus.oralStatus;
     private final QOrganization organization = QOrganization.organization;
 
@@ -194,20 +194,20 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
     private Map<Long, String> getOralStatusTitles(List<Long> userIds) {
 
-        QUserOralStatus uos = QUserOralStatus.userOralStatus;
+        QOralStatusAssignment oralStatusAssignmentAlias = QOralStatusAssignment.oralStatusAssignment;
         QOralStatus os = QOralStatus.oralStatus;
 
         List<Tuple> list = queryFactory
-                .select(uos.questionnaire.userId, os.oralStatusTitle)
-                .from(uos)
-                .leftJoin(uos.oralStatus, os)
-                .where(uos.questionnaire.userId.in(userIds))
+                .select(oralStatusAssignmentAlias.questionnaire.userId, os.oralStatusTitle)
+                .from(oralStatusAssignmentAlias)
+                .leftJoin(oralStatusAssignmentAlias.oralStatus, os)
+                .where(oralStatusAssignmentAlias.questionnaire.userId.in(userIds))
                 .fetch();
 
         return list.stream()
-                .filter(t -> t.get(uos.questionnaire.userId) != null)  // key null 제거
+                .filter(t -> t.get(oralStatusAssignmentAlias.questionnaire.userId) != null)
                 .collect(Collectors.toMap(
-                        t -> t.get(uos.questionnaire.userId),
+                        t -> t.get(oralStatusAssignmentAlias.questionnaire.userId),
                         t -> {
                             String value = t.get(os.oralStatusTitle);
                             return value != null ? value : "";
@@ -278,9 +278,9 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                     user.userId.in(
                             JPAExpressions
                                     .select(questionnaire.userId)
-                                    .from(userOralStatus)
-                                    .join(userOralStatus.questionnaire, questionnaire)
-                                    .join(userOralStatus.oralStatus, oralStatus)
+                .from(oralStatusAssignment)
+                .join(oralStatusAssignment.questionnaire, questionnaire)
+                .join(oralStatusAssignment.oralStatus, oralStatus)
                                     .where(oralStatus.oralStatusTitle.eq(request.getOralStatus()))
                     )
             );

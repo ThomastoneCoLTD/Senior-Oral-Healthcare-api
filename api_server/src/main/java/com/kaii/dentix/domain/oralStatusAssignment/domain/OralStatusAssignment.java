@@ -1,4 +1,4 @@
-package com.kaii.dentix.domain.userOralStatus.domain;
+package com.kaii.dentix.domain.oralStatusAssignment.domain;
 
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import jakarta.persistence.*;
@@ -12,12 +12,13 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "user_oral_status") // 이건 기존대로 유지
-public class UserOralStatus extends TimeEntity {
+// DB migration 전까지는 기존 테이블명을 유지한다.
+@Table(name = "user_oral_status")
+public class OralStatusAssignment extends TimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userOralStatusId;
+    private Long oralStatusAssignmentId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "questionnaireId")
@@ -28,23 +29,23 @@ public class UserOralStatus extends TimeEntity {
     private OralCheck oralCheck;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "oralStatusType", nullable = true)
+    @JoinColumn(name = "oralStatusType", nullable = false)
     private OralStatus oralStatus;
 
-    public static UserOralStatus forQuestionnaire(Questionnaire questionnaire, String oralStatusType) {
-        return new UserOralStatus(questionnaire, new OralStatus(oralStatusType));
+    public static OralStatusAssignment forQuestionnaire(Questionnaire questionnaire, String oralStatusType) {
+        return new OralStatusAssignment(questionnaire, new OralStatus(oralStatusType));
     }
 
-    public static UserOralStatus forOralCheck(OralCheck oralCheck, String oralStatusType) {
-        return new UserOralStatus(oralCheck, new OralStatus(oralStatusType));
+    public static OralStatusAssignment forOralCheck(OralCheck oralCheck, String oralStatusType) {
+        return new OralStatusAssignment(oralCheck, new OralStatus(oralStatusType));
     }
 
-    private UserOralStatus(Questionnaire questionnaire, OralStatus oralStatus) {
+    private OralStatusAssignment(Questionnaire questionnaire, OralStatus oralStatus) {
         this.questionnaire = questionnaire;
         this.oralStatus = oralStatus;
     }
 
-    private UserOralStatus(OralCheck oralCheck, OralStatus oralStatus) {
+    private OralStatusAssignment(OralCheck oralCheck, OralStatus oralStatus) {
         this.oralCheck = oralCheck;
         this.oralStatus = oralStatus;
     }

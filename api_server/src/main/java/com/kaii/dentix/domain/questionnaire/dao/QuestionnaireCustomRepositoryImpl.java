@@ -4,11 +4,11 @@ import com.kaii.dentix.domain.admin.dto.AdminStatisticDto;
 import com.kaii.dentix.domain.admin.dto.statistic.AllQuestionnaireCount;
 import com.kaii.dentix.domain.admin.dto.statistic.QuestionnaireStatisticDto;
 import com.kaii.dentix.domain.oralStatus.domain.QOralStatus;
+import com.kaii.dentix.domain.oralStatusAssignment.domain.QOralStatusAssignment;
 import com.kaii.dentix.domain.questionnaire.domain.QQuestionnaire;
 import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireDto;
 import com.kaii.dentix.domain.type.DatePeriodType;
 import com.kaii.dentix.domain.user.domain.QUser;
-import com.kaii.dentix.domain.userOralStatus.domain.QUserOralStatus;
 import com.kaii.dentix.global.common.util.DateFormatUtil;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -31,7 +31,7 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
     private final JPAQueryFactory queryFactory;
     private final QQuestionnaire questionnaire = QQuestionnaire.questionnaire;
     private final QOralStatus oralStatus = QOralStatus.oralStatus;
-    private final QUserOralStatus userOralStatus = QUserOralStatus.userOralStatus;
+    private final QOralStatusAssignment oralStatusAssignment = QOralStatusAssignment.oralStatusAssignment;
 
     private final QUser user = QUser.user;
 
@@ -48,8 +48,8 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
                         oralStatus.oralStatusTitle
                 ))
                 .from(questionnaire)
-                .join(userOralStatus).on(userOralStatus.questionnaire.questionnaireId.eq(questionnaire.questionnaireId))
-                .join(oralStatus).on(oralStatus.oralStatusType.eq(userOralStatus.oralStatus.oralStatusType))
+                .join(oralStatusAssignment).on(oralStatusAssignment.questionnaire.questionnaireId.eq(questionnaire.questionnaireId))
+                .join(oralStatus).on(oralStatus.oralStatusType.eq(oralStatusAssignment.oralStatus.oralStatusType))
                 .where(questionnaire.userId.eq(userId))
                 .orderBy(questionnaire.created.desc(), oralStatus.oralStatusPriority.asc())
                 .fetchFirst();
@@ -61,11 +61,11 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
     @Override
     public List<QuestionnaireStatisticDto> questionnaireList(AdminStatisticDto.SearchRequest request) {
         return queryFactory.select(Projections.constructor(QuestionnaireStatisticDto.class,
-                        user.userId, userOralStatus.oralStatus.oralStatusType
+                        user.userId, oralStatusAssignment.oralStatus.oralStatusType
                 ))
                 .from(questionnaire)
                 .join(user).on(questionnaire.userId.eq(user.userId))
-                .join(userOralStatus).on(questionnaire.questionnaireId.eq(userOralStatus.questionnaire.questionnaireId))
+                .join(oralStatusAssignment).on(questionnaire.questionnaireId.eq(oralStatusAssignment.questionnaire.questionnaireId))
                 .where(
                         user.deleted.isNull(),
                         whereAllDatePeriod(request.getDatePeriodType()),
@@ -137,4 +137,3 @@ public class QuestionnaireCustomRepositoryImpl implements QuestionnaireCustomRep
     }
 
 }
-

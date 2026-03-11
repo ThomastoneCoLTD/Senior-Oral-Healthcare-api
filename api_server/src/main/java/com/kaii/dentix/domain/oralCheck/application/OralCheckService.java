@@ -28,8 +28,8 @@ import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.userOralStatus.dao.UserOralStatusRepository;
-import com.kaii.dentix.domain.userOralStatus.domain.UserOralStatus;
+import com.kaii.dentix.domain.oralStatusAssignment.dao.OralStatusAssignmentRepository;
+import com.kaii.dentix.domain.oralStatusAssignment.domain.OralStatusAssignment;
 import com.kaii.dentix.global.common.aws.AWSS3Service;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
@@ -71,7 +71,7 @@ public class OralCheckService {
     private final OralCheckRepository oralCheckRepository;
     private final ToothBrushingRepository toothBrushingRepository;
     private final QuestionnaireRepository questionnaireRepository;
-    private final UserOralStatusRepository userOralStatusRepository;
+    private final OralStatusAssignmentRepository oralStatusAssignmentRepository;
     private final ToothBrushingCustomRepository toothBrushingCustomRepository;
     private final QuestionnaireCustomRepository questionnaireCustomRepository;
     private final OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
@@ -409,12 +409,12 @@ public class OralCheckService {
         List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
         List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
-        List<UserOralStatus> userOralStatusList = userOralStatusRepository.findAllByQuestionnaireIn(questionnaireList);
-        Map<Long, List<OralStatusDto.OralStatusType>> oralStatusByQuestionnaireId = userOralStatusList.stream()
+        List<OralStatusAssignment> oralStatusAssignments = oralStatusAssignmentRepository.findAllByQuestionnaireIn(questionnaireList);
+        Map<Long, List<OralStatusDto.OralStatusType>> oralStatusByQuestionnaireId = oralStatusAssignments.stream()
                 .collect(Collectors.groupingBy(
-                        userOralStatus -> userOralStatus.getQuestionnaire().getQuestionnaireId(),
+                        oralStatusAssignment -> oralStatusAssignment.getQuestionnaire().getQuestionnaireId(),
                         Collectors.mapping(
-                                userOralStatus -> OralStatusDto.OralStatusType.from(userOralStatus.getOralStatus()),
+                                oralStatusAssignment -> OralStatusDto.OralStatusType.from(oralStatusAssignment.getOralStatus()),
                                 Collectors.toList()
                         )
                 ));

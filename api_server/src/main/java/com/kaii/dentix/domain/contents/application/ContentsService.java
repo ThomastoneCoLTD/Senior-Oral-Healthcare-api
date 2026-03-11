@@ -10,7 +10,6 @@ import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
-import com.kaii.dentix.domain.type.OralSectionType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
@@ -39,7 +38,7 @@ public class ContentsService {
     /**
      * 콘텐츠 카테고리 목록 생성 (내부 헬퍼 메서드)
      */
-    private List<ContentsDto.Category> getCategoryList(String userName) {
+    private List<ContentsDto.Category> getCategoryList(String userName, boolean includePersonalizedCategory) {
         // 1. 기본 카테고리 조회
         List<ContentsDto.Category> categoryList = contentsCategoryRepository.findAll(Sort.by(Sort.Direction.ASC, "contentsCategorySort"))
                 .stream()
@@ -54,7 +53,7 @@ public class ContentsService {
         List<ContentsDto.Category> resultList = new ArrayList<>(categoryList);
 
         // 2. 사용자 맞춤 카테고리 추가 (인증된 사용자일 경우)
-        if (StringUtils.isNotBlank(userName)) {
+        if (includePersonalizedCategory && StringUtils.isNotBlank(userName)) {
             String displayName = (userName.length() > 6 ? userName.substring(0, 6) + "・・・" : userName) + "님 맞춤";
 
             ContentsDto.Category userCategory = ContentsDto.Category.builder()
@@ -84,11 +83,9 @@ public class ContentsService {
         boolean isVerifiedUser = (user != null && user.getIsVerify() == YnType.Y);
         String userName = isVerifiedUser ? user.getUserName() : null;
 
-        // 1. 카테고리 리스트 준비
-        List<ContentsDto.Category> categoryList = this.getCategoryList(userName);
-
         // 2. 전체 콘텐츠 리스트 조회
         List<ContentsDto.Summary> allContents = contentsCustomRepository.getContents();
+        List<Long> customizedIds = new ArrayList<>();
 
         // 3. 맞춤 콘텐츠 태깅 (인증된 사용자)
         if (isVerifiedUser) {
@@ -97,8 +94,6 @@ public class ContentsService {
 
             Optional<OralCheck> oralCheckOpt =
                     oralCheckRepository.findTopByUser_UserIdOrderByCreatedDesc(user.getUserId());
-
-            List<Long> customizedIds = new ArrayList<>();
 
             if (oralCheckOpt.isPresent()
                     && (questionnaireOpt.isEmpty()
@@ -126,6 +121,9 @@ public class ContentsService {
                             })
             );
         }
+
+        // 1. 카테고리 리스트 준비
+        List<ContentsDto.Category> categoryList = this.getCategoryList(userName, !customizedIds.isEmpty());
 
         return ContentsDto.ListResponse.builder()
                 .categories(categoryList)
