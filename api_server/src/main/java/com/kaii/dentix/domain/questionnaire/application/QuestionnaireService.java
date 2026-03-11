@@ -169,36 +169,8 @@ public class QuestionnaireService {
                 .orElse("ko");
 
         // 구강 상태 매핑
-        List<OralStatusDto.Info> oralStatusList = questionnaire.getUserOralStatusList().stream()
-                .map(userOralStatus -> {
-                    OralStatus oralStatus = userOralStatus.getOralStatus();
-                    String title, description, subDescription;
-
-                    switch (lang) {
-                        case "en" -> {
-                            title = Optional.ofNullable(oralStatus.getOralStatusTitleEn()).orElse(oralStatus.getOralStatusTitle());
-                            description = Optional.ofNullable(oralStatus.getOralStatusDescriptionEn()).orElse(oralStatus.getOralStatusDescription());
-                            subDescription = Optional.ofNullable(oralStatus.getOralStatusSubDescriptionEn()).orElse(oralStatus.getOralStatusSubDescription());
-                        }
-                        case "vi" -> {
-                            title = Optional.ofNullable(oralStatus.getOralStatusTitleVi()).orElse(oralStatus.getOralStatusTitle());
-                            description = Optional.ofNullable(oralStatus.getOralStatusDescriptionVi()).orElse(oralStatus.getOralStatusDescription());
-                            subDescription = Optional.ofNullable(oralStatus.getOralStatusSubDescriptionVi()).orElse(oralStatus.getOralStatusSubDescription());
-                        }
-                        default -> {
-                            title = oralStatus.getOralStatusTitle();
-                            description = oralStatus.getOralStatusDescription();
-                            subDescription = oralStatus.getOralStatusSubDescription();
-                        }
-                    }
-
-                    return OralStatusDto.Info.builder()
-                            .type(oralStatus.getOralStatusType())
-                            .title(title)
-                            .description(description)
-                            .subDescription(subDescription)
-                            .build();
-                })
+        List<OralStatusDto.Info> oralStatusList = questionnaire.getOralStatuses().stream()
+                .map(oralStatus -> OralStatusDto.Info.from(oralStatus, lang))
                 .toList();
 
         // 맞춤 콘텐츠 조회 (ContentsDto.Summary 사용)

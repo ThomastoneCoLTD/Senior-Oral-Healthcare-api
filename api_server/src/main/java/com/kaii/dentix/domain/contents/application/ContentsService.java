@@ -6,8 +6,11 @@ import com.kaii.dentix.domain.contents.dao.ContentsCustomRepository;
 import com.kaii.dentix.domain.contents.dao.ContentsRepository;
 import com.kaii.dentix.domain.contents.domain.Contents;
 import com.kaii.dentix.domain.contents.dto.ContentsDto;
+import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
+import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
+import com.kaii.dentix.domain.type.OralSectionType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
@@ -32,7 +35,7 @@ public class ContentsService {
     private final ContentsCardRepository contentsCardRepository;
     private final ContentsCustomRepository contentsCustomRepository;
     private final QuestionnaireRepository questionnaireRepository;
-
+    private final OralCheckRepository oralCheckRepository;
     /**
      * 콘텐츠 카테고리 목록 생성 (내부 헬퍼 메서드)
      */
@@ -89,19 +92,39 @@ public class ContentsService {
 
         // 3. 맞춤 콘텐츠 태깅 (인증된 사용자)
         if (isVerifiedUser) {
-            Optional<Questionnaire> questionnaireOpt = questionnaireRepository.findTopByUserIdOrderByCreatedDesc(user.getUserId());
+            Optional<Questionnaire> questionnaireOpt =
+                    questionnaireRepository.findTopByUserIdOrderByCreatedDesc(user.getUserId());
 
-            if (questionnaireOpt.isPresent()) {
-                List<Long> customizedIds = contentsCustomRepository.getCustomizedContentsIdList(questionnaireOpt.get().getQuestionnaireId());
+            Optional<OralCheck> oralCheckOpt =
+                    oralCheckRepository.findTopByUser_UserIdOrderByCreatedDesc(user.getUserId());
 
-                // 맞춤 콘텐츠 ID에 해당하는 항목의 categoryIds 맨 앞에 0 추가
-                customizedIds.forEach(targetId ->
-                        allContents.stream()
-                                .filter(c -> c.getId().equals(targetId))
-                                .findFirst()
-                                .ifPresent(c -> c.getCategoryIds().add(0, 0))
+            List<Long> customizedIds = new ArrayList<>();
+
+            if (oralCheckOpt.isPresent()
+                    && (questionnaireOpt.isEmpty()
+                    || oralCheckOpt.get().getCreated().before(questionnaireOpt.get().getCreated()))) {
+
+                customizedIds = contentsCustomRepository.getCustomizedContentsIdListByOralCheck(
+                        oralCheckOpt.get().getOralCheckId()
+                );
+
+            } else if (questionnaireOpt.isPresent()) {
+
+                customizedIds = contentsCustomRepository.getCustomizedContentsIdList(
+                        questionnaireOpt.get().getQuestionnaireId()
                 );
             }
+
+            customizedIds.forEach(targetId ->
+                    allContents.stream()
+                            .filter(c -> c.getId().equals(targetId))
+                            .findFirst()
+                            .ifPresent(c -> {
+                                if (!c.getCategoryIds().contains(0)) {
+                                    c.getCategoryIds().add(0, 0);
+                                }
+                            })
+            );
         }
 
         return ContentsDto.ListResponse.builder()

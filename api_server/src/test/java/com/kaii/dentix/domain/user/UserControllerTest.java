@@ -10,16 +10,17 @@ import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.controller.UserController;
 import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.domain.user.dto.UserLoginDto;
-import com.kaii.dentix.domain.user.dto.request.UserAutoLoginRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
+import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,6 +46,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
+@ExtendWith(RestDocumentationExtension.class)
 public class UserControllerTest {
 
     private MockMvc mockMvc;
@@ -77,6 +79,13 @@ public class UserControllerTest {
                 .build();
     }
 
+    private UserDto.TokenResponse tokenResponse() {
+        return UserDto.TokenResponse.builder()
+                .accessToken("Access Token")
+                .refreshToken("Refresh Token")
+                .build();
+    }
+
     private UserDto.InfoResponse userInfoResponse() {
         return UserDto.InfoResponse.builder()
                 .userName("강덴티") // 혹은 "김덴티"
@@ -103,6 +112,16 @@ public class UserControllerTest {
                 .build();
     }
 
+    private UserDto.ServiceUpdateResponse serviceUpdateResponse() {
+        return UserDto.ServiceUpdateResponse.builder()
+                .userName("강덴티")
+                .services(List.of(
+                        new UserDto.ServiceInfo(1L, "구강 검진", ServiceType.PLAQUE_DETECTION),
+                        new UserDto.ServiceInfo(2L, "치주 진단", ServiceType.PERIODONTAL_DETECTION)
+                ))
+                .build();
+    }
+
 
     /**
      *  사용자 자동 로그인
@@ -111,16 +130,12 @@ public class UserControllerTest {
     public void userAutoLogin() throws Exception{
 
         // given
-        given(userService.userAutoLogin(any(HttpServletRequest.class), any(UserAutoLoginRequest.class))).willReturn(userLoginDto());
-
-        UserAutoLoginRequest userAutoLoginRequest = UserAutoLoginRequest.builder()
-                .build();
+        given(userService.userAutoLogin(any(HttpServletRequest.class))).willReturn(tokenResponse());
 
         // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.put("/user/auto-login")
-                        .content(objectMapper.writeValueAsString(userAutoLoginRequest))
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
                         .with(user("user").roles("USER"))
         );
@@ -138,13 +153,11 @@ public class UserControllerTest {
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
                                 fieldWithPath("response.accessToken").type(JsonFieldType.STRING).description("Access Token"),
-                                fieldWithPath("response.refreshToken").type(JsonFieldType.STRING).description("Refresh Token"),
-                                fieldWithPath("response.userId").type(JsonFieldType.NUMBER).description("사용자 고유 번호"),
-                                fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 닉네임")
+                                fieldWithPath("response.refreshToken").type(JsonFieldType.STRING).description("Refresh Token")
                         )
                 ));
 
-        verify(userService).userAutoLogin(any(HttpServletRequest.class), any(UserAutoLoginRequest.class));
+        verify(userService).userAutoLogin(any(HttpServletRequest.class));
 
     }
 
@@ -411,16 +424,16 @@ public class UserControllerTest {
     public void userModifyServiceAgree() throws Exception{
 
         // given
-        given(serviceAgreementConsentService.userModifyServiceAgree(any(HttpServletRequest.class), any(ServiceAgreementConsentDto.ModifyRequest.class))).willReturn(userModifyServiceAgreeDto());
+        given(userService.updateUserServices(any(HttpServletRequest.class), any(UserDto.ServiceUpdateRequest.class)))
+                .willReturn(serviceUpdateResponse());
 
-        ServiceAgreementConsentDto.ModifyRequest userModifyServiceAgreeRequest = ServiceAgreementConsentDto.ModifyRequest.builder()
-                .serviceAgreeId(3L)
-                .isUserServiceAgree(YnType.Y)
+        UserDto.ServiceUpdateRequest userModifyServiceAgreeRequest = UserDto.ServiceUpdateRequest.builder()
+                .serviceIds(List.of(1L, 2L))
                 .build();
 
         // when
         ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.put("/user/service-agreement")
+                RestDocumentationRequestBuilders.post("/user/service")
                         .content(objectMapper.writeValueAsString(userModifyServiceAgreeRequest))
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
@@ -431,24 +444,25 @@ public class UserControllerTest {
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(document("user/service-agreement",
+                .andDo(document("user/service",
                         getDocumentRequest(),
                         getDocumentResponse(),
                         requestFields(
-                                fieldWithPath("serviceAgreeId").type(JsonFieldType.NUMBER).description("서비스 이용 동의 고유 번호"),
-                                fieldWithPath("isUserServiceAgree").type(JsonFieldType.STRING).attributes(yesNoFormat()).description("사용자 서비스 이용 동의 여부")
+                                fieldWithPath("serviceIds").type(JsonFieldType.ARRAY).description("선택한 서비스 ID 목록")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
-                                fieldWithPath("response.serviceAgreeId").type(JsonFieldType.NUMBER).description("서비스 이용 동의 고유 번호"),
-                                fieldWithPath("response.isUserServiceAgree").type(JsonFieldType.STRING).attributes(yesNoFormat()).description("사용자 서비스 이용 동의 여부"),
-                                fieldWithPath("response.date").type(JsonFieldType.STRING).attributes(dateTimeFormat()).description("서비스 이용 동의 시각")
+                                fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 이름"),
+                                fieldWithPath("response.services").type(JsonFieldType.ARRAY).description("선택된 서비스 목록"),
+                                fieldWithPath("response.services[].serviceId").type(JsonFieldType.NUMBER).description("서비스 ID"),
+                                fieldWithPath("response.services[].name").type(JsonFieldType.STRING).description("서비스 이름"),
+                                fieldWithPath("response.services[].serviceType").type(JsonFieldType.STRING).description("서비스 타입")
                         )
                 ));
 
-        verify(serviceAgreementConsentService).userModifyServiceAgree(any(HttpServletRequest.class), any(ServiceAgreementConsentDto.ModifyRequest.class));
+        verify(userService).updateUserServices(any(HttpServletRequest.class), any(UserDto.ServiceUpdateRequest.class));
 
     }
 
@@ -462,7 +476,7 @@ public class UserControllerTest {
         given(userService.getUserInfo(any(HttpServletRequest.class))).willReturn(userInfoResponse());
         // when
         ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.get("/user")
+                RestDocumentationRequestBuilders.get("/user/info")
                         .contentType(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
                         .with(user("user").roles("USER"))
@@ -481,13 +495,11 @@ public class UserControllerTest {
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
                                 fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 닉네임"),
                                 fieldWithPath("response.userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
-                                fieldWithPath("response.patientPhoneNumber").type(JsonFieldType.STRING).optional().attributes(userNumberFormat()).description("사용자(환자) 연락처"),
-                                fieldWithPath("response.userServiceAgreeLists").type(JsonFieldType.ARRAY).description("사용자 서비스 이용동의 목록"),
-                                fieldWithPath("response.userServiceAgreeLists[].serviceAgreeId").type(JsonFieldType.NUMBER).description("서비스 이용동의 고유 번호"),
-                                fieldWithPath("response.userServiceAgreeLists[].isUserServiceAgree").type(JsonFieldType.STRING).attributes(yesNoFormat()).description("사용자 서비스 이용동의 여부"),
-                                fieldWithPath("response.userServiceAgreeLists[].date").type(JsonFieldType.STRING).attributes(dateTimeFormat()).optional().description("사용자 서비스 이용동의 수정 시각"),
-                                fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별")
-
+                                fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
+                                fieldWithPath("response.services").type(JsonFieldType.ARRAY).optional().description("이용 중인 서비스 목록"),
+                                fieldWithPath("response.services[].serviceId").type(JsonFieldType.NUMBER).optional().description("서비스 고유 번호"),
+                                fieldWithPath("response.services[].name").type(JsonFieldType.STRING).optional().description("서비스 이름"),
+                                fieldWithPath("response.services[].serviceType").type(JsonFieldType.STRING).optional().description("서비스 타입")
                         )
                 ));
         verify(userService).getUserInfo(any(HttpServletRequest.class));

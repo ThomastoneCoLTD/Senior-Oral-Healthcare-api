@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -21,6 +22,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.restdocs.RestDocumentationContextProvider;
+import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -49,6 +51,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(OralCheckController.class)
+@ExtendWith(RestDocumentationExtension.class)
 public class OralCheckControllerTest {
 
     private MockMvc mockMvc;
@@ -251,7 +254,20 @@ public class OralCheckControllerTest {
                 .latestOralCheckId(1L)
                 .oralCheckTimeInterval(120L)
                 .oralCheckTotalCount(10)
+                .oralCheckHealthyCount(3)
+                .oralCheckGoodCount(4)
+                .oralCheckAttentionCount(2)
+                .oralCheckDangerCount(1)
+                .toothBrushingTotalCount(20)
+                .toothBrushingAverage(2.5f)
                 .oralStatus(new OralStatusDto.OralStatusType("A", "건강형"))
+                .oralCheckCreated(new Date())
+                .oralCheckDailyList(List.of(
+                        OralCheckDto.DailyChange.builder()
+                                .oralCheckNumber(1)
+                                .oralCheckResultTotalType(OralCheckResultType.HEALTHY)
+                                .build()
+                ))
                 .build();
 
         given(oralCheckService.dashboard(any(HttpServletRequest.class)))
@@ -286,6 +302,7 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.oralStatus.type").type(JsonFieldType.STRING).description("구강 상태 타입"),
                                 fieldWithPath("response.oralStatus.title").type(JsonFieldType.STRING).description("구강 상태 제목"),
                                 fieldWithPath("response.questionnaireCreated").type(JsonFieldType.STRING).optional().attributes(dateTimeFormat()).description("최근 문진표 검사일"),
+                                fieldWithPath("response.oralCheckCreated").type(JsonFieldType.STRING).optional().attributes(dateTimeFormat()).description("최근 구강 검진 일시"),
                                 fieldWithPath("response.oralCheckResultTotalType").type(JsonFieldType.STRING).optional().attributes(oralCheckResultTypeFormat()).description("최근 구강상태"),
                                 fieldWithPath("response.oralCheckUpRightScoreType").type(JsonFieldType.STRING).optional().attributes(oralCheckResultTypeFormat()).description("상악우측 상태"),
                                 fieldWithPath("response.oralCheckUpLeftScoreType").type(JsonFieldType.STRING).optional().attributes(oralCheckResultTypeFormat()).description("상악좌측 상태"),

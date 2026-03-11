@@ -10,12 +10,14 @@ import com.kaii.dentix.domain.type.ContentsType;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
+import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -44,6 +46,7 @@ import static org.springframework.restdocs.request.RequestDocumentation.queryPar
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(QuestionnaireController.class)
+@ExtendWith(RestDocumentationExtension.class)
 public class QuestionnaireControllerTest {
 
     private MockMvc mockMvc;
@@ -107,54 +110,38 @@ public class QuestionnaireControllerTest {
      */
     @Test
     public void questionnaireTemplate() throws Exception {
-        // given
-        // [수정 1] Service 메서드 파라미터(request)에 맞춰 any() 추가
-        given(questionnaireService.getQuestionnaireTemplate(any(HttpServletRequest.class)))
-                .willReturn(questionnaireTemplateJsonDto());
-
-        // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.get("/questionnaire/template")
+                        .param("lang", "ko")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, "questionnaire-template.이호준.AccessToken")
-                //.with(user("user").roles("USER")) // 필요 시 주석 해제
         );
 
-        // then
         resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andDo(document("questionnaire/template",
                         getDocumentRequest(),
                         getDocumentResponse(),
+                        queryParameters(
+                                parameterWithName("lang").optional().description("응답 언어 코드")
+                        ),
                         responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
                                 fieldWithPath("response.version").type(JsonFieldType.STRING).description("템플릿 버전"),
                                 fieldWithPath("response.template").type(JsonFieldType.ARRAY).description("문진표 양식"),
                                 fieldWithPath("response.template[].sort").type(JsonFieldType.NUMBER).description("문항 정렬"),
                                 fieldWithPath("response.template[].key").type(JsonFieldType.STRING).description("문항 고유번호 (제출 시 필요)"),
                                 fieldWithPath("response.template[].number").type(JsonFieldType.STRING).description("문항 제목 번호"),
-
-                                // [수정 2] 다국어 Map 반환에 따른 타입 변경 (STRING -> OBJECT)
-                                fieldWithPath("response.template[].title").type(JsonFieldType.OBJECT).description("문항 제목 (다국어 Map)"),
-                                fieldWithPath("response.template[].description").type(JsonFieldType.OBJECT).optional().description("문항 설명 (다국어 Map)"),
-
+                                fieldWithPath("response.template[].title").type(JsonFieldType.STRING).description("문항 제목"),
+                                fieldWithPath("response.template[].description").type(JsonFieldType.STRING).optional().description("문항 설명"),
                                 fieldWithPath("response.template[].minimum").type(JsonFieldType.NUMBER).description("문항 최소 개수"),
                                 fieldWithPath("response.template[].maximum").type(JsonFieldType.NUMBER).optional().description("문항 최대 개수 (null인 경우 무제한)"),
                                 fieldWithPath("response.template[].contents").type(JsonFieldType.ARRAY).description("문항 선택지"),
-                                fieldWithPath("response.template[].contents[].sort").type(JsonFieldType.NUMBER).description("문항 선택지 정렬"),
                                 fieldWithPath("response.template[].contents[].id").type(JsonFieldType.NUMBER).description("문항 선택지 고유번호 (제출 시 필요)"),
-
-                                // [수정 3] 다국어 Map 반환에 따른 타입 변경 (STRING -> OBJECT)
-                                fieldWithPath("response.template[].contents[].text").type(JsonFieldType.OBJECT).description("문항 선택지 내용 (다국어 Map)")
+                                fieldWithPath("response.template[].contents[].text").type(JsonFieldType.STRING).description("문항 선택지 내용")
                         )
                 ));
-
-        // [수정 4] Verify 인자도 any() 사용
-        verify(questionnaireService).getQuestionnaireTemplate(any(HttpServletRequest.class));
     }
 
 
@@ -247,7 +234,8 @@ public class QuestionnaireControllerTest {
                         .type(ContentsType.CARD)
                         .typeColor("#FF9F06")
                         .thumbnail("https://dentix-api-dev.kai-i.com")
-                        // .videoURL(null) // Summary DTO에 포함 여부에 따라 추가/삭제
+                        .videoURL(null)
+                        .categoryIds(List.of(1, 2))
                         .build()
         );
 
@@ -300,8 +288,9 @@ public class QuestionnaireControllerTest {
                                 fieldWithPath("response.contents[].sort").type(JsonFieldType.NUMBER).description("콘텐츠 정렬 순서"),
                                 fieldWithPath("response.contents[].type").type(JsonFieldType.STRING).attributes(contentsTypeFormat()).description("콘텐츠 타입"),
                                 fieldWithPath("response.contents[].typeColor").type(JsonFieldType.STRING).description("콘텐츠 제목 색상"),
-                                fieldWithPath("response.contents[].thumbnail").type(JsonFieldType.STRING).description("콘텐츠 썸네일")
-                                // videoURL, categoryIds 등이 Summary DTO에 없다면 제외합니다.
+                                fieldWithPath("response.contents[].thumbnail").type(JsonFieldType.STRING).description("콘텐츠 썸네일"),
+                                fieldWithPath("response.contents[].videoURL").type(JsonFieldType.NULL).optional().description("콘텐츠 동영상 경로"),
+                                fieldWithPath("response.contents[].categoryIds").type(JsonFieldType.ARRAY).description("콘텐츠 카테고리 ID 목록")
                         )
                 ));
 

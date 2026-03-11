@@ -1,6 +1,8 @@
 package com.kaii.dentix.domain.user;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kaii.dentix.domain.admin.application.AdminLoginService;
+import com.kaii.dentix.domain.auth.controller.AuthController;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.controller.UserLoginController;
@@ -8,11 +10,13 @@ import com.kaii.dentix.domain.user.dto.UserDto;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
+import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,7 +44,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
-@WebMvcTest(UserLoginController.class)
+@WebMvcTest({UserLoginController.class, AuthController.class})
+@ExtendWith(RestDocumentationExtension.class)
 public class UserLoginControllerTest {
 
     private MockMvc mockMvc;
@@ -60,6 +65,9 @@ public class UserLoginControllerTest {
 
     @MockBean
     private UserLoginService userLoginService;
+
+    @MockBean
+    private AdminLoginService adminLoginService;
 
     // =================================================================
     // Helper Methods (UserDto 사용)
@@ -265,32 +273,32 @@ public class UserLoginControllerTest {
      */
     @Test
     public void userLogin() throws Exception {
-        // given
-        // Service 메서드 시그니처 변경 반영 (HttpServletRequest 제거)
         given(userLoginService.userLogin(any(UserDto.LoginRequest.class))).willReturn(userLoginDto());
 
-        UserDto.LoginRequest request = UserDto.LoginRequest.builder()
-                .userLoginIdentifier("dentix123")
-                .userPassword("password!")
-                .build();
+        String request = """
+                {
+                  "userType": "user",
+                  "loginId": "dentix123",
+                  "password": "password!"
+                }
+                """;
 
-        // when
         ResultActions resultActions = mockMvc.perform(
                 RestDocumentationRequestBuilders.post("/login")
-                        .content(objectMapper.writeValueAsString(request))
+                        .content(request)
                         .contentType(MediaType.APPLICATION_JSON)
                         .with(user("user").roles("USER"))
         );
 
-        // then
         resultActions.andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(200))
                 .andDo(document("login",
                         getDocumentRequest(),
                         getDocumentResponse(),
                         requestFields(
-                                fieldWithPath("userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
-                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호")
+                                fieldWithPath("userType").type(JsonFieldType.STRING).description("로그인 사용자 타입"),
+                                fieldWithPath("loginId").type(JsonFieldType.STRING).description("사용자 아이디"),
+                                fieldWithPath("password").type(JsonFieldType.STRING).description("사용자 비밀번호")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
@@ -388,7 +396,7 @@ public class UserLoginControllerTest {
                                 parameterWithName("userId").description("사용자 고유 번호")
                         ),
                         requestFields(
-                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("변경할 새 비밀번호")
+                                fieldWithPath("userPassword").type(JsonFieldType.NULL).optional().description("변경할 새 비밀번호")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),

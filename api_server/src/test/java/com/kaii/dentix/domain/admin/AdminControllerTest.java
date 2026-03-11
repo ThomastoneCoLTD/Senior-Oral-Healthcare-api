@@ -7,12 +7,14 @@ import com.kaii.dentix.global.common.dto.PagingDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
+import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,6 +42,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(com.kaii.dentix.domain.admin.controller.AdminController.class)
+@ExtendWith(RestDocumentationExtension.class)
 public class AdminControllerTest {
 
     private MockMvc mockMvc;
@@ -256,7 +259,7 @@ public class AdminControllerTest {
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
                                 // 필드명 변경: adminPassword -> password
-                                fieldWithPath("response.password").type(JsonFieldType.STRING).description("초기화된 비밀번호")
+                                fieldWithPath("response.password").type(JsonFieldType.NULL).optional().description("초기화된 비밀번호")
                         )
                 ));
 
@@ -278,6 +281,7 @@ public class AdminControllerTest {
                 .name("홍길동")            // adminName -> name
                 .phoneNumber("01012345678") // adminPhoneNumber -> phoneNumber
                 .createdDate("2023.01.02") // created -> createdDate
+                .isSuper(YnType.N)
                 .build();
 
         AdminDto.Summary admin2 = AdminDto.Summary.builder()
@@ -286,6 +290,7 @@ public class AdminControllerTest {
                 .name("김길동")
                 .phoneNumber("01022222222")
                 .createdDate("2023.01.02")
+                .isSuper(YnType.N)
                 .build();
 
         // 2. 응답 DTO 생성 (AdminDto.ListResponse 사용)
@@ -331,7 +336,8 @@ public class AdminControllerTest {
                                 fieldWithPath("response.adminList[].loginId").type(JsonFieldType.STRING).description("관리자 아이디"), // 변경됨
                                 fieldWithPath("response.adminList[].name").type(JsonFieldType.STRING).description("관리자 이름"),   // 변경됨
                                 fieldWithPath("response.adminList[].phoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("관리자 연락처"), // 변경됨
-                                fieldWithPath("response.adminList[].createdDate").type(JsonFieldType.STRING).description("관리자 가입일") // 변경됨
+                                fieldWithPath("response.adminList[].createdDate").type(JsonFieldType.STRING).description("관리자 가입일"), // 변경됨
+                                fieldWithPath("response.adminList[].isSuper").type(JsonFieldType.STRING).attributes(yesNoFormat()).description("슈퍼 관리자 여부")
                         )
                 ));
 

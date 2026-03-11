@@ -31,6 +31,7 @@ public class Questionnaire extends TimeEntity {
     @Column(name = "form", columnDefinition = "json")
     private String form;
 
+    @Builder.Default
     @OneToMany(mappedBy = "questionnaire", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     private List<UserOralStatus> userOralStatusList = new ArrayList<>();
 
@@ -41,8 +42,18 @@ public class Questionnaire extends TimeEntity {
         this.userId = userId;
         this.questionnaireVersion = questionnaireVersion;
         this.form = form;
+        assignOralStatuses(oralStatusTypeList);
+    }
+
+    public void assignOralStatuses(List<String> oralStatusTypeList) {
         this.userOralStatusList = oralStatusTypeList.stream()
-                .map(oralStatusType -> new UserOralStatus(this, new OralStatus(oralStatusType)))
-                .collect(Collectors.toList());
+                .map(oralStatusType -> UserOralStatus.forQuestionnaire(this, oralStatusType))
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    public List<OralStatus> getOralStatuses() {
+        return userOralStatusList.stream()
+                .map(UserOralStatus::getOralStatus)
+                .toList();
     }
 }

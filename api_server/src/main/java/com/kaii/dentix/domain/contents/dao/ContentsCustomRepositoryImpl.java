@@ -4,6 +4,7 @@ import com.kaii.dentix.domain.contents.domain.QContents;
 import com.kaii.dentix.domain.contents.domain.QContentsToCategory;
 import com.kaii.dentix.domain.contents.dto.ContentsDto;
 import com.kaii.dentix.domain.oralStatusToContents.domain.QOralStatusToContents;
+import com.kaii.dentix.domain.type.OralSectionType;
 import com.kaii.dentix.domain.userOralStatus.domain.QUserOralStatus;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.JPQLTemplates;
@@ -79,6 +80,51 @@ public class ContentsCustomRepositoryImpl implements ContentsCustomRepository {
                 .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
                 .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
                 .where(userOralStatus.questionnaire.questionnaireId.eq(questionnaireId))
+                .orderBy(contents.contentsSort.asc())
+                .distinct()
+                .transform(groupBy(contents.contentsId).list(Projections.constructor(ContentsDto.Summary.class,
+                        contents.contentsId,
+                        contents.contentsTitle,
+                        contents.contentsSort,
+                        contents.contentsType,
+                        contents.contentsTypeColor,
+                        contents.contentsThumbnail,
+                        contents.contentsPath,
+                        list(contentsToCategory.contentsCategoryId)
+                )));
+    }
+
+    @Override
+    public List<Long> getCustomizedContentsIdListByOralCheck(Long oralCheckId) {
+        return queryFactory
+                .selectDistinct(contents.contentsId)
+                .from(contents)
+                .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
+                .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
+                .where(userOralStatus.oralCheck.oralCheckId.eq(oralCheckId))
+                .fetch();
+    }
+
+    @Override
+    public List<ContentsDto.Summary> getCustomizedContents(OralSectionType sectionType, Long sectionId) {
+        if (sectionType == null || sectionId == null) {
+            return List.of();
+        }
+
+        return switch (sectionType) {
+            case QUESTIONNAIRE -> getCustomizedContents(sectionId);
+            case ORAL_CHECK -> getCustomizedContentsByOralCheck(sectionId);
+            default -> List.of();
+        };
+    }
+
+    private List<ContentsDto.Summary> getCustomizedContentsByOralCheck(Long oralCheckId) {
+        return new JPAQueryFactory(JPQLTemplates.DEFAULT, entityManager)
+                .from(contents)
+                .leftJoin(contentsToCategory).on(contentsToCategory.contents.eq(contents))
+                .join(oralStatusToContents).on(oralStatusToContents.contents.contentsId.eq(contents.contentsId))
+                .join(userOralStatus).on(userOralStatus.oralStatus.oralStatusType.eq(oralStatusToContents.oralStatus.oralStatusType))
+                .where(userOralStatus.oralCheck.oralCheckId.eq(oralCheckId))
                 .orderBy(contents.contentsSort.asc())
                 .distinct()
                 .transform(groupBy(contents.contentsId).list(Projections.constructor(ContentsDto.Summary.class,

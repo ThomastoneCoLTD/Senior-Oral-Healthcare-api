@@ -15,11 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
 
     List<OralCheck> findAllByUser_UserIdOrderByCreatedDesc(Long userId);
+
+    Optional<OralCheck> findTopByUser_UserIdOrderByCreatedDesc(Long userId);
 
     // =================================================================
     // 1. 네이티브 쿼리 (Native Query)

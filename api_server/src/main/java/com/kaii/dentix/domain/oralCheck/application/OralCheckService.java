@@ -8,9 +8,7 @@ import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
-import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
 import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
-import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
@@ -71,7 +69,6 @@ public class OralCheckService {
     private final BillingService billingService;
     private final UserRepository userRepository;
     private final OralCheckRepository oralCheckRepository;
-    private final OralStatusRepository oralStatusRepository;
     private final ToothBrushingRepository toothBrushingRepository;
     private final QuestionnaireRepository questionnaireRepository;
     private final UserOralStatusRepository userOralStatusRepository;
@@ -413,7 +410,14 @@ public class OralCheckService {
         List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<UserOralStatus> userOralStatusList = userOralStatusRepository.findAllByQuestionnaireIn(questionnaireList);
-        List<OralStatus> oralStatusList = oralStatusRepository.findAll();
+        Map<Long, List<OralStatusDto.OralStatusType>> oralStatusByQuestionnaireId = userOralStatusList.stream()
+                .collect(Collectors.groupingBy(
+                        userOralStatus -> userOralStatus.getQuestionnaire().getQuestionnaireId(),
+                        Collectors.mapping(
+                                userOralStatus -> OralStatusDto.OralStatusType.from(userOralStatus.getOralStatus()),
+                                Collectors.toList()
+                        )
+                ));
 
         final String datePattern = "yyyy-MM-dd";
         Calendar calendar = Calendar.getInstance();
@@ -515,11 +519,7 @@ public class OralCheckService {
                             .sectionType(OralSectionType.QUESTIONNAIRE)
                             .date(q.getCreated())
                             .identifier(q.getQuestionnaireId())
-                            // [수정 포인트] 복잡한 Builder 대신 from() 메서드 사용
-                            .oralStatusList(userOralStatusList.stream()
-                                    .filter(uos -> uos.getQuestionnaire().getQuestionnaireId().equals(q.getQuestionnaireId())) // ID 비교가 더 안전함
-                                    .map(uos -> OralStatusDto.OralStatusType.from(uos.getOralStatus())) // from 메서드로 깔끔하게 변환
-                                    .toList())
+                            .oralStatusList(oralStatusByQuestionnaireId.getOrDefault(q.getQuestionnaireId(), List.of()))
                             .build())
                     .toList());
 

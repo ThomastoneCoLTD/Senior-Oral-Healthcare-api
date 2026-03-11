@@ -11,12 +11,14 @@ import com.kaii.dentix.global.common.dto.PagingDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationContextProvider;
+import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -43,6 +45,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AdminUserController.class)
+@ExtendWith(RestDocumentationExtension.class)
 public class AdminUserControllerTest {
 
     private MockMvc mockMvc;
@@ -58,7 +61,13 @@ public class AdminUserControllerTest {
     private ObjectMapper objectMapper;
 
     @MockBean
+    private com.kaii.dentix.domain.admin.application.AdminService adminService;
+
+    @MockBean
     private AdminUserService adminUserService;
+
+    @MockBean
+    private com.kaii.dentix.domain.jwt.JwtTokenUtil jwtTokenUtil;
 
     /**
      * 사용자 인증
