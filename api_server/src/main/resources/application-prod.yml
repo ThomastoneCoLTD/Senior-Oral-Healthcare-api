@@ -89,8 +89,8 @@ server:
 
 aiModel:
   apiUrl:
-    oralCheck: 'https://gpu-api.thomabio.com/denti/api/plaque_navy'
-    questionnaire: 'https://gpu-api.thomabio.com/denti/api/prsc_dku'
+    oralCheck: 'https://ai-backend-gpu.kai-i.com/denti/api/plaque_navy'
+    questionnaire: 'https://ai-backend-gpu.kai-i.com/denti/api/prsc_dku'
 s3:
   storage:
     bucketName: denti-dev
