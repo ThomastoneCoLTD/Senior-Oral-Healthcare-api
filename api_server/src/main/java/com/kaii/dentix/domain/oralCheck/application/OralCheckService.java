@@ -97,34 +97,75 @@ public class OralCheckService {
             String type
     ) throws IOException, NoSuchAlgorithmException, InvalidKeyException, InterruptedException {
 
-        log.info("요청 URI: {}", request.getRequestURI());
+        long startTime = System.currentTimeMillis();
+
+        // [증빙2-1], [증빙2-2] 업로드 API 요청 / 서버 수신 로그
+        log.info("[POST_UPLOAD_API_REQUEST] requestUri={}, method={}, contentType={}, type={}",
+                request.getRequestURI(),
+                request.getMethod(),
+                request.getContentType(),
+                type
+        );
+
+        log.info("[Server reception] 파일 수신 시작 - originalFilename={}, size={}, contentType={}",
+                file != null ? file.getOriginalFilename() : "null",
+                file != null ? file.getSize() : 0,
+                file != null ? file.getContentType() : "null"
+        );
 
         // 1. 사용자 인증 및 기관 확인
         User user = userService.getTokenUser(request);
         Organization organization = user.getOrganization();
 
+        log.info("[Server reception] 사용자 인증 완료 - userId={}, organizationId={}",
+                user.getUserId(),
+                organization != null ? organization.getOrganizationId() : null
+        );
+
         if (organization == null) {
+            log.error("[Server reception] 기관 정보 없음 - userId={}", user.getUserId());
             throw new BadRequestApiException("기관 정보를 찾을 수 없습니다.");
         }
 
         OrganizationSubscriptionHistory activeHistory =
                 organizationSubscriptionHistoryService.getActiveHistory(organization);
+
         if (activeHistory == null) {
+            log.error("[Server reception] 활성 구독 정보 없음 - organizationId={}", organization.getOrganizationId());
             throw new BadRequestApiException("기관의 구독 정보가 없습니다.");
         }
 
         // 2. 파일 업로드
         String uploadedUrl = awss3Service.upload(file, folderPath, true);
+
         if (StringUtils.isBlank(uploadedUrl)) {
+            log.error("[Image Upload Fail] 파일 업로드 실패 - userId={}, organizationId={}, originalFilename={}",
+                    user.getUserId(),
+                    organization.getOrganizationId(),
+                    file != null ? file.getOriginalFilename() : "null"
+            );
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        // 3. AI 분석 요청 및 데이터 변환 (Old DTO -> New DTO)
+        // [증빙2-3] 이미지 저장 경로 로그
+        log.info("[Upload Image URL] 업로드 완료 - userId={}, organizationId={}, originalFilename={}, uploadedUrl={}",
+                user.getUserId(),
+                organization.getOrganizationId(),
+                file != null ? file.getOriginalFilename() : "null",
+                uploadedUrl
+        );
+
+        // 3. AI 분석 요청 및 데이터 변환
         OralCheckDto.AnalysisResponse analysisData;
 
         try {
+            log.info("[Analysis started] AI 분석 요청 시작 - userId={}, organizationId={}, uploadedUrl={}",
+                    user.getUserId(),
+                    organization.getOrganizationId(),
+                    uploadedUrl
+            );
+
             OralCheckAnalysisResponse oldResponse = aiModelService.getPyDentalAiModel(file).get();
-            log.info("업로드된 이미지 URL: {}", uploadedUrl);
 
             analysisData = OralCheckDto.AnalysisResponse.builder()
                     .statusCode(oldResponse.getStatusCode())
@@ -137,14 +178,24 @@ public class OralCheckService {
                             .build())
                     .build();
 
+            log.info("[Analysis Result Response] AI 분석 응답 수신 - statusCode={}, statusMsg={}",
+                    analysisData.getStatusCode(),
+                    analysisData.getStatusMsg()
+            );
+
         } catch (ExecutionException e) {
-            log.error("AI 모델 실행 실패", e.getCause());
+            log.error("[Analysis fail] AI 모델 실행 실패 - userId={}, organizationId={}",
+                    user.getUserId(),
+                    organization.getOrganizationId(),
+                    e.getCause()
+            );
 
             if ("dev".equals(activeProfile)) {
-                log.warn("AI 모델 실패 → 개발용 더미 데이터 사용");
+                log.warn("[Analysis replacement] 개발 환경 더미 데이터 사용");
                 Random random = new Random();
                 analysisData = OralCheckDto.AnalysisResponse.builder()
                         .statusCode(200)
+                        .statusMsg("DEV_DUMMY")
                         .plaqueStats(OralCheckDto.AnalysisDivision.builder()
                                 .topRight(random.nextFloat(50))
                                 .topLeft(random.nextFloat(50))
@@ -154,7 +205,6 @@ public class OralCheckService {
                         .build();
             } else {
                 Throwable cause = e.getCause();
-//            log.error("AI 모델 요청 인터럽트", e);
                 log.error("AI 모델 실행 실패. type={}, message={}",
                         cause != null ? cause.getClass().getName() : "null",
                         cause != null ? cause.getMessage() : "null",
@@ -165,11 +215,11 @@ public class OralCheckService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             Throwable cause = e.getCause();
-//            log.error("AI 모델 요청 인터럽트", e);
-            log.error("AI 모델 실행 실패. type={}, message={}",
+            log.error("[Analysis fail] AI 요청 인터럽트 - type={}, message={}",
                     cause != null ? cause.getClass().getName() : "null",
                     cause != null ? cause.getMessage() : "null",
-                    cause);
+                    cause
+            );
             return new DataResponse<>(500, "요청 처리 중 오류가 발생했습니다.", null);
         }
 
@@ -188,9 +238,9 @@ public class OralCheckService {
             success = true;
         } else {
             if (statusCode == 402 || statusCode == 403 || statusCode == 404) {
-                log.warn("AI 분석 실패 (비정상 응답): status={}", statusCode);
+                log.warn("[Analysis Fail] status={}", statusCode);
             } else {
-                log.error("AI 분석 실패 (알 수 없는 상태): status={}", statusCode);
+                log.error("[Analysis Fail] status={}", statusCode);
             }
 
             oralCheck = registAnalysisFailedData(
@@ -202,30 +252,59 @@ public class OralCheckService {
         }
 
         if (oralCheck == null) {
+            log.error("[Analysis fail] oralCheck 저장 실패 - userId={}, uploadedUrl={}",
+                    user.getUserId(),
+                    uploadedUrl
+            );
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
+
+        // [증빙2-4] 결과 저장 로그
+        log.info("[Analysis Finish] oralCheckId={}, success={}, analysisState={}, userId={}, organizationId={}, uploadedUrl={}",
+                oralCheck.getOralCheckId(),
+                success,
+                oralCheck.getOralCheckAnalysisState(),
+                user.getUserId(),
+                organization.getOrganizationId(),
+                uploadedUrl
+        );
 
         // 5. 과금 처리
         if (success) {
             activeHistory.increaseSuccessCount();
             if (activeHistory.isOverused()) {
-                log.warn("기관 [{}] 사용량 초과 감지 → 자동 과금 생성", organization.getOrganizationId());
+                log.warn("[OVERUSES] 기관 [{}] 사용량 초과 감지 → 자동 과금 생성", organization.getOrganizationId());
                 billingService.createOveruseBatchBilling(organization);
             }
         }
 
         int remaining = Math.max(activeHistory.getRemainingResponses(), 0);
 
-        return new DataResponse<>(
+        String responseMessage = success ? "AI 분석이 완료되었습니다." : "AI 분석에 실패했습니다.";
+
+        OralCheckDto.PhotoResponse responseBody = OralCheckDto.PhotoResponse.builder()
+                .oralCheckId(oralCheck.getOralCheckId())
+                .success(success)
+                .remainingResponses(remaining)
+                .organizationId(organization.getOrganizationId())
+                .build();
+
+        DataResponse<OralCheckDto.PhotoResponse> response = new DataResponse<>(
                 200,
-                success ? "AI 분석이 완료되었습니다." : "AI 분석에 실패했습니다.",
-                OralCheckDto.PhotoResponse.builder()
-                        .oralCheckId(oralCheck.getOralCheckId())
-                        .success(success)
-                        .remainingResponses(remaining)
-                        .organizationId(organization.getOrganizationId())
-                        .build()
+                responseMessage,
+                responseBody
         );
+
+        // [증빙2-1] 응답 로그
+        log.info("[POST_UPLOAD_API_REQUEST] status=200, message={}, oralCheckId={}, success={}, remainingResponses={}, elapsedMs={}",
+                responseMessage,
+                responseBody.getOralCheckId(),
+                responseBody.isSuccess(),
+                responseBody.getRemainingResponses(),
+                System.currentTimeMillis() - startTime
+        );
+
+        return response;
     }
 
     /**
