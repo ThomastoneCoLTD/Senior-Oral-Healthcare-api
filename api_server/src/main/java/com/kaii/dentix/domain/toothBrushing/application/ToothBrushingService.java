@@ -158,12 +158,10 @@ public class ToothBrushingService {
             date = calendar.getTime();
         }
 
-        // dto가 아니라 date 사용
-        List<ToothBrushing> toothBrushingList =
-                toothBrushingRepository.findByUserIdAndCreatedStartingWithOrderByCreated(
-                        user.getUserId(),
-                        DateFormatUtil.dateToString("yyyy-MM-dd", date)
-                );
+        List<ToothBrushing> toothBrushingList = toothBrushingRepository.findByUserIdAndCreatedOrderByCreated(
+                user.getUserId(),
+                DateFormatUtil.dateToString("yyyy-MM-dd", date)
+        );
 
         Long timeInterval = 0L;
         if (!toothBrushingList.isEmpty()) {
