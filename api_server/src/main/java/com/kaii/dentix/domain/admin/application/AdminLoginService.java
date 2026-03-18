@@ -5,6 +5,7 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.AdminAuthDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
+import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
@@ -19,6 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +31,7 @@ public class AdminLoginService {
     private final AdminRepository adminRepository;
     private final PasswordEncoder passwordEncoder;
     private final OrganizationSubscriptionRepository subscriptionRepository;
+    private final OralCheckRepository oralCheckRepository;
 
     /**
      * 관리자 로그인
@@ -75,7 +80,12 @@ public class AdminLoginService {
                 // 날짜 변환 (toLocalDate 메서드가 내부에 있다고 가정)
                 LocalDate startDate = toLocalDate(subscription.getSubscriptionStartDate());
                 LocalDate endDate = toLocalDate(subscription.getSubscriptionEndDate());
-                LocalDate resetDate = toLocalDate(subscription.getUsageResetDate());
+                LocalDate resetDate = toLocalDate(resolveUsagePeriodEnd(subscription));
+                int successCount = oralCheckRepository.countSubscriptionPeriodUsage(
+                        organizationId,
+                        toDate(subscription.getSubscriptionStartDate()),
+                        toDate(resolveUsagePeriodEnd(subscription))
+                ).intValue();
 
                 // [수정 2] 클래스명 변경 (OrganizationDto 내부 클래스 사용)
                 subscriptionResponse = OrganizationDto.SubscriptionResponse.fromEntity(
@@ -83,7 +93,7 @@ public class AdminLoginService {
                         org.getOrganizationName(),
                         org.getOrganizationPhoneNumber(),
                         plan,
-                        subscription.getSuccessCount(),
+                        successCount,
                         startDate,
                         endDate,
                         resetDate
@@ -130,5 +140,15 @@ public class AdminLoginService {
     // 날짜 변환 헬퍼 (null safe)
     private LocalDate toLocalDate(java.time.LocalDateTime dateTime) {
         return dateTime != null ? dateTime.toLocalDate() : null;
+    }
+
+    private LocalDateTime resolveUsagePeriodEnd(OrganizationSubscription subscription) {
+        return subscription.getUsageResetDate() != null
+                ? subscription.getUsageResetDate()
+                : subscription.getSubscriptionEndDate();
+    }
+
+    private Date toDate(LocalDateTime dateTime) {
+        return Date.from(dateTime.atZone(ZoneId.of("Asia/Seoul")).toInstant());
     }
 }

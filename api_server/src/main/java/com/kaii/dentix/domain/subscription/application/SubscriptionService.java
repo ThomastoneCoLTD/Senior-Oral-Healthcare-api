@@ -4,6 +4,7 @@ import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.billing.dao.BillingRepository;
 import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
+import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
 import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
 import com.kaii.dentix.domain.organization.dao.OrganizationSubscriptionRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
@@ -17,9 +18,7 @@ import com.kaii.dentix.domain.subscription.dto.SubscriptionDto;
 import com.kaii.dentix.domain.type.BillingStatus;
 import com.kaii.dentix.domain.type.BillingType;
 import com.kaii.dentix.domain.type.PlanName;
-import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
 import com.kaii.dentix.domain.user.dao.UserRepository;
-import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.response.SuccessResponse;
@@ -30,7 +29,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -105,23 +108,17 @@ public class SubscriptionService {
             throw new NotFoundDataException("구독 정보를 찾을 수 없습니다.");
         }
         SubscriptionPlan plan = sub.getSubscriptionPlan();
+        Date periodStart = toDate(sub.getSubscriptionStartDate());
+        Date periodEnd = toDate(resolveUsagePeriodEnd(sub));
+        List<SubscriptionDto.InfoResponse.UserUsage> userUsages = buildUserUsages(organizationId, periodStart, periodEnd);
 
         // 1. 사용량 계산
-        int totalSuccessCount = sub.getSuccessCount() != null ? sub.getSuccessCount() : 0;
+        int totalSuccessCount = userUsages.stream()
+                .mapToInt(SubscriptionDto.InfoResponse.UserUsage::getSuccessCount)
+                .sum();
         int max = plan.getMaxSuccessResponses();
         int remaining = Math.max(0, max - totalSuccessCount);
         double usageRate = max == 0 ? 0 : (double) totalSuccessCount / max * 100.0;
-
-        // 2. 사용자별 사용 현황 조회
-        List<User> users = userRepository.findByOrganization_OrganizationId(organizationId);
-        List<SubscriptionDto.InfoResponse.UserUsage> userUsages = users.stream()
-                .map(u -> SubscriptionDto.InfoResponse.UserUsage.builder()
-                        .userId(u.getUserId())
-                        .userName(u.getUserName())
-                        .successCount((int) oralCheckRepository.countByUser_UserIdAndOralCheckAnalysisState(
-                                u.getUserId(), OralCheckAnalysisState.SUCCESS))
-                        .build())
-                .toList();
 
         return SubscriptionDto.InfoResponse.builder()
                 .id(plan.getId())
@@ -135,7 +132,7 @@ public class SubscriptionService {
                 .remainingCount(remaining)
                 .usageRate(Math.round(usageRate * 10) / 10.0)
                 .subscriptionStartDate(sub.getSubscriptionStartDate())
-                .usageResetDate(sub.getSubscriptionEndDate())
+                .usageResetDate(resolveUsagePeriodEnd(sub))
                 .users(userUsages)
                 .build();
     }
@@ -218,5 +215,37 @@ public class SubscriptionService {
 
         return organizationSubscriptionRepository.findByOrganization(organization)
                 .orElseThrow(() -> new NotFoundDataException("현재 구독 정보가 없습니다."));
+    }
+
+    private List<SubscriptionDto.InfoResponse.UserUsage> buildUserUsages(Long organizationId, Date periodStart, Date periodEnd) {
+        Map<Long, Integer> usageCountByUserId = oralCheckRepository
+                .findUserUsageByOrganizationAndPeriod(organizationId, periodStart, periodEnd)
+                .stream()
+                .collect(Collectors.toMap(
+                        OralCheckDto.Usage::getUserId,
+                        usage -> usage.getSuccessCount().intValue(),
+                        Integer::sum
+                ));
+
+        return userRepository.findByOrganization_OrganizationId(organizationId).stream()
+                .map(user -> SubscriptionDto.InfoResponse.UserUsage.builder()
+                        .userId(user.getUserId())
+                        .userName(user.getUserName())
+                        .successCount(usageCountByUserId.getOrDefault(user.getUserId(), 0))
+                        .build())
+                .toList();
+    }
+
+    private LocalDateTime resolveUsagePeriodEnd(OrganizationSubscription subscription) {
+        return subscription.getUsageResetDate() != null
+                ? subscription.getUsageResetDate()
+                : subscription.getSubscriptionEndDate();
+    }
+
+    private Date toDate(LocalDateTime localDateTime) {
+        if (localDateTime == null) {
+            return Date.from(LocalDateTime.now().atZone(ZoneId.of("Asia/Seoul")).toInstant());
+        }
+        return Date.from(localDateTime.atZone(ZoneId.of("Asia/Seoul")).toInstant());
     }
 }

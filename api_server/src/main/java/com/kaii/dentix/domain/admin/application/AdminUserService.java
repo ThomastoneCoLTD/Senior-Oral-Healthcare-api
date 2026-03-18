@@ -158,7 +158,9 @@ public class AdminUserService {
 
         // 날짜 변환 로직
         Date startDate = toDate(activeSubscription.getSubscriptionStartDate());
-        Date endDate = toDate(activeSubscription.getUsageResetDate());
+        Date endDate = toDate(activeSubscription.getUsageResetDate() != null
+                ? activeSubscription.getUsageResetDate()
+                : activeSubscription.getSubscriptionEndDate());
 
         List<OralCheckDto.Usage> usageList = oralcheckRepository.findUserUsageByOrganizationAndPeriod(
                 org.getOrganizationId(), startDate, endDate

@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 
@@ -38,9 +39,8 @@ public class OrganizationUsageService {
         Integer max = sub.getSubscriptionPlan().getMaxSuccessResponses();
 
         //LocalDateTime → Date 변환 (Asia/Seoul 기준)
-        ZoneId zone = ZoneId.of("Asia/Seoul");
-        Date startDate = Date.from(sub.getSubscriptionStartDate().atZone(zone).toInstant());
-        Date endDate = Date.from(sub.getSubscriptionEndDate().atZone(zone).toInstant());
+        Date startDate = toDate(sub.getSubscriptionStartDate());
+        Date endDate = toDate(resolveUsagePeriodEnd(sub));
 
         //구독 기간 동안 사용량
         Long successCount = oralCheckRepository.countSubscriptionPeriodUsage(
@@ -72,6 +72,16 @@ public class OrganizationUsageService {
                 .recentUsages(oralCheckRepository.findRecentUsages(organizationId))
 
                 .build();
+    }
+
+    private LocalDateTime resolveUsagePeriodEnd(OrganizationSubscription subscription) {
+        return subscription.getUsageResetDate() != null
+                ? subscription.getUsageResetDate()
+                : subscription.getSubscriptionEndDate();
+    }
+
+    private Date toDate(LocalDateTime localDateTime) {
+        return Date.from(localDateTime.atZone(ZoneId.of("Asia/Seoul")).toInstant());
     }
 }
     /**

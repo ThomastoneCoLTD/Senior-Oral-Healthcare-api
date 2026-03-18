@@ -90,6 +90,7 @@ public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
         SELECT COUNT(oc)
         FROM OralCheck oc
         WHERE oc.user.organization.organizationId = :orgId
+          AND oc.oralCheckAnalysisState = com.kaii.dentix.domain.type.oral.OralCheckAnalysisState.SUCCESS
           AND oc.created >= :start
           AND oc.created < :end
     """)
@@ -135,6 +136,7 @@ public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
         )
         FROM OralCheck oc JOIN oc.user u JOIN u.organization o
         WHERE o.organizationId = :orgId
+          AND oc.oralCheckAnalysisState = com.kaii.dentix.domain.type.oral.OralCheckAnalysisState.SUCCESS
           AND oc.created >= :start
           AND oc.created < :end
         GROUP BY u.userId, u.userName
