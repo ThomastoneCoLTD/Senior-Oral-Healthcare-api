@@ -64,12 +64,28 @@ public class UserService {
      */
     public User getTokenUser(HttpServletRequest request) {
         String token = jwtTokenUtil.getAccessToken(request);
-        if (jwtTokenUtil.getRoles(token, TokenType.AccessToken) != UserRole.ROLE_USER) {
-            throw new UnauthorizedException("권한이 없는 사용자입니다.");
+
+        if (StringUtils.isBlank(token)) {
+            throw new UnauthorizedException("인증 정보가 없습니다.");
         }
-        Long userId = jwtTokenUtil.getUserId(token, TokenType.AccessToken);
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+
+        try {
+            if (jwtTokenUtil.isExpired(token, TokenType.AccessToken)) {
+                throw new TokenExpiredException();
+            }
+
+            if (jwtTokenUtil.getRoles(token, TokenType.AccessToken) != UserRole.ROLE_USER) {
+                throw new UnauthorizedException("권한이 없는 사용자입니다.");
+            }
+
+            Long userId = jwtTokenUtil.getUserId(token, TokenType.AccessToken);
+            return userRepository.findById(userId)
+                    .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+        } catch (TokenExpiredException | UnauthorizedException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new UnauthorizedException("인증 정보가 올바르지 않습니다.");
+        }
     }
 
     /**
