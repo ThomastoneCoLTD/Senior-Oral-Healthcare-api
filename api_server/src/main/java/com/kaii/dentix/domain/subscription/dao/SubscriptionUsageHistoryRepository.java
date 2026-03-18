@@ -11,13 +11,13 @@ import java.time.YearMonth;
 import java.util.Optional;
 
 /**
- * ✅ 기관별 월별 사용량 조회용 Repository
+ * 기관별 월별 사용량 조회용 Repository
  */
 //@Repository
 //public interface SubscriptionUsageHistoryRepository extends JpaRepository<SubscriptionUsageHistory, Long> {
 //
 //    /**
-//     * ✅ 기관 ID와 사용월 기준으로 사용 이력 조회
+//     * 기관 ID와 사용월 기준으로 사용 이력 조회
 //     * - 사용월(usageMonth)은 YearMonthConverter로 DB에 문자열로 저장됨 ("YYYY-MM")
 //     */
 //    @Query("SELECT u FROM SubscriptionUsageHistory u " +

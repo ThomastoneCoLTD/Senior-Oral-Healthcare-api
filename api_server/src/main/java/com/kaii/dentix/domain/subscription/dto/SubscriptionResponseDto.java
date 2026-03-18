@@ -29,7 +29,7 @@ public class SubscriptionResponseDto {
     public static SubscriptionResponseDto from(SubscriptionCycle usage) {
         SubscriptionPlan plan = usage.getSubscriptionPlan();
 
-        // ✅ 사용률 계산 (0~1 비율)
+        // 사용률 계산 (0~1 비율)
         double usageRate = 0.0;
         if (plan.getMaxSuccessResponses() != null && plan.getMaxSuccessResponses() > 0) {
             usageRate = (double) usage.getSuccessCount() / plan.getMaxSuccessResponses();
@@ -60,7 +60,7 @@ public class SubscriptionResponseDto {
 
         @Id
         @GeneratedValue(strategy = GenerationType.IDENTITY)
-        @Column(name = "usageId")  // ✅ DB 컬럼명 명시
+        @Column(name = "usageId")
         private Long id;
 
         @ManyToOne(fetch = FetchType.LAZY)

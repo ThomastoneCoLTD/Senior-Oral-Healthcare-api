@@ -43,7 +43,7 @@ public class SubscriptionPlan extends TimeEntity {
     private LocalDateTime deleted;
 
     // =====================================================
-    // ✅ [추가] SaaS 구독 정책 관련 필드
+    // SaaS 구독 정책 관련 필드
     // =====================================================
 
     /** 초과 1회당 요금 (원 단위) */
@@ -63,7 +63,7 @@ public class SubscriptionPlan extends TimeEntity {
     private Boolean active = true;
 
     // =====================================================
-    // ✅ 기능 헬퍼 메서드
+    // 기능 헬퍼 메서드
     // =====================================================
 
     /** Soft delete 처리 */

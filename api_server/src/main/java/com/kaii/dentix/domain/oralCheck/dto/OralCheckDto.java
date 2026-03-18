@@ -134,6 +134,7 @@ public class OralCheckDto {
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
         private Date date;
         private long identifier;
+        private Long oralCheckId;
         private OralCheckResultType oralCheckResultTotalType;
         private Integer toothBrushingCount;
         @Builder.Default

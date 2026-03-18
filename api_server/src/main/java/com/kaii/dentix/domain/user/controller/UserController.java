@@ -1,5 +1,8 @@
 package com.kaii.dentix.domain.user.controller;
 
+import com.kaii.dentix.domain.toothBrushing.application.ToothBrushingService;
+import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRegisterDto;
+import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRequestDto;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.response.DataResponse;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/user")
 public class UserController {
     private final UserService userService;
+    private final ToothBrushingService toothBrushingService;
 
     /** 자동 로그인 (토큰 갱신) */
     @PutMapping("/auto-login")
@@ -60,7 +64,14 @@ public class UserController {
         return ResponseEntity.ok(new DataResponse<>(userService.updateUserServices(request, dto)));
     }
 
-
+    /** 양치 기록 */
+    @PostMapping("/brushing")
+    public DataResponse<ToothBrushingRegisterDto> recordToothBrushing(
+            HttpServletRequest request,
+            @Valid @RequestBody ToothBrushingRequestDto dto
+    ) {
+        return new DataResponse<>(toothBrushingService.recordToothBrushing(request, dto));
+    }
 
     /** 로그아웃 */
     @PutMapping("/logout")

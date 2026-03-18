@@ -501,6 +501,7 @@ public class OralCheckService {
         Calendar calendar = Calendar.getInstance();
         Date today = calendar.getTime();
         String todayString = DateFormatUtil.dateToString(datePattern, today);
+        Date timelineStartDate = resolveTimelineStartDate(today, oralCheckList, toothBrushingList, questionnaireList);
 
         // 상단 섹션
         List<OralCheckDto.Section> sectionList = new ArrayList<>();
@@ -525,8 +526,9 @@ public class OralCheckService {
             oralCheckPeriodAfter = DateFormatUtil.dateToString(datePattern, c.getTime());
         }
 
-        calendar.setTime(today);
-        calendar.add(Calendar.DATE, -30);
+        Calendar recentWindowCalendar = Calendar.getInstance();
+        recentWindowCalendar.setTime(today);
+        recentWindowCalendar.add(Calendar.DATE, -30);
 
         // 2. 양치질
         ToothBrushing latestToothBrushing = !toothBrushingList.isEmpty() ? toothBrushingList.get(0) : null;
@@ -543,7 +545,7 @@ public class OralCheckService {
 
         // 3. 문진표
         Questionnaire latestQuestionnaire = !questionnaireList.isEmpty() ? questionnaireList.get(0) : null;
-        sectionList.add(latestQuestionnaire == null || latestQuestionnaire.getCreated().before(calendar.getTime()) ? 1 : 2,
+        sectionList.add(latestQuestionnaire == null || latestQuestionnaire.getCreated().before(recentWindowCalendar.getTime()) ? 1 : 2,
                 OralCheckDto.Section.builder()
                         .sectionType(OralSectionType.QUESTIONNAIRE)
                         .date(latestQuestionnaire != null ? latestQuestionnaire.getCreated() : null)
@@ -556,6 +558,7 @@ public class OralCheckService {
 
         // 일별 상세 (Daily)
         List<OralCheckDto.Daily> dailyList = new ArrayList<>();
+        calendar.setTime(timelineStartDate);
         calendar.add(Calendar.DATE, 1 - calendar.get(Calendar.DAY_OF_WEEK));
 
         while (true) {
@@ -569,6 +572,7 @@ public class OralCheckService {
                             .sectionType(OralSectionType.ORAL_CHECK)
                             .date(oc.getCreated())
                             .identifier(oc.getOralCheckId())
+                            .oralCheckId(oc.getOralCheckId())
                             .oralCheckResultTotalType(oc.getOralCheckResultTotalType())
                             .build())
                     .toList());
@@ -642,6 +646,27 @@ public class OralCheckService {
                 .sectionList(sectionList)
                 .dailyList(dailyList)
                 .build();
+    }
+
+    private Date resolveTimelineStartDate(
+            Date today,
+            List<OralCheck> oralCheckList,
+            List<ToothBrushing> toothBrushingList,
+            List<Questionnaire> questionnaireList
+    ) {
+        Date earliest = today;
+
+        if (!oralCheckList.isEmpty()) {
+            earliest = oralCheckList.get(oralCheckList.size() - 1).getCreated();
+        }
+        if (!toothBrushingList.isEmpty() && toothBrushingList.get(toothBrushingList.size() - 1).getCreated().before(earliest)) {
+            earliest = toothBrushingList.get(toothBrushingList.size() - 1).getCreated();
+        }
+        if (!questionnaireList.isEmpty() && questionnaireList.get(questionnaireList.size() - 1).getCreated().before(earliest)) {
+            earliest = questionnaireList.get(questionnaireList.size() - 1).getCreated();
+        }
+
+        return earliest;
     }
 
     /**

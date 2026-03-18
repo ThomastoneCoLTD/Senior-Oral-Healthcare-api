@@ -15,19 +15,19 @@ import java.util.Optional;
 
 public interface OrganizationSubscriptionRepository extends JpaRepository<OrganizationSubscription, Long> {
 
-    /** ✅ 기관 ID로 구독 조회 (1:1 관계이므로 단일 결과) */
+    /** 기관 ID로 구독 조회 (1:1 관계이므로 단일 결과) */
     Optional<OrganizationSubscription> findByOrganization_OrganizationId(Long organizationId);
 
-    /** ✅ 구독 상태별 조회 (예: ACTIVE, EXPIRED 등) */
+    /** 구독 상태별 조회 (예: ACTIVE, EXPIRED 등) */
     List<OrganizationSubscription> findAllByStatus(SubscriptionStatus status);
 
-    /** ✅ 자동 갱신되는 구독만 조회 (배치/스케줄러용) */
+    /** 자동 갱신되는 구독만 조회 (배치/스케줄러용) */
     List<OrganizationSubscription> findAllByAutoRenewTrue();
 
-    /** ✅ 특정 기관의 활성 구독 존재 여부 확인 */
+    /** 특정 기관의 활성 구독 존재 여부 확인 */
     boolean existsByOrganization_OrganizationIdAndStatus(Long organizationId, SubscriptionStatus status);
 
-    /** ✅ 구독 종료일이 특정 시점 이전이고 autoRenew가 true인 구독 조회 → BillingScheduler에서 사용 */
+    /** 구독 종료일이 특정 시점 이전이고 autoRenew가 true인 구독 조회 → BillingScheduler에서 사용 */
     List<OrganizationSubscription> findAllBySubscriptionEndDateBeforeAndAutoRenewTrue(LocalDateTime dateTime);
     Optional<OrganizationSubscription> findByOrganization(Organization organization);
     @Query("""

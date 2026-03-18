@@ -10,7 +10,7 @@
 //import java.util.Optional;
 //
 //public interface SubscriptionUsageRepository extends JpaRepository<SubscriptionResponseDto.SubscriptionCycle, Long> {
-//    /** ✅ 현재 활성 구독 조회 */
+//    /** 현재 활성 구독 조회 */
 //    @Query("""
 //        SELECT u FROM SubscriptionUsage u
 //        WHERE u.organization.organizationId = :orgId
@@ -18,7 +18,7 @@
 //    """)
 //    Optional<SubscriptionUsage> findActiveByOrganization(@Param("orgId") Long orgId);
 //
-//    /** ✅ 기존 활성 구독 비활성화 (새 주기 시작 시 호출) */
+//    /** 기존 활성 구독 비활성화 (새 주기 시작 시 호출) */
 //    @Modifying(clearAutomatically = true)
 //    @Query("""
 //        UPDATE SubscriptionUsage u
@@ -28,7 +28,7 @@
 //    """)
 //    void deactivateActiveUsage(@Param("orgId") Long orgId);
 //
-//    // ✅ 기관별 구독정보 조회
+//    //  기관별 구독정보 조회
 //    Optional<SubscriptionResponseDto.SubscriptionCycle> findByOrganization_OrganizationIdAndActiveTrue(Long organizationId);
 //    boolean existsByOrganization_OrganizationIdAndActiveTrue(Long organizationId);
 //}

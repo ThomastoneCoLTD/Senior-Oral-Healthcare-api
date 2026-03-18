@@ -23,7 +23,7 @@ public class ContentsToCategory extends TimeEntity {
     private int contentsCategoryId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "contents_id") // ✅ FK 관계로 명시
+    @JoinColumn(name = "contents_id")
     private Contents contents;
 
 }

@@ -610,13 +610,13 @@ public class AdminStatisticService {
     @Transactional(readOnly = true)
     public AdminUserStatisticResponse getOrgStatistics(AdminStatisticRequest request, HttpServletRequest httpRequest) {
 
-        // ✅ 1️⃣ 현재 로그인 관리자 식별
+        // 현재 로그인 관리자 식별
         Long adminId = jwtTokenUtil.getUserId(
                 jwtTokenUtil.getAccessToken(httpRequest),
                 TokenType.AccessToken
         );
 
-        // ✅ 2️⃣ 관리자 → 소속 기관 ID 가져오기
+        // 관리자 → 소속 기관 ID 가져오기
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
 
@@ -626,15 +626,15 @@ public class AdminStatisticService {
 
         Long organizationId = admin.getOrganization().getOrganizationId();
 
-        // ✅ 3️⃣ request 에 기관ID 자동 주입
+        //request 에 기관ID 자동 주입
         request.setOrganizationId(organizationId);
 
-//        log.info("📊 통계 요청 관리자={}, 기관ID={}", admin.getAdminName(), organizationId);
+        //log.info("통계 요청 관리자={}, 기관ID={}", admin.getAdminName(), organizationId);
 
-        // ✅ 4️⃣ 통계 1. 전체 남녀 가입률
+        // 통계 1. 전체 남녀 가입률
         AdminUserSignUpCountDto userSignUpCount = adminUserCustomRepository.userSignUpCount(request);
 
-        // ✅ 5️⃣ 통계 2. 구강검진 통계
+        // 통계 2. 구강검진 통계
         OralCheckResultTypeCount userOralCheckList = oralCheckCustomRepository.userOralCheckList(request);
         int allUserOralCheckCount = oralCheckCustomRepository.allUserOralCheckCount(request);
         int allOralCheckCount = userOralCheckList.getCountHealthy()
@@ -648,13 +648,13 @@ public class AdminStatisticService {
 
         OralCheckResultType averageState = oralCheckService.getState(userOralCheckList);
 
-        // ✅ 6️⃣ 통계 3. 문진표 통계
+        // 통계 3. 문진표 통계
         List<QuestionnaireStatisticDto> questionnaireList = questionnaireCustomRepository.questionnaireList(request);
         int allQuestionnaireCount = questionnaireCustomRepository.allQuestionnaireCount(request);
 
         AllQuestionnaireResultTypeCount allQuestionnaireResultTypeCount = calcQuestionnaireCount(questionnaireList, allQuestionnaireCount);
 
-        // ✅ 7️⃣ 응답 반환
+        // 응답 반환
         return AdminUserStatisticResponse.builder()
                 .userSignUpCount(userSignUpCount)
                 .averageState(averageState)

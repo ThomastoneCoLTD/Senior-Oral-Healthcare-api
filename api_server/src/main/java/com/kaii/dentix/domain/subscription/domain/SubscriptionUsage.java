@@ -8,7 +8,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 /**
- * ✅ 현재 활성 구독 주기 (Subscription Usage)
+ * 현재 활성 구독 주기 (Subscription Usage)
  * - 한 기관당 active=true 인 주기는 하나만 존재
  * - 매월/매년 종료 시 히스토리로 이동
  */
@@ -25,42 +25,42 @@ public class SubscriptionUsage extends TimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long subscriptionUsageId;
 
-    /** ✅ 기관 (ManyToOne) */
+    /** 기관 (ManyToOne) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
 
-    /** ✅ 구독 플랜 (ManyToOne) */
+    /** 구독 플랜 (ManyToOne) */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subscription_plan_id", nullable = false)
     private SubscriptionPlan subscriptionPlan;
 
-    /** ✅ 사용 시작일 */
+    /** 사용 시작일 */
     @Column(nullable = false)
     private LocalDateTime periodStart;
 
-    /** ✅ 사용 종료일 (다음 결제/갱신일) */
+    /** 사용 종료일 (다음 결제/갱신일) */
     @Column(nullable = false)
     private LocalDateTime periodEnd;
 
-    /** ✅ 사용 횟수 */
+    /** 사용 횟수 */
     @Column(nullable = false)
     private Integer successCount = 0;
 
-    /** ✅ 초과 사용 횟수 */
+    /** 초과 사용 횟수 */
     @Column(nullable = false)
     private Integer overuseCount = 0;
 
-    /** ✅ 활성 상태 (현재 주기만 true) */
+    /** 활성 상태 (현재 주기만 true) */
     @Column(nullable = false)
     private Boolean active = true;
 
-    /** ✅ 남은 사용 가능 횟수 (optional) */
+    /** 남은 사용 가능 횟수 (optional) */
     @Column(nullable = false)
     private Integer remainingCount = 0;
 
     // -------------------------------
-    // ✅ 비즈니스 로직
+    // 비즈니스 로직
     // -------------------------------
 
     /** 사용 1회 증가 */

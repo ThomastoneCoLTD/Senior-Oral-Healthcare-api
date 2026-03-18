@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
- * ✅ 결제 청구 내역 (Billing)
+ * 결제 청구 내역 (Billing)
  */
 @Entity
 @Getter

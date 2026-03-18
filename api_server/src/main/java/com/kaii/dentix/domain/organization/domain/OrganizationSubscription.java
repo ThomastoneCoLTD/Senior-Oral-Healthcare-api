@@ -9,7 +9,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 /**
- * ✅ 기관 구독 정보 (OrganizationSubscription)
+ * 기관 구독 정보 (OrganizationSubscription)
  * - 구독 상태 + 사용량 + 리셋일 관리
  */
 @Entity
