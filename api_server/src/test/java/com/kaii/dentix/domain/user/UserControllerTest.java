@@ -1,15 +1,21 @@
 package com.kaii.dentix.domain.user;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
+import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
+import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
 import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
 import com.kaii.dentix.domain.agreement.dto.ServiceAgreementConsentDto;
 import com.kaii.dentix.domain.toothBrushing.application.ToothBrushingService;
 import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingDto;
 import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRegisterDto;
 import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRequestDto;
+import com.kaii.dentix.domain.type.OralDateStatusType;
+import com.kaii.dentix.domain.type.OralSectionType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.ServiceType;
 import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.controller.UserController;
 import com.kaii.dentix.domain.user.dto.UserDto;
@@ -72,6 +78,9 @@ public class UserControllerTest {
     private UserService userService;
 
     @MockBean
+    private OralCheckService oralCheckService;
+
+    @MockBean
     private ToothBrushingService toothBrushingService;
 
     @MockBean
@@ -132,6 +141,81 @@ public class UserControllerTest {
     private ToothBrushingRegisterDto toothBrushingRegisterResponse() {
         return ToothBrushingRegisterDto.builder()
                 .toothBrushingList(List.of(new ToothBrushingDto(1L, new Date())))
+                .build();
+    }
+
+    private OralCheckDto.TimelineResponse oralStatusResponse() {
+        Date now = new Date();
+        return OralCheckDto.TimelineResponse.builder()
+                .sectionList(List.of(
+                        OralCheckDto.Section.builder()
+                                .sort(1)
+                                .sectionType(OralSectionType.ORAL_CHECK)
+                                .date(now)
+                                .timeInterval(3600L)
+                                .build(),
+                        OralCheckDto.Section.builder()
+                                .sort(2)
+                                .sectionType(OralSectionType.QUESTIONNAIRE)
+                                .date(now)
+                                .timeInterval(1800L)
+                                .build(),
+                        OralCheckDto.Section.builder()
+                                .sort(3)
+                                .sectionType(OralSectionType.TOOTH_BRUSHING)
+                                .date(now)
+                                .timeInterval(600L)
+                                .toothBrushingList(List.of(new ToothBrushingDto(1L, now)))
+                                .build()
+                ))
+                .dailyList(List.of(
+                        OralCheckDto.Daily.builder()
+                                .date(now)
+                                .status(OralDateStatusType.GOOD)
+                                .questionnaire(true)
+                                .detailList(List.of(
+                                        OralCheckDto.Detail.builder()
+                                                .sectionType(OralSectionType.ORAL_CHECK)
+                                                .date(now)
+                                                .identifier(11L)
+                                                .oralCheckId(11L)
+                                                .oralCheckResultTotalType(OralCheckResultType.GOOD)
+                                                .build(),
+                                        OralCheckDto.Detail.builder()
+                                                .sectionType(OralSectionType.QUESTIONNAIRE)
+                                                .date(now)
+                                                .identifier(21L)
+                                                .oralStatusList(List.of(new OralStatusDto.OralStatusType("A", "건강형")))
+                                                .build(),
+                                        OralCheckDto.Detail.builder()
+                                                .sectionType(OralSectionType.TOOTH_BRUSHING)
+                                                .date(now)
+                                                .identifier(31L)
+                                                .toothBrushingCount(1)
+                                                .build()
+                                ))
+                                .build()
+                ))
+                .build();
+    }
+
+    private OralCheckDto.ResultResponse oralCheckResultResponse() {
+        return OralCheckDto.ResultResponse.builder()
+                .userId(1L)
+                .organizationId(1L)
+                .success(true)
+                .oralCheckResultTotalType(OralCheckResultType.GOOD)
+                .created(new Date())
+                .oralCheckTotalRange(10.0f)
+                .oralCheckUpRightRange(10.0f)
+                .oralCheckUpRightScoreType(OralCheckResultType.GOOD)
+                .oralCheckUpLeftRange(10.0f)
+                .oralCheckUpLeftScoreType(OralCheckResultType.GOOD)
+                .oralCheckDownLeftRange(10.0f)
+                .oralCheckDownLeftScoreType(OralCheckResultType.GOOD)
+                .oralCheckDownRightRange(10.0f)
+                .oralCheckDownRightScoreType(OralCheckResultType.GOOD)
+                .oralCheckCommentList(List.of("테스트"))
                 .build();
     }
 
@@ -522,6 +606,72 @@ public class UserControllerTest {
 
         verify(toothBrushingService).recordToothBrushing(any(HttpServletRequest.class), any(ToothBrushingRequestDto.class));
 
+    }
+
+    @Test
+    public void getToothBrushingByDate() throws Exception {
+
+        given(toothBrushingService.getToothBrushingByDate(any(HttpServletRequest.class), any(String.class)))
+                .willReturn(toothBrushingRegisterResponse());
+
+        ResultActions resultActions = mockMvc.perform(
+                RestDocumentationRequestBuilders.get("/user/brushing")
+                        .param("date", "2026-03-18")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
+                        .with(user("user").roles("USER"))
+        );
+
+        resultActions.andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+
+        verify(toothBrushingService).getToothBrushingByDate(any(HttpServletRequest.class), any(String.class));
+    }
+
+    @Test
+    public void getOralStatus() throws Exception {
+
+        given(oralCheckService.oralCheck(any(HttpServletRequest.class)))
+                .willReturn(oralStatusResponse());
+
+        ResultActions resultActions = mockMvc.perform(
+                RestDocumentationRequestBuilders.get("/user/oralStatus")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
+                        .with(user("user").roles("USER"))
+        );
+
+        resultActions.andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("response.dailyList[0].detailList[0].oralCheckId").value(11))
+                .andExpect(jsonPath("response.dailyList[0].detailList[1].oralStatusList[0].title").value("건강형"))
+                .andExpect(jsonPath("response.dailyList[0].detailList[2].toothBrushingCount").value(1));
+
+        verify(oralCheckService).oralCheck(any(HttpServletRequest.class));
+    }
+
+    @Test
+    public void getOralStatusResult() throws Exception {
+
+        given(oralCheckService.oralCheckResult(any(HttpServletRequest.class), any(Long.class)))
+                .willReturn(oralCheckResultResponse());
+
+        ResultActions resultActions = mockMvc.perform(
+                RestDocumentationRequestBuilders.get("/user/oralStatus/result")
+                        .param("oralCheckId", "11")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
+                        .with(user("user").roles("USER"))
+        );
+
+        resultActions.andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("response.oralCheckResultTotalType").value("GOOD"));
+
+        verify(oralCheckService).oralCheckResult(any(HttpServletRequest.class), any(Long.class));
     }
 
     /**

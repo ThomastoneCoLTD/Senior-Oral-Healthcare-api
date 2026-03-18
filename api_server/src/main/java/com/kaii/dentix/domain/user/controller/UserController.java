@@ -1,5 +1,7 @@
 package com.kaii.dentix.domain.user.controller;
 
+import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
+import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
 import com.kaii.dentix.domain.toothBrushing.application.ToothBrushingService;
 import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRegisterDto;
 import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRequestDto;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/user")
 public class UserController {
     private final UserService userService;
+    private final OralCheckService oralCheckService;
     private final ToothBrushingService toothBrushingService;
 
     /** 자동 로그인 (토큰 갱신) */
@@ -71,6 +74,30 @@ public class UserController {
             @Valid @RequestBody ToothBrushingRequestDto dto
     ) {
         return new DataResponse<>(toothBrushingService.recordToothBrushing(request, dto));
+    }
+
+    /** 양치 기록 조회 */
+    @GetMapping("/brushing")
+    public DataResponse<ToothBrushingRegisterDto> getToothBrushingByDate(
+            HttpServletRequest request,
+            @RequestParam(required = false) String date
+    ) {
+        return new DataResponse<>(toothBrushingService.getToothBrushingByDate(request, date));
+    }
+
+    /** 구강 상태 조회 호환 경로 */
+    @GetMapping("/oralStatus")
+    public DataResponse<OralCheckDto.TimelineResponse> getOralStatus(HttpServletRequest request) {
+        return new DataResponse<>(oralCheckService.oralCheck(request));
+    }
+
+    /** 구강 검진 결과 조회 호환 경로 */
+    @GetMapping("/oralStatus/result")
+    public DataResponse<OralCheckDto.ResultResponse> getOralStatusResult(
+            HttpServletRequest request,
+            @RequestParam Long oralCheckId
+    ) {
+        return new DataResponse<>(oralCheckService.oralCheckResult(request, oralCheckId));
     }
 
     /** 로그아웃 */
