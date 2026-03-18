@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -81,20 +82,20 @@ public class ToothBrushingService {
         }
 
         if (toothBrushingList.size() > 0) {
-            Date latestToothBrushingCreated = toothBrushingList.get(toothBrushingList.size() - 1).getCreated();
+            // 입력 시각이 마지막 기록보다 이르더라도, 같은 날 다른 기록과 1시간 이상 차이 나면 저장 허용
+            long nearestSecondsGap = toothBrushingList.stream()
+                    .mapToLong(toothBrushing ->
+                            Math.abs(brushingCreated.getTime() - toothBrushing.getCreated().getTime()) / 1000
+                    )
+                    .min()
+                    .orElse(Long.MAX_VALUE);
 
-            if (brushingCreated.before(latestToothBrushingCreated)) {
-                throw new BadRequestApiException("마지막 양치 시간 이후로만 기록할 수 있어요.");
-            }
-
-            // 양치한지 아직 1시간이 되지 않은 경우
-            long secondsAfterLatest = (brushingCreated.getTime() - latestToothBrushingCreated.getTime()) / 1000;
-            if (secondsAfterLatest < 3600) {
+            if (nearestSecondsGap < 3600) {
                 return ToothBrushingRegisterDto.builder()
                         .toothBrushingList(toothBrushingList.stream()
                                 .map(t -> new ToothBrushingDto(t.getToothBrushingId(), t.getCreated()))
                                 .toList())
-                        .timeInterval(3600 - secondsAfterLatest)
+                        .timeInterval(3600 - nearestSecondsGap)
                         .build();
             }
         }
