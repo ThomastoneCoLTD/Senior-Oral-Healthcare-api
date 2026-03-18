@@ -99,7 +99,14 @@ public class ToothBrushingService {
             }
         }
 
-        toothBrushingRepository.nativeInsert(user.getUserId(), brushingCreated, brushingCreated);
+        ToothBrushing toothBrushing = toothBrushingRepository.save(ToothBrushing.builder()
+                .userId(user.getUserId())
+                .build());
+
+        if (requestDto != null && requestDto.getBrushingTime() != null && !requestDto.getBrushingTime().isBlank()) {
+            toothBrushingRepository.updateCreated(toothBrushing.getToothBrushingId(), brushingCreated, brushingCreated);
+        }
+
         toothBrushingList = toothBrushingRepository.findByUserIdAndCreatedOrderByCreated(
                 user.getUserId(),
                 DateFormatUtil.dateToString("yyyy-MM-dd", brushingCreated)

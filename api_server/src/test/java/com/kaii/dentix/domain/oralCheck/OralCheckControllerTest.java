@@ -202,7 +202,15 @@ public class OralCheckControllerTest {
                                 .date(new Date())
                                 .status(OralDateStatusType.GOOD)
                                 .questionnaire(true)
-                                .detailList(List.of())
+                                .detailList(List.of(
+                                        OralCheckDto.Detail.builder()
+                                                .sectionType(OralSectionType.ORAL_CHECK)
+                                                .date(new Date())
+                                                .identifier(1L)
+                                                .oralCheckId(1L)
+                                                .oralCheckResultTotalType(OralCheckResultType.GOOD)
+                                                .build()
+                                ))
                                 .build()
                 ))
                 .build();
@@ -237,7 +245,14 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.dailyList[].date").type(JsonFieldType.STRING).description("날짜"),
                                 fieldWithPath("response.dailyList[].status").type(JsonFieldType.STRING).optional().description("일별 상태"),
                                 fieldWithPath("response.dailyList[].questionnaire").type(JsonFieldType.BOOLEAN).description("문진표 작성 여부"),
-                                fieldWithPath("response.dailyList[].detailList").type(JsonFieldType.ARRAY).description("상세 활동 목록")
+                                fieldWithPath("response.dailyList[].detailList").type(JsonFieldType.ARRAY).description("상세 활동 목록"),
+                                fieldWithPath("response.dailyList[].detailList[].sectionType").type(JsonFieldType.STRING).description("상세 섹션 타입"),
+                                fieldWithPath("response.dailyList[].detailList[].date").type(JsonFieldType.STRING).description("상세 활동 시각"),
+                                fieldWithPath("response.dailyList[].detailList[].identifier").type(JsonFieldType.NUMBER).description("상세 활동 식별자"),
+                                fieldWithPath("response.dailyList[].detailList[].oralCheckId").type(JsonFieldType.NUMBER).optional().description("구강 검진 ID"),
+                                fieldWithPath("response.dailyList[].detailList[].oralCheckResultTotalType").type(JsonFieldType.STRING).optional().description("구강 검진 종합 결과"),
+                                fieldWithPath("response.dailyList[].detailList[].toothBrushingCount").type(JsonFieldType.NUMBER).optional().description("양치 횟수"),
+                                fieldWithPath("response.dailyList[].detailList[].oralStatusList").type(JsonFieldType.ARRAY).description("구강 상태 목록")
                         )
                 ));
     }

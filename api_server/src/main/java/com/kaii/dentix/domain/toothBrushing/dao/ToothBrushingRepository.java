@@ -18,12 +18,13 @@ public interface ToothBrushingRepository extends JpaRepository<ToothBrushing, Lo
 
     @Modifying
     @Transactional
-    @Query(value = "INSERT INTO tooth_brushing (user_id, created, modified) VALUES (:userId, :created, :modified)", nativeQuery = true)
-    int nativeInsert(Long userId, Date created, Date modified);
+    @Query(value = "INSERT INTO toothBrushing (userId, created) VALUES (:userId, :created)", nativeQuery = true)
+    int nativeInsert(Long userId, Date created);
 
-    default int nativeInsert(Long userId, Date created) {
-        return nativeInsert(userId, created, created);
-    }
+    @Modifying
+    @Transactional
+    @Query("UPDATE ToothBrushing tb SET tb.created = :created, tb.modified = :modified WHERE tb.toothBrushingId = :toothBrushingId")
+    int updateCreated(Long toothBrushingId, Date created, Date modified);
 
     List<ToothBrushing> findByUserIdAndCreatedStartingWithOrderByCreated(Long userId, String createdPrefix);
 }
