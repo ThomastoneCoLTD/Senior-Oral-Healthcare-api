@@ -99,7 +99,7 @@ public class OralCheckService {
 
         long startTime = System.currentTimeMillis();
 
-        // [증빙2-1], [증빙2-2] 업로드 API 요청 / 서버 수신 로그
+        // 업로드 API 요청 / 서버 수신 로그
         log.info("[POST_UPLOAD_API_REQUEST] requestUri={}, method={}, contentType={}, type={}",
                 request.getRequestURI(),
                 request.getMethod(),
@@ -147,7 +147,6 @@ public class OralCheckService {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        // [증빙2-3] 이미지 저장 경로 로그
         log.info("[Upload Image URL] 업로드 완료 - userId={}, organizationId={}, originalFilename={}, uploadedUrl={}",
                 user.getUserId(),
                 organization.getOrganizationId(),
@@ -259,7 +258,7 @@ public class OralCheckService {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        // [증빙2-4] 결과 저장 로그
+        // 결과 저장 로그
         log.info("[Analysis Finish] oralCheckId={}, success={}, analysisState={}, userId={}, organizationId={}, uploadedUrl={}",
                 oralCheck.getOralCheckId(),
                 success,
@@ -295,7 +294,7 @@ public class OralCheckService {
                 responseBody
         );
 
-        // [증빙2-1] 응답 로그
+        // 응답 로그
         log.info("[POST_UPLOAD_API_REQUEST] status=200, message={}, oralCheckId={}, success={}, remainingResponses={}, elapsedMs={}",
                 responseMessage,
                 responseBody.getOralCheckId(),
