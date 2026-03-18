@@ -82,9 +82,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
         List<Long> userIds = users.stream().map(User::getUserId).toList();
 
         // 2~5) 연관 데이터 조회 (기존 로직 유지)
-        Map<Long, Questionnaire> latestQuestionnaires = getLatestQuestionnaires(userIds);
         Map<Long, OralCheck> latestOralChecks = getLatestOralChecks(userIds);
-        Map<Long, String> oralStatusTitles = getOralStatusTitles(userIds);
         Map<Long, List<String>> serviceNames = getUserServices(userIds);
 
         // 6) DTO 리스트 조립 (AdminUserDto.Info 생성자 사용)
@@ -94,14 +92,6 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                         u.getUserLoginIdentifier(),
                         u.getUserName(),
                         u.getUserGender(),
-
-                        // oralStatusTitle
-                        oralStatusTitles.getOrDefault(u.getUserId(), null),
-
-                        // questionnaireDate
-                        latestQuestionnaires.containsKey(u.getUserId())
-                                ? latestQuestionnaires.get(u.getUserId()).getCreated()
-                                : null,
 
                         // oralCheckResultTotalType
                         latestOralChecks.containsKey(u.getUserId())
