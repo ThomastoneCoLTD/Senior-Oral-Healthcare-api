@@ -15,6 +15,9 @@ import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
 import com.kaii.dentix.domain.toothBrushing.dao.ToothBrushingCustomRepository;
 import com.kaii.dentix.domain.toothBrushing.dao.ToothBrushingRepository;
 import com.kaii.dentix.domain.toothBrushing.domain.ToothBrushing;
+import com.kaii.dentix.domain.type.OralDateStatusType;
+import com.kaii.dentix.domain.type.OralSectionType;
+import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -75,6 +78,7 @@ class OralCheckServiceTest {
         OralCheck recentOralCheck = OralCheck.builder()
                 .oralCheckId(200L)
                 .user(user)
+                .oralCheckAnalysisState(OralCheckAnalysisState.SUCCESS)
                 .oralCheckResultTotalType(OralCheckResultType.GOOD)
                 .build();
         recentOralCheck.setCreated(recentDate);
@@ -82,6 +86,7 @@ class OralCheckServiceTest {
         OralCheck oldOralCheck = OralCheck.builder()
                 .oralCheckId(100L)
                 .user(user)
+                .oralCheckAnalysisState(OralCheckAnalysisState.SUCCESS)
                 .oralCheckResultTotalType(OralCheckResultType.ATTENTION)
                 .build();
         oldOralCheck.setCreated(oldDate);
@@ -105,5 +110,77 @@ class OralCheckServiceTest {
         assertThat(oldDetail).isNotNull();
         assertThat(oldDetail.getIdentifier()).isEqualTo(100L);
         assertThat(oldDetail.getOralCheckId()).isEqualTo(100L);
+    }
+
+    @Test
+    void oralCheck_skipsFailedOralCheckWithoutResultTypeWhenBuildingDailyStatus() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        User user = User.builder()
+                .userId(1L)
+                .organization(Organization.builder().organizationId(10L).organizationName("테스트기관").build())
+                .build();
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DATE, -1);
+        Date targetDate = calendar.getTime();
+
+        OralCheck failedOralCheck = OralCheck.builder()
+                .oralCheckId(300L)
+                .user(user)
+                .oralCheckAnalysisState(OralCheckAnalysisState.FAIL)
+                .build();
+        failedOralCheck.setCreated(targetDate);
+
+        Questionnaire questionnaire = Questionnaire.builder()
+                .questionnaireId(400L)
+                .userId(1L)
+                .questionnaireVersion("v1")
+                .form("{}")
+                .build();
+        questionnaire.setCreated(targetDate);
+
+        given(userService.getTokenUser(request)).willReturn(user);
+        given(oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(1L)).willReturn(List.of(failedOralCheck));
+        given(toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(Collections.<ToothBrushing>emptyList());
+        given(questionnaireRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(List.of(questionnaire));
+        given(oralStatusAssignmentRepository.findAllByQuestionnaireIn(List.of(questionnaire))).willReturn(Collections.emptyList());
+
+        OralCheckDto.TimelineResponse response = oralCheckService.oralCheck(request);
+
+        String targetDateString = DateFormatUtil.dateToString("yyyy-MM-dd", targetDate);
+        OralCheckDto.Daily targetDaily = response.getDailyList().stream()
+                .filter(daily -> DateFormatUtil.dateToString("yyyy-MM-dd", daily.getDate()).equals(targetDateString))
+                .findFirst()
+                .orElse(null);
+
+        assertThat(targetDaily).isNotNull();
+        assertThat(targetDaily.getStatus()).isEqualTo(OralDateStatusType.QUESTIONNAIRE);
+        assertThat(targetDaily.getDetailList()).extracting(OralCheckDto.Detail::getSectionType)
+                .containsExactly(OralSectionType.QUESTIONNAIRE);
+    }
+
+    @Test
+    void oralCheckResult_returnsFailedResponseWhenAnalysisWasNotSuccessful() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        User user = User.builder()
+                .userId(1L)
+                .organization(Organization.builder().organizationId(10L).organizationName("테스트기관").build())
+                .build();
+
+        OralCheck failedOralCheck = OralCheck.builder()
+                .oralCheckId(500L)
+                .user(user)
+                .oralCheckAnalysisState(OralCheckAnalysisState.FAIL)
+                .build();
+        failedOralCheck.setCreated(new Date());
+
+        given(userService.getTokenUser(request)).willReturn(user);
+        given(oralCheckRepository.findById(500L)).willReturn(java.util.Optional.of(failedOralCheck));
+
+        OralCheckDto.ResultResponse response = oralCheckService.oralCheckResult(request, 500L);
+
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getCreated()).isEqualTo(failedOralCheck.getCreated());
+        assertThat(response.getOralCheckCommentList()).isEmpty();
     }
 }

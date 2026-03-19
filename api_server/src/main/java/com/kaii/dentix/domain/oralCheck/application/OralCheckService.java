@@ -454,6 +454,17 @@ public class OralCheckService {
             throw new BadRequestApiException("회원 정보와 구강 검진 정보가 일치하지 않습니다.");
         }
 
+        if (oralCheck.getOralCheckAnalysisState() != OralCheckAnalysisState.SUCCESS
+                || oralCheck.getOralCheckResultTotalType() == null) {
+            return OralCheckDto.ResultResponse.builder()
+                    .userId(user.getUserId())
+                    .organizationId(user.getOrganization().getOrganizationId())
+                    .success(false)
+                    .created(oralCheck.getCreated())
+                    .oralCheckCommentList(List.of())
+                    .build();
+        }
+
         List<String> oralCheckCommentList = this.calcDivisionCommentType(oralCheck);
 
         // [수정] 통합 DTO의 내부 클래스(ResultResponse) 빌더 사용
@@ -485,6 +496,10 @@ public class OralCheckService {
         User user = userService.getTokenUser(httpServletRequest);
 
         List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
+        List<OralCheck> successfulOralCheckList = oralCheckList.stream()
+                .filter(oralCheck -> oralCheck.getOralCheckAnalysisState() == OralCheckAnalysisState.SUCCESS)
+                .filter(oralCheck -> oralCheck.getOralCheckResultTotalType() != null)
+                .toList();
         List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<OralStatusAssignment> oralStatusAssignments = oralStatusAssignmentRepository.findAllByQuestionnaireIn(questionnaireList);
@@ -507,7 +522,7 @@ public class OralCheckService {
         List<OralCheckDto.Section> sectionList = new ArrayList<>();
 
         // 1. 구강 촬영
-        OralCheck latestOralCheck = !oralCheckList.isEmpty() ? oralCheckList.get(0) : null;
+        OralCheck latestOralCheck = !successfulOralCheckList.isEmpty() ? successfulOralCheckList.get(0) : null;
         sectionList.add(OralCheckDto.Section.builder()
                 .sectionType(OralSectionType.ORAL_CHECK)
                 .date(latestOralCheck != null ? latestOralCheck.getCreated() : null)
@@ -566,7 +581,7 @@ public class OralCheckService {
             String dateString = DateFormatUtil.dateToString(datePattern, calendar.getTime());
 
             // 구강 촬영 상세
-            detailList.addAll(oralCheckList.stream()
+            detailList.addAll(successfulOralCheckList.stream()
                     .filter(oc -> DateFormatUtil.dateToString(datePattern, oc.getCreated()).equals(dateString))
                     .map(oc -> OralCheckDto.Detail.builder()
                             .sectionType(OralSectionType.ORAL_CHECK)
@@ -616,6 +631,9 @@ public class OralCheckService {
             } else if (!detailList.isEmpty()) {
                 for (OralCheckDto.Detail dto : detailList) {
                     if (dto.getSectionType() == OralSectionType.ORAL_CHECK) {
+                        if (dto.getOralCheckResultTotalType() == null) {
+                            continue;
+                        }
                         switch (dto.getOralCheckResultTotalType()) {
                             case HEALTHY -> dailyStatusType = OralDateStatusType.HEALTHY;
                             case GOOD -> dailyStatusType = OralDateStatusType.GOOD;
