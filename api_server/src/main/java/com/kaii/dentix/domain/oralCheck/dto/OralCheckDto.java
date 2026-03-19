@@ -135,6 +135,8 @@ public class OralCheckDto {
         private Date date;
         private long identifier;
         private Long oralCheckId;
+        private Long questionnaireId;
+        private Long toothBrushingId;
         private OralCheckResultType oralCheckResultTotalType;
         private Integer toothBrushingCount;
         @Builder.Default

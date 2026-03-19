@@ -152,7 +152,11 @@ public class QuestionnaireService {
                 )
         );
 
-        return new QuestionnaireDto.IdResponse(questionnaire.getQuestionnaireId());
+        return QuestionnaireDto.IdResponse.builder()
+                .questionnaireId(questionnaire.getQuestionnaireId())
+                .nextStep("ORAL_CHECK")
+                .nextPath("/oralCheck")
+                .build();
     }
 
     /**

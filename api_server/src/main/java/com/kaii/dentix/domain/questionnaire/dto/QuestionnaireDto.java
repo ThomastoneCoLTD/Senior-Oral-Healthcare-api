@@ -77,6 +77,8 @@ public class QuestionnaireDto {
     @NoArgsConstructor @AllArgsConstructor
     public static class IdResponse {
         private Long questionnaireId;
+        private String nextStep;
+        private String nextPath;
     }
 
     // =================================================================

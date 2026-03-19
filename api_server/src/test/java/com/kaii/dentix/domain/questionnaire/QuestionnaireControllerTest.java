@@ -169,7 +169,11 @@ public class QuestionnaireControllerTest {
 
         // given (Service Mocking 타입 변경)
         given(questionnaireService.questionnaireSubmit(any(HttpServletRequest.class), any(QuestionnaireDto.SubmitRequest.class)))
-                .willReturn(new QuestionnaireDto.IdResponse(1L));
+                .willReturn(QuestionnaireDto.IdResponse.builder()
+                        .questionnaireId(1L)
+                        .nextStep("ORAL_CHECK")
+                        .nextPath("/oralCheck")
+                        .build());
 
         // when
         ResultActions resultActions = mockMvc.perform(
@@ -196,7 +200,9 @@ public class QuestionnaireControllerTest {
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
-                                fieldWithPath("response.questionnaireId").type(JsonFieldType.NUMBER).description("문진표 고유번호")
+                                fieldWithPath("response.questionnaireId").type(JsonFieldType.NUMBER).description("문진표 고유번호"),
+                                fieldWithPath("response.nextStep").type(JsonFieldType.STRING).description("다음 진행 단계"),
+                                fieldWithPath("response.nextPath").type(JsonFieldType.STRING).description("다음 이동 경로")
                         )
                 ));
 

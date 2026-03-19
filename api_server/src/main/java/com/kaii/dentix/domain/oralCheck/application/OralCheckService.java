@@ -585,6 +585,7 @@ public class OralCheckService {
                         .sectionType(OralSectionType.TOOTH_BRUSHING)
                         .date(dailyToothBrushingList.get(i).getCreated())
                         .identifier(dailyToothBrushingList.get(i).getToothBrushingId())
+                        .toothBrushingId(dailyToothBrushingList.get(i).getToothBrushingId())
                         .toothBrushingCount(dailyToothBrushingList.size() - i)
                         .build());
             }
@@ -601,6 +602,7 @@ public class OralCheckService {
                             .sectionType(OralSectionType.QUESTIONNAIRE)
                             .date(q.getCreated())
                             .identifier(q.getQuestionnaireId())
+                            .questionnaireId(q.getQuestionnaireId())
                             .oralStatusList(oralStatusByQuestionnaireId.getOrDefault(q.getQuestionnaireId(), List.of()))
                             .build())
                     .toList());
