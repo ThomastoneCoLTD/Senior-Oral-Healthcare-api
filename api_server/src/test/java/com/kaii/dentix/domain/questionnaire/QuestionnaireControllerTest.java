@@ -171,8 +171,8 @@ public class QuestionnaireControllerTest {
         given(questionnaireService.questionnaireSubmit(any(HttpServletRequest.class), any(QuestionnaireDto.SubmitRequest.class)))
                 .willReturn(QuestionnaireDto.IdResponse.builder()
                         .questionnaireId(1L)
-                        .nextStep("ORAL_CHECK")
-                        .nextPath("/oralCheck")
+                        .nextStep("QUESTIONNAIRE_RESULT_MODAL")
+                        .nextPath("/questionnaire/result?questionnaireId=1")
                         .build());
 
         // when

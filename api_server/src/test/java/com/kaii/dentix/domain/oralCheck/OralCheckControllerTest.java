@@ -250,6 +250,8 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.dailyList[].detailList[].date").type(JsonFieldType.STRING).description("상세 활동 시각"),
                                 fieldWithPath("response.dailyList[].detailList[].identifier").type(JsonFieldType.NUMBER).description("상세 활동 식별자"),
                                 fieldWithPath("response.dailyList[].detailList[].oralCheckId").type(JsonFieldType.NUMBER).optional().description("구강 검진 ID"),
+                                fieldWithPath("response.dailyList[].detailList[].questionnaireId").type(JsonFieldType.NUMBER).optional().description("문진표 ID"),
+                                fieldWithPath("response.dailyList[].detailList[].toothBrushingId").type(JsonFieldType.NUMBER).optional().description("양치 기록 ID"),
                                 fieldWithPath("response.dailyList[].detailList[].oralCheckResultTotalType").type(JsonFieldType.STRING).optional().description("구강 검진 종합 결과"),
                                 fieldWithPath("response.dailyList[].detailList[].toothBrushingCount").type(JsonFieldType.NUMBER).optional().description("양치 횟수"),
                                 fieldWithPath("response.dailyList[].detailList[].oralStatusList").type(JsonFieldType.ARRAY).description("구강 상태 목록")

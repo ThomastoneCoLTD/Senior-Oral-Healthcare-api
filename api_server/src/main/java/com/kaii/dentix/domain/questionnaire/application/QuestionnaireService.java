@@ -154,8 +154,8 @@ public class QuestionnaireService {
 
         return QuestionnaireDto.IdResponse.builder()
                 .questionnaireId(questionnaire.getQuestionnaireId())
-                .nextStep("ORAL_CHECK")
-                .nextPath("/oralCheck")
+                .nextStep("QUESTIONNAIRE_RESULT_MODAL")
+                .nextPath("/questionnaire/result?questionnaireId=" + questionnaire.getQuestionnaireId())
                 .build();
     }
 
