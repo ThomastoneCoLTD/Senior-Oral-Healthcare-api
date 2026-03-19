@@ -6,6 +6,8 @@ import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
+import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
+import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
 import com.kaii.dentix.domain.oralStatusAssignment.dao.OralStatusAssignmentRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
@@ -52,6 +54,7 @@ class OralCheckServiceTest {
     @Mock private BillingService billingService;
     @Mock private UserRepository userRepository;
     @Mock private OralCheckRepository oralCheckRepository;
+    @Mock private OralStatusRepository oralStatusRepository;
     @Mock private ToothBrushingRepository toothBrushingRepository;
     @Mock private QuestionnaireRepository questionnaireRepository;
     @Mock private OralStatusAssignmentRepository oralStatusAssignmentRepository;
@@ -95,8 +98,6 @@ class OralCheckServiceTest {
         given(oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(1L)).willReturn(List.of(recentOralCheck, oldOralCheck));
         given(toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(Collections.<ToothBrushing>emptyList());
         given(questionnaireRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(Collections.<Questionnaire>emptyList());
-        given(oralStatusAssignmentRepository.findAllByQuestionnaireIn(Collections.emptyList())).willReturn(Collections.emptyList());
-
         OralCheckDto.TimelineResponse response = oralCheckService.oralCheck(request);
 
         String oldDateString = DateFormatUtil.dateToString("yyyy-MM-dd", oldDate);
@@ -143,7 +144,16 @@ class OralCheckServiceTest {
         given(oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(1L)).willReturn(List.of(failedOralCheck));
         given(toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(Collections.<ToothBrushing>emptyList());
         given(questionnaireRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(List.of(questionnaire));
-        given(oralStatusAssignmentRepository.findAllByQuestionnaireIn(List.of(questionnaire))).willReturn(Collections.emptyList());
+        given(oralStatusAssignmentRepository.findQuestionnaireOralStatuses(List.of(questionnaire.getQuestionnaireId())))
+                .willReturn(List.of(new OralStatusAssignmentProjection(questionnaire.getQuestionnaireId(), "A")));
+        given(oralStatusRepository.findAllByOralStatusTypeInOrderByOralStatusPriority(List.of("A")))
+                .willReturn(List.of(OralStatus.builder()
+                        .oralStatusType("A")
+                        .oralStatusPriority(1)
+                        .oralStatusTitle("건강형")
+                        .oralStatusDescription("설명")
+                        .oralStatusSubDescription("부연 설명")
+                        .build()));
 
         OralCheckDto.TimelineResponse response = oralCheckService.oralCheck(request);
 
@@ -182,5 +192,18 @@ class OralCheckServiceTest {
         assertThat(response.isSuccess()).isFalse();
         assertThat(response.getCreated()).isEqualTo(failedOralCheck.getCreated());
         assertThat(response.getOralCheckCommentList()).isEmpty();
+    }
+
+    private record OralStatusAssignmentProjection(Long questionnaireId, String oralStatusType)
+            implements OralStatusAssignmentRepository.QuestionnaireOralStatusProjection {
+        @Override
+        public Long getQuestionnaireId() {
+            return questionnaireId;
+        }
+
+        @Override
+        public String getOralStatusType() {
+            return oralStatusType;
+        }
     }
 }

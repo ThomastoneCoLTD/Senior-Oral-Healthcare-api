@@ -18,6 +18,6 @@ public interface QuestionnaireRepository extends JpaRepository<Questionnaire, Lo
 
     @Modifying
     @Transactional
-    @Query(value = "UPDATE questionnaire SET created = :created WHERE questionnaireId = :questionnaireId", nativeQuery = true)
+    @Query(value = "UPDATE questionnaire SET created = :created WHERE questionnaire_id = :questionnaireId", nativeQuery = true)
     int nativeUpdate(Long questionnaireId, Date created);
 }

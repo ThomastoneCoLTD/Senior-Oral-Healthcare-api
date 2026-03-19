@@ -18,18 +18,19 @@ public class OralStatusAssignment extends TimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_oral_status_id")
     private Long oralStatusAssignmentId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "questionnaireId")
+    @JoinColumn(name = "questionnaire_id")
     private Questionnaire questionnaire;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "oralCheckId")
+    @JoinColumn(name = "oral_check_id")
     private OralCheck oralCheck;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "oralStatusType", nullable = false)
+    @JoinColumn(name = "oral_status_type", nullable = false)
     private OralStatus oralStatus;
 
     public static OralStatusAssignment forQuestionnaire(Questionnaire questionnaire, String oralStatusType) {

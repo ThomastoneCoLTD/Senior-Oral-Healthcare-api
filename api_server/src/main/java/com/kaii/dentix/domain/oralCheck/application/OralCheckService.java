@@ -8,7 +8,9 @@ import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
+import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
 import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
+import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
@@ -29,7 +31,6 @@ import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.oralStatusAssignment.dao.OralStatusAssignmentRepository;
-import com.kaii.dentix.domain.oralStatusAssignment.domain.OralStatusAssignment;
 import com.kaii.dentix.global.common.aws.AWSS3Service;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
@@ -69,6 +70,7 @@ public class OralCheckService {
     private final BillingService billingService;
     private final UserRepository userRepository;
     private final OralCheckRepository oralCheckRepository;
+    private final OralStatusRepository oralStatusRepository;
     private final ToothBrushingRepository toothBrushingRepository;
     private final QuestionnaireRepository questionnaireRepository;
     private final OralStatusAssignmentRepository oralStatusAssignmentRepository;
@@ -502,15 +504,7 @@ public class OralCheckService {
                 .toList();
         List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
-        List<OralStatusAssignment> oralStatusAssignments = oralStatusAssignmentRepository.findAllByQuestionnaireIn(questionnaireList);
-        Map<Long, List<OralStatusDto.OralStatusType>> oralStatusByQuestionnaireId = oralStatusAssignments.stream()
-                .collect(Collectors.groupingBy(
-                        oralStatusAssignment -> oralStatusAssignment.getQuestionnaire().getQuestionnaireId(),
-                        Collectors.mapping(
-                                oralStatusAssignment -> OralStatusDto.OralStatusType.from(oralStatusAssignment.getOralStatus()),
-                                Collectors.toList()
-                        )
-                ));
+        Map<Long, List<OralStatusDto.OralStatusType>> oralStatusByQuestionnaireId = buildOralStatusByQuestionnaireId(questionnaireList);
 
         final String datePattern = "yyyy-MM-dd";
         Calendar calendar = Calendar.getInstance();
@@ -687,6 +681,45 @@ public class OralCheckService {
         }
 
         return earliest;
+    }
+
+    private Map<Long, List<OralStatusDto.OralStatusType>> buildOralStatusByQuestionnaireId(List<Questionnaire> questionnaireList) {
+        if (questionnaireList.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> questionnaireIds = questionnaireList.stream()
+                .map(Questionnaire::getQuestionnaireId)
+                .toList();
+
+        List<OralStatusAssignmentRepository.QuestionnaireOralStatusProjection> rows =
+                oralStatusAssignmentRepository.findQuestionnaireOralStatuses(questionnaireIds);
+
+        if (rows.isEmpty()) {
+            return Map.of();
+        }
+
+        List<String> oralStatusTypes = rows.stream()
+                .map(OralStatusAssignmentRepository.QuestionnaireOralStatusProjection::getOralStatusType)
+                .distinct()
+                .toList();
+
+        Map<String, OralStatusDto.OralStatusType> oralStatusMap = oralStatusRepository.findAllByOralStatusTypeInOrderByOralStatusPriority(oralStatusTypes)
+                .stream()
+                .collect(Collectors.toMap(
+                        OralStatus::getOralStatusType,
+                        OralStatusDto.OralStatusType::from
+                ));
+
+        return rows.stream()
+                .filter(row -> oralStatusMap.containsKey(row.getOralStatusType()))
+                .collect(Collectors.groupingBy(
+                        OralStatusAssignmentRepository.QuestionnaireOralStatusProjection::getQuestionnaireId,
+                        Collectors.mapping(
+                                row -> oralStatusMap.get(row.getOralStatusType()),
+                                Collectors.toList()
+                        )
+                ));
     }
 
     /**

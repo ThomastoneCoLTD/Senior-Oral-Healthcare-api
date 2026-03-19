@@ -12,7 +12,6 @@ import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.oralStatusAssignment.dao.OralStatusAssignmentRepository;
-import com.kaii.dentix.domain.oralStatusAssignment.domain.OralStatusAssignment;
 import com.kaii.dentix.global.common.util.DateFormatUtil;
 import com.kaii.dentix.global.common.util.Utils;
 import lombok.RequiredArgsConstructor;
@@ -48,10 +47,12 @@ public class UserScheduler {
         List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
         List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
-        List<OralStatusAssignment> oralStatusAssignments = oralStatusAssignmentRepository.findAllByQuestionnaireIn(questionnaireList);
+        List<Long> questionnaireIds = questionnaireList.stream().map(Questionnaire::getQuestionnaireId).toList();
 
         toothBrushingRepository.deleteAllInBatch(toothBrushingList);
-        oralStatusAssignmentRepository.deleteAllInBatch(oralStatusAssignments);
+        if (!questionnaireIds.isEmpty()) {
+            oralStatusAssignmentRepository.deleteByQuestionnaireIds(questionnaireIds);
+        }
         questionnaireRepository.deleteAllInBatch(questionnaireList);
         oralCheckRepository.deleteAllInBatch(oralCheckList);
 

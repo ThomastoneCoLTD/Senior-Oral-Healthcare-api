@@ -9,6 +9,7 @@ import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
 import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
+import com.kaii.dentix.domain.oralStatusAssignment.dao.OralStatusAssignmentRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
 import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireDto;
@@ -41,6 +42,7 @@ public class QuestionnaireService {
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
     private final OralStatusRepository oralStatusRepository;
+    private final OralStatusAssignmentRepository oralStatusAssignmentRepository;
     private final QuestionnaireRepository questionnaireRepository;
     private final ContentsCustomRepository contentsCustomRepository;
 
@@ -173,7 +175,8 @@ public class QuestionnaireService {
                 .orElse("ko");
 
         // 구강 상태 매핑
-        List<OralStatusDto.Info> oralStatusList = questionnaire.getOralStatuses().stream()
+        List<String> oralStatusTypes = oralStatusAssignmentRepository.findOralStatusTypesByQuestionnaireId(questionnaireId);
+        List<OralStatusDto.Info> oralStatusList = oralStatusRepository.findAllByOralStatusTypeInOrderByOralStatusPriority(oralStatusTypes).stream()
                 .map(oralStatus -> OralStatusDto.Info.from(oralStatus, lang))
                 .toList();
 
