@@ -6,8 +6,8 @@ import com.kaii.dentix.domain.contents.dao.ContentsCategoryRepository;
 import com.kaii.dentix.domain.contents.dao.ContentsCustomRepository;
 import com.kaii.dentix.domain.contents.dao.ContentsRepository;
 import com.kaii.dentix.domain.contents.dto.ContentsDto;
-import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
+import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
 import com.kaii.dentix.domain.type.ContentsType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.domain.User;
@@ -43,14 +43,11 @@ class ContentsServiceTest {
     @Mock
     private QuestionnaireRepository questionnaireRepository;
 
-    @Mock
-    private OralCheckRepository oralCheckRepository;
-
     @InjectMocks
     private ContentsService contentsService;
 
     @Test
-    void hidesPersonalizedCategoryWhenVerifiedUserHasNoQuestionnaireAndNoOralCheck() {
+    void hidesPersonalizedCategoryWhenVerifiedUserHasNoQuestionnaire() {
         User user = User.builder()
                 .userId(1L)
                 .userName("김덴티")
@@ -78,7 +75,6 @@ class ContentsServiceTest {
                         .build()
         ));
         when(questionnaireRepository.findTopByUserIdOrderByCreatedDesc(1L)).thenReturn(Optional.empty());
-        when(oralCheckRepository.findTopByUser_UserIdOrderByCreatedDesc(1L)).thenReturn(Optional.empty());
 
         ContentsDto.ListResponse response = contentsService.getContentsList(user);
 
@@ -86,5 +82,52 @@ class ContentsServiceTest {
                 .doesNotContain(0);
         assertThat(response.getContents()).allSatisfy(content ->
                 assertThat(content.getCategoryIds()).doesNotContain(0));
+    }
+
+    @Test
+    void addsPersonalizedCategoryOnlyWhenQuestionnaireCustomizedContentsExist() {
+        User user = User.builder()
+                .userId(1L)
+                .userName("김덴티")
+                .isVerify(YnType.Y)
+                .build();
+
+        when(contentsCategoryRepository.findAll(any(Sort.class))).thenReturn(List.of(
+                com.kaii.dentix.domain.contents.domain.ContentsCategory.builder()
+                        .contentsCategoryId(1)
+                        .contentsCategoryName("질병")
+                        .contentsCategoryColor("#98B4ED")
+                        .contentsCategorySort(1)
+                        .build()
+        ));
+        when(contentsCustomRepository.getContents()).thenReturn(List.of(
+                ContentsDto.Summary.builder()
+                        .id(1L)
+                        .title("콘텐츠")
+                        .sort(1)
+                        .type(ContentsType.CARD)
+                        .typeColor("#FF9F06")
+                        .thumbnail("thumb")
+                        .videoURL(null)
+                        .categoryIds(new java.util.ArrayList<>(List.of(1)))
+                        .build()
+        ));
+
+        Questionnaire questionnaire = Questionnaire.builder()
+                .questionnaireId(10L)
+                .userId(1L)
+                .questionnaireVersion("v1")
+                .form("{}")
+                .build();
+
+        when(questionnaireRepository.findTopByUserIdOrderByCreatedDesc(1L)).thenReturn(Optional.of(questionnaire));
+        when(contentsCustomRepository.getCustomizedContentsIdList(10L)).thenReturn(List.of(1L));
+
+        ContentsDto.ListResponse response = contentsService.getContentsList(user);
+
+        assertThat(response.getCategories()).extracting(ContentsDto.Category::getId)
+                .contains(0);
+        assertThat(response.getContents()).allSatisfy(content ->
+                assertThat(content.getCategoryIds()).containsExactly(0, 1));
     }
 }

@@ -6,8 +6,6 @@ import com.kaii.dentix.domain.contents.dao.ContentsCustomRepository;
 import com.kaii.dentix.domain.contents.dao.ContentsRepository;
 import com.kaii.dentix.domain.contents.domain.Contents;
 import com.kaii.dentix.domain.contents.dto.ContentsDto;
-import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
-import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
 import com.kaii.dentix.domain.type.YnType;
@@ -34,7 +32,6 @@ public class ContentsService {
     private final ContentsCardRepository contentsCardRepository;
     private final ContentsCustomRepository contentsCustomRepository;
     private final QuestionnaireRepository questionnaireRepository;
-    private final OralCheckRepository oralCheckRepository;
     /**
      * 콘텐츠 카테고리 목록 생성 (내부 헬퍼 메서드)
      */
@@ -92,19 +89,7 @@ public class ContentsService {
             Optional<Questionnaire> questionnaireOpt =
                     questionnaireRepository.findTopByUserIdOrderByCreatedDesc(user.getUserId());
 
-            Optional<OralCheck> oralCheckOpt =
-                    oralCheckRepository.findTopByUser_UserIdOrderByCreatedDesc(user.getUserId());
-
-            if (oralCheckOpt.isPresent()
-                    && (questionnaireOpt.isEmpty()
-                    || oralCheckOpt.get().getCreated().before(questionnaireOpt.get().getCreated()))) {
-
-                customizedIds = contentsCustomRepository.getCustomizedContentsIdListByOralCheck(
-                        oralCheckOpt.get().getOralCheckId()
-                );
-
-            } else if (questionnaireOpt.isPresent()) {
-
+            if (questionnaireOpt.isPresent()) {
                 customizedIds = contentsCustomRepository.getCustomizedContentsIdList(
                         questionnaireOpt.get().getQuestionnaireId()
                 );
