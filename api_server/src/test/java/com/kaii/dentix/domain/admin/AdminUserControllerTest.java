@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.admin;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.admin.application.AdminUserService;
 import com.kaii.dentix.domain.admin.controller.AdminUserController;
+import com.kaii.dentix.domain.admin.domain.Admin;
 import com.kaii.dentix.domain.admin.dto.AdminUserDto; //통합 DTO Import
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
@@ -21,6 +22,7 @@ import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -42,6 +44,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.springframework.restdocs.request.RequestDocumentation.queryParameters;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AdminUserController.class)
@@ -330,5 +333,65 @@ public class AdminUserControllerTest {
                 ));
 
         verify(adminUserService).userList(any(AdminUserDto.SearchRequest.class), any(HttpServletRequest.class));
+    }
+
+    @Test
+    void downloadUserTemplate() throws Exception {
+        given(adminUserService.createBulkUploadTemplate()).willReturn("excel".getBytes());
+
+        mockMvc.perform(
+                        RestDocumentationRequestBuilders.get("/admin/user/bulk-upload/template")
+                                .header(HttpHeaders.AUTHORIZATION, "admin-template.AccessToken")
+                                .with(user("user").roles("ADMIN"))
+                )
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.containsString("user_bulk_template.xlsx")))
+                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+
+        verify(adminUserService).createBulkUploadTemplate();
+    }
+
+    @Test
+    void uploadUsers() throws Exception {
+        Admin admin = Admin.builder().adminId(1L).build();
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "users.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "excel".getBytes()
+        );
+        AdminUserDto.BulkUploadResponse response = AdminUserDto.BulkUploadResponse.builder()
+                .successCount(20)
+                .createdCount(20)
+                .savedCount(20)
+                .count(20)
+                .failCount(2)
+                .failList(List.of(
+                        AdminUserDto.FailInfo.builder().row(3).reason("아이디 중복").build(),
+                        AdminUserDto.FailInfo.builder().row(7).reason("전화번호 형식 오류").build()
+                ))
+                .build();
+
+        given(adminService.getTokenAdmin(any(HttpServletRequest.class))).willReturn(admin);
+        given(adminUserService.processExcelUpload(any(), any(Admin.class))).willReturn(response);
+
+        mockMvc.perform(
+                        multipart("/admin/user/bulk-upload")
+                                .file(file)
+                                .header(HttpHeaders.AUTHORIZATION, "admin-bulk-upload.AccessToken")
+                                .with(user("user").roles("ADMIN"))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(jsonPath("response.successCount").value(20))
+                .andExpect(jsonPath("response.createdCount").value(20))
+                .andExpect(jsonPath("response.savedCount").value(20))
+                .andExpect(jsonPath("response.count").value(20))
+                .andExpect(jsonPath("response.failCount").value(2))
+                .andExpect(jsonPath("response.failList[0].row").value(3))
+                .andExpect(jsonPath("response.failList[0].reason").value("아이디 중복"));
+
+        verify(adminService).getTokenAdmin(any(HttpServletRequest.class));
+        verify(adminUserService).processExcelUpload(any(), any(Admin.class));
     }
 }

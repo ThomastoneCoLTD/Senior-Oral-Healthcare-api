@@ -8,16 +8,15 @@ import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.global.common.response.DataResponse;
 import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @RestController
@@ -103,67 +102,26 @@ public class AdminUserController {
      * 일반관리자 - 기관 사용자 일괄등록 엑셀 양식 다운로드
      */
     @GetMapping(value = "/bulk-upload/template", name = "기관 사용자 일괄등록 엑셀 양식 다운로드")
-    public void downloadUserTemplate(HttpServletResponse response) throws IOException {
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("UserTemplate");
+    public ResponseEntity<byte[]> downloadUserTemplate() {
+        byte[] templateBytes = adminUserService.createBulkUploadTemplate();
 
-        // 헤더
-        String[] headers = {
-                "userLoginIdentifier", "userPassword", "userName", "userGender",
-                "userPhoneNumber", "birth", "findPwdQuestionId", "findPwdAnswer",
-                "organizationId", "appServiceIds", "userServiceAgreementRequest"
-        };
-        Row header = sheet.createRow(0);
-        CellStyle headerStyle = workbook.createCellStyle();
-        Font font = workbook.createFont();
-        font.setBold(true);
-        headerStyle.setFont(font);
-        headerStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-        headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        headerStyle.setAlignment(HorizontalAlignment.CENTER);
-
-        for (int i = 0; i < headers.length; i++) {
-            Cell cell = header.createCell(i);
-            cell.setCellValue(headers[i]);
-            cell.setCellStyle(headerStyle);
-            sheet.setColumnWidth(i, 6000);
-        }
-
-        // 예시 데이터
-        Row example = sheet.createRow(1);
-        example.createCell(0).setCellValue("user01");
-        example.createCell(1).setCellValue("test1234!");
-        example.createCell(2).setCellValue("홍길동");
-        example.createCell(3).setCellValue("M");
-        example.createCell(4).setCellValue("01012345678");
-        example.createCell(5).setCellValue("1990-08-21");
-        example.createCell(6).setCellValue("1");
-        example.createCell(7).setCellValue("테스트답변");
-        example.createCell(8).setCellValue("2");
-        example.createCell(9).setCellValue("1,2");
-        example.createCell(10).setCellValue("1,2,3,4,5");
-
-        // 응답
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=user_bulk_template.xlsx");
-        workbook.write(response.getOutputStream());
-        workbook.close();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + new String("user_bulk_template.xlsx".getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1) + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(templateBytes);
     }
 
     /**
      * 일반관리자 - 기관 사용자 일괄등록 업로드
      */
     @PostMapping(value = "/bulk-upload", name = "기관 사용자 일괄등록 업로드")
-    public DataResponse<String> uploadUsers(
+    public DataResponse<AdminUserDto.BulkUploadResponse> uploadUsers(
             @RequestParam("file") MultipartFile file,
             HttpServletRequest request
     ) {
-        //중복 로직 제거: AdminService를 통해 토큰 검증 및 Admin 객체 획득
         Admin admin = adminService.getTokenAdmin(request);
-
-        // 서비스 호출
-        String result = adminUserService.processExcelUpload(file, admin);
-
+        AdminUserDto.BulkUploadResponse result = adminUserService.processExcelUpload(file, admin);
         return new DataResponse<>(result);
     }
 }

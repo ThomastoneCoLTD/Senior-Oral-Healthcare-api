@@ -120,4 +120,42 @@ public class AdminUserDto {
         private String name;
         private GenderType gender;
     }
+
+    // =================================================================
+    // 4. 사용자 일괄 업로드 (Bulk Upload)
+    // =================================================================
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BulkUploadResponse {
+        private int successCount;
+        private int createdCount;
+        private int savedCount;
+        private int count;
+        private int failCount;
+        private List<FailInfo> failList;
+
+        public static BulkUploadResponse of(int successCount, List<FailInfo> failList) {
+            int failCount = failList == null ? 0 : failList.size();
+
+            return BulkUploadResponse.builder()
+                    .successCount(successCount)
+                    .createdCount(successCount)
+                    .savedCount(successCount)
+                    .count(successCount)
+                    .failCount(failCount)
+                    .failList(failList == null ? List.of() : failList)
+                    .build();
+        }
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FailInfo {
+        private int row;
+        private String reason;
+    }
 }
