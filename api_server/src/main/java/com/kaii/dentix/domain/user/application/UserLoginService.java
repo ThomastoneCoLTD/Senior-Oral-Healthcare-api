@@ -162,7 +162,7 @@ public class UserLoginService {
         }
 
         if (user.getIsVerify() != YnType.Y) {
-            throw new UnauthorizedException("관리자 승인 후 이용 가능합니다.");
+            throw new UnauthorizedException("관리자 승인을 받아야 로그인할 수 있습니다.");
         }
 
         // 구독/기관 정보

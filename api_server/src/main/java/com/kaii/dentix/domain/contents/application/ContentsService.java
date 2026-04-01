@@ -8,6 +8,8 @@ import com.kaii.dentix.domain.contents.domain.Contents;
 import com.kaii.dentix.domain.contents.dto.ContentsDto;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
+import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.type.PlanName;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
@@ -79,13 +81,14 @@ public class ContentsService {
 
         boolean isVerifiedUser = (user != null && user.getIsVerify() == YnType.Y);
         String userName = isVerifiedUser ? user.getUserName() : null;
+        boolean canShowPersonalizedContents = canShowPersonalizedContents(user);
 
         // 2. 전체 콘텐츠 리스트 조회
         List<ContentsDto.Summary> allContents = contentsCustomRepository.getContents();
         List<Long> customizedIds = new ArrayList<>();
 
         // 3. 맞춤 콘텐츠 태깅 (인증된 사용자)
-        if (isVerifiedUser) {
+        if (isVerifiedUser && canShowPersonalizedContents) {
             Optional<Questionnaire> questionnaireOpt =
                     questionnaireRepository.findTopByUserIdOrderByCreatedDesc(user.getUserId());
 
@@ -114,6 +117,19 @@ public class ContentsService {
                 .categories(categoryList)
                 .contents(allContents)
                 .build();
+    }
+
+    private boolean canShowPersonalizedContents(User user) {
+        if (user == null || user.getOrganization() == null) {
+            return false;
+        }
+
+        SubscriptionPlan subscriptionPlan = user.getOrganization().getCurrentSubscriptionPlan();
+        if (subscriptionPlan == null) {
+            subscriptionPlan = user.getOrganization().getSubscriptionPlan();
+        }
+
+        return subscriptionPlan != null && subscriptionPlan.getPlanName() != PlanName.SMALL;
     }
 
     /**

@@ -53,7 +53,8 @@ public class GlobalExceptionHandler {
             return null;
         }
         log.info("error : ", e);
-        return ErrorResponse.of(HttpStatus.UNAUTHORIZED, StringUtils.isNotBlank(e.getMessage()) ? e.getMessage() : ResponseMessage.UNAUTHORIZED_MSG);
+        String message = StringUtils.isNotBlank(e.getMessage()) ? e.getMessage() : ResponseMessage.UNAUTHORIZED_MSG;
+        return ErrorResponse.of(HttpStatus.UNAUTHORIZED, translateUnauthorizedMessage(request, message));
     }
     
     /**
@@ -233,5 +234,27 @@ public class GlobalExceptionHandler {
         log.error("error : " + e);
         log.info("error : ", e);
         return ErrorResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, ResponseMessage.INTERNAL_SERVER_ERROR_MSG);
+    }
+
+    private String translateUnauthorizedMessage(HttpServletRequest request, String message) {
+        boolean english = isEnglishRequest(request);
+
+        if ("아이디 혹은 비밀번호가 올바르지 않습니다.".equals(message)) {
+            return english ? "Please check your ID or password." : message;
+        }
+
+        if ("관리자 승인을 받아야 로그인할 수 있습니다.".equals(message)
+                || "관리자 승인 후 이용 가능합니다.".equals(message)) {
+            return english
+                    ? "Administrator approval is required before you can log in."
+                    : "관리자 승인을 받아야 로그인할 수 있습니다.";
+        }
+
+        return message;
+    }
+
+    private boolean isEnglishRequest(HttpServletRequest request) {
+        String acceptLanguage = request.getHeader("Accept-Language");
+        return StringUtils.isNotBlank(acceptLanguage) && acceptLanguage.toLowerCase().startsWith("en");
     }
 }

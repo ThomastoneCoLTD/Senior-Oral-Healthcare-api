@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.user;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.admin.application.AdminLoginService;
 import com.kaii.dentix.domain.auth.controller.AuthController;
+import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.controller.UserLoginController;
@@ -319,6 +320,53 @@ public class UserLoginControllerTest {
                 ));
 
         verify(userLoginService).userLogin(any(UserDto.LoginRequest.class));
+    }
+
+    @Test
+    public void userLoginRequiresAdminApprovalMessageInKorean() throws Exception {
+        given(userLoginService.userLogin(any(UserDto.LoginRequest.class)))
+                .willThrow(new UnauthorizedException("관리자 승인을 받아야 로그인할 수 있습니다."));
+
+        String request = """
+                {
+                  "userType": "user",
+                  "loginId": "dentix123",
+                  "password": "password!"
+                }
+                """;
+
+        mockMvc.perform(
+                        RestDocumentationRequestBuilders.post("/login")
+                                .content(request)
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(401))
+                .andExpect(jsonPath("rtMsg").value("관리자 승인을 받아야 로그인할 수 있습니다."));
+    }
+
+    @Test
+    public void userLoginRequiresAdminApprovalMessageInEnglish() throws Exception {
+        given(userLoginService.userLogin(any(UserDto.LoginRequest.class)))
+                .willThrow(new UnauthorizedException("관리자 승인을 받아야 로그인할 수 있습니다."));
+
+        String request = """
+                {
+                  "userType": "user",
+                  "loginId": "dentix123",
+                  "password": "password!"
+                }
+                """;
+
+        mockMvc.perform(
+                        RestDocumentationRequestBuilders.post("/login")
+                                .header("Accept-Language", "en-US")
+                                .content(request)
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(401))
+                .andExpect(jsonPath("rtMsg").value("Administrator approval is required before you can log in."));
     }
 
     /**
