@@ -85,6 +85,9 @@ public class ContentsService {
 
         // 2. 전체 콘텐츠 리스트 조회
         List<ContentsDto.Summary> allContents = contentsCustomRepository.getContents();
+        allContents.forEach(content -> content.setCategoryIds(
+                new ArrayList<>(content.getCategoryIds() == null ? List.of() : content.getCategoryIds())
+        ));
         List<Long> customizedIds = new ArrayList<>();
 
         // 3. 맞춤 콘텐츠 태깅 (인증된 사용자)

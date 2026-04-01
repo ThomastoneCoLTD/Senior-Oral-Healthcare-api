@@ -34,6 +34,7 @@ public class ContentsDto {
         private String typeColor;
         private String thumbnail;
         private String videoURL; // Entity field: contentsPath
+        @Setter
         private List<Integer> categoryIds;
     }
 
