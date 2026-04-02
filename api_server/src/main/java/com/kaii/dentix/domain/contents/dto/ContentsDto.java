@@ -8,6 +8,13 @@ import java.util.List;
 
 public class ContentsDto {
 
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class MenuTab {
+        private String id;
+        private String name;
+    }
+
     // =================================================================
     // 1. 콘텐츠 카테고리 정보 (Category)
     // =================================================================
@@ -44,6 +51,7 @@ public class ContentsDto {
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor
     public static class ListResponse {
+        private List<MenuTab> menuTabs;
         private List<Category> categories;
         private List<Summary> contents;
     }

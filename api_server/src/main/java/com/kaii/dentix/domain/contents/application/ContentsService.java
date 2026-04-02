@@ -120,11 +120,31 @@ public class ContentsService {
 
         // 1. 카테고리 리스트 준비
         List<ContentsDto.Category> categoryList = this.getCategoryList(userName, !customizedIds.isEmpty());
+        List<ContentsDto.MenuTab> menuTabs = getMenuTabs(!customizedIds.isEmpty());
 
         return ContentsDto.ListResponse.builder()
+                .menuTabs(menuTabs)
                 .categories(categoryList)
                 .contents(allContents)
                 .build();
+    }
+
+    private List<ContentsDto.MenuTab> getMenuTabs(boolean includePersonalizedTab) {
+        List<ContentsDto.MenuTab> menuTabs = new ArrayList<>();
+
+        if (includePersonalizedTab) {
+            menuTabs.add(ContentsDto.MenuTab.builder()
+                    .id("PERSONALIZED")
+                    .name("맞춤 콘텐츠")
+                    .build());
+        }
+
+        menuTabs.add(ContentsDto.MenuTab.builder()
+                .id("ALL")
+                .name("모든 콘텐츠")
+                .build());
+
+        return menuTabs;
     }
 
     private boolean canShowPersonalizedContents(User user) {

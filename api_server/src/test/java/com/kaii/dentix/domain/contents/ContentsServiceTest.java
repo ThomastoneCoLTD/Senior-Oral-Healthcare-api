@@ -84,6 +84,8 @@ class ContentsServiceTest {
 
         ContentsDto.ListResponse response = contentsService.getContentsList(user);
 
+        assertThat(response.getMenuTabs()).extracting(ContentsDto.MenuTab::getId)
+                .containsExactly("ALL");
         assertThat(response.getCategories()).extracting(ContentsDto.Category::getId)
                 .doesNotContain(0);
         assertThat(response.getContents()).allSatisfy(content ->
@@ -132,6 +134,8 @@ class ContentsServiceTest {
 
         ContentsDto.ListResponse response = contentsService.getContentsList(user);
 
+        assertThat(response.getMenuTabs()).extracting(ContentsDto.MenuTab::getId)
+                .containsExactly("PERSONALIZED", "ALL");
         assertThat(response.getCategories()).extracting(ContentsDto.Category::getId)
                 .contains(0);
         assertThat(response.getContents()).allSatisfy(content ->
@@ -180,6 +184,8 @@ class ContentsServiceTest {
 
         ContentsDto.ListResponse response = contentsService.getContentsList(user);
 
+        assertThat(response.getMenuTabs()).extracting(ContentsDto.MenuTab::getId)
+                .containsExactly("PERSONALIZED", "ALL");
         assertThat(response.getCategories()).extracting(ContentsDto.Category::getId)
                 .contains(0);
         assertThat(response.getContents()).allSatisfy(content ->
@@ -218,6 +224,8 @@ class ContentsServiceTest {
 
         ContentsDto.ListResponse response = contentsService.getContentsList(user);
 
+        assertThat(response.getMenuTabs()).extracting(ContentsDto.MenuTab::getId)
+                .containsExactly("ALL");
         assertThat(response.getCategories()).extracting(ContentsDto.Category::getId)
                 .doesNotContain(0);
         assertThat(response.getContents()).allSatisfy(content ->
@@ -266,6 +274,8 @@ class ContentsServiceTest {
 
         ContentsDto.ListResponse response = contentsService.getContentsList(user);
 
+        assertThat(response.getMenuTabs()).extracting(ContentsDto.MenuTab::getId)
+                .containsExactly("ALL");
         assertThat(response.getCategories()).extracting(ContentsDto.Category::getId)
                 .doesNotContain(0);
         assertThat(response.getContents()).allSatisfy(content ->

@@ -108,6 +108,10 @@ public class ContentsControllerTest {
 
         given(contentsService.getContentsList(any()))
                 .willReturn(ContentsDto.ListResponse.builder()
+                        .menuTabs(List.of(
+                                ContentsDto.MenuTab.builder().id("PERSONALIZED").name("김덴티님 맞춤").build(),
+                                ContentsDto.MenuTab.builder().id("ALL").name("모든 콘텐츠").build()
+                        ))
                         .categories(categories)   // 아래에서 categories 타입도 바꿀 거야
                         .contents(contents)
                         .build());
@@ -130,6 +134,9 @@ public class ContentsControllerTest {
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
+                                fieldWithPath("response.menuTabs").type(JsonFieldType.ARRAY).description("헤더 메뉴 탭 목록"),
+                                fieldWithPath("response.menuTabs[].id").type(JsonFieldType.STRING).description("헤더 메뉴 탭 ID"),
+                                fieldWithPath("response.menuTabs[].name").type(JsonFieldType.STRING).description("헤더 메뉴 탭 이름"),
                                 fieldWithPath("response.categories").type(JsonFieldType.ARRAY).description("콘텐츠 카테고리 목록"),
                                 fieldWithPath("response.categories[].id").type(JsonFieldType.NUMBER).description("콘텐츠 카테고리 고유 번호"),
                                 fieldWithPath("response.categories[].name").type(JsonFieldType.STRING).description("콘텐츠 카테고리 이름"),
