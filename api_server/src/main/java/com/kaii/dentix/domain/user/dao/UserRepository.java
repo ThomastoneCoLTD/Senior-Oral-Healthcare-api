@@ -27,6 +27,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
     """)
     Optional<User> findByUserIdWithServices(@Param("userId") Long userId);
 
+    @Query("""
+        SELECT DISTINCT u
+        FROM User u
+        LEFT JOIN FETCH u.organization o
+        LEFT JOIN FETCH o.organizationSubscription os
+        LEFT JOIN FETCH os.subscriptionPlan sp
+        LEFT JOIN FETCH o.subscriptionPlan directSp
+        WHERE u.userId = :userId
+    """)
+    Optional<User> findByIdWithOrganizationAndSubscription(@Param("userId") Long userId);
+
     // 통계용 쿼리
     long countByOrganization_OrganizationId(Long organizationId);
     long countByOrganization_OrganizationIdAndUserGender(Long organizationId, GenderType userGender);

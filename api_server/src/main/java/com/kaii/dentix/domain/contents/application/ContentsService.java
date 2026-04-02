@@ -92,25 +92,30 @@ public class ContentsService {
 
         // 3. 맞춤 콘텐츠 태깅 (인증된 사용자)
         if (isVerifiedUser && canShowPersonalizedContents) {
-            Optional<Questionnaire> questionnaireOpt =
-                    questionnaireRepository.findTopByUserIdOrderByCreatedDesc(user.getUserId());
+            try {
+                Optional<Questionnaire> questionnaireOpt =
+                        questionnaireRepository.findTopByUserIdOrderByCreatedDesc(user.getUserId());
 
-            if (questionnaireOpt.isPresent()) {
-                customizedIds = contentsCustomRepository.getCustomizedContentsIdList(
-                        questionnaireOpt.get().getQuestionnaireId()
+                if (questionnaireOpt.isPresent()) {
+                    customizedIds = contentsCustomRepository.getCustomizedContentsIdList(
+                            questionnaireOpt.get().getQuestionnaireId()
+                    );
+                }
+
+                customizedIds.forEach(targetId ->
+                        allContents.stream()
+                                .filter(c -> c.getId().equals(targetId))
+                                .findFirst()
+                                .ifPresent(c -> {
+                                    if (!c.getCategoryIds().contains(0)) {
+                                        c.getCategoryIds().add(0, 0);
+                                    }
+                                })
                 );
+            } catch (Exception exception) {
+                log.warn("맞춤 콘텐츠 조회에 실패해 전체 콘텐츠만 반환합니다. userId={}", user.getUserId(), exception);
+                customizedIds = new ArrayList<>();
             }
-
-            customizedIds.forEach(targetId ->
-                    allContents.stream()
-                            .filter(c -> c.getId().equals(targetId))
-                            .findFirst()
-                            .ifPresent(c -> {
-                                if (!c.getCategoryIds().contains(0)) {
-                                    c.getCategoryIds().add(0, 0);
-                                }
-                            })
-            );
         }
 
         // 1. 카테고리 리스트 준비

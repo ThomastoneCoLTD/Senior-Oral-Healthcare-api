@@ -27,6 +27,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -221,6 +222,54 @@ class ContentsServiceTest {
                 .doesNotContain(0);
         assertThat(response.getContents()).allSatisfy(content ->
                 assertThat(content.getCategoryIds()).doesNotContain(0));
+    }
+
+    @Test
+    void returnsAllContentsWhenPersonalizedLookupFails() {
+        User user = User.builder()
+                .userId(1L)
+                .userName("김덴티")
+                .isVerify(YnType.Y)
+                .organization(createOrganization(PlanName.GROWTH))
+                .build();
+
+        when(contentsCategoryRepository.findAll(any(Sort.class))).thenReturn(List.of(
+                com.kaii.dentix.domain.contents.domain.ContentsCategory.builder()
+                        .contentsCategoryId(1)
+                        .contentsCategoryName("질병")
+                        .contentsCategoryColor("#98B4ED")
+                        .contentsCategorySort(1)
+                        .build()
+        ));
+        when(contentsCustomRepository.getContents()).thenReturn(List.of(
+                ContentsDto.Summary.builder()
+                        .id(1L)
+                        .title("콘텐츠")
+                        .sort(1)
+                        .type(ContentsType.CARD)
+                        .typeColor("#FF9F06")
+                        .thumbnail("thumb")
+                        .videoURL(null)
+                        .categoryIds(List.of(1))
+                        .build()
+        ));
+
+        Questionnaire questionnaire = Questionnaire.builder()
+                .questionnaireId(10L)
+                .userId(1L)
+                .questionnaireVersion("v1")
+                .form("{}")
+                .build();
+
+        when(questionnaireRepository.findTopByUserIdOrderByCreatedDesc(1L)).thenReturn(Optional.of(questionnaire));
+        when(contentsCustomRepository.getCustomizedContentsIdList(eq(10L))).thenThrow(new RuntimeException("query failure"));
+
+        ContentsDto.ListResponse response = contentsService.getContentsList(user);
+
+        assertThat(response.getCategories()).extracting(ContentsDto.Category::getId)
+                .doesNotContain(0);
+        assertThat(response.getContents()).allSatisfy(content ->
+                assertThat(content.getCategoryIds()).containsExactly(1));
     }
 
     private Organization createOrganization(PlanName planName) {

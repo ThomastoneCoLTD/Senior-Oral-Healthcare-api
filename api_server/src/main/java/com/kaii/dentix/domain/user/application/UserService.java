@@ -123,7 +123,8 @@ public class UserService {
         if (!roles.equals(UserRole.ROLE_USER)) throw new UnauthorizedException("권한이 없는 사용자입니다.");
 
         Long userId = jwtTokenUtil.getUserId(token, TokenType.AccessToken);
-        return userRepository.findById(userId).orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+        return userRepository.findByIdWithOrganizationAndSubscription(userId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
 
     }
 
