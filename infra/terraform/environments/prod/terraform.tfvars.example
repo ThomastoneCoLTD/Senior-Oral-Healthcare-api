@@ -1,0 +1,33 @@
+aws_region  = "ap-northeast-2"
+project_name = "soh-api"
+environment  = "prod"
+account_id   = "160885266674"
+
+vpc_cidr                 = "10.80.0.0/16"
+public_subnet_cidrs      = ["10.80.0.0/24", "10.80.1.0/24"]
+private_app_subnet_cidrs = ["10.80.10.0/24", "10.80.11.0/24"]
+private_db_subnet_cidrs  = ["10.80.20.0/24", "10.80.21.0/24"]
+single_nat_gateway       = false
+
+artifact_bucket = "denti-backends"
+artifact_prefix = "soh"
+release_type    = "prod"
+spring_profile  = "prod"
+
+app_port    = 8080
+health_path = "/api/actuator/health"
+
+alb_name             = "soh-api-prod-alb"
+target_group_name    = "soh-api-prod-tg"
+launch_template_name = "soh-api-prod-lt"
+asg_name             = "soh-api-prod-asg"
+
+desired_capacity = 2
+min_size         = 2
+max_size         = 4
+instance_type    = "t3.small"
+
+certificate_arn       = "<ALB_REGION_ACM_CERTIFICATE_ARN>"
+hosted_zone_name      = "thomabio.com"
+origin_domain_name    = "soh-api.thomabio.com"
+create_route53_record = false
