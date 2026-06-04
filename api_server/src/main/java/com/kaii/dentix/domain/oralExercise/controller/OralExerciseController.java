@@ -2,6 +2,8 @@ package com.kaii.dentix.domain.oralExercise.controller;
 
 import com.kaii.dentix.domain.oralExercise.application.OralExerciseService;
 import com.kaii.dentix.domain.oralExercise.dto.OralExerciseDto;
+import com.kaii.dentix.domain.reward.application.UserRewardService;
+import com.kaii.dentix.domain.reward.dto.UserRewardDto;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 public class OralExerciseController {
 
     private final OralExerciseService oralExerciseService;
+    private final UserRewardService userRewardService;
 
     @GetMapping
     public DataResponse<OralExerciseDto.ListResponse> getContents(HttpServletRequest request) {
@@ -25,5 +28,13 @@ public class OralExerciseController {
             @RequestBody OralExerciseDto.InteractionRequest interactionRequest
     ) {
         return new DataResponse<>(oralExerciseService.recordInteraction(request, interactionRequest));
+    }
+
+    @PostMapping("/rewards/coin-click")
+    public DataResponse<UserRewardDto.RewardResponse> rewardCoinClick(
+            HttpServletRequest request,
+            @RequestBody UserRewardDto.CoinClickRequest coinClickRequest
+    ) {
+        return new DataResponse<>(userRewardService.rewardOralExerciseCoin(request, coinClickRequest));
     }
 }
