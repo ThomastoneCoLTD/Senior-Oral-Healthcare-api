@@ -1,0 +1,18 @@
+package com.kaii.dentix.domain.daeguChain.config;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Getter
+@Setter
+@Component
+@ConfigurationProperties(prefix = "daegu-chain")
+public class DaeguChainProperties {
+
+    private String baseUrl = "https://www.daegu.go.kr/daeguchain";
+    private String apiVersion = "v2";
+    private String chain = "dchain";
+    private String token;
+}

@@ -91,6 +91,12 @@ aiModel:
   apiUrl:
     oralCheck: 'https://ai-backend-gpu.kai-i.com/denti/api/plaque_navy'
     questionnaire: 'https://ai-backend-gpu.kai-i.com/denti/api/prsc_dku'
+
+daegu-chain:
+  base-url: ${DAEGU_CHAIN_BASE_URL:https://www.daegu.go.kr/daeguchain}
+  api-version: ${DAEGU_CHAIN_API_VERSION:v2}
+  chain: ${DAEGU_CHAIN_ID:dchain}
+  token: ${DAEGU_CHAIN_TOKEN:}
 s3:
   storage:
     bucketName: ${S3_BUCKET_NAME:denti-backends}
