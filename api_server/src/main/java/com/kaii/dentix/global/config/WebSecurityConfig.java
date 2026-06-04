@@ -115,6 +115,7 @@ public class WebSecurityConfig {
                  * ============================= */
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/oral-exercise").permitAll()
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/health/**",
