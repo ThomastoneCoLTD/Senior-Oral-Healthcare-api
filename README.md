@@ -72,6 +72,68 @@ git push origin <current-branch>
 
 Do not commit real `.env`, `terraform.tfvars`, Terraform state, build outputs, or local IDE files.
 
+## New Project Startup Checklist
+
+Use this checklist whenever starting a new SOH-style project or moving this project to a new environment.
+
+1. Confirm repositories and branches.
+   - Confirm API and frontend repository names.
+   - Decide which branches deploy each environment.
+   - Confirm `main` is not a deployment branch unless intentionally changed.
+   - Write unusual branch mappings explicitly in `README.md` and `AGENTS.md`.
+
+2. Confirm build systems.
+   - Frontend: confirm package manager, lockfile, build command, and output directory.
+   - API: confirm Gradle/Maven, Java version, app directory, JAR output, and health path.
+   - Add workflow build commands that match the repository layout.
+
+3. Prepare GitHub Secrets.
+   - Register AWS deployment credentials only as GitHub Secrets.
+   - Register environment-specific app secrets such as API `.env` content.
+   - Do not commit real `.env`, AWS keys, DB passwords, JWT secrets, or private tokens.
+
+4. Prepare AWS bootstrap resources.
+   - Create or choose the Terraform state S3 bucket.
+   - Replace Terraform backend placeholders.
+   - Confirm S3 artifact bucket region.
+   - Prepare ACM certificate ARNs in the target ALB region.
+   - Confirm Route 53 hosted zone ownership if DNS will be created by Terraform.
+
+5. Prepare CI/CD.
+   - Ensure no workflow deploys from `main`.
+   - Ensure dev workflows write only dev artifact paths and refresh only dev ASGs.
+   - Ensure prod workflows write only prod artifact paths and refresh only prod ASGs.
+   - Keep deploy target names, S3 paths, CloudFront IDs, and ASG names guarded in workflows.
+
+6. Prepare AWS IAM.
+   - GitHub Actions IAM user needs artifact upload, ASG refresh, and Terraform plan/apply permissions.
+   - EC2 instance roles should read only their own `app.jar` and `.env` from S3.
+   - EC2 User Data must use the instance profile, not long-lived AWS access keys.
+
+7. Prepare CloudFront/API routing.
+   - Add `/api/*` behavior to the frontend CloudFront distribution.
+   - Disable caching for API behavior.
+   - Forward Authorization, Content-Type, query strings, and required headers.
+   - Ensure SPA fallback does not rewrite `/api/*` errors to `index.html`.
+
+8. Validate before release.
+   - Run YAML parsing checks for GitHub Actions.
+   - Run Terraform fmt and validate where Terraform CLI is available.
+   - Run local frontend/API builds where possible.
+   - Check for forbidden legacy values such as old S3 paths, old regions, OIDC settings, or main-branch deploy triggers.
+
+9. Commit and push.
+   - Update `README.md` and `AGENTS.md` together.
+   - Run `git diff --check`.
+   - Commit a clear summary.
+   - Push to the current branch when possible.
+
+10. Confirm deployment.
+    - Check uploaded S3 artifacts.
+    - Confirm ASG Instance Refresh started.
+    - Check EC2 User Data and systemd logs.
+    - Check internal and external health endpoints.
+
 ## Terraform Modules
 
 Created modules:

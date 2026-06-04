@@ -135,6 +135,23 @@ AGENTS.md
 
 Do this in the same commit.
 
+## New Project Startup Checklist
+
+For every new SOH-style project or environment, make sure the repository has a README section covering:
+
+- Repository names and branch deployment mapping.
+- Build tool, Java/Node version, build command, and output artifact.
+- GitHub Secrets for AWS credentials and environment-specific app configuration.
+- Terraform state bucket bootstrap, backend placeholder replacement, ACM ARN, and S3 bucket region check.
+- CI/CD workflow triggers, with no deployment from `main` unless intentionally approved.
+- Guard steps for branch, S3 path, release type, CloudFront distribution, and ASG names.
+- AWS IAM policy for GitHub Actions and EC2 instance roles.
+- CloudFront `/api/*` behavior and SPA fallback handling.
+- Validation commands and expected results.
+- Commit and push procedure.
+
+Keep the same checklist in `README.md` and update it whenever the deployment model changes.
+
 ## Commit And Push Policy
 
 After a successful repository update, do this when possible:
