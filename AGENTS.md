@@ -89,6 +89,16 @@ Before Terraform apply:
 - Fill ACM `certificate_arn`.
 - Confirm `denti-backends` region with `aws s3api get-bucket-location --bucket denti-backends`.
 
+## Manual AWS Console Guide
+
+Manual setup instructions live in:
+
+```text
+readme_수동.md
+```
+
+Use it when rebuilding the API AWS environment directly from the AWS web console instead of Terraform. Keep it aligned with Terraform, CI/CD, S3 artifact paths, ASG names, ALB/Route 53 settings, CloudFront `/api/*` behavior, and deployment verification steps.
+
 ## Secrets
 
 Required GitHub Secrets:
@@ -133,7 +143,7 @@ README.md
 AGENTS.md
 ```
 
-Do this in the same commit.
+Do this in the same commit. If the change affects manual AWS console setup, update `readme_수동.md` in that commit as well.
 
 ## New Project Startup Checklist
 

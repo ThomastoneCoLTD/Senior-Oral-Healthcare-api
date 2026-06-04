@@ -38,6 +38,16 @@ Deployment workflow files live in:
 .github/workflows
 ```
 
+## Manual AWS Console Setup Guide
+
+If this environment must be built manually from the AWS web console, use:
+
+```text
+readme_수동.md
+```
+
+That file documents the AWS Console steps from zero setup through S3 artifacts, VPC, IAM, ALB, ASG, Route 53, CloudFront `/api/*` routing, and release verification.
+
 ## Branch and Deployment Policy
 
 ```text
@@ -56,9 +66,10 @@ When working from another PC or with another Codex agent, read both files before
 ```text
 README.md
 AGENTS.md
+readme_수동.md
 ```
 
-Keep them aligned. Whenever CI/CD, Terraform, branch policy, AWS constants, GitHub Secrets, S3 paths, ASG names, CloudFront/API routing, or deployment commands change, update both files in the same commit.
+Keep them aligned. Whenever CI/CD, Terraform, branch policy, AWS constants, GitHub Secrets, S3 paths, ASG names, CloudFront/API routing, manual AWS setup steps, or deployment commands change, update the relevant documentation in the same commit.
 
 After a successful update, commit and push when possible:
 
