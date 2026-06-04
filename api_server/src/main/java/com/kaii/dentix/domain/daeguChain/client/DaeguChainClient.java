@@ -281,6 +281,14 @@ public class DaeguChainClient {
         );
     }
 
+    public DaeguChainDto.ApiResponse<JsonNode> postTimestamp(String path, Map<String, Object> request) {
+        return post(
+                path,
+                request,
+                new ParameterizedTypeReference<>() {}
+        );
+    }
+
     private <T> DaeguChainDto.ApiResponse<T> post(
             String path,
             Object request,
