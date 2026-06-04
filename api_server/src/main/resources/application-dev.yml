@@ -3,7 +3,7 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:db-huawei-aurora-mysql-instance-1.cfq0uo8ms95m.ap-southeast-1.rds.amazonaws.com:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
+    url: jdbc:mysql://db-block-chain-2026-dev-aurora-mysql-instance-1.cfq0uo8ms95m.ap-southeast-1.rds.amazonaws.com:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
     username: thomastone
     # [보안 권고] 소스코드에 비밀번호 평문 저장 금지 -> 환경변수 또는 Jasypt 암호화 사용 권장
     password: ${DB_PASSWORD:dPqkd0923!}
@@ -110,11 +110,11 @@ aiModel:
     questionnaire: 'https://ai-backend-gpu.kai-i.com/denti/api/prsc_dku'
 s3:
   storage:
-    bucketName: denti-dev
+    bucketName: ${S3_BUCKET_NAME:denti-backends}
     region: ap-southeast-1
 
   folderPath:
-    oralCheck: test/
+    oralCheck: soh/dev/
 
 aws:
   region: ap-southeast-1

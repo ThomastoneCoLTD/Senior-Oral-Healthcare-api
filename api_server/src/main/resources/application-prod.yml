@@ -93,12 +93,11 @@ aiModel:
     questionnaire: 'https://ai-backend-gpu.kai-i.com/denti/api/prsc_dku'
 s3:
   storage:
-    bucketName: denti-dev
+    bucketName: ${S3_BUCKET_NAME:denti-backends}
     region: ap-southeast-1
 
   folderPath:
-    #    oralCheck: 'https://denti-dev.s3.ap-southeast-1.amazonaws.com/test/'
-    oralCheck: test/
+    oralCheck: soh/prod/
 
 aws:
   region: ap-southeast-1
