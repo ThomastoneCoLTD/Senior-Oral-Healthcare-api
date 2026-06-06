@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.user.dto;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.ServiceType;
+import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.config.PasswordSerializer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -140,6 +141,8 @@ public class UserDto {
         private GenderType userGender;
         private Long organizationId;
         private String organizationName;
+        private String daeguDid;
+        private UserDaeguIdentityStatus daeguDidStatus;
     }
 
     // =================================================================
@@ -152,6 +155,8 @@ public class UserDto {
         private String userLoginIdentifier;
         private GenderType userGender;
         private List<ServiceInfo> services;
+        private String daeguDid;
+        private UserDaeguIdentityStatus daeguDidStatus;
     }
 
     @Getter @Builder

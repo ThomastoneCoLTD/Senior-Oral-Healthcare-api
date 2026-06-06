@@ -1,5 +1,8 @@
 package com.kaii.dentix.domain.reward.application;
 
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
+import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.oralExercise.dao.OralExerciseContentRepository;
@@ -16,6 +19,7 @@ import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.env.Environment;
 
 import java.util.Optional;
 
@@ -29,7 +33,10 @@ class UserRewardServiceTest {
     private UserRewardWalletRepository walletRepository;
     private UserRewardTransactionRepository transactionRepository;
     private OralExerciseContentRepository contentRepository;
+    private DaeguChainAccountService daeguChainAccountService;
+    private DaeguChainPointService daeguChainPointService;
     private JwtTokenUtil jwtTokenUtil;
+    private Environment environment;
     private UserRewardService service;
     private HttpServletRequest request;
 
@@ -38,7 +45,10 @@ class UserRewardServiceTest {
         walletRepository = mock(UserRewardWalletRepository.class);
         transactionRepository = mock(UserRewardTransactionRepository.class);
         contentRepository = mock(OralExerciseContentRepository.class);
+        daeguChainAccountService = mock(DaeguChainAccountService.class);
+        daeguChainPointService = mock(DaeguChainPointService.class);
         jwtTokenUtil = mock(JwtTokenUtil.class);
+        environment = mock(Environment.class);
         request = mock(HttpServletRequest.class);
 
         UserRewardProperties properties = new UserRewardProperties();
@@ -47,19 +57,23 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
+                daeguChainAccountService,
+                daeguChainPointService,
                 properties,
-                jwtTokenUtil
+                jwtTokenUtil,
+                environment
         );
 
         when(jwtTokenUtil.getAccessToken(request)).thenReturn("access-token");
         when(jwtTokenUtil.getUserId("access-token", TokenType.AccessToken)).thenReturn(7L);
         when(contentRepository.findById(11L)).thenReturn(Optional.of(content()));
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"test"});
     }
 
     @Test
     void rewardOralExerciseCoinCreatesWalletAndTransaction() {
         when(transactionRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
-        when(walletRepository.findByUserId(7L)).thenReturn(Optional.empty());
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.empty());
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -109,6 +123,47 @@ class UserRewardServiceTest {
         ))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("coinId is required");
+    }
+
+    @Test
+    void connectWalletCreatesDaeguAccountWhenWalletAddressIsEmpty() {
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.empty());
+        when(daeguChainAccountService.createAccount(any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>(
+                        "success",
+                        null,
+                        "ok",
+                        new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
+                                "private-key",
+                                "public-key",
+                                "0x-wallet"
+                        )),
+                        "cid"
+                ));
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserRewardDto.WalletResponse response = service.connectWallet(
+                request,
+                new UserRewardDto.WalletConnectRequest("did:daegu:test", null)
+        );
+
+        assertThat(response.getDaeguDid()).isEqualTo("did:daegu:test");
+        assertThat(response.getWalletAddress()).isEqualTo("0x-wallet");
+        verify(daeguChainAccountService).createAccount(any());
+    }
+
+    @Test
+    void connectWalletCreatesLocalTestAddressInDevWhenDaeguTokenIsMissing() {
+        when(environment.getActiveProfiles()).thenReturn(new String[]{"dev"});
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.empty());
+        when(daeguChainAccountService.createAccount(any()))
+                .thenThrow(new BadRequestApiException("token is required"));
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserRewardDto.WalletResponse response = service.connectWallet(request, null);
+
+        assertThat(response.getWalletAddress()).startsWith("0x");
+        assertThat(response.getWalletAddress()).hasSize(42);
     }
 
     private OralExerciseContent content() {

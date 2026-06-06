@@ -12,4 +12,8 @@ import org.springframework.stereotype.Component;
 public class UserRewardProperties {
 
     private long oralExerciseCoinAmount = 1L;
+    private boolean pointMintEnabled;
+    private String pointContractAddress;
+    private String pointOwnerAddress;
+    private String pointOwnerPrivateKey;
 }

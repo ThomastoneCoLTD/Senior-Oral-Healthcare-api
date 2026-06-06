@@ -33,6 +33,15 @@ public class UserRewardWallet extends TimeEntity {
     @Column(length = 255)
     private String walletAddress;
 
+    public void updateDaeguWallet(String daeguDid, String walletAddress) {
+        if (daeguDid != null && !daeguDid.isBlank()) {
+            this.daeguDid = daeguDid;
+        }
+        if (walletAddress != null && !walletAddress.isBlank()) {
+            this.walletAddress = walletAddress;
+        }
+    }
+
     public void addPoints(long amount) {
         if (amount <= 0) {
             throw new IllegalArgumentException("amount must be positive");

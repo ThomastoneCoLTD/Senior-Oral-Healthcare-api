@@ -242,6 +242,46 @@ public class DaeguChainClient {
         );
     }
 
+    public DaeguChainDto.ApiResponse<JsonNode> createPoint(DaeguChainDto.TokenCreateApiRequest request) {
+        return post(
+                "/mitum/point/create",
+                request,
+                new ParameterizedTypeReference<>() {}
+        );
+    }
+
+    public DaeguChainDto.ApiResponse<JsonNode> getPointList(DaeguChainDto.TokenListApiRequest request) {
+        return post(
+                "/mitum/point/points",
+                request,
+                new ParameterizedTypeReference<>() {}
+        );
+    }
+
+    public DaeguChainDto.ApiResponse<JsonNode> getPointBalance(DaeguChainDto.TokenBalanceApiRequest request) {
+        return post(
+                "/mitum/point/balance",
+                request,
+                new ParameterizedTypeReference<>() {}
+        );
+    }
+
+    public DaeguChainDto.ApiResponse<JsonNode> mintPoint(DaeguChainDto.TokenMintApiRequest request) {
+        return post(
+                "/mitum/point/mint",
+                request,
+                new ParameterizedTypeReference<>() {}
+        );
+    }
+
+    public DaeguChainDto.ApiResponse<JsonNode> transferPoint(DaeguChainDto.TokenTransferApiRequest request) {
+        return post(
+                "/mitum/point/transfer",
+                request,
+                new ParameterizedTypeReference<>() {}
+        );
+    }
+
     public DaeguChainDto.ApiResponse<JsonNode> postNft(String path, Map<String, Object> request) {
         return post(
                 path,

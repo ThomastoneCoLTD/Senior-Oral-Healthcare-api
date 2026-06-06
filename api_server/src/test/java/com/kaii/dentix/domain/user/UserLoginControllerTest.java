@@ -6,6 +6,7 @@ import com.kaii.dentix.domain.auth.controller.AuthController;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
+import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.domain.user.controller.UserLoginController;
 import com.kaii.dentix.domain.user.dto.UserDto;
 import jakarta.servlet.http.HttpServletRequest;
@@ -90,6 +91,8 @@ public class UserLoginControllerTest {
                 .userGender(GenderType.W)
                 .organizationId(1L)
                 .organizationName("테스트 치과")
+                .daeguDid("did:daegu:local:1")
+                .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
                 .build();
     }
 
@@ -229,7 +232,9 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 닉네임"),
                                 fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("response.organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
-                                fieldWithPath("response.organizationName").type(JsonFieldType.STRING).description("소속 기관 이름")
+                                fieldWithPath("response.organizationName").type(JsonFieldType.STRING).description("소속 기관 이름"),
+                                fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("대구 DID"),
+                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태")
                         )
                 ));
 

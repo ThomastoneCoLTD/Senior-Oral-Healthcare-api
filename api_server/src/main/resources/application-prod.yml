@@ -100,6 +100,10 @@ daegu-chain:
 
 user-reward:
   oral-exercise-coin-amount: ${ORAL_EXERCISE_COIN_REWARD_AMOUNT:1}
+  point-mint-enabled: ${USER_REWARD_POINT_MINT_ENABLED:false}
+  point-contract-address: ${USER_REWARD_POINT_CONTRACT_ADDRESS:}
+  point-owner-address: ${USER_REWARD_POINT_OWNER_ADDRESS:}
+  point-owner-private-key: ${USER_REWARD_POINT_OWNER_PRIVATE_KEY:}
 s3:
   storage:
     bucketName: ${S3_BUCKET_NAME:denti-backends}

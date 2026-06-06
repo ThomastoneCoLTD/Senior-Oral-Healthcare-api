@@ -43,7 +43,7 @@ public class UserRewardTransaction extends TimeEntity {
     @Column(nullable = false)
     private long balanceAfter;
 
-    @Column(nullable = false, length = 255)
+    @Column(name = "idempotency_key", nullable = false, length = 255)
     private String idempotencyKey;
 
     @Column(length = 100)
@@ -57,6 +57,16 @@ public class UserRewardTransaction extends TimeEntity {
 
     @Column(length = 255)
     private String daeguChainFactHash;
+
+    public void markPointMinted(String txHash, String factHash) {
+        this.status = UserRewardTransactionStatus.POINT_MINTED;
+        this.daeguChainTxHash = txHash;
+        this.daeguChainFactHash = factHash;
+    }
+
+    public void markPointMintFailed() {
+        this.status = UserRewardTransactionStatus.POINT_MINT_FAILED;
+    }
 
     public boolean isAlreadyApplied() {
         return status != UserRewardTransactionStatus.CANCELED;
