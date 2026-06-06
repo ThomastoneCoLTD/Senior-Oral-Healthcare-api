@@ -63,6 +63,16 @@ public class User extends TimeEntity {
     @Column(columnDefinition = "enum", nullable = false)
     private YnType isVerify;
 
+    @Column(length = 255)
+    private String daeguDid;
+
+    @Column(length = 255)
+    private String daeguDidKey;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private UserDaeguIdentityStatus daeguDidStatus;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizationId")
     private Organization organization;
@@ -76,6 +86,16 @@ public class User extends TimeEntity {
     public void updateLogin(String refreshToken) {
         this.userRefreshToken = refreshToken;
         this.userLastLoginDate = new Date();
+    }
+
+    public void updateDaeguDid(String daeguDid, String daeguDidKey, UserDaeguIdentityStatus status) {
+        if (daeguDid != null && !daeguDid.isBlank()) {
+            this.daeguDid = daeguDid;
+        }
+        if (daeguDidKey != null && !daeguDidKey.isBlank()) {
+            this.daeguDidKey = daeguDidKey;
+        }
+        this.daeguDidStatus = status;
     }
 
     /**

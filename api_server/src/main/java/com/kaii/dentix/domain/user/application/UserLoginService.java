@@ -12,7 +12,7 @@ import com.kaii.dentix.domain.appService.domain.UserToAppService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
-import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.application.DaeguDefaultOrganizationService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.UserRole;
@@ -57,8 +57,9 @@ public class UserLoginService {
 
     private final AdminRepository adminRepository;
     private final AppServiceRepository appServiceRepository;
-    private final OrganizationRepository organizationRepository;
+    private final DaeguDefaultOrganizationService daeguDefaultOrganizationService;
     private final ServiceAgreementConsentService serviceAgreementConsentService;
+    private final UserDaeguProvisioningService userDaeguProvisioningService;
 
     /**
      * 사용자 회원 인증 (가입 여부 확인)
@@ -101,8 +102,7 @@ public class UserLoginService {
             throw new NotFoundDataException("존재하지 않는 질문입니다.");
         }
 
-        Organization organization = organizationRepository.findById(request.getOrganizationId())
-                .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
+        Organization organization = daeguDefaultOrganizationService.getOrCreate();
 
         // 사용자 저장
         User user = userRepository.save(User.builder()
@@ -114,8 +114,10 @@ public class UserLoginService {
                 .findPwdAnswer(request.getFindPwdAnswer())
                 .userPhoneNumber(request.getUserPhoneNumber())
                 .organization(organization)
-                .isVerify(YnType.N)
+                .isVerify(YnType.Y)
                 .build());
+
+        userDaeguProvisioningService.provisionForSignUp(user);
 
         // 앱 서비스 연결
         List<AppService> appServices = appServiceRepository.findAllById(request.getAppServiceIds());
@@ -146,6 +148,8 @@ public class UserLoginService {
                 .userGender(user.getUserGender())
                 .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())
+                .daeguDid(user.getDaeguDid())
+                .daeguDidStatus(user.getDaeguDidStatus())
                 .build();
     }
 

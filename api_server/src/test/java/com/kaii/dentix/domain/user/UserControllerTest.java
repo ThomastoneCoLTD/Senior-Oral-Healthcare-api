@@ -441,7 +441,9 @@ public class UserControllerTest {
                                 fieldWithPath("response.services").type(JsonFieldType.ARRAY).optional().description("이용 중인 서비스 목록"),
                                 fieldWithPath("response.services[].serviceId").type(JsonFieldType.NUMBER).optional().description("서비스 고유 번호"),
                                 fieldWithPath("response.services[].name").type(JsonFieldType.STRING).optional().description("서비스 이름"),
-                                fieldWithPath("response.services[].serviceType").type(JsonFieldType.STRING).optional().description("서비스 타입")
+                                fieldWithPath("response.services[].serviceType").type(JsonFieldType.STRING).optional().description("서비스 타입"),
+                                fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("대구 DID"),
+                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태")
                         )
                 ));
         verify(userService).userModifyInfo(any(HttpServletRequest.class), any(UserDto.ModifyInfoRequest.class));
@@ -709,7 +711,9 @@ public class UserControllerTest {
                                 fieldWithPath("response.services").type(JsonFieldType.ARRAY).optional().description("이용 중인 서비스 목록"),
                                 fieldWithPath("response.services[].serviceId").type(JsonFieldType.NUMBER).optional().description("서비스 고유 번호"),
                                 fieldWithPath("response.services[].name").type(JsonFieldType.STRING).optional().description("서비스 이름"),
-                                fieldWithPath("response.services[].serviceType").type(JsonFieldType.STRING).optional().description("서비스 타입")
+                                fieldWithPath("response.services[].serviceType").type(JsonFieldType.STRING).optional().description("서비스 타입"),
+                                fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("대구 DID"),
+                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태")
                         )
                 ));
         verify(userService).getUserInfo(any(HttpServletRequest.class));
