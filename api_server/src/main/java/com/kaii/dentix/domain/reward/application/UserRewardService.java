@@ -97,20 +97,31 @@ public class UserRewardService {
     }
 
     @Transactional
-    public UserRewardDto.RewardResponse rewardOralExerciseCoin(
+    public UserRewardDto.RewardResponse rewardOralExerciseButtonClick(
             HttpServletRequest request,
-            UserRewardDto.CoinClickRequest coinClickRequest
+            UserRewardDto.ButtonClickRequest buttonClickRequest
     ) {
         Long userId = getUserId(request);
-        validateCoinClickRequest(coinClickRequest);
+        validateButtonClickRequest(buttonClickRequest);
         OralExerciseContent content = oralExerciseContentRepository
-                .findById(coinClickRequest.getContentId())
+                .findById(buttonClickRequest.getContentId())
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강체조 콘텐츠입니다."));
 
-        String idempotencyKey = buildIdempotencyKey(userId, coinClickRequest);
-        var existingTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey);
-        if (existingTransaction.isPresent() && existingTransaction.get().isAlreadyApplied()) {
-            return UserRewardDto.RewardResponse.from(existingTransaction.get(), true);
+        var existingContentReward = userRewardTransactionRepository
+                .findFirstByUserIdAndOralExerciseContent_OralExerciseContentIdAndTypeAndStatusNot(
+                        userId,
+                        content.getOralExerciseContentId(),
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                        UserRewardTransactionStatus.CANCELED
+                );
+        if (existingContentReward.isPresent()) {
+            return UserRewardDto.RewardResponse.from(existingContentReward.get(), true);
+        }
+
+        String idempotencyKey = buildButtonClickIdempotencyKey(userId, content.getOralExerciseContentId());
+        var existingIdempotentTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey);
+        if (existingIdempotentTransaction.isPresent() && existingIdempotentTransaction.get().isAlreadyApplied()) {
+            return UserRewardDto.RewardResponse.from(existingIdempotentTransaction.get(), true);
         }
 
         UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
@@ -131,8 +142,8 @@ public class UserRewardService {
                 .amount(amount)
                 .balanceAfter(savedWallet.getPointBalance())
                 .idempotencyKey(idempotencyKey)
-                .sessionId(coinClickRequest.getSessionId())
-                .coinId(coinClickRequest.getCoinId())
+                .sessionId(buttonClickRequest.getSessionId())
+                .coinId("button-" + buttonClickRequest.getSelectedButtonNumber())
                 .build());
 
         mintPointIfConfigured(transaction, savedWallet);
@@ -148,27 +159,29 @@ public class UserRewardService {
         return jwtTokenUtil.getUserId(accessToken, TokenType.AccessToken);
     }
 
-    private void validateCoinClickRequest(UserRewardDto.CoinClickRequest request) {
+    private void validateButtonClickRequest(UserRewardDto.ButtonClickRequest request) {
         if (request == null) {
             throw new BadRequestApiException("request is required");
         }
         if (request.getContentId() == null) {
             throw new BadRequestApiException("contentId is required");
         }
-        if (request.getSessionId() == null || request.getSessionId().isBlank()) {
-            throw new BadRequestApiException("sessionId is required");
+        if (request.getSelectedButtonNumber() == null) {
+            throw new BadRequestApiException("selectedButtonNumber is required");
         }
-        if (request.getCoinId() == null || request.getCoinId().isBlank()) {
-            throw new BadRequestApiException("coinId is required");
+        if (request.getSelectedButtonNumber() < 1 || request.getSelectedButtonNumber() > 5) {
+            throw new BadRequestApiException("selectedButtonNumber must be between 1 and 5");
+        }
+        if (request.getTargetButtonNumber() != null
+                && !request.getTargetButtonNumber().equals(request.getSelectedButtonNumber())) {
+            throw new BadRequestApiException("selectedButtonNumber does not match targetButtonNumber");
         }
     }
 
-    private String buildIdempotencyKey(Long userId, UserRewardDto.CoinClickRequest request) {
-        return "ORAL_EXERCISE_COIN:%d:%d:%s:%s".formatted(
+    private String buildButtonClickIdempotencyKey(Long userId, Long contentId) {
+        return "ORAL_EXERCISE_BUTTON:%d:%d".formatted(
                 userId,
-                request.getContentId(),
-                request.getSessionId(),
-                request.getCoinId()
+                contentId
         );
     }
 

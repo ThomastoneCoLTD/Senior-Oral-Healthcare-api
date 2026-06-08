@@ -30,11 +30,11 @@ public class OralExerciseController {
         return new DataResponse<>(oralExerciseService.recordInteraction(request, interactionRequest));
     }
 
-    @PostMapping("/rewards/coin-click")
-    public DataResponse<UserRewardDto.RewardResponse> rewardCoinClick(
+    @PostMapping("/rewards/button-click")
+    public DataResponse<UserRewardDto.RewardResponse> rewardButtonClick(
             HttpServletRequest request,
-            @RequestBody UserRewardDto.CoinClickRequest coinClickRequest
+            @RequestBody UserRewardDto.ButtonClickRequest buttonClickRequest
     ) {
-        return new DataResponse<>(userRewardService.rewardOralExerciseCoin(request, coinClickRequest));
+        return new DataResponse<>(userRewardService.rewardOralExerciseButtonClick(request, buttonClickRequest));
     }
 }

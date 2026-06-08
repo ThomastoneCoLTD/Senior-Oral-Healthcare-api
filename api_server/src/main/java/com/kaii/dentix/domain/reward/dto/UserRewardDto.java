@@ -12,10 +12,11 @@ public class UserRewardDto {
     @Getter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class CoinClickRequest {
+    public static class ButtonClickRequest {
         private Long contentId;
         private String sessionId;
-        private String coinId;
+        private Integer selectedButtonNumber;
+        private Integer targetButtonNumber;
     }
 
     @Getter

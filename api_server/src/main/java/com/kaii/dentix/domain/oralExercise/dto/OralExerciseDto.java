@@ -24,9 +24,21 @@ public class OralExerciseDto {
         private int durationSeconds;
         private String duration;
         private String level;
+        private int week;
+        private boolean coreContent;
+        private boolean available;
+        private boolean currentWeekContent;
+        private boolean rewardReceived;
+        private ButtonChallengeResponse buttonChallenge;
         private ProgressResponse progress;
 
-        public static ContentResponse from(OralExerciseContent content, UserOralExerciseProgress progress) {
+        public static ContentResponse from(
+                OralExerciseContent content,
+                UserOralExerciseProgress progress,
+                int currentWeek,
+                boolean rewardReceived
+        ) {
+            boolean available = currentWeek <= 0 || content.getContentSort() <= currentWeek;
             return ContentResponse.builder()
                     .id(content.getOralExerciseContentId())
                     .sort(content.getContentSort())
@@ -38,8 +50,18 @@ public class OralExerciseDto {
                     .durationSeconds(content.getDurationSeconds())
                     .duration(formatDuration(content.getDurationSeconds()))
                     .level(content.getLevel())
+                    .week(content.getContentSort())
+                    .coreContent(content.getContentSort() <= 5)
+                    .available(available)
+                    .currentWeekContent(currentWeek == content.getContentSort())
+                    .rewardReceived(rewardReceived)
+                    .buttonChallenge(ButtonChallengeResponse.forContent(rewardReceived))
                     .progress(ProgressResponse.from(progress))
                     .build();
+        }
+
+        public static ContentResponse from(OralExerciseContent content, UserOralExerciseProgress progress) {
+            return from(content, progress, 0, false);
         }
     }
 
@@ -83,7 +105,31 @@ public class OralExerciseDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ListResponse {
+        private int currentWeek;
+        private ContentResponse currentContent;
+        private List<ContentResponse> previousContents;
+        private List<ContentResponse> extraContents;
         private List<ContentResponse> contents;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ButtonChallengeResponse {
+        private List<Integer> buttons;
+        private int timeoutSeconds;
+        private boolean rewardAvailable;
+        private String promptMessage;
+
+        public static ButtonChallengeResponse forContent(boolean rewardReceived) {
+            return ButtonChallengeResponse.builder()
+                    .buttons(List.of(1, 2, 3, 4, 5))
+                    .timeoutSeconds(30)
+                    .rewardAvailable(!rewardReceived)
+                    .promptMessage("1번부터 5번 중 안내된 번호를 클릭하세요.")
+                    .build();
+        }
     }
 
     @Getter

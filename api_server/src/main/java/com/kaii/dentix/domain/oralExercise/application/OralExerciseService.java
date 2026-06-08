@@ -10,6 +10,11 @@ import com.kaii.dentix.domain.oralExercise.domain.OralExerciseInteractionEventTy
 import com.kaii.dentix.domain.oralExercise.domain.OralExerciseInteractionLog;
 import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.oralExercise.dto.OralExerciseDto;
+import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
+import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,7 +22,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -28,6 +38,8 @@ public class OralExerciseService {
     private final OralExerciseContentRepository oralExerciseContentRepository;
     private final OralExerciseInteractionLogRepository oralExerciseInteractionLogRepository;
     private final UserOralExerciseProgressRepository userOralExerciseProgressRepository;
+    private final UserRewardTransactionRepository userRewardTransactionRepository;
+    private final UserRepository userRepository;
     private final JwtTokenUtil jwtTokenUtil;
 
     @Transactional(readOnly = true)
@@ -41,17 +53,40 @@ public class OralExerciseService {
                         progress -> progress.getContent().getOralExerciseContentId(),
                         Function.identity()
                 ));
+        Set<Long> rewardedContentIds = userId == null
+                ? Set.of()
+                : userRewardTransactionRepository
+                .findByUserIdOrderByCreatedDesc(userId)
+                .stream()
+                .filter(transaction -> transaction.getOralExerciseContent() != null)
+                .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                .filter(transaction -> transaction.getStatus() != UserRewardTransactionStatus.CANCELED)
+                .map(transaction -> transaction.getOralExerciseContent().getOralExerciseContentId())
+                .collect(Collectors.toSet());
+        int currentWeek = calculateCurrentWeek(userId);
+        List<OralExerciseDto.ContentResponse> contents = oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc()
+                .stream()
+                .map(content -> OralExerciseDto.ContentResponse.from(
+                        content,
+                        progressMap.get(content.getOralExerciseContentId()),
+                        currentWeek,
+                        rewardedContentIds.contains(content.getOralExerciseContentId())
+                ))
+                .toList();
 
         return OralExerciseDto.ListResponse.builder()
-                .contents(
-                        oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc()
-                                .stream()
-                                .map(content -> OralExerciseDto.ContentResponse.from(
-                                        content,
-                                        progressMap.get(content.getOralExerciseContentId())
-                                ))
-                                .toList()
-                )
+                .currentWeek(Math.max(currentWeek, 1))
+                .currentContent(contents.stream()
+                        .filter(OralExerciseDto.ContentResponse::isCurrentWeekContent)
+                        .findFirst()
+                        .orElse(null))
+                .previousContents(contents.stream()
+                        .filter(content -> currentWeek > 0 && content.getWeek() < currentWeek)
+                        .toList())
+                .extraContents(contents.stream()
+                        .filter(content -> content.getWeek() > 5)
+                        .toList())
+                .contents(contents)
                 .build();
     }
 
@@ -131,6 +166,22 @@ public class OralExerciseService {
         } catch (Exception exception) {
             return null;
         }
+    }
+
+    private int calculateCurrentWeek(Long userId) {
+        if (userId == null) {
+            return 0;
+        }
+        return userRepository.findById(userId)
+                .map(User::getCreated)
+                .map(created -> {
+                    LocalDate startDate = created.toInstant()
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate();
+                    long days = ChronoUnit.DAYS.between(startDate, LocalDate.now(ZoneId.systemDefault()));
+                    return (int) (Math.max(days, 0) / 7) + 1;
+                })
+                .orElse(1);
     }
 
     private int calculateCompletionRate(
