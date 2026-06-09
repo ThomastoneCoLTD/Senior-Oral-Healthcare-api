@@ -43,4 +43,10 @@ public class OralExerciseContent extends TimeEntity {
     @Column(nullable = false)
     private boolean active;
 
+    public void fillVideoUrlIfBlank(String videoUrl) {
+        if ((this.videoUrl == null || this.videoUrl.isBlank()) && videoUrl != null && !videoUrl.isBlank()) {
+            this.videoUrl = videoUrl;
+        }
+    }
+
 }

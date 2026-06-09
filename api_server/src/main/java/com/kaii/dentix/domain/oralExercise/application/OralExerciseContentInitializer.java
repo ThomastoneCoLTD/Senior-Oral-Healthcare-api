@@ -22,9 +22,11 @@ public class OralExerciseContentInitializer {
     @Transactional
     public void seedOralExerciseContents() {
         for (OralExerciseContent defaultContent : defaultContents()) {
-            if (oralExerciseContentRepository.findByContentSort(defaultContent.getContentSort()).isEmpty()) {
-                oralExerciseContentRepository.save(defaultContent);
-            }
+            oralExerciseContentRepository.findByContentSort(defaultContent.getContentSort())
+                    .ifPresentOrElse(
+                            content -> content.fillVideoUrlIfBlank(TEST_VIDEO_URL),
+                            () -> oralExerciseContentRepository.save(defaultContent)
+                    );
         }
     }
 
@@ -107,7 +109,7 @@ public class OralExerciseContentInitializer {
             String description,
             String learningPoint
     ) {
-        return content(sort, title, description, learningPoint, null, sort == 1 ? "교육" : "실습");
+        return content(sort, title, description, learningPoint, TEST_VIDEO_URL, sort == 1 ? "교육" : "실습");
     }
 
     private OralExerciseContent content(
