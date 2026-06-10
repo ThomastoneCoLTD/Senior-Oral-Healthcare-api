@@ -92,6 +92,8 @@ Before Terraform apply:
 - RDS uses MySQL in private DB subnets and stores the managed master password in AWS Secrets Manager.
 - Confirm `denti-backends` region with `aws s3api get-bucket-location --bucket denti-backends`.
 
+`terraform-plan.yml` disables the S3 backend file inside the temporary GitHub Actions checkout and plans with local state plus `terraform.tfvars.example`. Use it as PR validation only. Authoritative apply plans use the real S3 backend and `SOH_TERRAFORM_TFVARS_DEV` / `SOH_TERRAFORM_TFVARS_PROD`.
+
 ## Manual AWS Console Guide
 
 Manual setup instructions live in:

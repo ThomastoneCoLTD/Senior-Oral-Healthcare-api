@@ -280,6 +280,8 @@ deploy-api-dev.yml        -> dev branch push and workflow_dispatch
 deploy-api-prod.yml       -> prod branch push and workflow_dispatch
 ```
 
+`terraform-plan.yml` temporarily disables the S3 backend file in the ephemeral GitHub Actions checkout and runs against local state with `terraform.tfvars.example`. This keeps PR validation working before the real backend bucket is configured. Treat that PR plan as a syntax/provider sanity check, not as the authoritative remote-state deployment plan. The apply workflows use the S3 backend and the filled `SOH_TERRAFORM_TFVARS_*` secrets.
+
 ## Required GitHub Secrets
 
 AWS deployment credentials:

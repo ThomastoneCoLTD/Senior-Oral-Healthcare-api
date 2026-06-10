@@ -43,8 +43,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform init without backend
-        run: terraform init -backend=false
+      - name: Use local backend for plan
+        run: |
+          if [ -f backend.tf ]; then
+            mv backend.tf backend.tf.disabled
+          fi
+
+      - name: Terraform init
+        run: terraform init
 
       - name: Terraform validate
         run: terraform validate

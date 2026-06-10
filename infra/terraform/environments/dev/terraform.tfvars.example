@@ -44,7 +44,8 @@ db_deletion_protection        = false
 db_skip_final_snapshot        = true
 db_apply_immediately          = false
 
-certificate_arn       = "<ALB_REGION_ACM_CERTIFICATE_ARN>"
+# Replace with the real ap-northeast-2 ALB certificate ARN before apply.
+certificate_arn       = "arn:aws:acm:ap-northeast-2:160885266674:certificate/00000000-0000-0000-0000-000000000000"
 hosted_zone_name      = "thomabio.com"
 origin_domain_name    = "soh-api-dev.thomabio.com"
 create_route53_record = false
