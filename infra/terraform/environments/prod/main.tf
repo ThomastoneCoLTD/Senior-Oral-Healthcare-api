@@ -45,6 +45,37 @@ module "security" {
   tags        = local.common_tags
 }
 
+module "rds" {
+  source = "../../modules/rds"
+
+  name_prefix           = local.name_prefix
+  vpc_id                = module.network.vpc_id
+  db_subnet_ids         = module.network.private_db_subnet_ids
+  app_security_group_id = module.security.ec2_sg_id
+
+  db_identifier              = var.db_identifier
+  engine                     = var.db_engine
+  engine_version             = var.db_engine_version
+  instance_class             = var.db_instance_class
+  allocated_storage          = var.db_allocated_storage
+  max_allocated_storage      = var.db_max_allocated_storage
+  storage_type               = var.db_storage_type
+  storage_encrypted          = var.db_storage_encrypted
+  db_name                    = var.db_name
+  username                   = var.db_username
+  port                       = var.db_port
+  multi_az                   = var.db_multi_az
+  backup_retention_period    = var.db_backup_retention_period
+  backup_window              = var.db_backup_window
+  maintenance_window         = var.db_maintenance_window
+  auto_minor_version_upgrade = var.db_auto_minor_version_upgrade
+  deletion_protection        = var.db_deletion_protection
+  skip_final_snapshot        = var.db_skip_final_snapshot
+  final_snapshot_identifier  = var.db_final_snapshot_identifier
+  apply_immediately          = var.db_apply_immediately
+  tags                       = local.common_tags
+}
+
 module "iam" {
   source = "../../modules/iam"
 
@@ -126,4 +157,21 @@ output "asg_name" {
 
 output "ec2_role_arn" {
   value = module.iam.role_arn
+}
+
+output "db_endpoint" {
+  value = module.rds.db_endpoint
+}
+
+output "db_address" {
+  value = module.rds.db_address
+}
+
+output "db_name" {
+  value = module.rds.db_name
+}
+
+output "db_master_user_secret_arn" {
+  value     = module.rds.master_user_secret_arn
+  sensitive = true
 }

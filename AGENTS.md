@@ -69,6 +69,7 @@ network
 security
 iam
 alb
+rds
 launch_template
 autoscaling
 ```
@@ -87,7 +88,11 @@ Before Terraform apply:
 - Create or choose the Terraform state S3 bucket.
 - Replace `<TERRAFORM_STATE_BUCKET>` in backend files.
 - Fill ACM `certificate_arn`.
+- Review compute defaults: EC2 instance type is `t3.medium`; RDS instance class is `db.t3.small`.
+- RDS uses MySQL in private DB subnets and stores the managed master password in AWS Secrets Manager.
 - Confirm `denti-backends` region with `aws s3api get-bucket-location --bucket denti-backends`.
+
+`terraform-plan.yml` disables the S3 backend file inside the temporary GitHub Actions checkout and plans with local state plus `terraform.tfvars.example`. Use it as PR validation only. Authoritative apply plans use the real S3 backend and `SOH_TERRAFORM_TFVARS_DEV` / `SOH_TERRAFORM_TFVARS_PROD`.
 
 ## Manual AWS Console Guide
 
@@ -108,9 +113,12 @@ AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY
 SOH_API_ENV_DEV
 SOH_API_ENV_PROD
+SOH_TERRAFORM_TFVARS_DEV
+SOH_TERRAFORM_TFVARS_PROD
 ```
 
 Never write AWS access keys, DB credentials, JWT secrets, or real `.env` contents into repository files.
+`SOH_TERRAFORM_TFVARS_*` should contain filled Terraform variable values such as ACM ARN and instance sizes, but not DB passwords or application `.env` secrets.
 
 ## Validation
 
@@ -153,6 +161,7 @@ For every new SOH-style project or environment, make sure the repository has a R
 - Build tool, Java/Node version, build command, and output artifact.
 - GitHub Secrets for AWS credentials and environment-specific app configuration.
 - Terraform state bucket bootstrap, backend placeholder replacement, ACM ARN, and S3 bucket region check.
+- RDS engine, instance class, subnet group, deletion protection, backup, and Secrets Manager password handling.
 - CI/CD workflow triggers, with no deployment from `main` unless intentionally approved.
 - Guard steps for branch, S3 path, release type, CloudFront distribution, and ASG names.
 - AWS IAM policy for GitHub Actions and EC2 instance roles.

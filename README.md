@@ -18,11 +18,12 @@ Artifact prefix: soh
 
 Terraform creates the AWS infrastructure instead of manual console setup:
 
-- VPC, public subnets, private app subnets, optional private DB subnets.
+- VPC, public subnets, private app subnets, and private DB subnets.
 - NAT Gateway and S3 Gateway Endpoint.
-- ALB security group and EC2 security group.
+- ALB security group, EC2 security group, and RDS security group.
 - EC2 instance role/profile with S3 artifact read permission and optional SSM.
 - ALB, HTTPS listener, target group, optional HTTP to HTTPS redirect, optional Route 53 alias.
+- RDS MySQL instance in private DB subnets with AWS-managed master password in Secrets Manager.
 - Launch Template with Amazon Linux 2023, Java 17, AWS CLI, and User Data.
 - Auto Scaling Group in private app subnets with target group attachment and rolling instance refresh.
 
@@ -47,6 +48,7 @@ readme_수동.md
 ```
 
 That file documents the AWS Console steps from zero setup through S3 artifacts, VPC, IAM, ALB, ASG, Route 53, CloudFront `/api/*` routing, and release verification.
+It also covers the manual RDS MySQL setup that Terraform normally creates.
 
 ## Branch and Deployment Policy
 
@@ -109,6 +111,7 @@ Use this checklist whenever starting a new SOH-style project or moving this proj
    - Confirm S3 artifact bucket region.
    - Prepare ACM certificate ARNs in the target ALB region.
    - Confirm Route 53 hosted zone ownership if DNS will be created by Terraform.
+   - Confirm RDS engine, instance class, subnet group, deletion protection, backup retention, and Secrets Manager password handling.
 
 5. Prepare CI/CD.
    - Ensure no workflow deploys from `main`.
@@ -154,6 +157,7 @@ infra/terraform/modules/network
 infra/terraform/modules/security
 infra/terraform/modules/iam
 infra/terraform/modules/alb
+infra/terraform/modules/rds
 infra/terraform/modules/launch_template
 infra/terraform/modules/autoscaling
 ```
@@ -171,9 +175,11 @@ Before GitHub Actions apply can work, do this once:
 
 1. Create or choose a Terraform state S3 bucket, for example `thomabio-terraform-state`.
 2. Replace `<TERRAFORM_STATE_BUCKET>` in both backend files.
-3. Copy each `terraform.tfvars.example` to `terraform.tfvars` or update the example values before apply.
+3. For local apply, copy each `terraform.tfvars.example` to `terraform.tfvars` and fill real values.
+   For GitHub Actions apply, store the filled tfvars content in `SOH_TERRAFORM_TFVARS_DEV` and `SOH_TERRAFORM_TFVARS_PROD`.
 4. Replace `certificate_arn` with an ACM certificate ARN in `ap-northeast-2`.
-5. Confirm the artifact bucket region:
+5. Review the RDS values. Current examples use EC2 `t3.medium` and RDS `db.t3.small`.
+6. Confirm the artifact bucket region:
 
 ```bash
 aws s3api get-bucket-location --bucket denti-backends
@@ -201,6 +207,9 @@ Launch template: soh-api-dev-lt
 ASG: soh-api-dev-asg
 Origin domain: soh-api-dev.thomabio.com
 Release type: dev
+EC2 instance type: t3.medium
+RDS: soh-api-dev-mysql, MySQL 8.0, db.t3.small, single-AZ
+RDS database: thomastone
 ```
 
 Dev uses a single NAT Gateway by default for cost control.
@@ -225,9 +234,13 @@ Launch template: soh-api-prod-lt
 ASG: soh-api-prod-asg
 Origin domain: soh-api.thomabio.com
 Release type: prod
+EC2 instance type: t3.medium
+RDS: soh-api-prod-mysql, MySQL 8.0, db.t3.small, single-AZ
+RDS database: thomastone
 ```
 
 Prod defaults to one NAT Gateway per AZ. Production Terraform apply is workflow-dispatch only and should use GitHub Environment approval through `production-infra`.
+Prod RDS has deletion protection enabled and requires a final snapshot on destroy unless intentionally changed.
 
 ## API Deployment Flow
 
@@ -267,6 +280,8 @@ deploy-api-dev.yml        -> dev branch push and workflow_dispatch
 deploy-api-prod.yml       -> prod branch push and workflow_dispatch
 ```
 
+`terraform-plan.yml` temporarily disables the S3 backend file in the ephemeral GitHub Actions checkout and runs against local state with `terraform.tfvars.example`. This keeps PR validation working before the real backend bucket is configured. Treat that PR plan as a syntax/provider sanity check, not as the authoritative remote-state deployment plan. The apply workflows use the S3 backend and the filled `SOH_TERRAFORM_TFVARS_*` secrets.
+
 ## Required GitHub Secrets
 
 AWS deployment credentials:
@@ -283,6 +298,15 @@ SOH_API_ENV_DEV
 SOH_API_ENV_PROD
 ```
 
+Terraform apply tfvars secrets:
+
+```text
+SOH_TERRAFORM_TFVARS_DEV
+SOH_TERRAFORM_TFVARS_PROD
+```
+
+Each `SOH_TERRAFORM_TFVARS_*` secret should contain the filled content of that environment's `terraform.tfvars.example`. Do not put AWS access keys, DB passwords, JWT secrets, or real `.env` content in these Terraform tfvars secrets.
+
 `SOH_API_ENV_DEV` example:
 
 ```text
@@ -291,11 +315,9 @@ SPRING_PROFILES_ACTIVE=dev
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh-dev.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh-dev.thomabio.com
-DB_HOST=<DEV_DB_HOST>
-DB_PORT=3306
-DB_NAME=<DEV_DB_NAME>
-DB_USERNAME=<DEV_DB_USER>
-DB_PASSWORD=<DEV_DB_PASSWORD>
+SPRING_DATASOURCE_URL=jdbc:mysql://<DEV_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
+SPRING_DATASOURCE_USERNAME=sohadmin
+SPRING_DATASOURCE_PASSWORD=<DEV_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<DEV_JWT_SECRET>
 ```
 
@@ -307,15 +329,14 @@ SPRING_PROFILES_ACTIVE=prod
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh.thomabio.com
-DB_HOST=<PROD_DB_HOST>
-DB_PORT=3306
-DB_NAME=<PROD_DB_NAME>
-DB_USERNAME=<PROD_DB_USER>
-DB_PASSWORD=<PROD_DB_PASSWORD>
+SPRING_DATASOURCE_URL=jdbc:mysql://<PROD_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
+SPRING_DATASOURCE_USERNAME=sohadmin
+SPRING_DATASOURCE_PASSWORD=<PROD_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<PROD_JWT_SECRET>
 ```
 
 Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3, and EC2 downloads it through the instance profile.
+Terraform outputs `db_address`, `db_endpoint`, and `db_master_user_secret_arn`; use the Secrets Manager secret value to populate the datasource password in the GitHub environment secret.
 
 ## GitHub Actions IAM User Policy
 
@@ -361,6 +382,8 @@ Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3
 ```
 
 If `aws_region` changes, update the Auto Scaling ARNs as well.
+
+Terraform plan/apply uses the same AWS credentials in the current workflows. That principal also needs permissions for managed infrastructure resources, including EC2/VPC, ELBv2, IAM, Auto Scaling, Route 53 when enabled, RDS, and Secrets Manager. Scope these permissions to `soh-api-*`, the configured VPC resources, and the Terraform state bucket where practical.
 
 ## EC2 Instance Role Policies
 
@@ -409,6 +432,8 @@ Terraform also attaches `AmazonSSMManagedInstanceCore` by default so access can 
 Initial ALB security group ingress allows HTTPS 443 from IPv4/IPv6 public internet. Before production traffic, restrict this to the CloudFront origin-facing managed prefix list where possible.
 
 The EC2 security group only accepts TCP 8080 from the ALB security group. EC2 outbound is broad in the base module for package install, S3, DB, and service dependencies; narrow it later when dependency destinations are finalized.
+
+The RDS security group only accepts TCP 3306 from the EC2 security group. RDS is created in private DB subnets with `publicly_accessible = false`.
 
 ## CloudFront API Integration
 

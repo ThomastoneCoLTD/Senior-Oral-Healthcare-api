@@ -28,6 +28,11 @@ infra/terraform/environments/prod
 ```
 
 Copy `terraform.tfvars.example` to `terraform.tfvars`, replace placeholders such as `certificate_arn`, then run plan/apply.
+For GitHub Actions apply, store the filled tfvars content in `SOH_TERRAFORM_TFVARS_DEV` and `SOH_TERRAFORM_TFVARS_PROD`.
+The current examples use EC2 `t3.medium` and RDS MySQL `db.t3.small`.
+RDS is created in private DB subnets and the master password is managed by AWS Secrets Manager.
+
+The PR `terraform-plan.yml` workflow moves `backend.tf` aside in the temporary checkout before `terraform init`, so the plan uses local state and the example tfvars. This is only a validation plan; apply workflows use the S3 backend.
 
 ## Local Validation
 
