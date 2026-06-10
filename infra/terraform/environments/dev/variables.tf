@@ -90,7 +90,7 @@ variable "max_size" {
 
 variable "instance_type" {
   type    = string
-  default = "t3.small"
+  default = "t3.medium"
 }
 
 variable "ami_id" {
@@ -123,4 +123,101 @@ variable "enable_http_redirect" {
 variable "enable_ssm" {
   type    = bool
   default = true
+}
+
+variable "db_identifier" {
+  type = string
+}
+
+variable "db_engine" {
+  type    = string
+  default = "mysql"
+}
+
+variable "db_engine_version" {
+  type    = string
+  default = "8.0"
+}
+
+variable "db_instance_class" {
+  type    = string
+  default = "db.t3.small"
+}
+
+variable "db_allocated_storage" {
+  type    = number
+  default = 20
+}
+
+variable "db_max_allocated_storage" {
+  type    = number
+  default = 100
+}
+
+variable "db_storage_type" {
+  type    = string
+  default = "gp3"
+}
+
+variable "db_storage_encrypted" {
+  type    = bool
+  default = true
+}
+
+variable "db_name" {
+  type = string
+}
+
+variable "db_username" {
+  type = string
+}
+
+variable "db_port" {
+  type    = number
+  default = 3306
+}
+
+variable "db_multi_az" {
+  type    = bool
+  default = false
+}
+
+variable "db_backup_retention_period" {
+  type    = number
+  default = 7
+}
+
+variable "db_backup_window" {
+  type    = string
+  default = "18:00-19:00"
+}
+
+variable "db_maintenance_window" {
+  type    = string
+  default = "sun:19:00-sun:20:00"
+}
+
+variable "db_auto_minor_version_upgrade" {
+  type    = bool
+  default = true
+}
+
+variable "db_deletion_protection" {
+  type    = bool
+  default = true
+}
+
+variable "db_skip_final_snapshot" {
+  type    = bool
+  default = false
+}
+
+variable "db_final_snapshot_identifier" {
+  type    = string
+  default = null
+}
+
+variable "db_apply_immediately" {
+  type    = bool
+  default = false
 }

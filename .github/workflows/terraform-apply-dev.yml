@@ -36,6 +36,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Write Terraform variables
+        env:
+          TERRAFORM_TFVARS: ${{ secrets.SOH_TERRAFORM_TFVARS_DEV }}
+        run: |
+          if [ -z "$TERRAFORM_TFVARS" ]; then
+            echo "SOH_TERRAFORM_TFVARS_DEV is empty"
+            exit 1
+          fi
+          printf '%s\n' "$TERRAFORM_TFVARS" > terraform.tfvars
+
       - name: Terraform init
         run: terraform init
 

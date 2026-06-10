@@ -16,6 +16,7 @@
 -> Private Subnet EC2
 -> systemd SOH API
 -> S3 artifact bucket에서 app.jar/.env 다운로드
+-> Private DB Subnet RDS MySQL
 ```
 
 수동 구축 대상:
@@ -31,6 +32,7 @@ Security Group
 IAM Role / Instance Profile
 ALB
 Target Group
+RDS MySQL
 Launch Template
 Auto Scaling Group
 Route 53 API origin record
@@ -52,6 +54,8 @@ ASG: soh-api-dev-asg
 EC2 service: soh-api-dev
 ALB: soh-api-dev-alb
 Target Group: soh-api-dev-tg
+RDS: soh-api-dev-mysql
+RDS class: db.t3.small
 API origin domain: soh-api-dev.thomabio.com
 Frontend URL: https://soh-dev.thomabio.com
 Health URL: https://soh-dev.thomabio.com/api/actuator/health
@@ -68,6 +72,8 @@ ASG: soh-api-prod-asg
 EC2 service: soh-api-prod
 ALB: soh-api-prod-alb
 Target Group: soh-api-prod-tg
+RDS: soh-api-prod-mysql
+RDS class: db.t3.small
 API origin domain: soh-api.thomabio.com
 Frontend URL: https://soh.thomabio.com
 Health URL: https://soh.thomabio.com/api/actuator/health
@@ -85,6 +91,9 @@ Region: ap-northeast-2
 Artifact bucket: denti-backends
 Hosted zone: thomabio.com
 ACM certificate: soh-api-dev.thomabio.com / soh-api.thomabio.com에 사용할 인증서
+RDS engine: MySQL 8.0
+RDS instance class: db.t3.small
+EC2 instance type: t3.medium
 ```
 
 체크:
@@ -200,12 +209,12 @@ Name: soh-api-dev-private-app-2
 AZ: ap-northeast-2c
 CIDR: 10.70.11.0/24
 
-Optional private DB subnet 1
+Private DB subnet 1
 Name: soh-api-dev-private-db-1
 AZ: ap-northeast-2a
 CIDR: 10.70.20.0/24
 
-Optional private DB subnet 2
+Private DB subnet 2
 Name: soh-api-dev-private-db-2
 AZ: ap-northeast-2c
 CIDR: 10.70.21.0/24
@@ -236,12 +245,12 @@ Name: soh-api-prod-private-app-2
 AZ: ap-northeast-2c
 CIDR: 10.80.11.0/24
 
-Optional private DB subnet 1
+Private DB subnet 1
 Name: soh-api-prod-private-db-1
 AZ: ap-northeast-2a
 CIDR: 10.80.20.0/24
 
-Optional private DB subnet 2
+Private DB subnet 2
 Name: soh-api-prod-private-db-2
 AZ: ap-northeast-2c
 CIDR: 10.80.21.0/24
@@ -547,9 +556,120 @@ Outbound:
   All traffic
 ```
 
+개발 RDS SG:
+
+```text
+Name: soh-api-dev-rds-sg
+VPC: soh-api-dev-vpc
+Inbound:
+  TCP 3306 from soh-api-dev-ec2-sg
+Outbound:
+  All traffic
+```
+
+운영 RDS SG:
+
+```text
+Name: soh-api-prod-rds-sg
+VPC: soh-api-prod-vpc
+Inbound:
+  TCP 3306 from soh-api-prod-ec2-sg
+Outbound:
+  All traffic
+```
+
 SSH는 기본적으로 열지 않는다. 접속은 SSM Session Manager를 사용한다.
 
-## 13. Target Group 생성
+## 13. RDS MySQL 생성
+
+AWS 콘솔:
+
+```text
+RDS -> Subnet groups -> Create DB subnet group
+RDS -> Databases -> Create database
+```
+
+DB subnet group:
+
+```text
+dev name: soh-api-dev-db-subnet-group
+dev VPC: soh-api-dev-vpc
+dev subnets:
+  soh-api-dev-private-db-1
+  soh-api-dev-private-db-2
+
+prod name: soh-api-prod-db-subnet-group
+prod VPC: soh-api-prod-vpc
+prod subnets:
+  soh-api-prod-private-db-1
+  soh-api-prod-private-db-2
+```
+
+공통 선택:
+
+```text
+Engine type: MySQL
+Engine version: MySQL 8.0
+Templates:
+  dev -> Free tier 또는 Dev/Test
+  prod -> Production 또는 Dev/Test에서 운영 정책에 맞게 조정
+DB instance class: db.t3.small
+Storage type: gp3
+Allocated storage: 20 GiB
+Storage autoscaling: Enable
+Maximum storage threshold: 100 GiB
+Public access: No
+Master username: sohadmin
+Credential management: Manage master credentials in AWS Secrets Manager 권장
+Initial database name: thomastone
+```
+
+개발 RDS:
+
+```text
+DB instance identifier: soh-api-dev-mysql
+VPC: soh-api-dev-vpc
+DB subnet group: soh-api-dev-db-subnet-group
+Subnets:
+  soh-api-dev-private-db-1
+  soh-api-dev-private-db-2
+VPC security group: soh-api-dev-rds-sg
+Multi-AZ: No
+Backup retention: 3 days
+Deletion protection: Off
+```
+
+운영 RDS:
+
+```text
+DB instance identifier: soh-api-prod-mysql
+VPC: soh-api-prod-vpc
+DB subnet group: soh-api-prod-db-subnet-group
+Subnets:
+  soh-api-prod-private-db-1
+  soh-api-prod-private-db-2
+VPC security group: soh-api-prod-rds-sg
+Multi-AZ: No, 운영 HA가 승인되면 Yes로 변경
+Backup retention: 7 days 이상
+Deletion protection: On
+Final snapshot: 삭제 시 반드시 생성
+```
+
+생성 후 확인:
+
+```text
+RDS endpoint를 기록한다.
+Secrets Manager에서 master credential secret ARN과 password를 확인한다.
+GitHub Secret SOH_API_ENV_DEV / SOH_API_ENV_PROD의 SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD에 반영한다.
+```
+
+주의:
+
+- RDS는 private DB subnet에 두고 public access를 열지 않는다.
+- RDS SG inbound는 EC2 SG에서 오는 TCP 3306만 허용한다.
+- 운영 DB 삭제 보호를 끄거나 final snapshot을 생략하지 않는다.
+
+## 14. Target Group 생성
 
 AWS 콘솔:
 
@@ -591,7 +711,7 @@ Deregistration delay: 45 seconds
 
 초기 생성 시 target 등록은 비워도 된다. ASG가 자동으로 붙인다.
 
-## 14. ALB 생성
+## 15. ALB 생성
 
 AWS 콘솔:
 
@@ -641,7 +761,7 @@ Status: HTTP_301
 
 이 경우 ALB SG에 `HTTP 80` inbound가 필요하다.
 
-## 15. Route 53 API Origin Record 생성
+## 16. Route 53 API Origin Record 생성
 
 AWS 콘솔:
 
@@ -678,7 +798,7 @@ nslookup soh-api-dev.thomabio.com
 nslookup soh-api.thomabio.com
 ```
 
-## 16. Launch Template 생성
+## 17. Launch Template 생성
 
 AWS 콘솔:
 
@@ -690,7 +810,7 @@ EC2 -> Launch Templates -> Create launch template
 
 ```text
 AMI: Amazon Linux 2023 최신 x86_64
-Instance type: t3.small 또는 프로젝트 기준
+Instance type: t3.medium
 Key pair: None 권장
 Network settings:
   Do not include subnet in launch template
@@ -811,7 +931,7 @@ SPRING_PROFILE="prod"
 Description=SOH API prod Server
 ```
 
-## 17. Auto Scaling Group 생성
+## 18. Auto Scaling Group 생성
 
 AWS 콘솔:
 
@@ -867,7 +987,7 @@ Min healthy percentage: 100
 Instance warmup: 180 seconds
 ```
 
-## 18. API Artifact 수동 업로드
+## 19. API Artifact 수동 업로드
 
 로컬에서 JAR 생성:
 
@@ -894,11 +1014,9 @@ SPRING_PROFILES_ACTIVE=dev
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh-dev.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh-dev.thomabio.com
-DB_HOST=<DEV_DB_HOST>
-DB_PORT=3306
-DB_NAME=<DEV_DB_NAME>
-DB_USERNAME=<DEV_DB_USER>
-DB_PASSWORD=<DEV_DB_PASSWORD>
+SPRING_DATASOURCE_URL=jdbc:mysql://<DEV_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
+SPRING_DATASOURCE_USERNAME=sohadmin
+SPRING_DATASOURCE_PASSWORD=<DEV_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<DEV_JWT_SECRET>
 ```
 
@@ -910,11 +1028,9 @@ SPRING_PROFILES_ACTIVE=prod
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh.thomabio.com
-DB_HOST=<PROD_DB_HOST>
-DB_PORT=3306
-DB_NAME=<PROD_DB_NAME>
-DB_USERNAME=<PROD_DB_USER>
-DB_PASSWORD=<PROD_DB_PASSWORD>
+SPRING_DATASOURCE_URL=jdbc:mysql://<PROD_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
+SPRING_DATASOURCE_USERNAME=sohadmin
+SPRING_DATASOURCE_PASSWORD=<PROD_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<PROD_JWT_SECRET>
 ```
 
@@ -937,7 +1053,7 @@ Upload .env
 - dev 파일을 `soh/prod/`에 올리지 않는다.
 - prod 파일을 `soh/dev/`에 올리지 않는다.
 
-## 19. ASG Instance Refresh 수동 실행
+## 20. ASG Instance Refresh 수동 실행
 
 AWS 콘솔:
 
@@ -969,7 +1085,7 @@ EC2 -> Instances -> 새 인스턴스 상태 확인
 Target Groups -> Targets -> health 상태 확인
 ```
 
-## 20. CloudFront /api/* 연결
+## 21. CloudFront /api/* 연결
 
 기존 프론트 CloudFront distribution을 수정한다.
 
@@ -1047,7 +1163,7 @@ function handler(event) {
 }
 ```
 
-## 21. 동작 확인
+## 22. 동작 확인
 
 S3 확인:
 
@@ -1088,7 +1204,7 @@ curl -i https://soh-dev.thomabio.com/api/actuator/health
 curl -i https://soh.thomabio.com/api/actuator/health
 ```
 
-## 22. 장애 대응 체크리스트
+## 23. 장애 대응 체크리스트
 
 Target Group이 unhealthy:
 
@@ -1105,6 +1221,14 @@ EC2가 S3에서 다운로드 실패:
 3. `denti-backends` bucket region이 `ap-northeast-2`인지 확인한다.
 4. S3 object path가 dev/prod에 맞는지 확인한다.
 
+EC2가 RDS에 연결 실패:
+
+1. RDS가 private DB subnet group에 생성됐는지 확인한다.
+2. RDS SG가 EC2 SG로부터 TCP 3306을 허용하는지 확인한다.
+3. `.env`의 `SPRING_DATASOURCE_URL` endpoint와 database name이 맞는지 확인한다.
+4. Secrets Manager의 password를 `SPRING_DATASOURCE_PASSWORD`에 정확히 반영했는지 확인한다.
+5. RDS status가 `Available`이고 backup/maintenance 작업 중이 아닌지 확인한다.
+
 CloudFront에서 API가 index.html로 반환됨:
 
 1. `/api/*` behavior가 default behavior보다 위에 있는지 확인한다.
@@ -1118,18 +1242,21 @@ CloudFront에서 API가 index.html로 반환됨:
 3. 새 인스턴스가 Target Group에서 healthy가 됐는지 확인한다.
 4. 기존 인스턴스가 종료됐는지 확인한다.
 
-## 23. 수동 구축 완료 체크리스트
+## 24. 수동 구축 완료 체크리스트
 
 ```text
 [ ] VPC 생성
 [ ] Public subnet 2개 생성
 [ ] Private app subnet 2개 생성
+[ ] Private DB subnet 2개 생성
 [ ] Internet Gateway 연결
 [ ] NAT Gateway 생성
 [ ] Public/private route table 연결
 [ ] S3 Gateway Endpoint 연결
 [ ] EC2 IAM role 생성
-[ ] ALB/EC2 Security Group 생성
+[ ] ALB/EC2/RDS Security Group 생성
+[ ] RDS MySQL 생성
+[ ] RDS endpoint와 Secrets Manager password를 .env/GitHub Secret에 반영
 [ ] Target Group 생성
 [ ] ALB HTTPS listener 생성
 [ ] Route 53 API origin record 생성
@@ -1147,6 +1274,8 @@ CloudFront에서 API가 index.html로 반환됨:
 
 - AWS VPC 생성: https://docs.aws.amazon.com/vpc/latest/userguide/create-vpc.html
 - S3 Gateway Endpoint: https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-s3.html
+- RDS DB instance in VPC: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.WorkingWithRDSInstanceinaVPC.html
+- RDS security groups: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.RDSSecurityGroups.html
 - ALB Target Group 생성: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/create-target-group.html
 - ALB HTTPS Listener: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/create-https-listener.html
 - ASG Instance Refresh: https://docs.aws.amazon.com/autoscaling/ec2/userguide/start-instance-refresh.html
