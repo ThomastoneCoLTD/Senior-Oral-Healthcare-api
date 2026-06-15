@@ -1,0 +1,98 @@
+name: Deploy SOH API Prod
+
+on:
+  push:
+    branches:
+      - prod
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: soh-api-prod-deploy
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-northeast-2
+  S3_BUCKET: denti-backends
+  S3_PREFIX: soh
+  RELEASE_TYPE: prod
+  JAR_NAME: app.jar
+  ENV_FILE: .env
+  ASG_NAME: soh-api-prod-asg
+  APP_DIR: api_server
+
+jobs:
+  deploy:
+    name: Build, upload, and refresh prod ASG
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Guard prod API deployment target
+        run: |
+          test "${GITHUB_REF_NAME}" = "prod" || (echo "This workflow must run from prod branch only" && exit 1)
+          test "${RELEASE_TYPE}" = "prod" || (echo "Wrong release type: ${RELEASE_TYPE}" && exit 1)
+          test "${S3_PREFIX}" = "soh" || (echo "Wrong S3 prefix: ${S3_PREFIX}" && exit 1)
+          test "${ASG_NAME}" = "soh-api-prod-asg" || (echo "Wrong ASG name: ${ASG_NAME}" && exit 1)
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build Spring Boot jar
+        run: |
+          set -e
+          cd "${APP_DIR}"
+
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew clean bootJar -x test -x asciidoctor
+            JAR_PATH=$(find build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*plain*" | head -n 1)
+          elif [ -f "./mvnw" ]; then
+            chmod +x ./mvnw
+            ./mvnw clean package -DskipTests
+            JAR_PATH=$(find target -maxdepth 1 -type f -name "*.jar" ! -name "original-*" | head -n 1)
+          elif [ -f "pom.xml" ]; then
+            mvn clean package -DskipTests
+            JAR_PATH=$(find target -maxdepth 1 -type f -name "*.jar" ! -name "original-*" | head -n 1)
+          else
+            echo "No supported build file found. Expected gradlew, mvnw, or pom.xml."
+            exit 1
+          fi
+
+          test -n "${JAR_PATH}" || (echo "JAR file not found" && exit 1)
+          cp "${JAR_PATH}" "../${JAR_NAME}"
+          ls -lh "../${JAR_NAME}"
+
+      - name: Create env file from GitHub Secret
+        env:
+          SOH_API_ENV: ${{ secrets.SOH_API_ENV_PROD }}
+        run: |
+          test -n "${SOH_API_ENV}" || (echo "SOH_API_ENV_PROD secret is empty" && exit 1)
+          printf '%s\n' "${SOH_API_ENV}" > "${ENV_FILE}"
+          chmod 600 "${ENV_FILE}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload artifacts to S3
+        run: |
+          aws s3 cp "${JAR_NAME}" "s3://${S3_BUCKET}/${S3_PREFIX}/${RELEASE_TYPE}/${JAR_NAME}" --only-show-errors
+          aws s3 cp "${ENV_FILE}" "s3://${S3_BUCKET}/${S3_PREFIX}/${RELEASE_TYPE}/${ENV_FILE}" --only-show-errors
+
+      - name: Start ASG instance refresh
+        run: |
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name "${ASG_NAME}" \
+            --preferences '{"InstanceWarmup":180,"MinHealthyPercentage":100}'
+

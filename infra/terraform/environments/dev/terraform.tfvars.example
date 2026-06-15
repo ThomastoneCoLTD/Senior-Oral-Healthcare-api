@@ -1,0 +1,51 @@
+aws_region  = "ap-northeast-2"
+project_name = "soh-api"
+environment  = "dev"
+account_id   = "160885266674"
+
+vpc_cidr                 = "10.70.0.0/16"
+public_subnet_cidrs      = ["10.70.0.0/24", "10.70.1.0/24"]
+private_app_subnet_cidrs = ["10.70.10.0/24", "10.70.11.0/24"]
+private_db_subnet_cidrs  = ["10.70.20.0/24", "10.70.21.0/24"]
+single_nat_gateway       = true
+
+artifact_bucket = "denti-backends"
+artifact_prefix = "soh"
+release_type    = "dev"
+spring_profile  = "dev"
+
+app_port    = 8080
+health_path = "/api/actuator/health"
+
+alb_name             = "soh-api-dev-alb"
+target_group_name    = "soh-api-dev-tg"
+launch_template_name = "soh-api-dev-lt"
+asg_name             = "soh-api-dev-asg"
+
+desired_capacity = 1
+min_size         = 1
+max_size         = 2
+instance_type    = "t3.medium"
+
+db_identifier                 = "soh-api-dev-mysql"
+db_engine                     = "mysql"
+db_engine_version             = "8.0"
+db_instance_class             = "db.t3.small"
+db_allocated_storage          = 20
+db_max_allocated_storage      = 100
+db_storage_type               = "gp3"
+db_storage_encrypted          = true
+db_name                       = "thomastone"
+db_username                   = "sohadmin"
+db_port                       = 3306
+db_multi_az                   = false
+db_backup_retention_period    = 3
+db_deletion_protection        = false
+db_skip_final_snapshot        = true
+db_apply_immediately          = false
+
+# Replace with the real ap-northeast-2 ALB certificate ARN before apply.
+certificate_arn       = "arn:aws:acm:ap-northeast-2:160885266674:certificate/00000000-0000-0000-0000-000000000000"
+hosted_zone_name      = "thomabio.com"
+origin_domain_name    = "soh-api-dev.thomabio.com"
+create_route53_record = false
