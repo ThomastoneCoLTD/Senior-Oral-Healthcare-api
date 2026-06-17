@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket = "<TERRAFORM_STATE_BUCKET>"
+    bucket = "thomabio-soh-terraform-state"
     key    = "soh-api/dev/terraform.tfstate"
     region = "ap-northeast-2"
   }

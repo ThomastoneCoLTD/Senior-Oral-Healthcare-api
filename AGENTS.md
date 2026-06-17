@@ -86,7 +86,7 @@ Do not run `terraform apply` from Codex. Apply must be run by GitHub Actions or 
 Before Terraform apply:
 
 - Create or choose the Terraform state S3 bucket.
-- Replace `<TERRAFORM_STATE_BUCKET>` in backend files.
+- Confirm backend files use `thomabio-soh-terraform-state`.
 - Fill ACM `certificate_arn`.
 - Review compute defaults: EC2 instance type is `t3.medium`; RDS instance class is `db.t3.small`.
 - RDS uses MySQL in private DB subnets and stores the managed master password in AWS Secrets Manager.

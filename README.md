@@ -173,8 +173,8 @@ infra/terraform/environments/prod
 
 Before GitHub Actions apply can work, do this once:
 
-1. Create or choose a Terraform state S3 bucket, for example `thomabio-terraform-state`.
-2. Replace `<TERRAFORM_STATE_BUCKET>` in both backend files.
+1. Create or choose the Terraform state S3 bucket: `thomabio-soh-terraform-state`.
+2. Confirm both backend files use `thomabio-soh-terraform-state`.
 3. For local apply, copy each `terraform.tfvars.example` to `terraform.tfvars` and fill real values.
    For GitHub Actions apply, store the filled tfvars content in `SOH_TERRAFORM_TFVARS_DEV` and `SOH_TERRAFORM_TFVARS_PROD`.
 4. Replace `certificate_arn` with an ACM certificate ARN in `ap-northeast-2`.

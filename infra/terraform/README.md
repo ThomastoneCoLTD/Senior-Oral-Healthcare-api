@@ -4,18 +4,17 @@ This Terraform tree prepares the SOH API infrastructure on AWS. Codex must not r
 
 ## Bootstrap Required Once
 
-Terraform remote state uses an S3 backend. Before running `terraform init`, create or choose a state bucket, then replace `<TERRAFORM_STATE_BUCKET>` in:
+Terraform remote state uses an S3 backend. Before running `terraform init`, create or choose the state bucket used by this repository:
+
+```text
+thomabio-soh-terraform-state
+```
+
+Backend files:
 
 ```text
 infra/terraform/environments/dev/backend.tf
 infra/terraform/environments/prod/backend.tf
-```
-
-Example state bucket names:
-
-```text
-thomabio-terraform-state
-<organization-standard-terraform-state-bucket>
 ```
 
 DynamoDB state locking is optional and can be added later.
