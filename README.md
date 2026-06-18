@@ -318,6 +318,8 @@ CORS_ALLOWED_ORIGINS=https://soh-dev.thomabio.com
 SPRING_DATASOURCE_URL=jdbc:mysql://<DEV_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
 SPRING_DATASOURCE_USERNAME=sohadmin
 SPRING_DATASOURCE_PASSWORD=<DEV_RDS_PASSWORD_FROM_SECRETS_MANAGER>
+JWT_ACCESS_KEY=<DEV_RANDOM_32_BYTE_BASE64_VALUE>
+JWT_REFRESH_KEY=<DEV_RANDOM_32_BYTE_BASE64_VALUE>
 JWT_SECRET=<DEV_JWT_SECRET>
 ```
 
@@ -332,11 +334,43 @@ CORS_ALLOWED_ORIGINS=https://soh.thomabio.com
 SPRING_DATASOURCE_URL=jdbc:mysql://<PROD_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
 SPRING_DATASOURCE_USERNAME=sohadmin
 SPRING_DATASOURCE_PASSWORD=<PROD_RDS_PASSWORD_FROM_SECRETS_MANAGER>
+JWT_ACCESS_KEY=<PROD_RANDOM_32_BYTE_BASE64_VALUE>
+JWT_REFRESH_KEY=<PROD_RANDOM_32_BYTE_BASE64_VALUE>
 JWT_SECRET=<PROD_JWT_SECRET>
 ```
 
 Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3, and EC2 downloads it through the instance profile.
 Terraform outputs `db_address`, `db_endpoint`, and `db_master_user_secret_arn`; use the Secrets Manager secret value to populate the datasource password in the GitHub environment secret.
+
+JWT signing keys:
+
+- The application reads `JWT_ACCESS_KEY` and `JWT_REFRESH_KEY` through `jwt.accessTokenKey` and `jwt.refreshTokenKey`.
+- Generate distinct random values for access and refresh tokens. Each value must be at least 32 bytes for HS256.
+- `JWT_SECRET` is kept for compatibility, but do not rely on the default `jwt` value.
+- Do not use placeholder, test, repeated, or all-zero values such as `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`.
+- Rotating these values invalidates existing login tokens.
+
+PowerShell key generation:
+
+```powershell
+1..3 | ForEach-Object {
+  $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+  $bytes = New-Object byte[] 32
+  $rng.GetBytes($bytes)
+  [Convert]::ToBase64String($bytes)
+  $rng.Dispose()
+}
+```
+
+Use the three output lines as:
+
+```text
+JWT_ACCESS_KEY=<first output line>
+JWT_REFRESH_KEY=<second output line>
+JWT_SECRET=<third output line>
+```
+
+Some Windows PowerShell/.NET versions do not support `[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)`. If that command fails, discard any `AAAAAAAA...` output and use the `Create()` / `GetBytes()` command above.
 
 ## GitHub Actions IAM User Policy
 

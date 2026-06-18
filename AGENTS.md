@@ -120,6 +120,8 @@ SOH_TERRAFORM_TFVARS_PROD
 Never write AWS access keys, DB credentials, JWT secrets, or real `.env` contents into repository files.
 `SOH_TERRAFORM_TFVARS_*` should contain filled Terraform variable values such as ACM ARN and instance sizes, but not DB passwords or application `.env` secrets.
 
+For API env secrets, include `JWT_ACCESS_KEY`, `JWT_REFRESH_KEY`, and `JWT_SECRET`. The application signs tokens with `JWT_ACCESS_KEY` and `JWT_REFRESH_KEY`; each must be a distinct random value of at least 32 bytes. On Windows PowerShell, prefer `RandomNumberGenerator.Create().GetBytes($bytes)` and base64 encode the result. Do not use failed all-zero output such as `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`.
+
 ## Validation
 
 Prefer these checks after relevant changes:
