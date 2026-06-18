@@ -1,0 +1,59 @@
+name: Terraform Apply Dev
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: soh-api-terraform-apply-dev
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ap-northeast-2
+
+jobs:
+  apply:
+    name: Terraform apply dev
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: infra/terraform/environments/dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Write Terraform variables
+        env:
+          TERRAFORM_TFVARS: ${{ secrets.SOH_TERRAFORM_TFVARS_DEV }}
+        run: |
+          if [ -z "$TERRAFORM_TFVARS" ]; then
+            echo "SOH_TERRAFORM_TFVARS_DEV is empty"
+            exit 1
+          fi
+          printf '%s\n' "$TERRAFORM_TFVARS" > terraform.tfvars
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve tfplan
