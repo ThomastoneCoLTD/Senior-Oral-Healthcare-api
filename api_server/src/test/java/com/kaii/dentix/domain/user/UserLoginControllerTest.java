@@ -91,7 +91,7 @@ public class UserLoginControllerTest {
                 .userGender(GenderType.W)
                 .organizationId(1L)
                 .organizationName("테스트 치과")
-                .daeguDid("did:daegu:local:1")
+                .daeguDid("did:mitum:minic:0x123")
                 .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
                 .build();
     }

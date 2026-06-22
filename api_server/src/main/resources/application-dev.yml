@@ -111,6 +111,7 @@ aiModel:
 
 daegu-chain:
   base-url: ${DAEGU_CHAIN_BASE_URL:https://www.daegu.go.kr/daeguchain}
+  api-base-url: ${DAEGU_CHAIN_API_BASE_URL:}
   api-version: ${DAEGU_CHAIN_API_VERSION:v2}
   chain: ${DAEGU_CHAIN_ID:dchain}
   token: ${DAEGU_CHAIN_TOKEN:}

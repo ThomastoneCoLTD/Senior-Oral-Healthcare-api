@@ -30,6 +30,9 @@ public class UserDaeguProvisioningService {
 
     public void provisionForSignUp(User user) {
         provisionDid(user);
+        if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED) {
+            return;
+        }
         provisionWallet(user);
     }
 
@@ -44,10 +47,6 @@ public class UserDaeguProvisioningService {
             }
             user.updateDaeguDid(did, key, UserDaeguIdentityStatus.ISSUED);
         } catch (RuntimeException exception) {
-            if (isDevProfile() && isTokenRequiredError(exception)) {
-                user.updateDaeguDid(buildLocalTestDid(user), buildLocalTestDidKey(user), UserDaeguIdentityStatus.ISSUED);
-                return;
-            }
             log.warn("Daegu DID provisioning failed. userId={}", user.getUserId(), exception);
             user.updateDaeguDid(null, null, UserDaeguIdentityStatus.FAILED);
         }
@@ -118,14 +117,6 @@ public class UserDaeguProvisioningService {
             }
         }
         return null;
-    }
-
-    private String buildLocalTestDid(User user) {
-        return "did:daegu:local:" + user.getUserId();
-    }
-
-    private String buildLocalTestDidKey(User user) {
-        return "local-key-" + user.getUserId();
     }
 
     private String buildLocalTestWalletAddress(User user) {
