@@ -11,6 +11,7 @@ import com.kaii.dentix.domain.oralExercise.domain.OralExerciseInteractionLog;
 import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.oralExercise.dto.OralExerciseDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
+import com.kaii.dentix.domain.reward.domain.OralExerciseRewardToken;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -53,15 +54,15 @@ public class OralExerciseService {
                         progress -> progress.getContent().getOralExerciseContentId(),
                         Function.identity()
                 ));
-        Set<Long> rewardedContentIds = userId == null
+        Set<String> rewardedTokenNames = userId == null
                 ? Set.of()
                 : userRewardTransactionRepository
                 .findByUserIdOrderByCreatedDesc(userId)
                 .stream()
-                .filter(transaction -> transaction.getOralExerciseContent() != null)
+                .filter(transaction -> transaction.getCoinId() != null)
                 .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
                 .filter(transaction -> transaction.getStatus() != UserRewardTransactionStatus.CANCELED)
-                .map(transaction -> transaction.getOralExerciseContent().getOralExerciseContentId())
+                .map(transaction -> transaction.getCoinId().toLowerCase())
                 .collect(Collectors.toSet());
         int currentWeek = calculateCurrentWeek(userId);
         List<OralExerciseDto.ContentResponse> contents = oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc()
@@ -70,7 +71,7 @@ public class OralExerciseService {
                         content,
                         progressMap.get(content.getOralExerciseContentId()),
                         currentWeek,
-                        rewardedContentIds.contains(content.getOralExerciseContentId())
+                        rewardedTokenNames.contains(resolveRewardTokenName(content))
                 ))
                 .toList();
 
@@ -182,6 +183,11 @@ public class OralExerciseService {
                     return (int) (Math.max(days, 0) / 7) + 1;
                 })
                 .orElse(1);
+    }
+
+    private String resolveRewardTokenName(OralExerciseContent content) {
+        String tokenName = OralExerciseRewardToken.tokenNameForContentSort(content.getContentSort());
+        return tokenName == null ? null : tokenName.toLowerCase();
     }
 
     private int calculateCompletionRate(

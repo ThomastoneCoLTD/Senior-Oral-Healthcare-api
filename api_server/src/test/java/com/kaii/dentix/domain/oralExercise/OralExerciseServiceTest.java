@@ -96,7 +96,7 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void getContentsMarksButtonRewardAsAlreadyReceivedPerContent() {
+    void getContentsMarksButtonRewardAsAlreadyReceivedPerRewardTokenName() {
         User user = userCreatedDaysAgo(0);
         OralExerciseContent firstContent = content(1);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
@@ -109,7 +109,8 @@ class OralExerciseServiceTest {
                         .status(UserRewardTransactionStatus.LOCAL_RECORDED)
                         .amount(3L)
                         .balanceAfter(3L)
-                        .idempotencyKey("ORAL_EXERCISE_BUTTON:7:1")
+                        .idempotencyKey("ORAL_EXERCISE_BUTTON:7:essential_video_1")
+                        .coinId("essential_video_1")
                         .build()
         ));
 

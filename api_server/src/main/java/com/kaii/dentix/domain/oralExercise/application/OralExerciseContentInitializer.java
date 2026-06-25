@@ -99,6 +99,12 @@ public class OralExerciseContentInitializer {
                         "영상 업로드 및 재생 테스트",
                         TEST_VIDEO_URL,
                         "테스트"
+                ),
+                content(
+                        12,
+                        "구강 건강 생활습관",
+                        "일상에서 실천할 수 있는 구강 건강 관리 습관을 학습합니다.",
+                        "구강 건강 생활습관, 정기 관리, 예방 중심 관리"
                 )
         );
     }

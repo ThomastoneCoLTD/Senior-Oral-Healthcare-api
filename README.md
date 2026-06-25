@@ -325,6 +325,7 @@ DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<DEV_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
 DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY=<DEV_DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY>
 DAEGU_CHAIN_TOKEN_SYMBOL=MYT
 DAEGU_CHAIN_TOKEN_DECIMALS=18
+USER_REWARD_TOKEN_TRANSFER_ENABLED=true
 ```
 
 `SOH_API_ENV_PROD` example:
@@ -345,11 +346,13 @@ DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<PROD_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
 DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY=<PROD_DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY>
 DAEGU_CHAIN_TOKEN_SYMBOL=MYT
 DAEGU_CHAIN_TOKEN_DECIMALS=18
+USER_REWARD_TOKEN_TRANSFER_ENABLED=true
 ```
 
 Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3, and EC2 downloads it through the instance profile.
 Terraform outputs `db_address`, `db_endpoint`, and `db_master_user_secret_arn`; use the Secrets Manager secret value to populate the datasource password in the GitHub environment secret.
 DaeguChain API requests use `DAEGU_CHAIN_APP_KEY` for every outbound request body field named `token`; keep app keys and token owner private keys only in environment secrets.
+When `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, oral-exercise video rewards are transferred through DaeguChain token contracts by reward token name.
 
 ## GitHub Actions IAM User Policy
 

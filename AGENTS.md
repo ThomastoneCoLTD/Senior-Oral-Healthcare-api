@@ -118,7 +118,7 @@ SOH_TERRAFORM_TFVARS_PROD
 ```
 
 Never write AWS access keys, DB credentials, JWT secrets, or real `.env` contents into repository files.
-`SOH_API_ENV_DEV` and `SOH_API_ENV_PROD` should include DaeguChain app configuration such as `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`, `DAEGU_CHAIN_TOKEN_SYMBOL`, and `DAEGU_CHAIN_TOKEN_DECIMALS` when DaeguChain admin token creation is enabled.
+`SOH_API_ENV_DEV` and `SOH_API_ENV_PROD` should include DaeguChain app configuration such as `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, and `USER_REWARD_TOKEN_TRANSFER_ENABLED` when DaeguChain admin token creation or oral-exercise token rewards are enabled.
 Outbound DaeguChain request body fields named `token` must be populated from the environment app key, not hardcoded in source.
 `SOH_TERRAFORM_TFVARS_*` should contain filled Terraform variable values such as ACM ARN and instance sizes, but not DB passwords or application `.env` secrets.
 

@@ -16,4 +16,5 @@ public class UserRewardProperties {
     private String pointContractAddress;
     private String pointOwnerAddress;
     private String pointOwnerPrivateKey;
+    private boolean tokenTransferEnabled;
 }

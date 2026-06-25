@@ -19,5 +19,12 @@ public interface UserRewardTransactionRepository extends JpaRepository<UserRewar
             UserRewardTransactionStatus status
     );
 
+    Optional<UserRewardTransaction> findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
+            Long userId,
+            String coinId,
+            UserRewardTransactionType type,
+            UserRewardTransactionStatus status
+    );
+
     List<UserRewardTransaction> findByUserIdOrderByCreatedDesc(Long userId);
 }

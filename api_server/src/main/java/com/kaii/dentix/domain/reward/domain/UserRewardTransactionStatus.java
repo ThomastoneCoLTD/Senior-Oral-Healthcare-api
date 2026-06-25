@@ -5,5 +5,7 @@ public enum UserRewardTransactionStatus {
     POINT_MINT_PENDING,
     POINT_MINTED,
     POINT_MINT_FAILED,
+    TOKEN_TRANSFERRED,
+    TOKEN_TRANSFER_FAILED,
     CANCELED
 }

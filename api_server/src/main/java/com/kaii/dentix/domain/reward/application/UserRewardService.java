@@ -1,7 +1,10 @@
 package com.kaii.dentix.domain.reward.application;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainToken20Service;
+import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
@@ -10,6 +13,7 @@ import com.kaii.dentix.domain.oralExercise.domain.OralExerciseContent;
 import com.kaii.dentix.domain.reward.config.UserRewardProperties;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
+import com.kaii.dentix.domain.reward.domain.OralExerciseRewardToken;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
@@ -36,6 +40,8 @@ public class UserRewardService {
     private final OralExerciseContentRepository oralExerciseContentRepository;
     private final DaeguChainAccountService daeguChainAccountService;
     private final DaeguChainPointService daeguChainPointService;
+    private final DaeguChainToken20Service daeguChainToken20Service;
+    private final DaeguChainProperties daeguChainProperties;
     private final UserRewardProperties userRewardProperties;
     private final JwtTokenUtil jwtTokenUtil;
     private final Environment environment;
@@ -106,19 +112,20 @@ public class UserRewardService {
         OralExerciseContent content = oralExerciseContentRepository
                 .findById(buttonClickRequest.getContentId())
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강체조 콘텐츠입니다."));
+        String rewardTokenName = resolveRewardTokenName(content);
 
-        var existingContentReward = userRewardTransactionRepository
-                .findFirstByUserIdAndOralExerciseContent_OralExerciseContentIdAndTypeAndStatusNot(
+        var existingTokenReward = userRewardTransactionRepository
+                .findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
                         userId,
-                        content.getOralExerciseContentId(),
+                        rewardTokenName,
                         UserRewardTransactionType.ORAL_EXERCISE_COIN,
                         UserRewardTransactionStatus.CANCELED
                 );
-        if (existingContentReward.isPresent()) {
-            return UserRewardDto.RewardResponse.from(existingContentReward.get(), true);
+        if (existingTokenReward.isPresent()) {
+            return UserRewardDto.RewardResponse.from(existingTokenReward.get(), true);
         }
 
-        String idempotencyKey = buildButtonClickIdempotencyKey(userId, content.getOralExerciseContentId());
+        String idempotencyKey = buildButtonClickIdempotencyKey(userId, rewardTokenName);
         var existingIdempotentTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey);
         if (existingIdempotentTransaction.isPresent() && existingIdempotentTransaction.get().isAlreadyApplied()) {
             return UserRewardDto.RewardResponse.from(existingIdempotentTransaction.get(), true);
@@ -143,10 +150,14 @@ public class UserRewardService {
                 .balanceAfter(savedWallet.getPointBalance())
                 .idempotencyKey(idempotencyKey)
                 .sessionId(buttonClickRequest.getSessionId())
-                .coinId("button-" + buttonClickRequest.getSelectedButtonNumber())
+                .coinId(rewardTokenName)
                 .build());
 
-        mintPointIfConfigured(transaction, savedWallet);
+        if (userRewardProperties.isTokenTransferEnabled()) {
+            transferTokenIfConfigured(transaction, savedWallet, rewardTokenName);
+        } else {
+            mintPointIfConfigured(transaction, savedWallet);
+        }
 
         return UserRewardDto.RewardResponse.from(transaction, false);
     }
@@ -178,11 +189,69 @@ public class UserRewardService {
         }
     }
 
-    private String buildButtonClickIdempotencyKey(Long userId, Long contentId) {
-        return "ORAL_EXERCISE_BUTTON:%d:%d".formatted(
+    private String buildButtonClickIdempotencyKey(Long userId, String rewardTokenName) {
+        return "ORAL_EXERCISE_BUTTON:%d:%s".formatted(
                 userId,
-                contentId
+                rewardTokenName
         );
+    }
+
+    private String resolveRewardTokenName(OralExerciseContent content) {
+        String tokenName = OralExerciseRewardToken.tokenNameForContentSort(content.getContentSort());
+        if (isBlank(tokenName)) {
+            throw new BadRequestApiException("reward token name is not configured for content");
+        }
+        return tokenName;
+    }
+
+    private void transferTokenIfConfigured(UserRewardTransaction transaction, UserRewardWallet wallet, String rewardTokenName) {
+        if (isBlank(daeguChainProperties.getTokenOwnerAddress())
+                || isBlank(daeguChainProperties.getTokenOwnerPrivateKey())
+                || isBlank(wallet.getWalletAddress())) {
+            transaction.markTokenTransferFailed();
+            return;
+        }
+
+        try {
+            String contractAddress = findTokenContractAddress(rewardTokenName);
+            DaeguChainDto.ApiResponse<JsonNode> response =
+                    daeguChainToken20Service.transferToken(new DaeguChainDto.TokenTransferRequest(
+                            null,
+                            null,
+                            contractAddress,
+                            daeguChainProperties.getTokenOwnerAddress(),
+                            daeguChainProperties.getTokenOwnerPrivateKey(),
+                            wallet.getWalletAddress(),
+                            String.valueOf(transaction.getAmount())
+                    ));
+            transaction.markTokenTransferred(
+                    extractHash(response, "tx_hash", "transaction_hash", "hash"),
+                    extractHash(response, "fact_hash")
+            );
+        } catch (RuntimeException exception) {
+            transaction.markTokenTransferFailed();
+        }
+    }
+
+    private String findTokenContractAddress(String rewardTokenName) {
+        DaeguChainDto.ApiResponse<JsonNode> response =
+                daeguChainToken20Service.getTokenList(new DaeguChainDto.TokenListRequest(null, null));
+        JsonNode data = response == null ? null : response.getData();
+        if (data == null || !data.isArray()) {
+            throw new BadRequestApiException("DaeguChain token list is empty");
+        }
+        for (JsonNode token : data) {
+            String name = token.path("data").path("name").asText();
+            String contractAddress = token.path("contract").asText();
+            if (normalizeTokenName(rewardTokenName).equals(normalizeTokenName(name)) && !isBlank(contractAddress)) {
+                return contractAddress;
+            }
+        }
+        throw new BadRequestApiException("DaeguChain token contract is not found: " + rewardTokenName);
+    }
+
+    private String normalizeTokenName(String tokenName) {
+        return tokenName == null ? "" : tokenName.replace("_", "").toLowerCase();
     }
 
     private void mintPointIfConfigured(UserRewardTransaction transaction, UserRewardWallet wallet) {
@@ -214,17 +283,45 @@ public class UserRewardService {
         }
     }
 
-    private String extractHash(DaeguChainDto.ApiResponse<com.fasterxml.jackson.databind.JsonNode> response, String... fields) {
+    private String extractHash(DaeguChainDto.ApiResponse<JsonNode> response, String... fields) {
         if (response == null || response.getData() == null) {
             return response == null ? null : response.getCid();
         }
         for (String field : fields) {
-            com.fasterxml.jackson.databind.JsonNode value = response.getData().get(field);
-            if (value != null && !value.isNull() && !value.asText().isBlank()) {
-                return value.asText();
+            String value = findFirstText(response.getData(), field);
+            if (!isBlank(value)) {
+                return value;
             }
         }
         return response.getCid();
+    }
+
+    private String findFirstText(JsonNode node, String fieldName) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        JsonNode value = node.get(fieldName);
+        if (value != null && !value.isNull() && !value.asText().isBlank()) {
+            return value.asText();
+        }
+        if (node.isObject()) {
+            var fields = node.fields();
+            while (fields.hasNext()) {
+                String found = findFirstText(fields.next().getValue(), fieldName);
+                if (!isBlank(found)) {
+                    return found;
+                }
+            }
+        }
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                String found = findFirstText(child, fieldName);
+                if (!isBlank(found)) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     private String extractWalletAddress(DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> account) {

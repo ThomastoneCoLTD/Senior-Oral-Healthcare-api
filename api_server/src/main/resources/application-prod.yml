@@ -112,6 +112,7 @@ user-reward:
   point-contract-address: ${USER_REWARD_POINT_CONTRACT_ADDRESS:}
   point-owner-address: ${USER_REWARD_POINT_OWNER_ADDRESS:}
   point-owner-private-key: ${USER_REWARD_POINT_OWNER_PRIVATE_KEY:}
+  token-transfer-enabled: ${USER_REWARD_TOKEN_TRANSFER_ENABLED:false}
 s3:
   storage:
     bucketName: ${S3_BUCKET_NAME:denti-backends}

@@ -68,6 +68,16 @@ public class UserRewardTransaction extends TimeEntity {
         this.status = UserRewardTransactionStatus.POINT_MINT_FAILED;
     }
 
+    public void markTokenTransferred(String txHash, String factHash) {
+        this.status = UserRewardTransactionStatus.TOKEN_TRANSFERRED;
+        this.daeguChainTxHash = txHash;
+        this.daeguChainFactHash = factHash;
+    }
+
+    public void markTokenTransferFailed() {
+        this.status = UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED;
+    }
+
     public boolean isAlreadyApplied() {
         return status != UserRewardTransactionStatus.CANCELED;
     }
