@@ -325,6 +325,58 @@ class DaeguChainClientTest {
     }
 
     @Test
+    void postDidRegistProjectPostsIssuerPayload() {
+        server.expect(once(), requestTo("https://www.daegu.go.kr/daeguchain/v2/mitum/did/regist_project"))
+                .andExpect(method(POST))
+                .andExpect(content().string(containsString("\"project_id\":\"soh\"")))
+                .andExpect(content().string(containsString("\"project_name\":\"Senior-Oral-Healthcare\"")))
+                .andExpect(content().string(containsString("\"issuer_name\":\"thomastone\"")))
+                .andExpect(content().string(containsString("\"chain\":\"mitumt\"")))
+                .andRespond(withSuccess("""
+                        {
+                          "state": "OK",
+                          "rcode": {},
+                          "msg": "",
+                          "data": {
+                            "owner": "0x-owner",
+                            "contract": {
+                              "data": {
+                                "address": "0x-contract"
+                              }
+                            },
+                            "did": {
+                              "data": {
+                                "project_id": "soh"
+                              }
+                            }
+                          },
+                          "cid": "cid-did-project"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        DaeguChainDto.ApiResponse<JsonNode> response = client.postDid(
+                "/mitum/did/regist_project",
+                Map.ofEntries(
+                        Map.entry("token", "app-token"),
+                        Map.entry("chain", "mitumt"),
+                        Map.entry("operation", "0"),
+                        Map.entry("project_id", "soh"),
+                        Map.entry("project_name", "Senior-Oral-Healthcare"),
+                        Map.entry("issuer_name", "thomastone"),
+                        Map.entry("company_name", "thomastone"),
+                        Map.entry("service_name", "Senior oral healthcare"),
+                        Map.entry("display_name", "TEST DID DISPLAY"),
+                        Map.entry("service_url", "http://localhost:3000/daeguchain/baas"),
+                        Map.entry("icon_url", "http://localhost:3000/daeguchain/icon.jpg")
+                )
+        );
+
+        assertThat(response.getData().get("owner").asText()).isEqualTo("0x-owner");
+        assertThat(response.getData().get("did").get("data").get("project_id").asText()).isEqualTo("soh");
+        server.verify();
+    }
+
+    @Test
     void apiBaseUrlCanPointDirectlyToExternalMitumApiRoot() {
         DaeguChainProperties properties = new DaeguChainProperties();
         properties.setApiBaseUrl("https://did-api.example.com/v2/mitum");

@@ -24,7 +24,17 @@ public class DaeguChainDidService {
     }
 
     public DaeguChainDto.ApiResponse<JsonNode> registProject(Map<String, Object> request) {
-        return call("/mitum/did/regist_project", request, List.of("operation"));
+        return call("/mitum/did/regist_project", request, List.of(
+                "operation",
+                "project_id",
+                "project_name",
+                "issuer_name",
+                "company_name",
+                "service_name",
+                "display_name",
+                "service_url",
+                "icon_url"
+        ));
     }
 
     public DaeguChainDto.ApiResponse<JsonNode> templateList(Map<String, Object> request) {

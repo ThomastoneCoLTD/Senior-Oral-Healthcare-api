@@ -56,4 +56,52 @@ class DaeguChainDidServiceTest {
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("subject is required");
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void registProjectPostsSohIssuerPayload() {
+        service.registProject(Map.ofEntries(
+                Map.entry("chain", "mitumt"),
+                Map.entry("operation", "0"),
+                Map.entry("project_id", "soh"),
+                Map.entry("project_name", "Senior-Oral-Healthcare"),
+                Map.entry("issuer_name", "thomastone"),
+                Map.entry("company_name", "thomastone"),
+                Map.entry("service_name", "Senior oral healthcare"),
+                Map.entry("display_name", "TEST DID DISPLAY"),
+                Map.entry("service_url", "http://localhost:3000/daeguchain/baas"),
+                Map.entry("icon_url", "http://localhost:3000/daeguchain/icon.jpg")
+        ));
+
+        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(daeguChainClient).postDid(eq("/mitum/did/regist_project"), captor.capture());
+
+        assertThat(captor.getValue().get("token")).isEqualTo("configured-token");
+        assertThat(captor.getValue().get("chain")).isEqualTo("mitumt");
+        assertThat(captor.getValue().get("operation")).isEqualTo("0");
+        assertThat(captor.getValue().get("project_id")).isEqualTo("soh");
+        assertThat(captor.getValue().get("project_name")).isEqualTo("Senior-Oral-Healthcare");
+        assertThat(captor.getValue().get("issuer_name")).isEqualTo("thomastone");
+        assertThat(captor.getValue().get("company_name")).isEqualTo("thomastone");
+        assertThat(captor.getValue().get("service_name")).isEqualTo("Senior oral healthcare");
+        assertThat(captor.getValue().get("display_name")).isEqualTo("TEST DID DISPLAY");
+        assertThat(captor.getValue().get("service_url")).isEqualTo("http://localhost:3000/daeguchain/baas");
+        assertThat(captor.getValue().get("icon_url")).isEqualTo("http://localhost:3000/daeguchain/icon.jpg");
+    }
+
+    @Test
+    void registProjectRequiresIssuerName() {
+        assertThatThrownBy(() -> service.registProject(Map.ofEntries(
+                Map.entry("operation", "0"),
+                Map.entry("project_id", "soh"),
+                Map.entry("project_name", "Senior-Oral-Healthcare"),
+                Map.entry("company_name", "thomastone"),
+                Map.entry("service_name", "Senior oral healthcare"),
+                Map.entry("display_name", "TEST DID DISPLAY"),
+                Map.entry("service_url", "http://localhost:3000/daeguchain/baas"),
+                Map.entry("icon_url", "http://localhost:3000/daeguchain/icon.jpg")
+        )))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("issuer_name is required");
+    }
 }
