@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 public class DaeguChainProperties {
 
     private String baseUrl = "https://www.daegu.go.kr/daeguchain";
+    private String apiBaseUrl;
     private String apiVersion = "v2";
     private String chain = "dchain";
     private String token;

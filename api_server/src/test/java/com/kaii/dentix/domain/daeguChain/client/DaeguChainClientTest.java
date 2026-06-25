@@ -323,4 +323,36 @@ class DaeguChainClientTest {
         assertThat(response.getData().get("jwt").asText()).isEqualTo("credential-jwt");
         server.verify();
     }
+
+    @Test
+    void apiBaseUrlCanPointDirectlyToExternalMitumApiRoot() {
+        DaeguChainProperties properties = new DaeguChainProperties();
+        properties.setApiBaseUrl("https://did-api.example.com/v2/mitum");
+
+        MockServerRestTemplateCustomizer customizer = new MockServerRestTemplateCustomizer();
+        DaeguChainClient externalClient = new DaeguChainClient(properties, new RestTemplateBuilder(customizer));
+        MockRestServiceServer externalServer = customizer.getServer();
+
+        externalServer.expect(once(), requestTo("https://did-api.example.com/v2/mitum/did/create_account"))
+                .andExpect(method(POST))
+                .andRespond(withSuccess("""
+                        {
+                          "state": "OK",
+                          "rcode": {},
+                          "msg": "",
+                          "data": {
+                            "did": "did:mitum:minic:0x123"
+                          },
+                          "cid": "cid-did-create"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        DaeguChainDto.ApiResponse<JsonNode> response = externalClient.postDid(
+                "/mitum/did/create_account",
+                Map.of("token", "external-token", "chain", "dchain")
+        );
+
+        assertThat(response.getData().get("did").asText()).isEqualTo("did:mitum:minic:0x123");
+        externalServer.verify();
+    }
 }

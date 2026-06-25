@@ -350,10 +350,61 @@ public class DaeguChainClient {
 
     private String getApiUrl(String path) {
         return UriComponentsBuilder
-                .fromHttpUrl(properties.getBaseUrl())
-                .pathSegment(properties.getApiVersion())
-                .path(path)
+                .fromHttpUrl(trimTrailingSlash(resolveApiBaseUrl()))
+                .path(normalizePath(path))
                 .toUriString();
+    }
+
+    private String resolveApiBaseUrl() {
+        if (hasText(properties.getApiBaseUrl())) {
+            return properties.getApiBaseUrl();
+        }
+        return trimTrailingSlash(properties.getBaseUrl()) + "/" + trimSlashes(properties.getApiVersion());
+    }
+
+    private String normalizePath(String path) {
+        String normalizedPath = path == null || path.isBlank() ? "" : path;
+        if (!normalizedPath.startsWith("/")) {
+            normalizedPath = "/" + normalizedPath;
+        }
+        if (apiBaseUrlEndsWithMitum() && normalizedPath.startsWith("/mitum/")) {
+            return normalizedPath.substring("/mitum".length());
+        }
+        return normalizedPath;
+    }
+
+    private boolean apiBaseUrlEndsWithMitum() {
+        String apiBaseUrl = trimTrailingSlash(resolveApiBaseUrl()).toLowerCase();
+        return apiBaseUrl.endsWith("/mitum");
+    }
+
+    private String trimTrailingSlash(String value) {
+        if (value == null) {
+            return "";
+        }
+        String result = value.trim();
+        while (result.endsWith("/")) {
+            result = result.substring(0, result.length() - 1);
+        }
+        return result;
+    }
+
+    private String trimSlashes(String value) {
+        if (value == null) {
+            return "";
+        }
+        String result = value.trim();
+        while (result.startsWith("/")) {
+            result = result.substring(1);
+        }
+        while (result.endsWith("/")) {
+            result = result.substring(0, result.length() - 1);
+        }
+        return result;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private ByteArrayResource toResource(MultipartFile file) throws IOException {
