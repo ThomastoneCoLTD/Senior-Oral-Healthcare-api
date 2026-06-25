@@ -12,6 +12,7 @@ import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.core.env.Environment;
 
 import java.util.Optional;
@@ -70,25 +71,16 @@ class UserDaeguProvisioningServiceTest {
         when(daeguChainDidService.createAccount(any()))
                 .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
-        when(daeguChainAccountService.createAccount(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "OK",
-                        null,
-                        "",
-                        new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
-                                "private-key",
-                                "public-key",
-                                "0x-wallet"
-                        )),
-                        "cid"
-                ));
 
         service.provisionForSignUp(user);
 
         assertThat(user.getDaeguDid()).isEqualTo("did:mitum:minic:0x123");
         assertThat(user.getDaeguDidKey()).isEqualTo("external-public-key");
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
-        verify(userRewardWalletRepository).save(any(UserRewardWallet.class));
+        ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
+        verify(userRewardWalletRepository).save(captor.capture());
+        assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
+        verify(daeguChainAccountService, never()).createAccount(any());
     }
 
     @Test
