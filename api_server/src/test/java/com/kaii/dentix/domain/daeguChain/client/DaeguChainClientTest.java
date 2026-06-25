@@ -377,6 +377,49 @@ class DaeguChainClientTest {
     }
 
     @Test
+    void postDidCreateAccountPreservesDidAccountResponse() {
+        server.expect(once(), requestTo("https://www.daegu.go.kr/daeguchain/v2/mitum/did/create_account"))
+                .andExpect(method(POST))
+                .andExpect(content().string(containsString("\"token\":\"app-token\"")))
+                .andExpect(content().string(containsString("\"chain\":\"mitumt\"")))
+                .andRespond(withSuccess("""
+                        {
+                          "state": "OK",
+                          "rcode": {},
+                          "msg": "",
+                          "data": {
+                            "key_pair": {
+                              "privatekey": "private-key",
+                              "publickey": "public-key",
+                              "address": "0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca"
+                            },
+                            "did": "did:mitum:minic:0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca",
+                            "faucet": {
+                              "currency": "DMC",
+                              "amount": "1"
+                            },
+                            "tx": {
+                              "hash": "4WQGWmrgKRp7Xx6x8xtMMaodJMm2UgYv7eQoHbhGV6Sn",
+                              "fact_hash": "E5gAWQwvCgC3ZdLKmwrsg1KoZ4bFMSi1chGfAu5SnrYM"
+                            }
+                          },
+                          "cid": "cid-did-create-account"
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        DaeguChainDto.ApiResponse<JsonNode> response = client.postDid(
+                "/mitum/did/create_account",
+                Map.of("token", "app-token", "chain", "mitumt")
+        );
+
+        assertThat(response.getData().get("did").asText())
+                .isEqualTo("did:mitum:minic:0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
+        assertThat(response.getData().get("key_pair").get("publickey").asText()).isEqualTo("public-key");
+        assertThat(response.getData().get("tx").get("fact_hash").asText()).isEqualTo("E5gAWQwvCgC3ZdLKmwrsg1KoZ4bFMSi1chGfAu5SnrYM");
+        server.verify();
+    }
+
+    @Test
     void apiBaseUrlCanPointDirectlyToExternalMitumApiRoot() {
         DaeguChainProperties properties = new DaeguChainProperties();
         properties.setApiBaseUrl("https://did-api.example.com/v2/mitum");

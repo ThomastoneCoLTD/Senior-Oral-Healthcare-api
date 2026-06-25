@@ -51,8 +51,20 @@ class UserDaeguProvisioningServiceTest {
                 .build();
         JsonNode didData = new ObjectMapper().readTree("""
                 {
+                  "key_pair": {
+                    "privatekey": "private-key",
+                    "publickey": "external-public-key",
+                    "address": "0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca"
+                  },
                   "did": "did:mitum:minic:0x123",
-                  "public_key": "external-public-key"
+                  "faucet": {
+                    "currency": "DMC",
+                    "amount": "1"
+                  },
+                  "tx": {
+                    "hash": "4WQGWmrgKRp7Xx6x8xtMMaodJMm2UgYv7eQoHbhGV6Sn",
+                    "fact_hash": "E5gAWQwvCgC3ZdLKmwrsg1KoZ4bFMSi1chGfAu5SnrYM"
+                  }
                 }
                 """);
         when(daeguChainDidService.createAccount(any()))

@@ -41,7 +41,7 @@ public class UserDaeguProvisioningService {
             DaeguChainDto.ApiResponse<JsonNode> response = daeguChainDidService.createAccount(Map.of());
             JsonNode data = response.getData();
             String did = findFirstText(data, "did", "DID", "account");
-            String key = findFirstText(data, "public_key", "publicKey", "key_id", "keyId");
+            String key = findFirstText(data, "publickey", "public_key", "publicKey", "key_id", "keyId");
             if (isBlank(did)) {
                 throw new BadRequestApiException("DaeguChain DID is empty");
             }
