@@ -3,8 +3,7 @@ package com.kaii.dentix.domain.reward.application;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainToken20Service;
-import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
+import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
@@ -41,8 +40,7 @@ public class UserRewardService {
     private final OralExerciseContentRepository oralExerciseContentRepository;
     private final DaeguChainDidService daeguChainDidService;
     private final DaeguChainPointService daeguChainPointService;
-    private final DaeguChainToken20Service daeguChainToken20Service;
-    private final DaeguChainProperties daeguChainProperties;
+    private final ExternalTokenClient externalTokenClient;
     private final UserRewardProperties userRewardProperties;
     private final JwtTokenUtil jwtTokenUtil;
     private final Environment environment;
@@ -214,53 +212,26 @@ public class UserRewardService {
     }
 
     private void transferTokenIfConfigured(UserRewardTransaction transaction, UserRewardWallet wallet, String rewardTokenName) {
-        if (isBlank(daeguChainProperties.getTokenOwnerAddress())
-                || isBlank(daeguChainProperties.getTokenOwnerPrivateKey())
+        if (isBlank(wallet.getDaeguDid())
                 || isBlank(wallet.getWalletAddress())) {
             transaction.markTokenTransferFailed();
             return;
         }
 
         try {
-            String contractAddress = findTokenContractAddress(rewardTokenName);
-            DaeguChainDto.ApiResponse<JsonNode> response =
-                    daeguChainToken20Service.transferToken(new DaeguChainDto.TokenTransferRequest(
-                            null,
-                            null,
-                            contractAddress,
-                            daeguChainProperties.getTokenOwnerAddress(),
-                            daeguChainProperties.getTokenOwnerPrivateKey(),
-                            wallet.getWalletAddress(),
-                            String.valueOf(transaction.getAmount())
-                    ));
+            JsonNode response = externalTokenClient.transferToken(
+                    wallet.getDaeguDid(),
+                    rewardTokenName,
+                    wallet.getWalletAddress(),
+                    transaction.getAmount()
+            );
             transaction.markTokenTransferred(
-                    extractHash(response, "tx_hash", "transaction_hash", "hash"),
-                    extractHash(response, "fact_hash")
+                    findFirstText(response, "tx_hash", "transaction_hash", "hash", "Date"),
+                    findFirstText(response, "fact_hash")
             );
         } catch (RuntimeException exception) {
             transaction.markTokenTransferFailed();
         }
-    }
-
-    private String findTokenContractAddress(String rewardTokenName) {
-        DaeguChainDto.ApiResponse<JsonNode> response =
-                daeguChainToken20Service.getTokenList(new DaeguChainDto.TokenListRequest(null, null));
-        JsonNode data = response == null ? null : response.getData();
-        if (data == null || !data.isArray()) {
-            throw new BadRequestApiException("DaeguChain token list is empty");
-        }
-        for (JsonNode token : data) {
-            String name = token.path("data").path("name").asText();
-            String contractAddress = token.path("contract").asText();
-            if (normalizeTokenName(rewardTokenName).equals(normalizeTokenName(name)) && !isBlank(contractAddress)) {
-                return contractAddress;
-            }
-        }
-        throw new BadRequestApiException("DaeguChain token contract is not found: " + rewardTokenName);
-    }
-
-    private String normalizeTokenName(String tokenName) {
-        return tokenName == null ? "" : tokenName.replace("_", "").toLowerCase();
     }
 
     private void mintPointIfConfigured(UserRewardTransaction transaction, UserRewardWallet wallet) {

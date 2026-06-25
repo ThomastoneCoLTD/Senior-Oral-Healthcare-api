@@ -107,6 +107,10 @@ daegu-chain:
   token-lockable: ${DAEGU_CHAIN_TOKEN_LOCKABLE:true}
   did-server-base-url: ${DID_SERVER_BASE_URL:http://localhost:5000}
   did-create-path: ${DID_CREATE_PATH:/did/create}
+  token-server-base-url: ${TOKEN_SERVER_BASE_URL:http://localhost:5000}
+  token-create-path: ${TOKEN_CREATE_PATH:/token/create}
+  token-transfer-path: ${TOKEN_TRANSFER_PATH:/token/transfer}
+  token-list-path: ${TOKEN_LIST_PATH:/token/token_list}
 
 user-reward:
   oral-exercise-coin-amount: ${ORAL_EXERCISE_COIN_REWARD_AMOUNT:1}
@@ -114,7 +118,7 @@ user-reward:
   point-contract-address: ${USER_REWARD_POINT_CONTRACT_ADDRESS:}
   point-owner-address: ${USER_REWARD_POINT_OWNER_ADDRESS:}
   point-owner-private-key: ${USER_REWARD_POINT_OWNER_PRIVATE_KEY:}
-  token-transfer-enabled: ${USER_REWARD_TOKEN_TRANSFER_ENABLED:false}
+  token-transfer-enabled: ${USER_REWARD_TOKEN_TRANSFER_ENABLED:true}
 s3:
   storage:
     bucketName: ${S3_BUCKET_NAME:denti-backends}

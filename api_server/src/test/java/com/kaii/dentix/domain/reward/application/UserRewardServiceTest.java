@@ -3,8 +3,7 @@ package com.kaii.dentix.domain.reward.application;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainToken20Service;
-import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
+import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
@@ -39,7 +38,7 @@ class UserRewardServiceTest {
     private OralExerciseContentRepository contentRepository;
     private DaeguChainDidService daeguChainDidService;
     private DaeguChainPointService daeguChainPointService;
-    private DaeguChainToken20Service daeguChainToken20Service;
+    private ExternalTokenClient externalTokenClient;
     private JwtTokenUtil jwtTokenUtil;
     private Environment environment;
     private UserRewardService service;
@@ -52,24 +51,20 @@ class UserRewardServiceTest {
         contentRepository = mock(OralExerciseContentRepository.class);
         daeguChainDidService = mock(DaeguChainDidService.class);
         daeguChainPointService = mock(DaeguChainPointService.class);
-        daeguChainToken20Service = mock(DaeguChainToken20Service.class);
+        externalTokenClient = mock(ExternalTokenClient.class);
         jwtTokenUtil = mock(JwtTokenUtil.class);
         environment = mock(Environment.class);
         request = mock(HttpServletRequest.class);
 
         UserRewardProperties properties = new UserRewardProperties();
         properties.setOralExerciseCoinAmount(3L);
-        DaeguChainProperties daeguChainProperties = new DaeguChainProperties();
-        daeguChainProperties.setTokenOwnerAddress("0x-admin");
-        daeguChainProperties.setTokenOwnerPrivateKey("admin-private-key");
         service = new UserRewardService(
                 walletRepository,
                 transactionRepository,
                 contentRepository,
                 daeguChainDidService,
                 daeguChainPointService,
-                daeguChainToken20Service,
-                daeguChainProperties,
+                externalTokenClient,
                 properties,
                 jwtTokenUtil,
                 environment
@@ -145,17 +140,13 @@ class UserRewardServiceTest {
         UserRewardProperties properties = new UserRewardProperties();
         properties.setOralExerciseCoinAmount(1L);
         properties.setTokenTransferEnabled(true);
-        DaeguChainProperties daeguChainProperties = new DaeguChainProperties();
-        daeguChainProperties.setTokenOwnerAddress("0x-admin");
-        daeguChainProperties.setTokenOwnerPrivateKey("admin-private-key");
         service = new UserRewardService(
                 walletRepository,
                 transactionRepository,
                 contentRepository,
                 daeguChainDidService,
                 daeguChainPointService,
-                daeguChainToken20Service,
-                daeguChainProperties,
+                externalTokenClient,
                 properties,
                 jwtTokenUtil,
                 environment
@@ -170,42 +161,24 @@ class UserRewardServiceTest {
         when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
                 .userId(7L)
                 .pointBalance(0L)
+                .daeguDid("did:mitum:minic:0x-user-wallet")
                 .walletAddress("0x-user-wallet")
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(daeguChainToken20Service.getTokenList(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "OK",
-                        null,
-                        "",
-                        new ObjectMapper().readTree("""
-                                [
-                                  {
-                                    "contract": "0x-token-contract",
-                                    "data": {
-                                      "name": "ESSENTIAL_VIDEO_1"
-                                    }
-                                  }
-                                ]
-                                """),
-                        "cid"
-                ));
-        when(daeguChainToken20Service.transferToken(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "OK",
-                        null,
-                        "",
-                        new ObjectMapper().readTree("""
-                                {
-                                  "tx": {
-                                    "hash": "tx-hash",
-                                    "fact_hash": "fact-hash"
-                                  }
-                                }
-                                """),
-                        "cid"
-                ));
+        when(externalTokenClient.transferToken(
+                "did:mitum:minic:0x-user-wallet",
+                "essential_video_1",
+                "0x-user-wallet",
+                1L
+        )).thenReturn(new ObjectMapper().readTree("""
+                {
+                  "Date": "2026-06-25T01:00:00Z",
+                  "Sender": "0x-admin",
+                  "Receiver": "0x-user-wallet",
+                  "Amount": "1"
+                }
+                """));
 
         UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
                 request,
@@ -213,13 +186,12 @@ class UserRewardServiceTest {
         );
 
         assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
-        verify(daeguChainToken20Service).transferToken(argThat(transfer ->
-                transfer.getContAddr().equals("0x-token-contract")
-                        && transfer.getSender().equals("0x-admin")
-                        && transfer.getSenderPkey().equals("admin-private-key")
-                        && transfer.getReceiver().equals("0x-user-wallet")
-                        && transfer.getAmount().equals("1")
-        ));
+        verify(externalTokenClient).transferToken(
+                "did:mitum:minic:0x-user-wallet",
+                "essential_video_1",
+                "0x-user-wallet",
+                1L
+        );
         verify(transactionRepository).save(argThat(transaction ->
                 transaction.getCoinId().equals("essential_video_1")
         ));

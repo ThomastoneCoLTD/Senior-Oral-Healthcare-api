@@ -2,7 +2,7 @@ package com.kaii.dentix.domain.admin.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.admin.dto.AdminDaeguChainTokenDto;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainToken20Service;
+import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
@@ -16,23 +16,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminDaeguChainTokenService {
 
-    private final DaeguChainToken20Service daeguChainToken20Service;
+    private final ExternalTokenClient externalTokenClient;
     private final DaeguChainProperties properties;
 
     public List<String> getTokenNames() {
-        DaeguChainDto.ApiResponse<JsonNode> response =
-                daeguChainToken20Service.getTokenList(new DaeguChainDto.TokenListRequest(null, null));
-
         List<String> tokenNames = new ArrayList<>();
-        JsonNode data = response == null ? null : response.getData();
+        JsonNode data = externalTokenClient.getTokenList();
         if (data == null || !data.isArray()) {
             return tokenNames;
         }
 
         for (JsonNode token : data) {
-            JsonNode name = token.path("data").path("name");
-            if (!name.isMissingNode() && !name.asText().isBlank()) {
-                tokenNames.add(name.asText());
+            String name = extractTokenName(token);
+            if (!isBlank(name)) {
+                tokenNames.add(name);
             }
         }
         return tokenNames;
@@ -40,34 +37,59 @@ public class AdminDaeguChainTokenService {
 
     public DaeguChainDto.ApiResponse<JsonNode> createToken(AdminDaeguChainTokenDto.CreateRequest request) {
         validateTokenCreateConfiguration();
-        return daeguChainToken20Service.createToken(new DaeguChainDto.TokenCreateRequest(
-                null,
-                null,
-                null,
-                properties.getTokenOwnerAddress(),
-                properties.getTokenOwnerPrivateKey(),
+        JsonNode response = externalTokenClient.createToken(
                 request.getTokenName(),
                 properties.getTokenSymbol(),
-                properties.getTokenDecimals(),
-                request.getSupply(),
-                properties.getTokenMintable(),
-                properties.getTokenLockable()
-        ));
+                request.getSupply()
+        );
+        return new DaeguChainDto.ApiResponse<>("OK", null, "", response, null);
     }
 
     private void validateTokenCreateConfiguration() {
-        if (isBlank(properties.getTokenOwnerAddress())) {
-            throw new BadRequestApiException("daegu-chain.token-owner-address is required");
-        }
-        if (isBlank(properties.getTokenOwnerPrivateKey())) {
-            throw new BadRequestApiException("daegu-chain.token-owner-private-key is required");
-        }
         if (isBlank(properties.getTokenSymbol())) {
             throw new BadRequestApiException("daegu-chain.token-symbol is required");
         }
-        if (properties.getTokenDecimals() == null) {
-            throw new BadRequestApiException("daegu-chain.token-decimals is required");
+    }
+
+    private String extractTokenName(JsonNode token) {
+        String name = findFirstText(token, "token_name", "tokenName", "name");
+        if (!isBlank(name)) {
+            return name;
         }
+        if (token != null && token.isArray() && token.size() > 1 && token.get(1).isTextual()) {
+            return token.get(1).asText();
+        }
+        return null;
+    }
+
+    private String findFirstText(JsonNode node, String... fieldNames) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        for (String fieldName : fieldNames) {
+            JsonNode value = node.get(fieldName);
+            if (value != null && !value.isNull() && !value.asText().isBlank()) {
+                return value.asText();
+            }
+        }
+        if (node.isObject()) {
+            var fields = node.fields();
+            while (fields.hasNext()) {
+                String found = findFirstText(fields.next().getValue(), fieldNames);
+                if (!isBlank(found)) {
+                    return found;
+                }
+            }
+        }
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                String found = findFirstText(child, fieldNames);
+                if (!isBlank(found)) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     private boolean isBlank(String value) {
