@@ -45,6 +45,19 @@ class DaeguChainToken20ServiceTest {
     }
 
     @Test
+    void getTokenListUsesConfiguredAppKeyBeforeRequestToken() {
+        properties.setAppKey("configured-app-key");
+
+        service.getTokenList(new DaeguChainDto.TokenListRequest("request-token", null));
+
+        ArgumentCaptor<DaeguChainDto.TokenListApiRequest> captor =
+                ArgumentCaptor.forClass(DaeguChainDto.TokenListApiRequest.class);
+        verify(daeguChainClient).getTokenList(captor.capture());
+
+        assertThat(captor.getValue().getToken()).isEqualTo("configured-app-key");
+    }
+
+    @Test
     void uploadTokenRequiresContractAddress() {
         assertThatThrownBy(() -> service.uploadToken("token", "", null))
                 .isInstanceOf(BadRequestApiException.class)

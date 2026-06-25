@@ -15,5 +15,20 @@ public class DaeguChainProperties {
     private String apiBaseUrl;
     private String apiVersion = "v2";
     private String chain = "dchain";
+    private String appKey;
     private String token;
+    private String tokenOwnerAddress;
+    private String tokenOwnerPrivateKey;
+    private String tokenSymbol = "MYT";
+    private Integer tokenDecimals = 18;
+    private Boolean tokenMintable = true;
+    private Boolean tokenLockable = true;
+
+    public String resolveAppKey() {
+        return hasText(appKey) ? appKey : token;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
 }

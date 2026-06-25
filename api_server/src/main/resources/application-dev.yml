@@ -114,7 +114,14 @@ daegu-chain:
   api-base-url: ${DAEGU_CHAIN_API_BASE_URL:}
   api-version: ${DAEGU_CHAIN_API_VERSION:v2}
   chain: ${DAEGU_CHAIN_ID:dchain}
+  app-key: ${DAEGU_CHAIN_APP_KEY:${DAEGU_CHAIN_TOKEN:}}
   token: ${DAEGU_CHAIN_TOKEN:}
+  token-owner-address: ${DAEGU_CHAIN_TOKEN_OWNER_ADDRESS:}
+  token-owner-private-key: ${DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY:}
+  token-symbol: ${DAEGU_CHAIN_TOKEN_SYMBOL:MYT}
+  token-decimals: ${DAEGU_CHAIN_TOKEN_DECIMALS:18}
+  token-mintable: ${DAEGU_CHAIN_TOKEN_MINTABLE:true}
+  token-lockable: ${DAEGU_CHAIN_TOKEN_LOCKABLE:true}
 
 user-reward:
   oral-exercise-coin-amount: ${ORAL_EXERCISE_COIN_REWARD_AMOUNT:1}

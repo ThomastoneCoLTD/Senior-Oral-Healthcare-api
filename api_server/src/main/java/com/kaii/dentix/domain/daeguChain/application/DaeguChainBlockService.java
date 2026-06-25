@@ -65,7 +65,8 @@ public class DaeguChainBlockService {
     }
 
     private String resolveToken(String token) {
-        String resolvedToken = token == null || token.isBlank() ? properties.getToken() : token;
+        String configuredAppKey = properties.resolveAppKey();
+        String resolvedToken = configuredAppKey == null || configuredAppKey.isBlank() ? token : configuredAppKey;
         if (resolvedToken == null || resolvedToken.isBlank()) {
             throw new BadRequestApiException("token is required");
         }

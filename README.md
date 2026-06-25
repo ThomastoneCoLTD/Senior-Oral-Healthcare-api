@@ -319,6 +319,12 @@ SPRING_DATASOURCE_URL=jdbc:mysql://<DEV_RDS_ENDPOINT>:3306/thomastone?serverTime
 SPRING_DATASOURCE_USERNAME=sohadmin
 SPRING_DATASOURCE_PASSWORD=<DEV_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<DEV_JWT_SECRET>
+DAEGU_CHAIN_APP_KEY=<DEV_DAEGU_CHAIN_APP_KEY>
+DAEGU_CHAIN_ID=mitumt
+DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<DEV_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
+DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY=<DEV_DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY>
+DAEGU_CHAIN_TOKEN_SYMBOL=MYT
+DAEGU_CHAIN_TOKEN_DECIMALS=18
 ```
 
 `SOH_API_ENV_PROD` example:
@@ -333,10 +339,17 @@ SPRING_DATASOURCE_URL=jdbc:mysql://<PROD_RDS_ENDPOINT>:3306/thomastone?serverTim
 SPRING_DATASOURCE_USERNAME=sohadmin
 SPRING_DATASOURCE_PASSWORD=<PROD_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<PROD_JWT_SECRET>
+DAEGU_CHAIN_APP_KEY=<PROD_DAEGU_CHAIN_APP_KEY>
+DAEGU_CHAIN_ID=mitumt
+DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<PROD_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
+DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY=<PROD_DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY>
+DAEGU_CHAIN_TOKEN_SYMBOL=MYT
+DAEGU_CHAIN_TOKEN_DECIMALS=18
 ```
 
 Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3, and EC2 downloads it through the instance profile.
 Terraform outputs `db_address`, `db_endpoint`, and `db_master_user_secret_arn`; use the Secrets Manager secret value to populate the datasource password in the GitHub environment secret.
+DaeguChain API requests use `DAEGU_CHAIN_APP_KEY` for every outbound request body field named `token`; keep app keys and token owner private keys only in environment secrets.
 
 ## GitHub Actions IAM User Policy
 
