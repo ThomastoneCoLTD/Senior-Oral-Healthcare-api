@@ -1,7 +1,6 @@
 package com.kaii.dentix.domain.user.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
@@ -11,12 +10,9 @@ import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 import java.util.Map;
-import java.util.Objects;
 
 @Slf4j
 @Service
@@ -24,9 +20,7 @@ import java.util.Objects;
 public class UserDaeguProvisioningService {
 
     private final DaeguChainDidService daeguChainDidService;
-    private final DaeguChainAccountService daeguChainAccountService;
     private final UserRewardWalletRepository userRewardWalletRepository;
-    private final Environment environment;
 
     public void provisionForSignUp(User user) {
         String walletAddress = provisionDid(user);
@@ -43,6 +37,9 @@ public class UserDaeguProvisioningService {
             String did = findFirstText(data, "did", "DID", "account");
             String key = findFirstText(data, "publickey", "public_key", "publicKey", "key_id", "keyId");
             String walletAddress = findFirstText(data, "address");
+            if (isBlank(walletAddress)) {
+                walletAddress = extractAddressFromDid(did);
+            }
             if (isBlank(did)) {
                 throw new BadRequestApiException("DaeguChain DID is empty");
             }
@@ -76,27 +73,7 @@ public class UserDaeguProvisioningService {
         if (!isBlank(didWalletAddress)) {
             return didWalletAddress;
         }
-        return createWalletAddress(user);
-    }
-
-    private String createWalletAddress(User user) {
-        try {
-            DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> account =
-                    daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null));
-            if (account == null
-                    || account.getData() == null
-                    || account.getData().getKeyPair() == null
-                    || isBlank(account.getData().getKeyPair().getAddress())) {
-                throw new BadRequestApiException("DaeguChain account address is empty");
-            }
-            return account.getData().getKeyPair().getAddress();
-        } catch (RuntimeException exception) {
-            if (isDevProfile() && isTokenRequiredError(exception)) {
-                return buildLocalTestWalletAddress(user);
-            }
-            log.warn("Daegu wallet provisioning failed. userId={}", user.getUserId(), exception);
-            return null;
-        }
+        return extractAddressFromDid(user.getDaeguDid());
     }
 
     private String findFirstText(JsonNode node, String... fieldNames) {
@@ -129,18 +106,12 @@ public class UserDaeguProvisioningService {
         return null;
     }
 
-    private String buildLocalTestWalletAddress(User user) {
-        long hash = Integer.toUnsignedLong(Objects.hash("soh-signup-wallet", user.getUserId()));
-        return "0x" + "%040x".formatted(hash);
-    }
-
-    private boolean isDevProfile() {
-        return Arrays.stream(environment.getActiveProfiles())
-                .anyMatch(profile -> profile.equals("dev") || profile.equals("local"));
-    }
-
-    private boolean isTokenRequiredError(Throwable exception) {
-        return exception.getMessage() != null && exception.getMessage().contains("token is required");
+    private String extractAddressFromDid(String did) {
+        if (isBlank(did)) {
+            return null;
+        }
+        int index = did.lastIndexOf(':');
+        return index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
     }
 
     private boolean isBlank(String value) {

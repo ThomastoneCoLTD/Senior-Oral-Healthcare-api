@@ -1,7 +1,10 @@
 package com.kaii.dentix.domain.daeguChain.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.kaii.dentix.domain.daeguChain.client.DaeguChainClient;
+import com.kaii.dentix.domain.daeguChain.client.ExternalDidClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
@@ -17,7 +20,9 @@ import java.util.Map;
 public class DaeguChainDidService {
 
     private final DaeguChainClient daeguChainClient;
+    private final ExternalDidClient externalDidClient;
     private final DaeguChainProperties properties;
+    private final ObjectMapper objectMapper;
 
     public DaeguChainDto.ApiResponse<JsonNode> projectList(Map<String, Object> request) {
         return call("/mitum/did/projects", request, List.of());
@@ -50,7 +55,31 @@ public class DaeguChainDidService {
     }
 
     public DaeguChainDto.ApiResponse<JsonNode> createAccount(Map<String, Object> request) {
-        return call("/mitum/did/create_account", request, List.of());
+        JsonNode externalResponse = externalDidClient.createDid();
+        String did = findFirstText(externalResponse, "DID", "did");
+        if (did == null || did.isBlank()) {
+            throw new BadRequestApiException("DID server response did is empty");
+        }
+
+        ObjectNode data = objectMapper.createObjectNode();
+        data.put("did", did);
+        data.put("DID", did);
+
+        String address = findFirstText(externalResponse, "address");
+        if (address == null || address.isBlank()) {
+            address = extractAddressFromDid(did);
+        }
+        if (address != null && !address.isBlank()) {
+            data.put("address", address);
+        }
+
+        JsonNode keyPair = externalResponse.path("data").path("key_pair");
+        if (!keyPair.isMissingNode() && !keyPair.isNull()) {
+            data.set("key_pair", keyPair);
+        }
+        data.set("external_response", externalResponse);
+
+        return new DaeguChainDto.ApiResponse<>("OK", Map.of(), "", data, null);
     }
 
     public DaeguChainDto.ApiResponse<JsonNode> getKey(Map<String, Object> request) {
@@ -105,5 +134,43 @@ public class DaeguChainDidService {
             throw new BadRequestApiException("token is required");
         }
         return resolvedToken;
+    }
+
+    private String findFirstText(JsonNode node, String... fieldNames) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        for (String fieldName : fieldNames) {
+            JsonNode value = node.get(fieldName);
+            if (value != null && !value.isNull() && !value.asText().isBlank()) {
+                return value.asText();
+            }
+        }
+        if (node.isObject()) {
+            var fields = node.fields();
+            while (fields.hasNext()) {
+                String found = findFirstText(fields.next().getValue(), fieldNames);
+                if (found != null && !found.isBlank()) {
+                    return found;
+                }
+            }
+        }
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                String found = findFirstText(child, fieldNames);
+                if (found != null && !found.isBlank()) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String extractAddressFromDid(String did) {
+        if (did == null || did.isBlank()) {
+            return null;
+        }
+        int index = did.lastIndexOf(':');
+        return index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
     }
 }

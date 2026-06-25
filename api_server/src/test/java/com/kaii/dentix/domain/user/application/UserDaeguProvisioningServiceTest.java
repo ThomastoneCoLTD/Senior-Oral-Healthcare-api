@@ -2,7 +2,6 @@ package com.kaii.dentix.domain.user.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
@@ -13,7 +12,6 @@ import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.core.env.Environment;
 
 import java.util.Optional;
 
@@ -27,21 +25,16 @@ import static org.mockito.Mockito.when;
 class UserDaeguProvisioningServiceTest {
 
     private DaeguChainDidService daeguChainDidService;
-    private DaeguChainAccountService daeguChainAccountService;
     private UserRewardWalletRepository userRewardWalletRepository;
     private UserDaeguProvisioningService service;
 
     @BeforeEach
     void setUp() {
         daeguChainDidService = mock(DaeguChainDidService.class);
-        daeguChainAccountService = mock(DaeguChainAccountService.class);
         userRewardWalletRepository = mock(UserRewardWalletRepository.class);
-        Environment environment = mock(Environment.class);
         service = new UserDaeguProvisioningService(
                 daeguChainDidService,
-                daeguChainAccountService,
-                userRewardWalletRepository,
-                environment
+                userRewardWalletRepository
         );
     }
 
@@ -80,7 +73,6 @@ class UserDaeguProvisioningServiceTest {
         ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
         verify(userRewardWalletRepository).save(captor.capture());
         assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
-        verify(daeguChainAccountService, never()).createAccount(any());
     }
 
     @Test
@@ -97,7 +89,6 @@ class UserDaeguProvisioningServiceTest {
         assertThat(user.getDaeguDid()).isNull();
         assertThat(user.getDaeguDidKey()).isNull();
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.FAILED);
-        verify(daeguChainAccountService, never()).createAccount(any());
         verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
     }
 }

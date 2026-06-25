@@ -23,6 +23,8 @@ public class DaeguChainProperties {
     private Integer tokenDecimals = 18;
     private Boolean tokenMintable = true;
     private Boolean tokenLockable = true;
+    private String didServerBaseUrl = "http://localhost:5000";
+    private String didCreatePath = "/did/create";
 
     public String resolveAppKey() {
         return hasText(appKey) ? appKey : token;

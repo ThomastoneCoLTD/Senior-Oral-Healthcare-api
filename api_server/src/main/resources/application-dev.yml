@@ -122,6 +122,8 @@ daegu-chain:
   token-decimals: ${DAEGU_CHAIN_TOKEN_DECIMALS:18}
   token-mintable: ${DAEGU_CHAIN_TOKEN_MINTABLE:true}
   token-lockable: ${DAEGU_CHAIN_TOKEN_LOCKABLE:true}
+  did-server-base-url: ${DID_SERVER_BASE_URL:http://localhost:5000}
+  did-create-path: ${DID_CREATE_PATH:/did/create}
 
 user-reward:
   oral-exercise-coin-amount: ${ORAL_EXERCISE_COIN_REWARD_AMOUNT:1}

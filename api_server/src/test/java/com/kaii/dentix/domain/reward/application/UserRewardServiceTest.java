@@ -1,7 +1,7 @@
 package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainToken20Service;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
@@ -37,7 +37,7 @@ class UserRewardServiceTest {
     private UserRewardWalletRepository walletRepository;
     private UserRewardTransactionRepository transactionRepository;
     private OralExerciseContentRepository contentRepository;
-    private DaeguChainAccountService daeguChainAccountService;
+    private DaeguChainDidService daeguChainDidService;
     private DaeguChainPointService daeguChainPointService;
     private DaeguChainToken20Service daeguChainToken20Service;
     private JwtTokenUtil jwtTokenUtil;
@@ -50,7 +50,7 @@ class UserRewardServiceTest {
         walletRepository = mock(UserRewardWalletRepository.class);
         transactionRepository = mock(UserRewardTransactionRepository.class);
         contentRepository = mock(OralExerciseContentRepository.class);
-        daeguChainAccountService = mock(DaeguChainAccountService.class);
+        daeguChainDidService = mock(DaeguChainDidService.class);
         daeguChainPointService = mock(DaeguChainPointService.class);
         daeguChainToken20Service = mock(DaeguChainToken20Service.class);
         jwtTokenUtil = mock(JwtTokenUtil.class);
@@ -66,7 +66,7 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
-                daeguChainAccountService,
+                daeguChainDidService,
                 daeguChainPointService,
                 daeguChainToken20Service,
                 daeguChainProperties,
@@ -152,7 +152,7 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
-                daeguChainAccountService,
+                daeguChainDidService,
                 daeguChainPointService,
                 daeguChainToken20Service,
                 daeguChainProperties,
@@ -246,37 +246,35 @@ class UserRewardServiceTest {
     }
 
     @Test
-    void connectWalletCreatesDaeguAccountWhenWalletAddressIsEmpty() {
+    void connectWalletCreatesDidWalletWhenWalletAddressIsEmpty() throws Exception {
         when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.empty());
-        when(daeguChainAccountService.createAccount(any()))
+        when(daeguChainDidService.createAccount(any()))
                 .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "success",
+                        "OK",
                         null,
-                        "ok",
-                        new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
-                                "private-key",
-                                "public-key",
-                                "0x-wallet"
-                        )),
+                        "",
+                        new ObjectMapper().readTree("""
+                                {
+                                  "did": "did:mitum:minic:0x-wallet",
+                                  "address": "0x-wallet"
+                                }
+                                """),
                         "cid"
                 ));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        UserRewardDto.WalletResponse response = service.connectWallet(
-                request,
-                new UserRewardDto.WalletConnectRequest("did:daegu:test", null)
-        );
+        UserRewardDto.WalletResponse response = service.connectWallet(request, null);
 
-        assertThat(response.getDaeguDid()).isEqualTo("did:daegu:test");
+        assertThat(response.getDaeguDid()).isEqualTo("did:mitum:minic:0x-wallet");
         assertThat(response.getWalletAddress()).isEqualTo("0x-wallet");
-        verify(daeguChainAccountService).createAccount(any());
+        verify(daeguChainDidService).createAccount(any());
     }
 
     @Test
     void connectWalletCreatesLocalTestAddressInDevWhenDaeguTokenIsMissing() {
         when(environment.getActiveProfiles()).thenReturn(new String[]{"dev"});
         when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.empty());
-        when(daeguChainAccountService.createAccount(any()))
+        when(daeguChainDidService.createAccount(any()))
                 .thenThrow(new BadRequestApiException("token is required"));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
 

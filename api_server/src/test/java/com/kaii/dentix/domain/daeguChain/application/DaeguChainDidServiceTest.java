@@ -1,6 +1,8 @@
 package com.kaii.dentix.domain.daeguChain.application;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.daeguChain.client.DaeguChainClient;
+import com.kaii.dentix.domain.daeguChain.client.ExternalDidClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,12 +18,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DaeguChainDidServiceTest {
 
     @Mock
     private DaeguChainClient daeguChainClient;
+
+    @Mock
+    private ExternalDidClient externalDidClient;
 
     private DaeguChainDidService service;
 
@@ -30,7 +37,7 @@ class DaeguChainDidServiceTest {
         DaeguChainProperties properties = new DaeguChainProperties();
         properties.setChain("dchain");
         properties.setToken("configured-token");
-        service = new DaeguChainDidService(daeguChainClient, properties);
+        service = new DaeguChainDidService(daeguChainClient, externalDidClient, properties, new ObjectMapper());
     }
 
     @Test
@@ -55,6 +62,27 @@ class DaeguChainDidServiceTest {
         )))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("subject is required");
+    }
+
+    @Test
+    void createAccountUsesExternalDidServerAndExtractsWalletAddress() throws Exception {
+        when(externalDidClient.createDid())
+                .thenReturn(new ObjectMapper().readTree("""
+                        {
+                          "res": true,
+                          "DID": "did:mitum:minic:0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca"
+                        }
+                        """));
+
+        var response = service.createAccount(null);
+
+        assertThat(response.getState()).isEqualTo("OK");
+        assertThat(response.getData().path("did").asText())
+                .isEqualTo("did:mitum:minic:0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
+        assertThat(response.getData().path("address").asText())
+                .isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
+        verify(externalDidClient).createDid();
+        verifyNoMoreInteractions(daeguChainClient);
     }
 
     @Test

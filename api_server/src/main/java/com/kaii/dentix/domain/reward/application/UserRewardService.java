@@ -1,7 +1,7 @@
 package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainToken20Service;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -38,7 +39,7 @@ public class UserRewardService {
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final UserRewardTransactionRepository userRewardTransactionRepository;
     private final OralExerciseContentRepository oralExerciseContentRepository;
-    private final DaeguChainAccountService daeguChainAccountService;
+    private final DaeguChainDidService daeguChainDidService;
     private final DaeguChainPointService daeguChainPointService;
     private final DaeguChainToken20Service daeguChainToken20Service;
     private final DaeguChainProperties daeguChainProperties;
@@ -84,8 +85,16 @@ public class UserRewardService {
         String daeguDid = connectRequest == null ? null : connectRequest.getDaeguDid();
         String walletAddress = connectRequest == null ? null : connectRequest.getWalletAddress();
 
+        if (isBlank(walletAddress) && !isBlank(daeguDid)) {
+            walletAddress = extractAddressFromDid(daeguDid);
+        }
+
         if (isBlank(wallet.getWalletAddress()) && isBlank(walletAddress)) {
-            walletAddress = createDaeguWalletAddress(userId);
+            DidWallet didWallet = createDidWallet(userId);
+            if (isBlank(daeguDid)) {
+                daeguDid = didWallet.did();
+            }
+            walletAddress = didWallet.walletAddress();
         }
 
         if (isBlank(walletAddress) && isBlank(wallet.getWalletAddress())) {
@@ -296,18 +305,20 @@ public class UserRewardService {
         return response.getCid();
     }
 
-    private String findFirstText(JsonNode node, String fieldName) {
+    private String findFirstText(JsonNode node, String... fieldNames) {
         if (node == null || node.isNull()) {
             return null;
         }
-        JsonNode value = node.get(fieldName);
-        if (value != null && !value.isNull() && !value.asText().isBlank()) {
-            return value.asText();
+        for (String fieldName : fieldNames) {
+            JsonNode value = node.get(fieldName);
+            if (value != null && !value.isNull() && !value.asText().isBlank()) {
+                return value.asText();
+            }
         }
         if (node.isObject()) {
             var fields = node.fields();
             while (fields.hasNext()) {
-                String found = findFirstText(fields.next().getValue(), fieldName);
+                String found = findFirstText(fields.next().getValue(), fieldNames);
                 if (!isBlank(found)) {
                     return found;
                 }
@@ -315,7 +326,7 @@ public class UserRewardService {
         }
         if (node.isArray()) {
             for (JsonNode child : node) {
-                String found = findFirstText(child, fieldName);
+                String found = findFirstText(child, fieldNames);
                 if (!isBlank(found)) {
                     return found;
                 }
@@ -324,24 +335,22 @@ public class UserRewardService {
         return null;
     }
 
-    private String extractWalletAddress(DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> account) {
-        if (account == null
-                || account.getData() == null
-                || account.getData().getKeyPair() == null
-                || isBlank(account.getData().getKeyPair().getAddress())) {
-            throw new BadRequestApiException("DaeguChain account address is empty");
-        }
-        return account.getData().getKeyPair().getAddress();
-    }
-
-    private String createDaeguWalletAddress(Long userId) {
+    private DidWallet createDidWallet(Long userId) {
         try {
-            DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> account =
-                    daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null));
-            return extractWalletAddress(account);
+            DaeguChainDto.ApiResponse<JsonNode> response = daeguChainDidService.createAccount(Map.of());
+            JsonNode data = response == null ? null : response.getData();
+            String did = findFirstText(data, "did", "DID", "account");
+            String walletAddress = findFirstText(data, "address");
+            if (isBlank(walletAddress)) {
+                walletAddress = extractAddressFromDid(did);
+            }
+            if (isBlank(walletAddress)) {
+                throw new BadRequestApiException("DaeguChain DID wallet address is empty");
+            }
+            return new DidWallet(did, walletAddress);
         } catch (BadRequestApiException exception) {
             if (isDevProfile() && exception.getMessage() != null && exception.getMessage().contains("token is required")) {
-                return buildLocalTestWalletAddress(userId);
+                return new DidWallet(null, buildLocalTestWalletAddress(userId));
             }
             throw exception;
         }
@@ -359,5 +368,16 @@ public class UserRewardService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String extractAddressFromDid(String did) {
+        if (isBlank(did)) {
+            return null;
+        }
+        int index = did.lastIndexOf(':');
+        return index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
+    }
+
+    private record DidWallet(String did, String walletAddress) {
     }
 }
