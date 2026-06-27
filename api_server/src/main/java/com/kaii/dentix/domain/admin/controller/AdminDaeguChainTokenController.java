@@ -28,6 +28,11 @@ public class AdminDaeguChainTokenController {
         return new DataResponse<>(adminDaeguChainTokenService.getTokenNames());
     }
 
+    @PostMapping("/list")
+    public DataResponse<JsonNode> getTokenList() {
+        return new DataResponse<>(adminDaeguChainTokenService.getTokenList());
+    }
+
     @PostMapping("/create")
     public DataResponse<DaeguChainDto.ApiResponse<JsonNode>> createToken(
             @Valid @RequestBody AdminDaeguChainTokenDto.CreateRequest request

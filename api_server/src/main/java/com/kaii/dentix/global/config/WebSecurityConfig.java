@@ -35,7 +35,7 @@ public class WebSecurityConfig {
     public static String[] EXCLUDE_URLS = {
             "/actuator/health",
             "/docs/*",
-            "/login", "/login/*",
+            "/login", "/login/**",
             "/admin/user/bulk-upload/template/*",
             "/password", "/password/*",
             "/service-agreement",

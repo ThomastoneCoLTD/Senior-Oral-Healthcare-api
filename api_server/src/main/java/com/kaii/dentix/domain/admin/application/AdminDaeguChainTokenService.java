@@ -35,6 +35,10 @@ public class AdminDaeguChainTokenService {
         return tokenNames;
     }
 
+    public JsonNode getTokenList() {
+        return externalTokenClient.getTokenList();
+    }
+
     public DaeguChainDto.ApiResponse<JsonNode> createToken(AdminDaeguChainTokenDto.CreateRequest request) {
         validateTokenCreateConfiguration();
         JsonNode response = externalTokenClient.createToken(

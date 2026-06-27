@@ -18,6 +18,9 @@ import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.domain.reward.dto.UserRewardDto;
+import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
@@ -41,6 +44,7 @@ public class UserRewardService {
     private final DaeguChainDidService daeguChainDidService;
     private final DaeguChainPointService daeguChainPointService;
     private final ExternalTokenClient externalTokenClient;
+    private final UserRepository userRepository;
     private final UserRewardProperties userRewardProperties;
     private final JwtTokenUtil jwtTokenUtil;
     private final Environment environment;
@@ -127,15 +131,15 @@ public class UserRewardService {
                         rewardTokenName,
                         UserRewardTransactionType.ORAL_EXERCISE_COIN,
                         UserRewardTransactionStatus.CANCELED
-                );
+        );
         if (existingTokenReward.isPresent()) {
-            return UserRewardDto.RewardResponse.from(existingTokenReward.get(), true);
+            return retryTokenTransferIfNeeded(userId, existingTokenReward.get(), rewardTokenName);
         }
 
         String idempotencyKey = buildButtonClickIdempotencyKey(userId, rewardTokenName);
         var existingIdempotentTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey);
         if (existingIdempotentTransaction.isPresent() && existingIdempotentTransaction.get().isAlreadyApplied()) {
-            return UserRewardDto.RewardResponse.from(existingIdempotentTransaction.get(), true);
+            return retryTokenTransferIfNeeded(userId, existingIdempotentTransaction.get(), rewardTokenName);
         }
 
         UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
@@ -143,6 +147,7 @@ public class UserRewardService {
                         .userId(userId)
                         .pointBalance(0L)
                         .build());
+        syncWalletFromUser(userId, wallet);
 
         long amount = userRewardProperties.getOralExerciseCoinAmount();
         wallet.addPoints(amount);
@@ -167,6 +172,114 @@ public class UserRewardService {
         }
 
         return UserRewardDto.RewardResponse.from(transaction, false);
+    }
+
+    @Transactional
+    public UserRewardDto.RewardResponse rewardOralExerciseCompletion(
+            Long userId,
+            OralExerciseContent content,
+            String sessionId
+    ) {
+        if (userId == null) {
+            throw new UnauthorizedException("?몄쬆 ?뺣낫媛 ?놁뒿?덈떎.");
+        }
+        if (content == null) {
+            throw new BadRequestApiException("content is required");
+        }
+
+        String rewardTokenName = resolveRewardTokenName(content);
+        var existingTokenReward = userRewardTransactionRepository
+                .findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
+                        userId,
+                        rewardTokenName,
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                        UserRewardTransactionStatus.CANCELED
+        );
+        if (existingTokenReward.isPresent()) {
+            return retryTokenTransferIfNeeded(userId, existingTokenReward.get(), rewardTokenName);
+        }
+
+        String idempotencyKey = buildButtonClickIdempotencyKey(userId, rewardTokenName);
+        var existingIdempotentTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey);
+        if (existingIdempotentTransaction.isPresent() && existingIdempotentTransaction.get().isAlreadyApplied()) {
+            return retryTokenTransferIfNeeded(userId, existingIdempotentTransaction.get(), rewardTokenName);
+        }
+
+        UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
+                .orElseGet(() -> UserRewardWallet.builder()
+                        .userId(userId)
+                        .pointBalance(0L)
+                        .build());
+        syncWalletFromUser(userId, wallet);
+
+        long amount = userRewardProperties.getOralExerciseCoinAmount();
+        wallet.addPoints(amount);
+        UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
+
+        UserRewardTransaction transaction = userRewardTransactionRepository.save(UserRewardTransaction.builder()
+                .userId(userId)
+                .oralExerciseContent(content)
+                .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                .status(UserRewardTransactionStatus.LOCAL_RECORDED)
+                .amount(amount)
+                .balanceAfter(savedWallet.getPointBalance())
+                .idempotencyKey(idempotencyKey)
+                .sessionId(sessionId)
+                .coinId(rewardTokenName)
+                .build());
+
+        if (userRewardProperties.isTokenTransferEnabled()) {
+            transferTokenIfConfigured(transaction, savedWallet, rewardTokenName);
+        } else {
+            mintPointIfConfigured(transaction, savedWallet);
+        }
+
+        return UserRewardDto.RewardResponse.from(transaction, false);
+    }
+
+    private UserRewardDto.RewardResponse retryTokenTransferIfNeeded(
+            Long userId,
+            UserRewardTransaction transaction,
+            String rewardTokenName
+    ) {
+        if (userRewardProperties.isTokenTransferEnabled()
+                && transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED) {
+            UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
+                    .orElseGet(() -> UserRewardWallet.builder()
+                            .userId(userId)
+                            .pointBalance(transaction.getBalanceAfter())
+                            .build());
+            syncWalletFromUser(userId, wallet);
+            UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
+            transferTokenIfConfigured(transaction, savedWallet, rewardTokenName);
+        }
+        return UserRewardDto.RewardResponse.from(transaction, true);
+    }
+
+    private void syncWalletFromUser(Long userId, UserRewardWallet wallet) {
+        if (!isBlank(wallet.getDaeguDid()) && !isBlank(wallet.getWalletAddress())) {
+            return;
+        }
+        userRepository.findById(userId)
+                .filter(user -> user.getDaeguDidStatus() == UserDaeguIdentityStatus.ISSUED)
+                .ifPresent(user -> {
+                    String daeguDid = isBlank(wallet.getDaeguDid()) ? user.getDaeguDid() : wallet.getDaeguDid();
+                    String walletAddress = isBlank(wallet.getWalletAddress())
+                            ? extractWalletAddress(user)
+                            : wallet.getWalletAddress();
+                    wallet.updateDaeguWallet(daeguDid, walletAddress);
+                });
+    }
+
+    private String extractWalletAddress(User user) {
+        if (user == null) {
+            return null;
+        }
+        String walletAddress = extractAddressFromDid(user.getDaeguDid());
+        if (!isBlank(walletAddress)) {
+            return walletAddress;
+        }
+        return extractAddressFromDid(user.getDaeguDidKey());
     }
 
     private Long getUserId(HttpServletRequest request) {

@@ -17,6 +17,7 @@ import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.domain.reward.dto.UserRewardDto;
+import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +40,7 @@ class UserRewardServiceTest {
     private DaeguChainDidService daeguChainDidService;
     private DaeguChainPointService daeguChainPointService;
     private ExternalTokenClient externalTokenClient;
+    private UserRepository userRepository;
     private JwtTokenUtil jwtTokenUtil;
     private Environment environment;
     private UserRewardService service;
@@ -52,6 +54,7 @@ class UserRewardServiceTest {
         daeguChainDidService = mock(DaeguChainDidService.class);
         daeguChainPointService = mock(DaeguChainPointService.class);
         externalTokenClient = mock(ExternalTokenClient.class);
+        userRepository = mock(UserRepository.class);
         jwtTokenUtil = mock(JwtTokenUtil.class);
         environment = mock(Environment.class);
         request = mock(HttpServletRequest.class);
@@ -65,6 +68,7 @@ class UserRewardServiceTest {
                 daeguChainDidService,
                 daeguChainPointService,
                 externalTokenClient,
+                userRepository,
                 properties,
                 jwtTokenUtil,
                 environment
@@ -147,6 +151,7 @@ class UserRewardServiceTest {
                 daeguChainDidService,
                 daeguChainPointService,
                 externalTokenClient,
+                userRepository,
                 properties,
                 jwtTokenUtil,
                 environment
