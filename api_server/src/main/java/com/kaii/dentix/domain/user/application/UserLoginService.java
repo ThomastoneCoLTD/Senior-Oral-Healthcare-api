@@ -9,16 +9,19 @@ import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
 import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
 import com.kaii.dentix.domain.appService.domain.AppService;
 import com.kaii.dentix.domain.appService.domain.UserToAppService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
-import com.kaii.dentix.domain.organization.dao.OrganizationRepository;
+import com.kaii.dentix.domain.organization.application.DaeguDefaultOrganizationService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.error.exception.*;
 import io.micrometer.common.util.StringUtils;
@@ -57,8 +60,10 @@ public class UserLoginService {
 
     private final AdminRepository adminRepository;
     private final AppServiceRepository appServiceRepository;
-    private final OrganizationRepository organizationRepository;
+    private final DaeguDefaultOrganizationService daeguDefaultOrganizationService;
     private final ServiceAgreementConsentService serviceAgreementConsentService;
+    private final UserDaeguProvisioningService userDaeguProvisioningService;
+    private final DaeguChainDidService daeguChainDidService;
 
     /**
      * 사용자 회원 인증 (가입 여부 확인)
@@ -101,8 +106,7 @@ public class UserLoginService {
             throw new NotFoundDataException("존재하지 않는 질문입니다.");
         }
 
-        Organization organization = organizationRepository.findById(request.getOrganizationId())
-                .orElseThrow(() -> new NotFoundDataException("기관을 찾을 수 없습니다."));
+        Organization organization = daeguDefaultOrganizationService.getOrCreate();
 
         // 사용자 저장
         User user = userRepository.save(User.builder()
@@ -114,8 +118,10 @@ public class UserLoginService {
                 .findPwdAnswer(request.getFindPwdAnswer())
                 .userPhoneNumber(request.getUserPhoneNumber())
                 .organization(organization)
-                .isVerify(YnType.N)
+                .isVerify(YnType.Y)
                 .build());
+
+        userDaeguProvisioningService.provisionForSignUp(user);
 
         // 앱 서비스 연결
         List<AppService> appServices = appServiceRepository.findAllById(request.getAppServiceIds());
@@ -146,6 +152,63 @@ public class UserLoginService {
                 .userGender(user.getUserGender())
                 .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())
+                .daeguDid(user.getDaeguDid())
+                .daeguDidStatus(user.getDaeguDidStatus())
+                .build();
+    }
+
+    /**
+     * DID 간편 회원가입: 아이디만 받아 사용자를 만들고 DID를 발급합니다.
+     */
+    @Transactional
+    public UserDto.SignUpResponse userDidSignUp(UserDto.DidSignUpRequest request) {
+        this.loginIdCheck(request.getUserLoginIdentifier());
+
+        Organization organization = daeguDefaultOrganizationService.getOrCreate();
+        String loginIdentifier = request.getUserLoginIdentifier().trim();
+
+        User user = userRepository.save(User.builder()
+                .userLoginIdentifier(loginIdentifier)
+                .userName(request.getUserName())
+                .userGender(GenderType.M)
+                .userPassword(passwordEncoder.encode("DID_ONLY:" + loginIdentifier))
+                .findPwdQuestionId(resolveDefaultFindPwdQuestionId())
+                .findPwdAnswer(loginIdentifier)
+                .userPhoneNumber(request.getUserPhoneNumber())
+                .userBirthDate(request.getUserBirthDate())
+                .organization(organization)
+                .isVerify(YnType.Y)
+                .build());
+
+        userDaeguProvisioningService.provisionForSignUp(user);
+
+        appServiceRepository.findAll().forEach(appService ->
+                userToAppServiceRepository.save(UserToAppService.builder()
+                        .user(user)
+                        .appService(appService)
+                        .build())
+        );
+
+        serviceAgreementConsentService.saveUserServiceAgreements(
+                user.getUserId(),
+                request.getUserServiceAgreementRequest()
+        );
+
+        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
+        String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
+        user.updateLogin(refreshToken);
+
+        return UserDto.SignUpResponse.builder()
+                .userId(user.getUserId())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .userLoginIdentifier(user.getUserLoginIdentifier())
+                .userName(user.getUserName())
+                .userGender(user.getUserGender())
+                .organizationId(organization.getOrganizationId())
+                .organizationName(organization.getOrganizationName())
+                .daeguDid(user.getDaeguDid())
+                .daeguDidStatus(user.getDaeguDidStatus())
                 .build();
     }
 
@@ -207,12 +270,93 @@ public class UserLoginService {
                 .organizationName(org != null ? org.getOrganizationName() : null)
                 .organizationPlanName(planName)
                 .organizationCustomSurveyEnabled(customSurvey)
+                .daeguDid(user.getDaeguDid())
+                .daeguDidStatus(user.getDaeguDidStatus())
+                .build();
+    }
+
+    /**
+     * DID 로그인: 아이디로 사용자를 찾고 DB에 저장된 DID 발급 상태를 확인한 뒤 토큰을 발급합니다.
+     */
+    @Transactional
+    public UserDto.LoginResponse userDidLogin(UserDto.DidLoginRequest request) {
+        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
+                .orElseThrow(() -> new UnauthorizedException("아이디 또는 DID가 올바르지 않습니다."));
+
+        if (user.getIsVerify() != YnType.Y) {
+            throw new UnauthorizedException("관리자 승인 후 로그인할 수 있습니다.");
+        }
+        if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || StringUtils.isBlank(user.getDaeguDid())) {
+            throw new UnauthorizedException("DID가 발급되지 않은 사용자입니다.");
+        }
+        verifyDaeguCredentialForLogin(user);
+
+        Organization org = user.getOrganization();
+        String planName = null;
+        Boolean customSurvey = false;
+
+        if (org != null && org.getOrganizationSubscription() != null) {
+            SubscriptionPlan plan = org.getOrganizationSubscription().getSubscriptionPlan();
+            if (plan != null) {
+                planName = plan.getPlanName().name();
+                customSurvey = plan.getCustomSurveyEnabled();
+            }
+        }
+
+        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
+        String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
+        user.updateLogin(refreshToken);
+
+        List<UserDto.ServiceInfo> services = userToAppServiceRepository.findByUser(user).stream()
+                .map(uta -> UserDto.ServiceInfo.builder()
+                        .serviceId(uta.getAppService().getAppServiceId())
+                        .name(uta.getAppService().getName())
+                        .serviceType(uta.getAppService().getServiceType())
+                        .build())
+                .toList();
+
+        Long mainServiceId = services.isEmpty() ? null : services.get(0).getServiceId();
+        String mainServiceName = services.isEmpty() ? null : services.get(0).getName();
+
+        return UserDto.LoginResponse.builder()
+                .userId(user.getUserId())
+                .userName(user.getUserName())
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .serviceId(mainServiceId)
+                .name(mainServiceName)
+                .services(services)
+                .organizationId(org != null ? org.getOrganizationId() : null)
+                .organizationName(org != null ? org.getOrganizationName() : null)
+                .organizationPlanName(planName)
+                .organizationCustomSurveyEnabled(customSurvey)
+                .daeguDid(user.getDaeguDid())
+                .daeguDidStatus(user.getDaeguDidStatus())
                 .build();
     }
 
     /**
      * 비밀번호 찾기 (질문/답변 확인)
      */
+    private void verifyDaeguCredentialForLogin(User user) {
+        if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || StringUtils.isBlank(user.getDaeguDid())) {
+            throw new UnauthorizedException("DID credential is not issued.");
+        }
+
+        if (StringUtils.isBlank(user.getDaeguCredentialJwt())) {
+            try {
+                daeguChainDidService.issueLoginUserCredential(user);
+            } catch (RuntimeException exception) {
+                user.markDaeguCredentialFailed();
+                throw new UnauthorizedException("DID credential verification failed.");
+            }
+        }
+
+        if (!daeguChainDidService.verifyLoginUserCredential(user)) {
+            throw new UnauthorizedException("DID credential verification failed.");
+        }
+    }
+
     @Transactional
     public UserDto.FindPasswordResponse userFindPassword(UserDto.FindPasswordRequest request) {
         User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
@@ -238,6 +382,13 @@ public class UserLoginService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
         user.setUserPassword(passwordEncoder.encode(request.getUserPassword()));
+    }
+
+    private Long resolveDefaultFindPwdQuestionId() {
+        return findPwdQuestionRepository.findAll().stream()
+                .findFirst()
+                .map(question -> question.getFindPwdQuestionId())
+                .orElse(1L);
     }
 
     /**

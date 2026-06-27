@@ -3,7 +3,7 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:db-huawei-aurora-mysql-instance-1.cfq0uo8ms95m.ap-southeast-1.rds.amazonaws.com:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
+    url: jdbc:mysql://db-block-chain-2026-dev-aurora-mysql-instance-1.cfq0uo8ms95m.ap-southeast-1.rds.amazonaws.com:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
     username: thomastone
     # [보안 권고] 소스코드에 비밀번호 평문 저장 금지 -> 환경변수 또는 Jasypt 암호화 사용 권장
     password: ${DB_PASSWORD:dPqkd0923!}
@@ -108,13 +108,45 @@ aiModel:
   apiUrl:
     oralCheck: 'https://ai-backend-gpu.kai-i.com/denti/api/plaque_navy'
     questionnaire: 'https://ai-backend-gpu.kai-i.com/denti/api/prsc_dku'
+
+daegu-chain:
+  base-url: ${DAEGU_CHAIN_BASE_URL:https://www.daegu.go.kr/daeguchain}
+  api-base-url: ${DAEGU_CHAIN_API_BASE_URL:}
+  api-version: ${DAEGU_CHAIN_API_VERSION:v2}
+  chain: ${DAEGU_CHAIN_ID:dchain}
+  app-key: ${DAEGU_CHAIN_APP_KEY:${DAEGU_CHAIN_TOKEN:}}
+  token: ${DAEGU_CHAIN_TOKEN:}
+  token-owner-address: ${DAEGU_CHAIN_TOKEN_OWNER_ADDRESS:}
+  token-owner-private-key: ${DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY:}
+  token-symbol: ${DAEGU_CHAIN_TOKEN_SYMBOL:MYT}
+  token-decimals: ${DAEGU_CHAIN_TOKEN_DECIMALS:18}
+  token-mintable: ${DAEGU_CHAIN_TOKEN_MINTABLE:true}
+  token-lockable: ${DAEGU_CHAIN_TOKEN_LOCKABLE:true}
+  did-server-base-url: ${DID_SERVER_BASE_URL:http://localhost:5000}
+  did-create-path: ${DID_CREATE_PATH:/did/create}
+  token-server-base-url: ${TOKEN_SERVER_BASE_URL:http://localhost:5000}
+  token-create-path: ${TOKEN_CREATE_PATH:/token/create}
+  token-transfer-path: ${TOKEN_TRANSFER_PATH:/token/transfer}
+  token-list-path: ${TOKEN_LIST_PATH:/token/token_list}
+  login-user-credential-template-id: ${DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID:VLVSWVRSOPZJMPINTBNA}
+  login-user-credential-valid-from: ${DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_FROM:}
+  login-user-credential-valid-until: ${DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_UNTIL:}
+  login-user-credential-valid-days: ${DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS:3650}
+
+user-reward:
+  oral-exercise-coin-amount: ${ORAL_EXERCISE_COIN_REWARD_AMOUNT:1}
+  point-mint-enabled: ${USER_REWARD_POINT_MINT_ENABLED:false}
+  point-contract-address: ${USER_REWARD_POINT_CONTRACT_ADDRESS:}
+  point-owner-address: ${USER_REWARD_POINT_OWNER_ADDRESS:}
+  point-owner-private-key: ${USER_REWARD_POINT_OWNER_PRIVATE_KEY:}
+  token-transfer-enabled: ${USER_REWARD_TOKEN_TRANSFER_ENABLED:true}
 s3:
   storage:
-    bucketName: denti-dev
+    bucketName: ${S3_BUCKET_NAME:denti-backends}
     region: ap-southeast-1
 
   folderPath:
-    oralCheck: test/
+    oralCheck: soh/dev/
 
 aws:
   region: ap-southeast-1

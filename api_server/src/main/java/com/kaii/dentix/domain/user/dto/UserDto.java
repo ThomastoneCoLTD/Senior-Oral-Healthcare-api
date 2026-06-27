@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.user.dto;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.ServiceType;
+import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.config.PasswordSerializer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -46,6 +47,13 @@ public class UserDto {
 
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor
+    public static class DidLoginRequest {
+        @NotBlank(message = "아이디는 필수입니다.")
+        private String userLoginIdentifier;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
     public static class LoginResponse {
         private Long userId;
         private String userName;
@@ -64,6 +72,8 @@ public class UserDto {
         private String organizationName;
         private String organizationPlanName;
         private Boolean organizationCustomSurveyEnabled;
+        private String daeguDid;
+        private UserDaeguIdentityStatus daeguDidStatus;
     }
 
     @Getter @Builder
@@ -140,6 +150,32 @@ public class UserDto {
         private GenderType userGender;
         private Long organizationId;
         private String organizationName;
+        private String daeguDid;
+        private UserDaeguIdentityStatus daeguDidStatus;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class DidSignUpRequest {
+        @NotBlank(message = "아이디는 필수입니다.")
+        @Size(min = 4, max = 12, message = "아이디는 최소 4자부터 최대 12자입니다.")
+        @Pattern(regexp = "^[a-zA-Z0-9]+$", message = "아이디는 숫자와 영문만 사용할 수 있습니다.")
+        private String userLoginIdentifier;
+
+        @NotBlank(message = "이름은 필수입니다.")
+        private String userName;
+
+        @NotBlank(message = "전화번호는 필수입니다.")
+        @Size(min = 10, max = 11, message = "전화번호는 최소 10자부터 최대 11자입니다.")
+        @Pattern(regexp = "^[0-9]+$", message = "전화번호는 숫자만 입력해 주세요.")
+        private String userPhoneNumber;
+
+        @NotBlank(message = "생년월일은 필수입니다.")
+        @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "생년월일은 YYYY-MM-DD 형식으로 입력해 주세요.")
+        private String userBirthDate;
+
+        @NotNull(message = "서비스 이용 동의는 필수입니다.")
+        private List<Long> userServiceAgreementRequest;
     }
 
     // =================================================================
@@ -152,6 +188,8 @@ public class UserDto {
         private String userLoginIdentifier;
         private GenderType userGender;
         private List<ServiceInfo> services;
+        private String daeguDid;
+        private UserDaeguIdentityStatus daeguDidStatus;
     }
 
     @Getter @Builder

@@ -10,6 +10,7 @@ import lombok.*;
 import org.hibernate.annotations.Where;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -37,6 +38,9 @@ public class User extends TimeEntity {
     @Column(length = 45, nullable = false)
     private String userPhoneNumber;
 
+    @Column(length = 10)
+    private String userBirthDate;
+
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "enum")
     private GenderType userGender;
@@ -63,6 +67,27 @@ public class User extends TimeEntity {
     @Column(columnDefinition = "enum", nullable = false)
     private YnType isVerify;
 
+    @Column(length = 255)
+    private String daeguDid;
+
+    @Column(length = 255)
+    private String daeguDidKey;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private UserDaeguIdentityStatus daeguDidStatus;
+
+    @Column(columnDefinition = "TEXT")
+    private String daeguCredentialJwt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private UserDaeguCredentialStatus daeguCredentialStatus;
+
+    private LocalDate daeguCredentialValidFrom;
+
+    private LocalDate daeguCredentialValidUntil;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizationId")
     private Organization organization;
@@ -76,6 +101,38 @@ public class User extends TimeEntity {
     public void updateLogin(String refreshToken) {
         this.userRefreshToken = refreshToken;
         this.userLastLoginDate = new Date();
+    }
+
+    public void updateDaeguDid(String daeguDid, String daeguDidKey, UserDaeguIdentityStatus status) {
+        if (daeguDid != null && !daeguDid.isBlank()) {
+            this.daeguDid = daeguDid;
+        }
+        if (daeguDidKey != null && !daeguDidKey.isBlank()) {
+            this.daeguDidKey = daeguDidKey;
+        }
+        this.daeguDidStatus = status;
+    }
+
+    public void updateDaeguCredential(
+            String credentialJwt,
+            UserDaeguCredentialStatus status,
+            LocalDate validFrom,
+            LocalDate validUntil
+    ) {
+        if (credentialJwt != null && !credentialJwt.isBlank()) {
+            this.daeguCredentialJwt = credentialJwt;
+        }
+        this.daeguCredentialStatus = status;
+        if (validFrom != null) {
+            this.daeguCredentialValidFrom = validFrom;
+        }
+        if (validUntil != null) {
+            this.daeguCredentialValidUntil = validUntil;
+        }
+    }
+
+    public void markDaeguCredentialFailed() {
+        this.daeguCredentialStatus = UserDaeguCredentialStatus.FAILED;
     }
 
     /**

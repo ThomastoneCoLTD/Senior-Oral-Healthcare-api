@@ -240,6 +240,8 @@ public class UserService {
                 .userLoginIdentifier(fullUser.getUserLoginIdentifier())
                 .userGender(fullUser.getUserGender())
                 .services(services)
+                .daeguDid(fullUser.getDaeguDid())
+                .daeguDidStatus(fullUser.getDaeguDidStatus())
                 .build();
     }
 

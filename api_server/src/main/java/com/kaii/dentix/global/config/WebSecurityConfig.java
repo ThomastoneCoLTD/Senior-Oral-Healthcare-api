@@ -35,7 +35,7 @@ public class WebSecurityConfig {
     public static String[] EXCLUDE_URLS = {
             "/actuator/health",
             "/docs/*",
-            "/login", "/login/*",
+            "/login", "/login/**",
             "/admin/user/bulk-upload/template/*",
             "/password", "/password/*",
             "/service-agreement",
@@ -115,6 +115,7 @@ public class WebSecurityConfig {
                  * ============================= */
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/oral-exercise").permitAll()
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/health/**",
@@ -140,6 +141,7 @@ public class WebSecurityConfig {
 
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
+                "http://soh-api-dev.thomabio.com",
                 "https://denti.thomabio.com",
                 "https://*.thomabio.com"
         ));

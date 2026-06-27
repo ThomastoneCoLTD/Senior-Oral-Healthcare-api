@@ -31,6 +31,18 @@ public class UserLoginController {
         return new DataResponse<>(userLoginService.userSignUp(request));
     }
 
+    /** DID 간편 회원가입 */
+    @PostMapping("/signUp/did")
+    public DataResponse<UserDto.SignUpResponse> userDidSignUp(@Valid @RequestBody UserDto.DidSignUpRequest request) {
+        return new DataResponse<>(userLoginService.userDidSignUp(request));
+    }
+
+    /** DID 로그인 */
+    @PostMapping("/did")
+    public DataResponse<UserDto.LoginResponse> userDidLogin(@Valid @RequestBody UserDto.DidLoginRequest request) {
+        return new DataResponse<>(userLoginService.userDidLogin(request));
+    }
+
     /** 아이디 중복 확인 */
     @GetMapping("/loginIdentifier-check")
     public SuccessResponse loginIdCheck(@RequestParam @NotBlank String userLoginIdentifier) {
