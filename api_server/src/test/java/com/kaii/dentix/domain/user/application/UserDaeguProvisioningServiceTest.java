@@ -7,6 +7,7 @@ import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.domain.user.domain.UserDaeguCredentialStatus;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,7 @@ class UserDaeguProvisioningServiceTest {
         ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
         verify(userRewardWalletRepository).save(captor.capture());
         assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
+        verify(daeguChainDidService).issueLoginUserCredential(user);
     }
 
     @Test
@@ -90,5 +92,30 @@ class UserDaeguProvisioningServiceTest {
         assertThat(user.getDaeguDidKey()).isNull();
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.FAILED);
         verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
+        verify(daeguChainDidService, never()).issueLoginUserCredential(any(User.class));
+    }
+
+    @Test
+    void provisionForSignUpMarksCredentialFailedWhenIssueFails() throws Exception {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .build();
+        JsonNode didData = new ObjectMapper().readTree("""
+                {
+                  "did": "did:mitum:minic:0x123",
+                  "address": "0x123"
+                }
+                """);
+        when(daeguChainDidService.createAccount(any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
+        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
+        when(daeguChainDidService.issueLoginUserCredential(user))
+                .thenThrow(new BadRequestApiException("credential jwt is empty"));
+
+        service.provisionForSignUp(user);
+
+        assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
+        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.FAILED);
     }
 }

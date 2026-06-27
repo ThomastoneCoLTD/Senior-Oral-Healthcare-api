@@ -7,10 +7,18 @@ import com.kaii.dentix.domain.daeguChain.client.DaeguChainClient;
 import com.kaii.dentix.domain.daeguChain.client.ExternalDidClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
+import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.domain.user.domain.UserDaeguCredentialStatus;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
+import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +29,7 @@ public class DaeguChainDidService {
 
     private final DaeguChainClient daeguChainClient;
     private final ExternalDidClient externalDidClient;
+    private final UserRepository userRepository;
     private final DaeguChainProperties properties;
     private final ObjectMapper objectMapper;
 
@@ -90,6 +99,80 @@ public class DaeguChainDidService {
         return call("/mitum/did/issue", request, List.of("did", "template_id", "subject", "validfrom", "validuntil"));
     }
 
+    @Transactional
+    public DaeguChainDto.ApiResponse<JsonNode> issueLoginUserCredential(Long userId) {
+        if (userId == null) {
+            throw new BadRequestApiException("userId is required");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundDataException("User not found"));
+        return issueLoginUserCredential(user);
+    }
+
+    public DaeguChainDto.ApiResponse<JsonNode> issueLoginUserCredential(User user) {
+        if (user == null) {
+            throw new BadRequestApiException("user is required");
+        }
+        if (isBlank(user.getDaeguDid())) {
+            throw new BadRequestApiException("user daeguDid is required");
+        }
+        if (isBlank(user.getUserLoginIdentifier())) {
+            throw new BadRequestApiException("userLoginIdentifier is required");
+        }
+
+        LocalDate validFrom = resolveCredentialValidFrom();
+        LocalDate validUntil = resolveCredentialValidUntil(validFrom);
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("did", user.getDaeguDid());
+        request.put("template_id", resolveLoginUserCredentialTemplateId());
+        request.put("subject", Map.of(
+                "key", "id",
+                "value", user.getUserLoginIdentifier()
+        ));
+        request.put("validfrom", validFrom.toString());
+        request.put("validuntil", validUntil.toString());
+
+        DaeguChainDto.ApiResponse<JsonNode> response = issueCredential(request);
+        String credentialJwt = extractCredentialJwt(response);
+        if (isBlank(credentialJwt)) {
+            throw new BadRequestApiException("credential jwt is empty");
+        }
+        user.updateDaeguCredential(
+                credentialJwt,
+                UserDaeguCredentialStatus.ISSUED,
+                validFrom,
+                validUntil
+        );
+        return response;
+    }
+
+    public boolean verifyLoginUserCredential(User user) {
+        if (user == null
+                || isBlank(user.getDaeguDid())
+                || isBlank(user.getDaeguCredentialJwt())) {
+            return false;
+        }
+
+        try {
+            DaeguChainDto.ApiResponse<JsonNode> response = verification(Map.of(
+                    "template_id", resolveLoginUserCredentialTemplateId(),
+                    "jwt", user.getDaeguCredentialJwt()
+            ));
+            if (response == null || !"OK".equalsIgnoreCase(response.getState())) {
+                return false;
+            }
+
+            String templateId = resolveLoginUserCredentialTemplateId();
+            String verifiedDid = findFirstText(response.getData(), "aud", "did", "DID");
+            if (isBlank(verifiedDid)) {
+                verifiedDid = findJwtClaim(user.getDaeguCredentialJwt(), "aud", "did", "DID");
+            }
+            return matchesVerifiedDid(user.getDaeguDid(), templateId, verifiedDid);
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
     public DaeguChainDto.ApiResponse<JsonNode> disclosure(Map<String, Object> request) {
         return call("/mitum/did/disclosure", request, List.of("did", "template_id"));
     }
@@ -136,14 +219,80 @@ public class DaeguChainDidService {
         return resolvedToken;
     }
 
+    private String resolveLoginUserCredentialTemplateId() {
+        String templateId = properties.getLoginUserCredentialTemplateId();
+        if (isBlank(templateId)) {
+            throw new BadRequestApiException("login user credential template id is required");
+        }
+        return templateId;
+    }
+
+    private LocalDate resolveCredentialValidFrom() {
+        if (!isBlank(properties.getLoginUserCredentialValidFrom())) {
+            return LocalDate.parse(properties.getLoginUserCredentialValidFrom());
+        }
+        return LocalDate.now();
+    }
+
+    private LocalDate resolveCredentialValidUntil(LocalDate validFrom) {
+        if (!isBlank(properties.getLoginUserCredentialValidUntil())) {
+            return LocalDate.parse(properties.getLoginUserCredentialValidUntil());
+        }
+        int validDays = properties.getLoginUserCredentialValidDays() == null
+                ? 3650
+                : Math.max(properties.getLoginUserCredentialValidDays(), 1);
+        return validFrom.plusDays(validDays);
+    }
+
+    private String extractCredentialJwt(DaeguChainDto.ApiResponse<JsonNode> response) {
+        if (response == null) {
+            return null;
+        }
+        return findFirstText(response.getData(), "jwt");
+    }
+
+    private String findJwtClaim(String jwt, String... claimNames) {
+        if (isBlank(jwt)) {
+            return null;
+        }
+        String[] parts = jwt.split("\\.");
+        if (parts.length < 2) {
+            return null;
+        }
+        try {
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+            return findFirstText(objectMapper.readTree(payload), claimNames);
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    private boolean matchesVerifiedDid(String userDid, String templateId, String verifiedDid) {
+        if (isBlank(userDid) || isBlank(verifiedDid)) {
+            return false;
+        }
+        if (userDid.equals(verifiedDid)) {
+            return true;
+        }
+        return !isBlank(templateId) && (userDid + ":" + templateId).equals(verifiedDid);
+    }
+
     private String findFirstText(JsonNode node, String... fieldNames) {
         if (node == null || node.isNull()) {
             return null;
         }
         for (String fieldName : fieldNames) {
             JsonNode value = node.get(fieldName);
-            if (value != null && !value.isNull() && !value.asText().isBlank()) {
-                return value.asText();
+            if (value != null && !value.isNull()) {
+                if (value.isArray()) {
+                    for (JsonNode child : value) {
+                        if (child != null && !child.isNull() && !child.asText().isBlank()) {
+                            return child.asText();
+                        }
+                    }
+                } else if (!value.asText().isBlank()) {
+                    return value.asText();
+                }
             }
         }
         if (node.isObject()) {
@@ -167,10 +316,14 @@ public class DaeguChainDidService {
     }
 
     private String extractAddressFromDid(String did) {
-        if (did == null || did.isBlank()) {
+        if (isBlank(did)) {
             return null;
         }
         int index = did.lastIndexOf(':');
         return index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

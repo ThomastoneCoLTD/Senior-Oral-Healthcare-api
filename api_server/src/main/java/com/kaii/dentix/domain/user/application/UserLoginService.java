@@ -9,6 +9,7 @@ import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
 import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
 import com.kaii.dentix.domain.appService.domain.AppService;
 import com.kaii.dentix.domain.appService.domain.UserToAppService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
@@ -62,6 +63,7 @@ public class UserLoginService {
     private final DaeguDefaultOrganizationService daeguDefaultOrganizationService;
     private final ServiceAgreementConsentService serviceAgreementConsentService;
     private final UserDaeguProvisioningService userDaeguProvisioningService;
+    private final DaeguChainDidService daeguChainDidService;
 
     /**
      * 사용자 회원 인증 (가입 여부 확인)
@@ -287,6 +289,7 @@ public class UserLoginService {
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || StringUtils.isBlank(user.getDaeguDid())) {
             throw new UnauthorizedException("DID가 발급되지 않은 사용자입니다.");
         }
+        verifyDaeguCredentialForLogin(user);
 
         Organization org = user.getOrganization();
         String planName = null;
@@ -335,6 +338,25 @@ public class UserLoginService {
     /**
      * 비밀번호 찾기 (질문/답변 확인)
      */
+    private void verifyDaeguCredentialForLogin(User user) {
+        if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || StringUtils.isBlank(user.getDaeguDid())) {
+            throw new UnauthorizedException("DID credential is not issued.");
+        }
+
+        if (StringUtils.isBlank(user.getDaeguCredentialJwt())) {
+            try {
+                daeguChainDidService.issueLoginUserCredential(user);
+            } catch (RuntimeException exception) {
+                user.markDaeguCredentialFailed();
+                throw new UnauthorizedException("DID credential verification failed.");
+            }
+        }
+
+        if (!daeguChainDidService.verifyLoginUserCredential(user)) {
+            throw new UnauthorizedException("DID credential verification failed.");
+        }
+    }
+
     @Transactional
     public UserDto.FindPasswordResponse userFindPassword(UserDto.FindPasswordRequest request) {
         User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())

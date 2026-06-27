@@ -29,6 +29,10 @@ public class DaeguChainProperties {
     private String tokenCreatePath = "/token/create";
     private String tokenTransferPath = "/token/transfer";
     private String tokenListPath = "/token/token_list";
+    private String loginUserCredentialTemplateId = "VLVSWVRSOPZJMPINTBNA";
+    private String loginUserCredentialValidFrom;
+    private String loginUserCredentialValidUntil;
+    private Integer loginUserCredentialValidDays = 3650;
 
     public String resolveAppKey() {
         return hasText(appKey) ? appKey : token;

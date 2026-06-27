@@ -10,6 +10,7 @@ import lombok.*;
 import org.hibernate.annotations.Where;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -76,6 +77,17 @@ public class User extends TimeEntity {
     @Column(length = 20)
     private UserDaeguIdentityStatus daeguDidStatus;
 
+    @Column(columnDefinition = "TEXT")
+    private String daeguCredentialJwt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private UserDaeguCredentialStatus daeguCredentialStatus;
+
+    private LocalDate daeguCredentialValidFrom;
+
+    private LocalDate daeguCredentialValidUntil;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizationId")
     private Organization organization;
@@ -99,6 +111,28 @@ public class User extends TimeEntity {
             this.daeguDidKey = daeguDidKey;
         }
         this.daeguDidStatus = status;
+    }
+
+    public void updateDaeguCredential(
+            String credentialJwt,
+            UserDaeguCredentialStatus status,
+            LocalDate validFrom,
+            LocalDate validUntil
+    ) {
+        if (credentialJwt != null && !credentialJwt.isBlank()) {
+            this.daeguCredentialJwt = credentialJwt;
+        }
+        this.daeguCredentialStatus = status;
+        if (validFrom != null) {
+            this.daeguCredentialValidFrom = validFrom;
+        }
+        if (validUntil != null) {
+            this.daeguCredentialValidUntil = validUntil;
+        }
+    }
+
+    public void markDaeguCredentialFailed() {
+        this.daeguCredentialStatus = UserDaeguCredentialStatus.FAILED;
     }
 
     /**

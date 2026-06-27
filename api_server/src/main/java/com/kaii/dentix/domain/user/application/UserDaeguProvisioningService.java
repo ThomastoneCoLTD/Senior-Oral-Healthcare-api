@@ -28,6 +28,7 @@ public class UserDaeguProvisioningService {
             return;
         }
         provisionWallet(user, walletAddress);
+        provisionCredential(user);
     }
 
     private String provisionDid(User user) {
@@ -67,6 +68,15 @@ public class UserDaeguProvisioningService {
                         .walletAddress(resolveWalletAddress(user, didWalletAddress))
                         .build())
         );
+    }
+
+    private void provisionCredential(User user) {
+        try {
+            daeguChainDidService.issueLoginUserCredential(user);
+        } catch (RuntimeException exception) {
+            log.warn("Daegu DID credential issuance failed. userId={}", user.getUserId(), exception);
+            user.markDaeguCredentialFailed();
+        }
     }
 
     private String resolveWalletAddress(User user, String didWalletAddress) {
