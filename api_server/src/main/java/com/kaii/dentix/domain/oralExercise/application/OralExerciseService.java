@@ -14,6 +14,7 @@ import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.domain.OralExerciseRewardToken;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
+import com.kaii.dentix.domain.reward.application.UserRewardService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
@@ -40,6 +41,7 @@ public class OralExerciseService {
     private final OralExerciseInteractionLogRepository oralExerciseInteractionLogRepository;
     private final UserOralExerciseProgressRepository userOralExerciseProgressRepository;
     private final UserRewardTransactionRepository userRewardTransactionRepository;
+    private final UserRewardService userRewardService;
     private final UserRepository userRepository;
     private final JwtTokenUtil jwtTokenUtil;
 
@@ -145,6 +147,13 @@ public class OralExerciseService {
         );
 
         UserOralExerciseProgress savedProgress = userOralExerciseProgressRepository.save(progress);
+        if (completed && isCoreContent(content)) {
+            userRewardService.rewardOralExerciseCompletion(
+                    userId,
+                    content,
+                    interactionRequest.getSessionId()
+            );
+        }
 
         return OralExerciseDto.ProgressResponse.from(savedProgress);
     }
@@ -188,6 +197,10 @@ public class OralExerciseService {
     private String resolveRewardTokenName(OralExerciseContent content) {
         String tokenName = OralExerciseRewardToken.tokenNameForContentSort(content.getContentSort());
         return tokenName == null ? null : tokenName.toLowerCase();
+    }
+
+    private boolean isCoreContent(OralExerciseContent content) {
+        return content.getContentSort() >= 1 && content.getContentSort() <= 5;
     }
 
     private int calculateCompletionRate(

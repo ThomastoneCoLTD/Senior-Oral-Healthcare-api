@@ -12,6 +12,7 @@ import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
+import com.kaii.dentix.domain.reward.application.UserRewardService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,6 +39,7 @@ class OralExerciseServiceTest {
     private OralExerciseInteractionLogRepository interactionLogRepository;
     private UserOralExerciseProgressRepository progressRepository;
     private UserRewardTransactionRepository rewardTransactionRepository;
+    private UserRewardService userRewardService;
     private UserRepository userRepository;
     private JwtTokenUtil jwtTokenUtil;
     private OralExerciseService service;
@@ -49,6 +51,7 @@ class OralExerciseServiceTest {
         interactionLogRepository = mock(OralExerciseInteractionLogRepository.class);
         progressRepository = mock(UserOralExerciseProgressRepository.class);
         rewardTransactionRepository = mock(UserRewardTransactionRepository.class);
+        userRewardService = mock(UserRewardService.class);
         userRepository = mock(UserRepository.class);
         jwtTokenUtil = mock(JwtTokenUtil.class);
         request = mock(HttpServletRequest.class);
@@ -58,6 +61,7 @@ class OralExerciseServiceTest {
                 interactionLogRepository,
                 progressRepository,
                 rewardTransactionRepository,
+                userRewardService,
                 userRepository,
                 jwtTokenUtil
         );

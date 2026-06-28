@@ -50,8 +50,6 @@ public class UserDto {
     public static class DidLoginRequest {
         @NotBlank(message = "아이디는 필수입니다.")
         private String userLoginIdentifier;
-
-        private String credentialJwt;
     }
 
     @Getter @Builder
@@ -154,7 +152,6 @@ public class UserDto {
         private String organizationName;
         private String daeguDid;
         private UserDaeguIdentityStatus daeguDidStatus;
-        private String credentialJwt;
     }
 
     @Getter @Builder
