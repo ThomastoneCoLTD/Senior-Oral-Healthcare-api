@@ -109,6 +109,7 @@ public class DaeguChainDidService {
         return issueLoginUserCredential(user);
     }
 
+    @Transactional
     public DaeguChainDto.ApiResponse<JsonNode> issueLoginUserCredential(User user) {
         if (user == null) {
             throw new BadRequestApiException("user is required");
@@ -133,9 +134,12 @@ public class DaeguChainDidService {
         request.put("validuntil", validUntil.toString());
 
         DaeguChainDto.ApiResponse<JsonNode> response = issueCredential(request);
+        if (response == null || !"OK".equalsIgnoreCase(response.getState())) {
+            throw new BadRequestApiException("credential issuance failed: " + summarizeCredentialResponse(response));
+        }
         String credentialJwt = extractCredentialJwt(response);
         if (isBlank(credentialJwt)) {
-            throw new BadRequestApiException("credential jwt is empty");
+            throw new BadRequestApiException("credential jwt is empty: " + summarizeCredentialResponse(response));
         }
         user.updateDaeguCredential(
                 credentialJwt,
@@ -143,20 +147,28 @@ public class DaeguChainDidService {
                 validFrom,
                 validUntil
         );
+        userRepository.saveAndFlush(user);
         return response;
     }
 
     public boolean verifyLoginUserCredential(User user) {
+        if (user == null) {
+            return false;
+        }
+        return verifyLoginUserCredential(user, user.getDaeguCredentialJwt());
+    }
+
+    public boolean verifyLoginUserCredential(User user, String credentialJwt) {
         if (user == null
                 || isBlank(user.getDaeguDid())
-                || isBlank(user.getDaeguCredentialJwt())) {
+                || isBlank(credentialJwt)) {
             return false;
         }
 
         try {
             DaeguChainDto.ApiResponse<JsonNode> response = verification(Map.of(
                     "template_id", resolveLoginUserCredentialTemplateId(),
-                    "jwt", user.getDaeguCredentialJwt()
+                    "jwt", credentialJwt
             ));
             if (response == null || !"OK".equalsIgnoreCase(response.getState())) {
                 return false;
@@ -165,7 +177,7 @@ public class DaeguChainDidService {
             String templateId = resolveLoginUserCredentialTemplateId();
             String verifiedDid = findFirstText(response.getData(), "aud", "did", "DID");
             if (isBlank(verifiedDid)) {
-                verifiedDid = findJwtClaim(user.getDaeguCredentialJwt(), "aud", "did", "DID");
+                verifiedDid = findJwtClaim(credentialJwt, "aud", "did", "DID");
             }
             return matchesVerifiedDid(user.getDaeguDid(), templateId, verifiedDid);
         } catch (RuntimeException exception) {
@@ -191,7 +203,10 @@ public class DaeguChainDidService {
 
     private DaeguChainDto.ApiResponse<JsonNode> call(String path, Map<String, Object> request, List<String> requiredFields) {
         Map<String, Object> body = new LinkedHashMap<>(request == null ? Map.of() : request);
-        body.putIfAbsent("token", resolveToken((String) body.get("token")));
+        String resolvedToken = resolveToken((String) body.get("token"));
+        if (!isBlank(resolvedToken)) {
+            body.putIfAbsent("token", resolvedToken);
+        }
         body.putIfAbsent("chain", resolveChain((String) body.get("chain")));
         validateRequiredFields(body, requiredFields);
         return daeguChainClient.postDid(path, body);
@@ -212,11 +227,7 @@ public class DaeguChainDidService {
 
     private String resolveToken(String token) {
         String configuredAppKey = properties.resolveAppKey();
-        String resolvedToken = configuredAppKey == null || configuredAppKey.isBlank() ? token : configuredAppKey;
-        if (resolvedToken == null || resolvedToken.isBlank()) {
-            throw new BadRequestApiException("token is required");
-        }
-        return resolvedToken;
+        return isBlank(configuredAppKey) ? token : configuredAppKey;
     }
 
     private String resolveLoginUserCredentialTemplateId() {
@@ -249,6 +260,16 @@ public class DaeguChainDidService {
             return null;
         }
         return findFirstText(response.getData(), "jwt");
+    }
+
+    private String summarizeCredentialResponse(DaeguChainDto.ApiResponse<JsonNode> response) {
+        if (response == null) {
+            return "response=null";
+        }
+        return "state=" + response.getState()
+                + ", msg=" + response.getMsg()
+                + ", rcode=" + response.getRcode()
+                + ", cid=" + response.getCid();
     }
 
     private String findJwtClaim(String jwt, String... claimNames) {

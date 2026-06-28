@@ -154,6 +154,7 @@ public class UserLoginService {
                 .organizationName(organization.getOrganizationName())
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
+                .credentialJwt(user.getDaeguCredentialJwt())
                 .build();
     }
 
@@ -209,6 +210,7 @@ public class UserLoginService {
                 .organizationName(organization.getOrganizationName())
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
+                .credentialJwt(user.getDaeguCredentialJwt())
                 .build();
     }
 
@@ -286,10 +288,11 @@ public class UserLoginService {
         if (user.getIsVerify() != YnType.Y) {
             throw new UnauthorizedException("관리자 승인 후 로그인할 수 있습니다.");
         }
+        ensureDaeguDidForLogin(user);
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || StringUtils.isBlank(user.getDaeguDid())) {
             throw new UnauthorizedException("DID가 발급되지 않은 사용자입니다.");
         }
-        verifyDaeguCredentialForLogin(user);
+        verifyDaeguCredentialForLogin(user, request.getCredentialJwt());
 
         Organization org = user.getOrganization();
         String planName = null;
@@ -336,23 +339,56 @@ public class UserLoginService {
     }
 
     /**
-     * 비밀번호 찾기 (질문/답변 확인)
+     * DID login credential verification.
      */
-    private void verifyDaeguCredentialForLogin(User user) {
+    private void ensureDaeguDidForLogin(User user) {
+        if (user.getDaeguDidStatus() == UserDaeguIdentityStatus.ISSUED && !StringUtils.isBlank(user.getDaeguDid())) {
+            return;
+        }
+        userDaeguProvisioningService.provisionForSignUp(user);
+    }
+
+    private void verifyDaeguCredentialForLogin(User user, String credentialJwt) {
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || StringUtils.isBlank(user.getDaeguDid())) {
             throw new UnauthorizedException("DID credential is not issued.");
         }
 
-        if (StringUtils.isBlank(user.getDaeguCredentialJwt())) {
+        boolean submittedCredential = !StringUtils.isBlank(credentialJwt);
+        String resolvedCredentialJwt = credentialJwt;
+        if (StringUtils.isBlank(resolvedCredentialJwt)) {
+            resolvedCredentialJwt = user.getDaeguCredentialJwt();
+        }
+
+        if (StringUtils.isBlank(resolvedCredentialJwt)) {
             try {
                 daeguChainDidService.issueLoginUserCredential(user);
+                resolvedCredentialJwt = user.getDaeguCredentialJwt();
             } catch (RuntimeException exception) {
                 user.markDaeguCredentialFailed();
                 throw new UnauthorizedException("DID credential verification failed.");
             }
         }
 
-        if (!daeguChainDidService.verifyLoginUserCredential(user)) {
+        if (StringUtils.isBlank(resolvedCredentialJwt)) {
+            throw new UnauthorizedException("DID credential verification failed.");
+        }
+
+        boolean verified = daeguChainDidService.verifyLoginUserCredential(user, resolvedCredentialJwt);
+        if (!verified) {
+            if (!submittedCredential) {
+                try {
+                    daeguChainDidService.issueLoginUserCredential(user);
+                    resolvedCredentialJwt = user.getDaeguCredentialJwt();
+                    verified = !StringUtils.isBlank(resolvedCredentialJwt)
+                            && daeguChainDidService.verifyLoginUserCredential(user, resolvedCredentialJwt);
+                } catch (RuntimeException exception) {
+                    user.markDaeguCredentialFailed();
+                    throw new UnauthorizedException("DID credential verification failed.");
+                }
+            }
+        }
+
+        if (!verified) {
             throw new UnauthorizedException("DID credential verification failed.");
         }
     }

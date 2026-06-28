@@ -125,6 +125,7 @@ class DaeguChainDidServiceTest {
         assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.ISSUED);
         assertThat(user.getDaeguCredentialValidFrom()).hasToString("2026-06-01");
         assertThat(user.getDaeguCredentialValidUntil()).hasToString("2026-12-01");
+        verify(userRepository).saveAndFlush(user);
     }
 
     @Test
@@ -148,6 +149,30 @@ class DaeguChainDidServiceTest {
         assertThatThrownBy(() -> service.issueLoginUserCredential(7L))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("userLoginIdentifier is required");
+    }
+
+    @Test
+    void issueLoginUserCredentialIncludesDaeguChainFailureMessage() throws Exception {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .daeguDid("did:mitum:minic:0xabc")
+                .build();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(daeguChainClient.postDid(eq("/mitum/did/issue"), any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>(
+                        "ERROR",
+                        Map.of("code", "INVALID_TEMPLATE"),
+                        "template not found",
+                        objectMapper.readTree("{}"),
+                        "cid-001"
+                ));
+
+        assertThatThrownBy(() -> service.issueLoginUserCredential(7L))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessageContaining("credential issuance failed")
+                .hasMessageContaining("template not found")
+                .hasMessageContaining("INVALID_TEMPLATE");
     }
 
     @Test
@@ -182,6 +207,37 @@ class DaeguChainDidServiceTest {
         assertThat(captor.getValue().get("chain")).isEqualTo("dchain");
         assertThat(captor.getValue().get("template_id")).isEqualTo("VLVSWVRSOPZJMPINTBNA");
         assertThat(captor.getValue().get("jwt")).isEqualTo(jwt);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void verifyLoginUserCredentialUsesSubmittedCredentialJwt() throws Exception {
+        String did = "did:mitum:minic:0xabc";
+        String submittedJwt = jwtWithAud(did + ":VLVSWVRSOPZJMPINTBNA");
+        User user = User.builder()
+                .userId(7L)
+                .daeguDid(did)
+                .daeguCredentialJwt(jwtWithAud("did:mitum:minic:0xstored"))
+                .build();
+        when(daeguChainClient.postDid(eq("/mitum/did/verification"), any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>(
+                        "OK",
+                        null,
+                        "",
+                        objectMapper.readTree("""
+                                {
+                                  "verify": true
+                                }
+                                """),
+                        "cid"
+                ));
+
+        boolean verified = service.verifyLoginUserCredential(user, submittedJwt);
+
+        assertThat(verified).isTrue();
+        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(daeguChainClient).postDid(eq("/mitum/did/verification"), captor.capture());
+        assertThat(captor.getValue().get("jwt")).isEqualTo(submittedJwt);
     }
 
     @Test

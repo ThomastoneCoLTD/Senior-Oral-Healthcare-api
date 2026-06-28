@@ -93,6 +93,7 @@ public class UserLoginControllerTest {
                 .organizationName("테스트 치과")
                 .daeguDid("did:mitum:minic:0x123")
                 .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
+                .credentialJwt("credential.jwt.value")
                 .build();
     }
 
@@ -234,7 +235,8 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
                                 fieldWithPath("response.organizationName").type(JsonFieldType.STRING).description("소속 기관 이름"),
                                 fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("대구 DID"),
-                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태")
+                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태"),
+                                fieldWithPath("response.credentialJwt").type(JsonFieldType.STRING).optional().description("DID credential JWT")
                         )
                 ));
 
@@ -320,7 +322,9 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.organizationId").type(JsonFieldType.NUMBER).optional().description("소속 기관 ID"),
                                 fieldWithPath("response.organizationName").type(JsonFieldType.STRING).optional().description("소속 기관 이름"),
                                 fieldWithPath("response.organizationPlanName").type(JsonFieldType.STRING).optional().description("기관 구독 플랜 이름"),
-                                fieldWithPath("response.organizationCustomSurveyEnabled").type(JsonFieldType.BOOLEAN).optional().description("커스텀 설문 기능 사용 가능 여부")
+                                fieldWithPath("response.organizationCustomSurveyEnabled").type(JsonFieldType.BOOLEAN).optional().description("커스텀 설문 기능 사용 가능 여부"),
+                                fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("대구 DID"),
+                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태")
                         )
                 ));
 
