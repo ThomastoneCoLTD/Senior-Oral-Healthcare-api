@@ -27,11 +27,15 @@ public class ExternalDidClient {
     }
 
     public JsonNode createDid() {
+        return createDid(Map.of());
+    }
+
+    public JsonNode createDid(Map<String, Object> request) {
         try {
             ResponseEntity<JsonNode> response = restTemplate.exchange(
                     getCreateDidUrl(),
                     HttpMethod.POST,
-                    new HttpEntity<>(Map.of()),
+                    new HttpEntity<>(request == null ? Map.of() : request),
                     JsonNode.class
             );
             JsonNode body = Objects.requireNonNull(response.getBody(), "DID server response body is empty");

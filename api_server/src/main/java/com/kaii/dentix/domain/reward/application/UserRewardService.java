@@ -171,6 +171,7 @@ public class UserRewardService {
             mintPointIfConfigured(transaction, savedWallet);
         }
 
+        assertRewardSucceeded(transaction);
         return UserRewardDto.RewardResponse.from(transaction, false);
     }
 
@@ -234,6 +235,7 @@ public class UserRewardService {
             mintPointIfConfigured(transaction, savedWallet);
         }
 
+        assertRewardSucceeded(transaction);
         return UserRewardDto.RewardResponse.from(transaction, false);
     }
 
@@ -253,6 +255,7 @@ public class UserRewardService {
             UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
             transferTokenIfConfigured(transaction, savedWallet, rewardTokenName);
         }
+        assertRewardSucceeded(transaction);
         return UserRewardDto.RewardResponse.from(transaction, true);
     }
 
@@ -328,6 +331,7 @@ public class UserRewardService {
         if (isBlank(wallet.getDaeguDid())
                 || isBlank(wallet.getWalletAddress())) {
             transaction.markTokenTransferFailed();
+            throwRewardFailure();
             return;
         }
 
@@ -344,7 +348,19 @@ public class UserRewardService {
             );
         } catch (RuntimeException exception) {
             transaction.markTokenTransferFailed();
+            throwRewardFailure();
         }
+    }
+
+    private void assertRewardSucceeded(UserRewardTransaction transaction) {
+        if (transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED
+                || transaction.getStatus() == UserRewardTransactionStatus.POINT_MINT_FAILED) {
+            throwRewardFailure();
+        }
+    }
+
+    private void throwRewardFailure() {
+        throw new BadRequestApiException("토큰 지급에 실패했습니다. 보상을 받을 수 없습니다.");
     }
 
     private void mintPointIfConfigured(UserRewardTransaction transaction, UserRewardWallet wallet) {

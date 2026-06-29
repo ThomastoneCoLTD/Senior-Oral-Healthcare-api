@@ -65,6 +65,18 @@ public class UserLoginService {
     private final UserDaeguProvisioningService userDaeguProvisioningService;
     private final DaeguChainDidService daeguChainDidService;
 
+    @Transactional(readOnly = true)
+    public UserDto.VerifyResponse userPhoneCheck(String userPhoneNumber) {
+        String normalizedPhoneNumber = normalizePhoneNumber(userPhoneNumber);
+        return userRepository.findByUserPhoneNumber(normalizedPhoneNumber)
+                .map(user -> UserDto.VerifyResponse.builder()
+                        .userId(user.getUserId())
+                        .build())
+                .orElseGet(() -> UserDto.VerifyResponse.builder()
+                        .userId(null)
+                        .build());
+    }
+
     /**
      * 사용자 회원 인증 (가입 여부 확인)
      */
@@ -101,6 +113,8 @@ public class UserLoginService {
     @Transactional
     public UserDto.SignUpResponse userSignUp(UserDto.SignUpRequest request) {
         this.loginIdCheck(request.getUserLoginIdentifier());
+        String userPhoneNumber = normalizePhoneNumber(request.getUserPhoneNumber());
+        assertPhoneNumberAvailable(userPhoneNumber);
 
         if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
             throw new NotFoundDataException("존재하지 않는 질문입니다.");
@@ -116,7 +130,7 @@ public class UserLoginService {
                 .userPassword(passwordEncoder.encode(request.getUserPassword()))
                 .findPwdQuestionId(request.getFindPwdQuestionId())
                 .findPwdAnswer(request.getFindPwdAnswer())
-                .userPhoneNumber(request.getUserPhoneNumber())
+                .userPhoneNumber(userPhoneNumber)
                 .organization(organization)
                 .isVerify(YnType.Y)
                 .build());
@@ -163,6 +177,8 @@ public class UserLoginService {
     @Transactional
     public UserDto.SignUpResponse userDidSignUp(UserDto.DidSignUpRequest request) {
         this.loginIdCheck(request.getUserLoginIdentifier());
+        String userPhoneNumber = normalizePhoneNumber(request.getUserPhoneNumber());
+        assertPhoneNumberAvailable(userPhoneNumber);
 
         Organization organization = daeguDefaultOrganizationService.getOrCreate();
         String loginIdentifier = request.getUserLoginIdentifier().trim();
@@ -174,7 +190,7 @@ public class UserLoginService {
                 .userPassword(passwordEncoder.encode("DID_ONLY:" + loginIdentifier))
                 .findPwdQuestionId(resolveDefaultFindPwdQuestionId())
                 .findPwdAnswer(loginIdentifier)
-                .userPhoneNumber(request.getUserPhoneNumber())
+                .userPhoneNumber(userPhoneNumber)
                 .userBirthDate(request.getUserBirthDate())
                 .organization(organization)
                 .isVerify(YnType.Y)
@@ -399,6 +415,25 @@ public class UserLoginService {
         if (userRepository.findByUserLoginIdentifier(userLoginIdentifier).isPresent()) {
             throw new AlreadyDataException("이미 사용 중인 아이디입니다.");
         }
+    }
+
+    private void assertPhoneNumberAvailable(String userPhoneNumber) {
+        if (userRepository.findByUserPhoneNumber(userPhoneNumber).isPresent()) {
+            throw new AlreadyDataException("Already registered phone number.");
+        }
+    }
+
+    private String normalizePhoneNumber(String userPhoneNumber) {
+        if (StringUtils.isBlank(userPhoneNumber)) {
+            throw new BadRequestApiException("Phone number is required.");
+        }
+
+        String normalizedPhoneNumber = userPhoneNumber.replaceAll("[^0-9]", "");
+        if (!normalizedPhoneNumber.matches("^[0-9]{10,11}$")) {
+            throw new BadRequestApiException("Phone number must be 10 to 11 digits.");
+        }
+
+        return normalizedPhoneNumber;
     }
 
     /**

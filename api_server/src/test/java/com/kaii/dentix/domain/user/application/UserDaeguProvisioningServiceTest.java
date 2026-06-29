@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,6 +44,7 @@ class UserDaeguProvisioningServiceTest {
     void provisionForSignUpStoresDidReturnedByExternalApi() throws Exception {
         User user = User.builder()
                 .userId(7L)
+                .userLoginIdentifier("soh-user-001")
                 .build();
         JsonNode didData = new ObjectMapper().readTree("""
                 {
@@ -71,10 +73,40 @@ class UserDaeguProvisioningServiceTest {
         assertThat(user.getDaeguDid()).isEqualTo("did:mitum:minic:0x123");
         assertThat(user.getDaeguDidKey()).isEqualTo("external-public-key");
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
+        ArgumentCaptor<Map<String, Object>> createRequestCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(daeguChainDidService).createAccount(createRequestCaptor.capture());
+        assertThat(createRequestCaptor.getValue())
+                .containsEntry("userIdentifier", "soh-user-001")
+                .containsEntry("userLoginIdentifier", "soh-user-001");
         ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
         verify(userRewardWalletRepository).save(captor.capture());
         assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
         verify(daeguChainDidService).issueLoginUserCredential(user);
+    }
+
+    @Test
+    void provisionForSignUpStoresCredentialJwtReturnedByDidServer() throws Exception {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .build();
+        JsonNode didData = new ObjectMapper().readTree("""
+                {
+                  "did": "did:mitum:minic:0x123",
+                  "address": "0x123",
+                  "credentialJwt": "credential.jwt.value"
+                }
+                """);
+        when(daeguChainDidService.createAccount(any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
+        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
+
+        service.provisionForSignUp(user);
+
+        assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
+        assertThat(user.getDaeguCredentialJwt()).isEqualTo("credential.jwt.value");
+        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.ISSUED);
+        verify(daeguChainDidService, never()).issueLoginUserCredential(user);
     }
 
     @Test

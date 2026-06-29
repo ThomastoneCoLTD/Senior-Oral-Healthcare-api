@@ -12,6 +12,8 @@ import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/login")
@@ -23,6 +25,12 @@ public class UserLoginController {
     @PostMapping("/verify")
     public DataResponse<UserDto.VerifyResponse> userVerify(@Valid @RequestBody UserDto.VerifyRequest request) {
         return new DataResponse<>(userLoginService.userVerify(request));
+    }
+
+    /** Check whether a phone number is already registered before sign-up. */
+    @PostMapping("/phone-check")
+    public DataResponse<UserDto.VerifyResponse> userPhoneCheck(@RequestBody Map<String, String> request) {
+        return new DataResponse<>(userLoginService.userPhoneCheck(request.get("userPhoneNumber")));
     }
 
     /** 회원가입 */

@@ -203,6 +203,104 @@ class UserRewardServiceTest {
     }
 
     @Test
+    void rewardOralExerciseButtonClickThrowsWhenTokenTransferFails() {
+        UserRewardProperties properties = new UserRewardProperties();
+        properties.setOralExerciseCoinAmount(1L);
+        properties.setTokenTransferEnabled(true);
+        service = new UserRewardService(
+                walletRepository,
+                transactionRepository,
+                contentRepository,
+                daeguChainDidService,
+                daeguChainPointService,
+                externalTokenClient,
+                userRepository,
+                properties,
+                jwtTokenUtil,
+                environment
+        );
+        when(transactionRepository.findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
+                7L,
+                "essential_video_1",
+                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                UserRewardTransactionStatus.CANCELED
+        )).thenReturn(Optional.empty());
+        when(transactionRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(0L)
+                .daeguDid("did:mitum:minic:0x-user-wallet")
+                .walletAddress("0x-user-wallet")
+                .build()));
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(externalTokenClient.transferToken(
+                "did:mitum:minic:0x-user-wallet",
+                "essential_video_1",
+                "0x-user-wallet",
+                1L
+        )).thenThrow(new BadRequestApiException("token transfer failed"));
+
+        assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
+                request,
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
+        ))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("토큰 지급에 실패했습니다. 보상을 받을 수 없습니다.");
+    }
+
+    @Test
+    void rewardOralExerciseButtonClickThrowsWhenExistingTokenTransferStillFailed() {
+        UserRewardProperties properties = new UserRewardProperties();
+        properties.setOralExerciseCoinAmount(1L);
+        properties.setTokenTransferEnabled(true);
+        service = new UserRewardService(
+                walletRepository,
+                transactionRepository,
+                contentRepository,
+                daeguChainDidService,
+                daeguChainPointService,
+                externalTokenClient,
+                userRepository,
+                properties,
+                jwtTokenUtil,
+                environment
+        );
+        UserRewardTransaction transaction = UserRewardTransaction.builder()
+                .userId(7L)
+                .oralExerciseContent(content())
+                .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                .status(UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED)
+                .amount(1L)
+                .balanceAfter(1L)
+                .idempotencyKey("ORAL_EXERCISE_BUTTON:7:essential_video_1")
+                .coinId("essential_video_1")
+                .build();
+        when(transactionRepository.findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
+                7L,
+                "essential_video_1",
+                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                UserRewardTransactionStatus.CANCELED
+        )).thenReturn(Optional.of(transaction));
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(1L)
+                .daeguDid("did:mitum:minic:0x-user-wallet")
+                .walletAddress("0x-user-wallet")
+                .build()));
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(externalTokenClient.transferToken(any(), any(), any(), anyLong()))
+                .thenThrow(new BadRequestApiException("token transfer failed"));
+
+        assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
+                request,
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
+        ))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("토큰 지급에 실패했습니다. 보상을 받을 수 없습니다.");
+    }
+
+    @Test
     void rewardOralExerciseButtonClickRequiresSelectedButtonNumber() {
         assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
                 request,

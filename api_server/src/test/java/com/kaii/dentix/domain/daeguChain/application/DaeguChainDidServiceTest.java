@@ -185,6 +185,46 @@ class DaeguChainDidServiceTest {
     }
 
     @Test
+    void verifyLoginUserCredentialAcceptsStoredCredentialSubject() {
+        String did = "did:mitum:minic:0xabc";
+        String jwt = jwtWithClaims("""
+                {
+                  "aud": "did:mitum:minic:0xabc:VLVSWVRSOPZJMPINTBNA",
+                  "val": "id|soh-user-001"
+                }
+                """);
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .daeguDid(did)
+                .daeguCredentialJwt(jwt)
+                .build();
+
+        boolean verified = service.verifyLoginUserCredential(user);
+
+        assertThat(verified).isTrue();
+        verifyNoMoreInteractions(daeguChainClient);
+    }
+
+    @Test
+    void verifyLoginUserCredentialRejectsStoredCredentialSubjectForDifferentUser() {
+        String jwt = jwtWithClaims("""
+                {
+                  "aud": "did:mitum:minic:0xabc:VLVSWVRSOPZJMPINTBNA",
+                  "val": "id|another-user"
+                }
+                """);
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .daeguDid("did:mitum:minic:0xabc")
+                .daeguCredentialJwt(jwt)
+                .build();
+
+        assertThat(service.verifyLoginUserCredential(user)).isFalse();
+    }
+
+    @Test
     void verifyLoginUserCredentialRejectsDifferentAud() throws Exception {
         User user = User.builder()
                 .userId(7L)
@@ -209,7 +249,7 @@ class DaeguChainDidServiceTest {
 
     @Test
     void createAccountUsesExternalDidServerAndExtractsWalletAddress() throws Exception {
-        when(externalDidClient.createDid())
+        when(externalDidClient.createDid(any()))
                 .thenReturn(new ObjectMapper().readTree("""
                         {
                           "res": true,
@@ -224,7 +264,7 @@ class DaeguChainDidServiceTest {
                 .isEqualTo("did:mitum:minic:0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
         assertThat(response.getData().path("address").asText())
                 .isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
-        verify(externalDidClient).createDid();
+        verify(externalDidClient).createDid(Map.of());
         verifyNoMoreInteractions(daeguChainClient);
     }
 
@@ -281,6 +321,14 @@ class DaeguChainDidServiceTest {
                 .encodeToString("{}".getBytes(StandardCharsets.UTF_8));
         String payload = Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(("{\"aud\":\"" + aud + "\"}").getBytes(StandardCharsets.UTF_8));
+        return header + "." + payload + ".signature";
+    }
+
+    private String jwtWithClaims(String claims) {
+        String header = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{}".getBytes(StandardCharsets.UTF_8));
+        String payload = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(claims.getBytes(StandardCharsets.UTF_8));
         return header + "." + payload + ".signature";
     }
 }

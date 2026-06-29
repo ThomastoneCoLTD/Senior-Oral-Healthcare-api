@@ -57,7 +57,12 @@ public class ExternalTokenClient {
                     new HttpEntity<>(body),
                     JsonNode.class
             );
-            return Objects.requireNonNull(response.getBody(), "Token server response body is empty");
+            JsonNode responseBody = Objects.requireNonNull(response.getBody(), "Token server response body is empty");
+            if (responseBody.has("res") && !responseBody.path("res").asBoolean()) {
+                String message = responseBody.path("message").asText(responseBody.path("msg").asText("Token server request failed"));
+                throw new BadRequestApiException(message);
+            }
+            return responseBody;
         } catch (RestClientException | NullPointerException exception) {
             throw new BadRequestApiException("Token server API call failed: " + exception.getMessage());
         }
