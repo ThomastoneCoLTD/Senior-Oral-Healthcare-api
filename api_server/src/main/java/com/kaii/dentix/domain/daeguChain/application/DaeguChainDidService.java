@@ -191,13 +191,14 @@ public class DaeguChainDidService {
             return false;
         }
 
+        JsonNode jwtPayload = readJwtPayload(user.getDaeguCredentialJwt());
         String templateId = resolveLoginUserCredentialTemplateId();
-        String verifiedDid = findJwtClaim(user.getDaeguCredentialJwt(), "aud", "did", "DID");
+        String verifiedDid = findFirstText(jwtPayload, "aud", "did", "DID");
         if (!isBlank(verifiedDid) && !matchesVerifiedDid(user.getDaeguDid(), templateId, verifiedDid)) {
             return false;
         }
 
-        String subject = findJwtClaim(user.getDaeguCredentialJwt(), "val", "subject", "sub");
+        String subject = findCredentialSubject(jwtPayload);
         if (!isBlank(subject)) {
             return matchesCredentialSubject(subject, user.getUserLoginIdentifier());
         }
@@ -291,6 +292,10 @@ public class DaeguChainDidService {
     }
 
     private String findJwtClaim(String jwt, String... claimNames) {
+        return findFirstText(readJwtPayload(jwt), claimNames);
+    }
+
+    private JsonNode readJwtPayload(String jwt) {
         if (isBlank(jwt)) {
             return null;
         }
@@ -300,10 +305,69 @@ public class DaeguChainDidService {
         }
         try {
             String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-            return findFirstText(objectMapper.readTree(payload), claimNames);
+            return objectMapper.readTree(payload);
         } catch (Exception exception) {
             return null;
         }
+    }
+
+    private String findCredentialSubject(JsonNode jwtPayload) {
+        if (jwtPayload == null || jwtPayload.isNull()) {
+            return null;
+        }
+        for (String claimName : List.of("val", "subject", "sub", "credentialSubject")) {
+            JsonNode claim = jwtPayload.get(claimName);
+            String subject = extractCredentialSubjectValue(claim);
+            if (!isBlank(subject)) {
+                return subject;
+            }
+        }
+        return null;
+    }
+
+    private String extractCredentialSubjectValue(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        if (node.isTextual() || node.isNumber() || node.isBoolean()) {
+            return node.asText();
+        }
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                String subject = extractCredentialSubjectValue(child);
+                if (!isBlank(subject)) {
+                    return subject;
+                }
+            }
+            return null;
+        }
+        if (node.isObject()) {
+            String directValue = findDirectText(node, "value", "id", "userIdentifier", "userLoginIdentifier");
+            if (!isBlank(directValue)) {
+                String key = findDirectText(node, "key", "name", "type");
+                if (isBlank(key)
+                        || "id".equalsIgnoreCase(key)
+                        || "userIdentifier".equalsIgnoreCase(key)
+                        || "userLoginIdentifier".equalsIgnoreCase(key)) {
+                    return directValue;
+                }
+            }
+            return findFirstText(node, "value", "id", "userIdentifier", "userLoginIdentifier");
+        }
+        return null;
+    }
+
+    private String findDirectText(JsonNode node, String... fieldNames) {
+        if (node == null || !node.isObject()) {
+            return null;
+        }
+        for (String fieldName : fieldNames) {
+            JsonNode value = node.get(fieldName);
+            if (value != null && !value.isNull() && !value.asText().isBlank()) {
+                return value.asText();
+            }
+        }
+        return null;
     }
 
     private boolean matchesVerifiedDid(String userDid, String templateId, String verifiedDid) {
