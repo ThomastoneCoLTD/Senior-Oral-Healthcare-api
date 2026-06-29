@@ -149,18 +149,44 @@ class UserRewardServiceTest {
     void getWalletExcludesFailedRewardTransactionsFromPointBalance() {
         when(transactionRepository.sumRewardedAmount(eq(7L), eq(UserRewardTransactionType.ORAL_EXERCISE_COIN), any()))
                 .thenReturn(2L);
-        when(walletRepository.findByUserId(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
                 .userId(7L)
                 .pointBalance(5L)
                 .daeguDid("did:mitum:minic:0x-user-wallet")
                 .walletAddress("0x-user-wallet")
                 .build()));
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserRewardDto.WalletResponse response = service.getWallet(request);
 
         assertThat(response.getPointBalance()).isEqualTo(2L);
         assertThat(response.getDaeguDid()).isEqualTo("did:mitum:minic:0x-user-wallet");
         assertThat(response.getWalletAddress()).isEqualTo("0x-user-wallet");
+        verify(walletRepository).save(argThat(wallet -> wallet.getPointBalance() == 2L));
+    }
+
+    @Test
+    void getTransactionsReturnsZeroAmountForFailedRewards() {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(java.util.List.of(
+                UserRewardTransaction.builder()
+                        .userId(7L)
+                        .oralExerciseContent(content())
+                        .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                        .status(UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED)
+                        .amount(3L)
+                        .balanceAfter(3L)
+                        .idempotencyKey("ORAL_EXERCISE_BUTTON:7:essential_video_1")
+                        .coinId("essential_video_1")
+                        .build()
+        ));
+
+        UserRewardDto.TransactionListResponse response = service.getTransactions(request);
+
+        assertThat(response.getTransactions()).singleElement()
+                .satisfies(transaction -> {
+                    assertThat(transaction.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED);
+                    assertThat(transaction.getAmount()).isZero();
+                });
     }
 
     @Test

@@ -56,16 +56,20 @@ public class UserRewardService {
     private final JwtTokenUtil jwtTokenUtil;
     private final Environment environment;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public UserRewardDto.WalletResponse getWallet(HttpServletRequest request) {
         Long userId = getUserId(request);
         long pointBalance = calculateRewardedPointBalance(userId);
-        return userRewardWalletRepository.findByUserId(userId)
-                .map(wallet -> UserRewardDto.WalletResponse.builder()
-                        .pointBalance(pointBalance)
-                        .daeguDid(wallet.getDaeguDid())
-                        .walletAddress(wallet.getWalletAddress())
-                        .build())
+        return userRewardWalletRepository.findByUserIdForUpdate(userId)
+                .map(wallet -> {
+                    wallet.resetPointBalance(pointBalance);
+                    UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
+                    return UserRewardDto.WalletResponse.builder()
+                            .pointBalance(savedWallet.getPointBalance())
+                            .daeguDid(savedWallet.getDaeguDid())
+                            .walletAddress(savedWallet.getWalletAddress())
+                            .build();
+                })
                 .orElseGet(() -> UserRewardDto.WalletResponse.builder()
                         .pointBalance(pointBalance)
                         .build());

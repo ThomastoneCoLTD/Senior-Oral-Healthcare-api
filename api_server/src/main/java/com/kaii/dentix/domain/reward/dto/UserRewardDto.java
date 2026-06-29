@@ -91,7 +91,7 @@ public class UserRewardDto {
                     .id(transaction.getUserRewardTransactionId())
                     .type(transaction.getType().name())
                     .status(transaction.getStatus())
-                    .amount(transaction.getAmount())
+                    .amount(transaction.isRewardReceived() ? transaction.getAmount() : 0L)
                     .balanceAfter(transaction.getBalanceAfter())
                     .contentTitle(transaction.getOralExerciseContent() == null
                             ? null
