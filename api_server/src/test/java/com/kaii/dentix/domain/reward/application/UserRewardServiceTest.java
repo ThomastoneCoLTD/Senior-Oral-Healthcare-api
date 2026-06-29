@@ -301,6 +301,74 @@ class UserRewardServiceTest {
     }
 
     @Test
+    void rewardOralExerciseButtonClickRetriesExistingFailedTokenTransfer() throws Exception {
+        UserRewardProperties properties = new UserRewardProperties();
+        properties.setOralExerciseCoinAmount(1L);
+        properties.setTokenTransferEnabled(true);
+        service = new UserRewardService(
+                walletRepository,
+                transactionRepository,
+                contentRepository,
+                daeguChainDidService,
+                daeguChainPointService,
+                externalTokenClient,
+                userRepository,
+                properties,
+                jwtTokenUtil,
+                environment
+        );
+        UserRewardTransaction transaction = UserRewardTransaction.builder()
+                .userId(7L)
+                .oralExerciseContent(content())
+                .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                .status(UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED)
+                .amount(1L)
+                .balanceAfter(1L)
+                .idempotencyKey("ORAL_EXERCISE_BUTTON:7:essential_video_1")
+                .coinId("essential_video_1")
+                .build();
+        when(transactionRepository.findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
+                7L,
+                "essential_video_1",
+                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                UserRewardTransactionStatus.CANCELED
+        )).thenReturn(Optional.of(transaction));
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(1L)
+                .daeguDid("did:mitum:minic:0x-user-wallet")
+                .walletAddress("0x-user-wallet")
+                .build()));
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(externalTokenClient.transferToken(
+                "did:mitum:minic:0x-user-wallet",
+                "essential_video_1",
+                "0x-user-wallet",
+                1L
+        )).thenReturn(new ObjectMapper().readTree("""
+                {
+                  "tx_hash": "0x-retry-tx",
+                  "fact_hash": "retry-fact"
+                }
+                """));
+
+        UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
+                request,
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
+        );
+
+        assertThat(response.isDuplicated()).isTrue();
+        assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
+        verify(externalTokenClient).transferToken(
+                "did:mitum:minic:0x-user-wallet",
+                "essential_video_1",
+                "0x-user-wallet",
+                1L
+        );
+        verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
     void rewardOralExerciseButtonClickRequiresSelectedButtonNumber() {
         assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
                 request,

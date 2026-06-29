@@ -81,4 +81,10 @@ public class UserRewardTransaction extends TimeEntity {
     public boolean isAlreadyApplied() {
         return status != UserRewardTransactionStatus.CANCELED;
     }
+
+    public boolean isRewardReceived() {
+        return status != UserRewardTransactionStatus.CANCELED
+                && status != UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED
+                && status != UserRewardTransactionStatus.POINT_MINT_FAILED;
+    }
 }

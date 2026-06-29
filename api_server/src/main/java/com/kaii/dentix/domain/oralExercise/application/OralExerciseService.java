@@ -12,7 +12,6 @@ import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.oralExercise.dto.OralExerciseDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.domain.OralExerciseRewardToken;
-import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.application.UserRewardService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -63,7 +62,7 @@ public class OralExerciseService {
                 .stream()
                 .filter(transaction -> transaction.getCoinId() != null)
                 .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
-                .filter(transaction -> transaction.getStatus() != UserRewardTransactionStatus.CANCELED)
+                .filter(transaction -> transaction.isRewardReceived())
                 .map(transaction -> transaction.getCoinId().toLowerCase())
                 .collect(Collectors.toSet());
         int currentWeek = calculateCurrentWeek(userId);
