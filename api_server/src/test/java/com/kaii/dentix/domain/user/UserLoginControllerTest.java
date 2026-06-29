@@ -139,7 +139,7 @@ public class UserLoginControllerTest {
         given(userLoginService.userVerify(any(UserDto.VerifyRequest.class))).willReturn(userVerifyDto());
 
         UserDto.VerifyRequest request = UserDto.VerifyRequest.builder()
-                .userPhoneNumber("01012345678")
+                .userPhoneNumber("010-1234-5678")
                 .userName("김덴티")
                 .build();
 
@@ -320,7 +320,9 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.organizationId").type(JsonFieldType.NUMBER).optional().description("소속 기관 ID"),
                                 fieldWithPath("response.organizationName").type(JsonFieldType.STRING).optional().description("소속 기관 이름"),
                                 fieldWithPath("response.organizationPlanName").type(JsonFieldType.STRING).optional().description("기관 구독 플랜 이름"),
-                                fieldWithPath("response.organizationCustomSurveyEnabled").type(JsonFieldType.BOOLEAN).optional().description("커스텀 설문 기능 사용 가능 여부")
+                                fieldWithPath("response.organizationCustomSurveyEnabled").type(JsonFieldType.BOOLEAN).optional().description("커스텀 설문 기능 사용 가능 여부"),
+                                fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("DaeguChain DID"),
+                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("DaeguChain DID status")
                         )
                 ));
 

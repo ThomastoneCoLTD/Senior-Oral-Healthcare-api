@@ -82,13 +82,15 @@ public class UserLoginService {
      */
     @Transactional(rollbackFor = Exception.class)
     public UserDto.VerifyResponse userVerify(UserDto.VerifyRequest request) {
+        String normalizedPhoneNumber = normalizePhoneNumber(request.getUserPhoneNumber());
+        String userName = request.getUserName().trim();
         List<User> users = userRepository.findByUserPhoneNumberOrUserName(
-                request.getUserPhoneNumber(), request.getUserName());
+                normalizedPhoneNumber, userName);
 
         // 1. 이름 + 전화번호 일치 -> 이미 가입됨
         User exactUser = users.stream()
-                .filter(u -> u.getUserName().equals(request.getUserName())
-                        && u.getUserPhoneNumber().equals(request.getUserPhoneNumber()))
+                .filter(u -> u.getUserName().equals(userName)
+                        && u.getUserPhoneNumber().equals(normalizedPhoneNumber))
                 .findFirst().orElse(null);
 
         if (exactUser != null) {
@@ -96,12 +98,12 @@ public class UserLoginService {
         }
 
         // 2. 전화번호 중복 체크
-        if (users.stream().anyMatch(u -> u.getUserPhoneNumber().equals(request.getUserPhoneNumber()))) {
+        if (users.stream().anyMatch(u -> u.getUserPhoneNumber().equals(normalizedPhoneNumber))) {
             throw new BadRequestApiException("이미 사용중인 번호에요.\n번호를 다시 확인해 주세요.");
         }
 
         // 3. 이름 중복 체크 (선택 사항)
-        if (users.stream().anyMatch(u -> u.getUserName().equals(request.getUserName()))) {
+        if (users.stream().anyMatch(u -> u.getUserName().equals(userName))) {
             throw new UnauthorizedException("회원 정보가 일치하지 않아요.\n다시 확인해 주세요.");
         }
 
