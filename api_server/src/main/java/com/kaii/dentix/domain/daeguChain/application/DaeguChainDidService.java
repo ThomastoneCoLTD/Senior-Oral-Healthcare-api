@@ -210,7 +210,10 @@ public class DaeguChainDidService {
         if (isBlank(subject) || isBlank(userLoginIdentifier)) {
             return false;
         }
-        return subject.equals(userLoginIdentifier) || subject.equals("id|" + userLoginIdentifier);
+        return subject.equals(userLoginIdentifier)
+                || subject.equals("id|" + userLoginIdentifier)
+                || subject.equals("id:" + userLoginIdentifier)
+                || subject.equals("id=" + userLoginIdentifier);
     }
 
     public DaeguChainDto.ApiResponse<JsonNode> disclosure(Map<String, Object> request) {
@@ -330,6 +333,13 @@ public class DaeguChainDidService {
             return null;
         }
         if (node.isTextual() || node.isNumber() || node.isBoolean()) {
+            if (node.isTextual() && looksLikeJson(node.asText())) {
+                try {
+                    return extractCredentialSubjectValue(objectMapper.readTree(node.asText()));
+                } catch (Exception ignored) {
+                    return node.asText();
+                }
+            }
             return node.asText();
         }
         if (node.isArray()) {
@@ -370,14 +380,35 @@ public class DaeguChainDidService {
         return null;
     }
 
+    private boolean looksLikeJson(String value) {
+        if (isBlank(value)) {
+            return false;
+        }
+        String trimmed = value.trim();
+        return (trimmed.startsWith("{") && trimmed.endsWith("}"))
+                || (trimmed.startsWith("[") && trimmed.endsWith("]"));
+    }
+
     private boolean matchesVerifiedDid(String userDid, String templateId, String verifiedDid) {
         if (isBlank(userDid) || isBlank(verifiedDid)) {
             return false;
         }
-        if (userDid.equals(verifiedDid)) {
+        String normalizedUserDid = removeTemplateSuffix(userDid, templateId);
+        String normalizedVerifiedDid = removeTemplateSuffix(verifiedDid, templateId);
+        if (normalizedUserDid.equals(normalizedVerifiedDid)) {
             return true;
         }
-        return !isBlank(templateId) && (userDid + ":" + templateId).equals(verifiedDid);
+        String userAddress = extractAddressFromDid(normalizedUserDid);
+        String verifiedAddress = extractAddressFromDid(normalizedVerifiedDid);
+        return !isBlank(userAddress) && userAddress.equalsIgnoreCase(verifiedAddress);
+    }
+
+    private String removeTemplateSuffix(String did, String templateId) {
+        if (isBlank(did) || isBlank(templateId)) {
+            return did;
+        }
+        String suffix = ":" + templateId;
+        return did.endsWith(suffix) ? did.substring(0, did.length() - suffix.length()) : did;
     }
 
     private String findFirstText(JsonNode node, String... fieldNames) {

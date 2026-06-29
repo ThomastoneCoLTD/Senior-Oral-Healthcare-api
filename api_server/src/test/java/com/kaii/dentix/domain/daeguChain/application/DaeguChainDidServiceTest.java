@@ -256,6 +256,49 @@ class DaeguChainDidServiceTest {
     }
 
     @Test
+    void verifyLoginUserCredentialAcceptsStoredCredentialSubjectJsonString() {
+        String did = "did:mitum:minic:0xabc";
+        String jwt = jwtWithClaims("""
+                {
+                  "aud": "did:mitum:minic:0xabc:VLVSWVRSOPZJMPINTBNA",
+                  "val": "{\\"key\\":\\"id\\",\\"value\\":\\"soh-user-001\\"}"
+                }
+                """);
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .daeguDid(did)
+                .daeguCredentialJwt(jwt)
+                .build();
+
+        boolean verified = service.verifyLoginUserCredential(user);
+
+        assertThat(verified).isTrue();
+        verifyNoMoreInteractions(daeguChainClient);
+    }
+
+    @Test
+    void verifyLoginUserCredentialAcceptsAudWithSameWalletAddress() {
+        String jwt = jwtWithClaims("""
+                {
+                  "aud": "did:mitum:0xabc:VLVSWVRSOPZJMPINTBNA",
+                  "val": "id|soh-user-001"
+                }
+                """);
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .daeguDid("did:mitum:minic:0xabc")
+                .daeguCredentialJwt(jwt)
+                .build();
+
+        boolean verified = service.verifyLoginUserCredential(user);
+
+        assertThat(verified).isTrue();
+        verifyNoMoreInteractions(daeguChainClient);
+    }
+
+    @Test
     void verifyLoginUserCredentialRejectsStoredCredentialSubjectForDifferentUser() {
         String jwt = jwtWithClaims("""
                 {
