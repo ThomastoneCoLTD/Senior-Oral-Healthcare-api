@@ -127,6 +127,13 @@ class UserRewardServiceTest {
                 UserRewardTransactionType.ORAL_EXERCISE_COIN,
                 UserRewardTransactionStatus.CANCELED
         )).thenReturn(Optional.of(transaction));
+        when(transactionRepository.sumRewardedAmount(eq(7L), eq(UserRewardTransactionType.ORAL_EXERCISE_COIN), any()))
+                .thenReturn(9L);
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(9L)
+                .build()));
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
                 request,
@@ -135,8 +142,25 @@ class UserRewardServiceTest {
 
         assertThat(response.isDuplicated()).isTrue();
         assertThat(response.getPointBalance()).isEqualTo(9L);
-        verify(walletRepository, never()).save(any());
         verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
+    void getWalletExcludesFailedRewardTransactionsFromPointBalance() {
+        when(transactionRepository.sumRewardedAmount(eq(7L), eq(UserRewardTransactionType.ORAL_EXERCISE_COIN), any()))
+                .thenReturn(2L);
+        when(walletRepository.findByUserId(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(5L)
+                .daeguDid("did:mitum:minic:0x-user-wallet")
+                .walletAddress("0x-user-wallet")
+                .build()));
+
+        UserRewardDto.WalletResponse response = service.getWallet(request);
+
+        assertThat(response.getPointBalance()).isEqualTo(2L);
+        assertThat(response.getDaeguDid()).isEqualTo("did:mitum:minic:0x-user-wallet");
+        assertThat(response.getWalletAddress()).isEqualTo("0x-user-wallet");
     }
 
     @Test
@@ -247,6 +271,7 @@ class UserRewardServiceTest {
         ))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("토큰 지급에 실패했습니다. 보상을 받을 수 없습니다.");
+        verify(walletRepository, never()).save(argThat(wallet -> wallet.getPointBalance() > 0));
     }
 
     @Test

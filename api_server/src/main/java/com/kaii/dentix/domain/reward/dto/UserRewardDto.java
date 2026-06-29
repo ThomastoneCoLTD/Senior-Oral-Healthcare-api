@@ -31,9 +31,13 @@ public class UserRewardDto {
         private Long transactionId;
 
         public static RewardResponse from(UserRewardTransaction transaction, boolean duplicated) {
+            return from(transaction, duplicated, transaction.getBalanceAfter());
+        }
+
+        public static RewardResponse from(UserRewardTransaction transaction, boolean duplicated, long pointBalance) {
             return RewardResponse.builder()
                     .amount(transaction.getAmount())
-                    .pointBalance(transaction.getBalanceAfter())
+                    .pointBalance(pointBalance)
                     .duplicated(duplicated)
                     .status(transaction.getStatus())
                     .transactionId(transaction.getUserRewardTransactionId())

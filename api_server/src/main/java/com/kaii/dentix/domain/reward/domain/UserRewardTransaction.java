@@ -78,6 +78,13 @@ public class UserRewardTransaction extends TimeEntity {
         this.status = UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED;
     }
 
+    public void updateBalanceAfter(long balanceAfter) {
+        if (balanceAfter < 0) {
+            throw new IllegalArgumentException("balanceAfter must not be negative");
+        }
+        this.balanceAfter = balanceAfter;
+    }
+
     public boolean isAlreadyApplied() {
         return status != UserRewardTransactionStatus.CANCELED;
     }

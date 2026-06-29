@@ -4,7 +4,10 @@ import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,4 +30,17 @@ public interface UserRewardTransactionRepository extends JpaRepository<UserRewar
     );
 
     List<UserRewardTransaction> findByUserIdOrderByCreatedDesc(Long userId);
+
+    @Query("""
+            select coalesce(sum(rewardTransaction.amount), 0)
+            from UserRewardTransaction rewardTransaction
+            where rewardTransaction.userId = :userId
+              and rewardTransaction.type = :type
+              and rewardTransaction.status not in :excludedStatuses
+            """)
+    long sumRewardedAmount(
+            @Param("userId") Long userId,
+            @Param("type") UserRewardTransactionType type,
+            @Param("excludedStatuses") Collection<UserRewardTransactionStatus> excludedStatuses
+    );
 }

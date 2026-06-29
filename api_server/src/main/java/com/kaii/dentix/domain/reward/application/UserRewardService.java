@@ -31,12 +31,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class UserRewardService {
+
+    private static final EnumSet<UserRewardTransactionStatus> NON_REWARDED_STATUSES = EnumSet.of(
+            UserRewardTransactionStatus.CANCELED,
+            UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED,
+            UserRewardTransactionStatus.POINT_MINT_FAILED
+    );
 
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final UserRewardTransactionRepository userRewardTransactionRepository;
@@ -52,13 +59,16 @@ public class UserRewardService {
     @Transactional(readOnly = true)
     public UserRewardDto.WalletResponse getWallet(HttpServletRequest request) {
         Long userId = getUserId(request);
+        long pointBalance = calculateRewardedPointBalance(userId);
         return userRewardWalletRepository.findByUserId(userId)
                 .map(wallet -> UserRewardDto.WalletResponse.builder()
-                        .pointBalance(wallet.getPointBalance())
+                        .pointBalance(pointBalance)
                         .daeguDid(wallet.getDaeguDid())
                         .walletAddress(wallet.getWalletAddress())
                         .build())
-                .orElseGet(UserRewardDto.WalletResponse::empty);
+                .orElseGet(() -> UserRewardDto.WalletResponse.builder()
+                        .pointBalance(pointBalance)
+                        .build());
     }
 
     @Transactional(readOnly = true)
@@ -104,6 +114,7 @@ public class UserRewardService {
         }
 
         wallet.updateDaeguWallet(daeguDid, walletAddress);
+        resetWalletToRewardedPointBalance(userId, wallet);
         UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
 
         return UserRewardDto.WalletResponse.builder()
@@ -142,16 +153,8 @@ public class UserRewardService {
             return retryTokenTransferIfNeeded(userId, existingIdempotentTransaction.get(), rewardTokenName);
         }
 
-        UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
-                .orElseGet(() -> UserRewardWallet.builder()
-                        .userId(userId)
-                        .pointBalance(0L)
-                        .build());
-        syncWalletFromUser(userId, wallet);
-
+        UserRewardWallet wallet = getOrCreateRewardWallet(userId);
         long amount = userRewardProperties.getOralExerciseCoinAmount();
-        wallet.addPoints(amount);
-        UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
 
         UserRewardTransaction transaction = userRewardTransactionRepository.save(UserRewardTransaction.builder()
                 .userId(userId)
@@ -159,20 +162,21 @@ public class UserRewardService {
                 .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
                 .status(UserRewardTransactionStatus.LOCAL_RECORDED)
                 .amount(amount)
-                .balanceAfter(savedWallet.getPointBalance())
+                .balanceAfter(wallet.getPointBalance())
                 .idempotencyKey(idempotencyKey)
                 .sessionId(buttonClickRequest.getSessionId())
                 .coinId(rewardTokenName)
                 .build());
 
         if (userRewardProperties.isTokenTransferEnabled()) {
-            transferTokenIfConfigured(transaction, savedWallet, rewardTokenName);
+            transferTokenIfConfigured(transaction, wallet, rewardTokenName);
         } else {
-            mintPointIfConfigured(transaction, savedWallet);
+            mintPointIfConfigured(transaction, wallet);
         }
 
         assertRewardSucceeded(transaction);
-        return UserRewardDto.RewardResponse.from(transaction, false);
+        creditReward(wallet, transaction);
+        return UserRewardDto.RewardResponse.from(transaction, false, wallet.getPointBalance());
     }
 
     @Transactional
@@ -206,16 +210,8 @@ public class UserRewardService {
             return retryTokenTransferIfNeeded(userId, existingIdempotentTransaction.get(), rewardTokenName);
         }
 
-        UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
-                .orElseGet(() -> UserRewardWallet.builder()
-                        .userId(userId)
-                        .pointBalance(0L)
-                        .build());
-        syncWalletFromUser(userId, wallet);
-
+        UserRewardWallet wallet = getOrCreateRewardWallet(userId);
         long amount = userRewardProperties.getOralExerciseCoinAmount();
-        wallet.addPoints(amount);
-        UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
 
         UserRewardTransaction transaction = userRewardTransactionRepository.save(UserRewardTransaction.builder()
                 .userId(userId)
@@ -223,20 +219,21 @@ public class UserRewardService {
                 .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
                 .status(UserRewardTransactionStatus.LOCAL_RECORDED)
                 .amount(amount)
-                .balanceAfter(savedWallet.getPointBalance())
+                .balanceAfter(wallet.getPointBalance())
                 .idempotencyKey(idempotencyKey)
                 .sessionId(sessionId)
                 .coinId(rewardTokenName)
                 .build());
 
         if (userRewardProperties.isTokenTransferEnabled()) {
-            transferTokenIfConfigured(transaction, savedWallet, rewardTokenName);
+            transferTokenIfConfigured(transaction, wallet, rewardTokenName);
         } else {
-            mintPointIfConfigured(transaction, savedWallet);
+            mintPointIfConfigured(transaction, wallet);
         }
 
         assertRewardSucceeded(transaction);
-        return UserRewardDto.RewardResponse.from(transaction, false);
+        creditReward(wallet, transaction);
+        return UserRewardDto.RewardResponse.from(transaction, false, wallet.getPointBalance());
     }
 
     private UserRewardDto.RewardResponse retryTokenTransferIfNeeded(
@@ -244,19 +241,48 @@ public class UserRewardService {
             UserRewardTransaction transaction,
             String rewardTokenName
     ) {
+        UserRewardWallet wallet = getOrCreateRewardWallet(userId);
         if (userRewardProperties.isTokenTransferEnabled()
                 && transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED) {
-            UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
-                    .orElseGet(() -> UserRewardWallet.builder()
-                            .userId(userId)
-                            .pointBalance(transaction.getBalanceAfter())
-                            .build());
-            syncWalletFromUser(userId, wallet);
-            UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
-            transferTokenIfConfigured(transaction, savedWallet, rewardTokenName);
+            transferTokenIfConfigured(transaction, wallet, rewardTokenName);
+            assertRewardSucceeded(transaction);
+            creditReward(wallet, transaction);
+            return UserRewardDto.RewardResponse.from(transaction, true, wallet.getPointBalance());
         }
         assertRewardSucceeded(transaction);
-        return UserRewardDto.RewardResponse.from(transaction, true);
+        return UserRewardDto.RewardResponse.from(transaction, true, wallet.getPointBalance());
+    }
+
+    private UserRewardWallet getOrCreateRewardWallet(Long userId) {
+        UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
+                .orElseGet(() -> UserRewardWallet.builder()
+                        .userId(userId)
+                        .pointBalance(0L)
+                        .build());
+        syncWalletFromUser(userId, wallet);
+        resetWalletToRewardedPointBalance(userId, wallet);
+        return userRewardWalletRepository.save(wallet);
+    }
+
+    private void resetWalletToRewardedPointBalance(Long userId, UserRewardWallet wallet) {
+        wallet.resetPointBalance(calculateRewardedPointBalance(userId));
+    }
+
+    private long calculateRewardedPointBalance(Long userId) {
+        return userRewardTransactionRepository.sumRewardedAmount(
+                userId,
+                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                NON_REWARDED_STATUSES
+        );
+    }
+
+    private void creditReward(UserRewardWallet wallet, UserRewardTransaction transaction) {
+        if (!transaction.isRewardReceived()) {
+            return;
+        }
+        wallet.addPoints(transaction.getAmount());
+        transaction.updateBalanceAfter(wallet.getPointBalance());
+        userRewardWalletRepository.save(wallet);
     }
 
     private void syncWalletFromUser(Long userId, UserRewardWallet wallet) {
