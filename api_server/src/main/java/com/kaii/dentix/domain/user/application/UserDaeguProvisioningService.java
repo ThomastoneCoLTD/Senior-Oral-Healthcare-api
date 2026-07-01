@@ -102,7 +102,6 @@ public class UserDaeguProvisioningService {
         } catch (RuntimeException exception) {
             log.warn("Daegu DID credential issuance failed. userId={}", user.getUserId(), exception);
             user.markDaeguCredentialFailed();
-            throw new BadRequestApiException("DID credential 발급에 실패했습니다: " + exception.getMessage());
         }
     }
 
