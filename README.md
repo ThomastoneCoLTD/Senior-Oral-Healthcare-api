@@ -329,7 +329,7 @@ DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<DEV_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
 DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY=<DEV_DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY>
 DAEGU_CHAIN_TOKEN_SYMBOL=MYT
 DAEGU_CHAIN_TOKEN_DECIMALS=18
-USER_REWARD_TOKEN_TRANSFER_ENABLED=true
+USER_REWARD_TOKEN_TRANSFER_ENABLED=false
 ```
 
 `SOH_API_ENV_PROD` example:
@@ -362,7 +362,7 @@ Terraform outputs `db_address`, `db_endpoint`, and `db_master_user_secret_arn`; 
 DaeguChain API requests use `DAEGU_CHAIN_APP_KEY` for every outbound request body field named `token`; keep app keys and token owner private keys only in environment secrets.
 `DID_SERVER_BASE_URL` must point to the reachable DID creation service used by `/did/create`; development currently uses `http://43.201.125.82`.
 `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID` controls the DID login credential template. Optional `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_FROM` and `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_UNTIL` can pin the validity window; otherwise `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS` is applied from the issue date.
-When `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, oral-exercise video rewards are transferred through DaeguChain token contracts by reward token name.
+When `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, oral-exercise video rewards are transferred through DaeguChain token contracts by reward token name. Development keeps this disabled by default so token transfer outages do not block exercise completion.
 
 ## GitHub Actions IAM User Policy
 
