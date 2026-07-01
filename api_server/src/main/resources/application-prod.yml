@@ -90,6 +90,7 @@ server:
 aiModel:
   apiUrl:
     oralCheck: 'https://ai-backend-gpu.kai-i.com/denti/api/plaque_navy'
+    gingivitis: 'https://ai-backend-gpu.kai-i.com/denti/api/gingivitis'
     questionnaire: 'https://ai-backend-gpu.kai-i.com/denti/api/prsc_dku'
 
 daegu-chain:
@@ -126,13 +127,13 @@ user-reward:
 s3:
   storage:
     bucketName: ${S3_BUCKET_NAME:denti-backends}
-    region: ap-southeast-1
+    region: ${S3_REGION:ap-northeast-2}
 
   folderPath:
     oralCheck: soh/prod/
 
 aws:
-  region: ap-southeast-1
+  region: ${AWS_REGION:ap-northeast-2}
   #aws:
   #  account:
   #    accessKey: 'AKIAXXXXXXXXXXXXXXXX'
