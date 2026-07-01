@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -69,29 +71,28 @@ public class ServiceAgreementConsentService {
     public void saveUserServiceAgreements(Long userId, List<Long> request) {
         List<ServiceAgreementDto.Response> list =
                 serviceAgreementService.serviceAgreementList().getServiceAgreement();
-
-        // 1) 요청 id가 실제 약관 목록에 존재하는지 검증
-        boolean hasInvalid = request.stream()
-                .anyMatch(reqId -> list.stream().noneMatch(d -> d.getId().equals(reqId)));
-
-        if (hasInvalid) {
-            throw new NotFoundDataException("존재하지 않는 서비스 이용 동의입니다.");
-        }
-
-        // 2) 필수 약관 누락 검증
+        Set<Long> requestedIds = request == null ? Set.of() : new HashSet<>(request);
+        Set<Long> validRequestedIds = new HashSet<>();
         list.forEach(agree -> {
-            if (agree.getIsServiceAgreeRequired() == YnType.Y && !request.contains(agree.getId())) {
+            if (requestedIds.contains(agree.getId())) {
+                validRequestedIds.add(agree.getId());
+            }
+        });
+
+        // 1) 필수 약관 누락 검증
+        list.forEach(agree -> {
+            if (agree.getIsServiceAgreeRequired() == YnType.Y && !validRequestedIds.contains(agree.getId())) {
                 throw new BadRequestApiException(agree.getName() + "는(은) 필수 항목입니다.");
             }
         });
 
-        // 3) 저장 (전체 약관 기준으로 Y/N 저장)
+        // 2) 저장 (전체 약관 기준으로 Y/N 저장)
         Date now = new Date();
         list.forEach(agree -> serviceAgreementConsentRepository.save(
                 ServiceAgreementConsent.builder()
                         .userId(userId)
                         .serviceAgreeId(agree.getId())
-                        .isUserServiceAgree(request.contains(agree.getId()) ? YnType.Y : YnType.N)
+                        .isUserServiceAgree(validRequestedIds.contains(agree.getId()) ? YnType.Y : YnType.N)
                         .userServiceAgreeDate(now)
                         .build()
         ));
