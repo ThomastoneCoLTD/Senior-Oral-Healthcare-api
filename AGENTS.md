@@ -118,7 +118,7 @@ SOH_TERRAFORM_TFVARS_PROD
 ```
 
 Never write AWS access keys, DB credentials, JWT secrets, or real `.env` contents into repository files.
-`SOH_API_ENV_DEV` and `SOH_API_ENV_PROD` should include DaeguChain app configuration such as `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, and `USER_REWARD_TOKEN_TRANSFER_ENABLED` when DaeguChain DID login, admin token creation, or oral-exercise token rewards are enabled.
+`SOH_API_ENV_DEV` and `SOH_API_ENV_PROD` should include DaeguChain and DID app configuration such as `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, and `USER_REWARD_TOKEN_TRANSFER_ENABLED` when DaeguChain DID login, admin token creation, or oral-exercise token rewards are enabled.
 Optional `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_FROM` and `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_UNTIL` can pin the DID login credential validity window.
 Outbound DaeguChain request body fields named `token` must be populated from the environment app key, not hardcoded in source.
 `SOH_TERRAFORM_TFVARS_*` should contain filled Terraform variable values such as ACM ARN and instance sizes, but not DB passwords or application `.env` secrets.

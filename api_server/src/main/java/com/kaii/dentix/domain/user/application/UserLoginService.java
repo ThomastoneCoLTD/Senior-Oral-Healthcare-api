@@ -170,6 +170,7 @@ public class UserLoginService {
                 .organizationName(organization.getOrganizationName())
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
+                .daeguCredentialStatus(user.getDaeguCredentialStatus())
                 .build();
     }
 
@@ -227,6 +228,7 @@ public class UserLoginService {
                 .organizationName(organization.getOrganizationName())
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
+                .daeguCredentialStatus(user.getDaeguCredentialStatus())
                 .build();
     }
 

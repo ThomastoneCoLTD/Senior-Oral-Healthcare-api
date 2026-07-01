@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -67,6 +68,16 @@ class UserDaeguProvisioningServiceTest {
         when(daeguChainDidService.createAccount(any()))
                 .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
+        when(daeguChainDidService.issueLoginUserCredential(user))
+                .thenAnswer(invocation -> {
+                    user.updateDaeguCredential(
+                            "issued.credential.jwt",
+                            UserDaeguCredentialStatus.ISSUED,
+                            null,
+                            null
+                    );
+                    return null;
+                });
 
         service.provisionForSignUp(user);
 
@@ -110,7 +121,7 @@ class UserDaeguProvisioningServiceTest {
     }
 
     @Test
-    void provisionForSignUpDoesNotCreateLocalDidWhenExternalApiFails() {
+    void provisionForSignUpFailsWhenExternalApiFails() {
         User user = User.builder()
                 .userId(7L)
                 .build();
@@ -118,7 +129,9 @@ class UserDaeguProvisioningServiceTest {
                 .thenThrow(new BadRequestApiException("token is required"));
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
 
-        service.provisionForSignUp(user);
+        assertThatThrownBy(() -> service.provisionForSignUp(user))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessageContaining("DID 생성에 실패했습니다");
 
         assertThat(user.getDaeguDid()).isNull();
         assertThat(user.getDaeguDidKey()).isNull();
@@ -128,7 +141,7 @@ class UserDaeguProvisioningServiceTest {
     }
 
     @Test
-    void provisionForSignUpMarksCredentialFailedWhenIssueFails() throws Exception {
+    void provisionForSignUpFailsWhenCredentialIssueFails() throws Exception {
         User user = User.builder()
                 .userId(7L)
                 .userLoginIdentifier("soh-user-001")
@@ -145,9 +158,34 @@ class UserDaeguProvisioningServiceTest {
         when(daeguChainDidService.issueLoginUserCredential(user))
                 .thenThrow(new BadRequestApiException("credential jwt is empty"));
 
-        service.provisionForSignUp(user);
+        assertThatThrownBy(() -> service.provisionForSignUp(user))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessageContaining("DID credential 발급에 실패했습니다");
 
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
+        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.FAILED);
+    }
+
+    @Test
+    void provisionForSignUpFailsWhenCredentialIssueDoesNotStoreJwt() throws Exception {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .build();
+        JsonNode didData = new ObjectMapper().readTree("""
+                {
+                  "did": "did:mitum:minic:0x123",
+                  "address": "0x123"
+                }
+                """);
+        when(daeguChainDidService.createAccount(any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
+        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.provisionForSignUp(user))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessageContaining("DID credential 발급에 실패했습니다");
+
         assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.FAILED);
     }
 }

@@ -61,7 +61,7 @@ public class UserDaeguProvisioningService {
         } catch (RuntimeException exception) {
             log.warn("Daegu DID provisioning failed. userId={}", user.getUserId(), exception);
             user.updateDaeguDid(null, null, UserDaeguIdentityStatus.FAILED);
-            return null;
+            throw new BadRequestApiException("DID 생성에 실패했습니다: " + exception.getMessage());
         }
     }
 
@@ -95,9 +95,14 @@ public class UserDaeguProvisioningService {
     private void provisionCredential(User user) {
         try {
             daeguChainDidService.issueLoginUserCredential(user);
+            if (isBlank(user.getDaeguCredentialJwt())
+                    || user.getDaeguCredentialStatus() != UserDaeguCredentialStatus.ISSUED) {
+                throw new BadRequestApiException("credential jwt is empty");
+            }
         } catch (RuntimeException exception) {
             log.warn("Daegu DID credential issuance failed. userId={}", user.getUserId(), exception);
             user.markDaeguCredentialFailed();
+            throw new BadRequestApiException("DID credential 발급에 실패했습니다: " + exception.getMessage());
         }
     }
 

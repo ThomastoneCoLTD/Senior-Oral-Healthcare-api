@@ -6,6 +6,7 @@ import com.kaii.dentix.domain.auth.controller.AuthController;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
+import com.kaii.dentix.domain.user.domain.UserDaeguCredentialStatus;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.domain.user.controller.UserLoginController;
 import com.kaii.dentix.domain.user.dto.UserDto;
@@ -93,6 +94,7 @@ public class UserLoginControllerTest {
                 .organizationName("테스트 치과")
                 .daeguDid("did:mitum:minic:0x123")
                 .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
+                .daeguCredentialStatus(UserDaeguCredentialStatus.ISSUED)
                 .build();
     }
 
@@ -234,7 +236,8 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
                                 fieldWithPath("response.organizationName").type(JsonFieldType.STRING).description("소속 기관 이름"),
                                 fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("대구 DID"),
-                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태")
+                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태"),
+                                fieldWithPath("response.daeguCredentialStatus").type(JsonFieldType.STRING).optional().description("대구 DID credential 발급 상태")
                         )
                 ));
 
