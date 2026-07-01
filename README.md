@@ -321,7 +321,7 @@ SPRING_DATASOURCE_PASSWORD=<DEV_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<DEV_JWT_SECRET>
 DAEGU_CHAIN_APP_KEY=<DEV_DAEGU_CHAIN_APP_KEY>
 DAEGU_CHAIN_ID=mitumt
-DID_SERVER_BASE_URL=<DEV_DID_SERVER_BASE_URL>
+DID_SERVER_BASE_URL=http://43.201.125.82
 DID_CREATE_PATH=/did/create
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID=VLVSWVRSOPZJMPINTBNA
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS=3650
@@ -360,7 +360,7 @@ USER_REWARD_TOKEN_TRANSFER_ENABLED=true
 Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3, and EC2 downloads it through the instance profile.
 Terraform outputs `db_address`, `db_endpoint`, and `db_master_user_secret_arn`; use the Secrets Manager secret value to populate the datasource password in the GitHub environment secret.
 DaeguChain API requests use `DAEGU_CHAIN_APP_KEY` for every outbound request body field named `token`; keep app keys and token owner private keys only in environment secrets.
-`DID_SERVER_BASE_URL` must point to the reachable DID creation service used by `/did/create`; do not rely on the local default unless that service runs on the same EC2 instance.
+`DID_SERVER_BASE_URL` must point to the reachable DID creation service used by `/did/create`; development currently uses `http://43.201.125.82`.
 `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID` controls the DID login credential template. Optional `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_FROM` and `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_UNTIL` can pin the validity window; otherwise `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS` is applied from the issue date.
 When `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, oral-exercise video rewards are transferred through DaeguChain token contracts by reward token name.
 

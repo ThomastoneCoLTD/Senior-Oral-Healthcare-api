@@ -123,7 +123,7 @@ daegu-chain:
   token-decimals: ${DAEGU_CHAIN_TOKEN_DECIMALS:18}
   token-mintable: ${DAEGU_CHAIN_TOKEN_MINTABLE:true}
   token-lockable: ${DAEGU_CHAIN_TOKEN_LOCKABLE:true}
-  did-server-base-url: ${DID_SERVER_BASE_URL:http://localhost:5000}
+  did-server-base-url: ${DID_SERVER_BASE_URL:http://43.201.125.82}
   did-create-path: ${DID_CREATE_PATH:/did/create}
   token-server-base-url: ${TOKEN_SERVER_BASE_URL:http://localhost:5000}
   token-create-path: ${TOKEN_CREATE_PATH:/token/create}
