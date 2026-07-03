@@ -15,6 +15,20 @@ import java.util.List;
 public class OralExerciseContentInitializer {
 
     private static final String TEST_VIDEO_URL = "/videos/oral-exercise/test.mp4";
+    private static final String S3_VIDEO_BASE_URL =
+            "https://denti-backends.s3.ap-northeast-2.amazonaws.com/soh/video/";
+    private static final String VIDEO_1_URL =
+            S3_VIDEO_BASE_URL + "1%ED%99%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0%EC%9D%98%20%ED%9A%A8%EB%8A%A5_fin.mp4";
+    private static final String VIDEO_2_URL =
+            S3_VIDEO_BASE_URL + "2%ED%99%94%20%EB%AA%A9%EC%8A%A4%ED%8A%B8%EB%A0%88%EC%B9%AD_fin.mp4";
+    private static final String VIDEO_3_URL =
+            S3_VIDEO_BASE_URL + "3%ED%99%94%20%ED%83%80%EC%95%A1%20%EB%82%98%EC%98%A4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
+    private static final String VIDEO_4_URL =
+            S3_VIDEO_BASE_URL + "4%ED%99%94%20%EC%82%BC%ED%82%A4%EB%8A%94%20%ED%9E%98%20%EA%B8%B0%EB%A5%B4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
+    private static final String VIDEO_5_URL =
+            S3_VIDEO_BASE_URL + "5%ED%99%94%20%EB%A7%90%ED%95%98%EB%8A%94%20%ED%9E%98%20%EA%B8%B0%EB%A5%B4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
+    private static final String VIDEO_6_URL =
+            S3_VIDEO_BASE_URL + "6%ED%99%94%20%EC%94%B9%EB%8A%94%20%ED%9E%98%20%EA%B8%B0%EB%A5%B4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
 
     private final OralExerciseContentRepository oralExerciseContentRepository;
 
@@ -24,7 +38,7 @@ public class OralExerciseContentInitializer {
         for (OralExerciseContent defaultContent : defaultContents()) {
             oralExerciseContentRepository.findByContentSort(defaultContent.getContentSort())
                     .ifPresentOrElse(
-                            content -> content.fillVideoUrlIfBlank(TEST_VIDEO_URL),
+                            content -> content.applyDefaultVideoUrl(defaultContent.getVideoUrl(), TEST_VIDEO_URL),
                             () -> oralExerciseContentRepository.save(defaultContent)
                     );
         }
@@ -115,7 +129,7 @@ public class OralExerciseContentInitializer {
             String description,
             String learningPoint
     ) {
-        return content(sort, title, description, learningPoint, TEST_VIDEO_URL, sort == 1 ? "교육" : "실습");
+        return content(sort, title, description, learningPoint, videoUrlForSort(sort), sort == 1 ? "교육" : "실습");
     }
 
     private OralExerciseContent content(
@@ -137,5 +151,17 @@ public class OralExerciseContentInitializer {
                 .level(level)
                 .active(true)
                 .build();
+    }
+
+    private String videoUrlForSort(int sort) {
+        return switch (sort) {
+            case 1 -> VIDEO_1_URL;
+            case 2 -> VIDEO_2_URL;
+            case 3 -> VIDEO_3_URL;
+            case 4 -> VIDEO_4_URL;
+            case 5 -> VIDEO_5_URL;
+            case 6 -> VIDEO_6_URL;
+            default -> TEST_VIDEO_URL;
+        };
     }
 }
