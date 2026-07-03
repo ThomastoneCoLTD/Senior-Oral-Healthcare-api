@@ -105,6 +105,21 @@ public class UserDto {
         private ServiceType serviceType;
     }
 
+    public static List<ServiceInfo> defaultServiceInfo() {
+        return List.of(
+                ServiceInfo.builder()
+                        .serviceId(1L)
+                        .name("PLAQUE")
+                        .serviceType(ServiceType.PLAQUE_DETECTION)
+                        .build(),
+                ServiceInfo.builder()
+                        .serviceId(2L)
+                        .name("PERIODONTAL")
+                        .serviceType(ServiceType.PERIODONTAL_DETECTION)
+                        .build()
+        );
+    }
+
     // =================================================================
     // 3. 회원가입 (SignUp)
     // =================================================================
@@ -131,9 +146,6 @@ public class UserDto {
         private Long findPwdQuestionId;
         @NotBlank(message = "답변은 필수입니다.")
         private String findPwdAnswer;
-
-        @NotNull(message = "서비스 선택 필수입니다.")
-        private List<Long> appServiceIds;
         private Long organizationId;
 
         @NotNull(message = "서비스 동의 체크는 필수입니다.")
@@ -256,18 +268,6 @@ public class UserDto {
         private String findPwdAnswer;
     }
 
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class ServiceUpdateRequest {
-        private List<Long> serviceIds;
-    }
-
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class ServiceUpdateResponse {
-        private String userName;
-        private List<ServiceInfo> services;
-    }
 
     // =================================================================
     // 7. 서비스 사용 통계 (Usage)

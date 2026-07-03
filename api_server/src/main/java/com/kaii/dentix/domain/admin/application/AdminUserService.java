@@ -7,10 +7,6 @@ import com.kaii.dentix.domain.admin.dto.AdminUserDto;
 import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
 import com.kaii.dentix.domain.agreement.dao.ServiceAgreementRepository;
 import com.kaii.dentix.domain.agreement.domain.ServiceAgreement;
-import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
-import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
-import com.kaii.dentix.domain.appService.domain.AppService;
-import com.kaii.dentix.domain.appService.domain.UserToAppService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.findPwdQuestion.domain.FindPwdQuestion;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
@@ -66,7 +62,7 @@ public class AdminUserService {
     private static final String[] TEMPLATE_HEADERS = {
             "userLoginIdentifier", "userPassword", "userName", "userGender",
             "userPhoneNumber", "findPwdQuestionId", "findPwdAnswer",
-            "appServiceIds", "userServiceAgreementIds"
+            "userServiceAgreementIds"
     };
     private static final Pattern LOGIN_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9]+$");
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-zA-Z])(?=.*[!@#$%^&*])[a-zA-Z!@#$%^&*0-9]+$");
@@ -82,8 +78,6 @@ public class AdminUserService {
     private final AdminUserRepositoryImpl adminUserRepository;
     private final AdminUserCustomRepository adminUserCustomRepository;
     private final OrganizationSubscriptionService organizationSubscriptionService;
-    private final AppServiceRepository appServiceRepository;
-    private final UserToAppServiceRepository userToAppServiceRepository;
     private final FindPwdQuestionRepository findPwdQuestionRepository;
     private final ServiceAgreementRepository serviceAgreementRepository;
     private final ServiceAgreementConsentService serviceAgreementConsentService;
@@ -311,8 +305,7 @@ public class AdminUserService {
         example.createCell(4).setCellValue("01012345678");
         example.createCell(5).setCellValue("1");
         example.createCell(6).setCellValue("우리집");
-        example.createCell(7).setCellValue("1,2");
-        example.createCell(8).setCellValue("1,2,3");
+        example.createCell(7).setCellValue("1,2,3");
     }
 
     private void createGuideSheet(Workbook workbook) {
@@ -336,7 +329,6 @@ public class AdminUserService {
                 {"userPhoneNumber", "숫자만 10~11자리", "01012345678"},
                 {"findPwdQuestionId", "비밀번호 찾기 질문 ID", "1"},
                 {"findPwdAnswer", "비밀번호 찾기 답변", "우리집"},
-                {"appServiceIds", "서비스 ID를 쉼표로 구분, 비우면 전체 서비스로 등록", "1,2"},
                 {"userServiceAgreementIds", "약관 ID를 쉼표로 구분, 비우면 필수 약관만 동의 처리", "1,2,3"}
         };
 
@@ -349,7 +341,6 @@ public class AdminUserService {
         }
 
         rowIndex = writeQuestionGuideRows(guideSheet, rowIndex, headerStyle);
-        rowIndex = writeAppServiceGuideRows(guideSheet, rowIndex, headerStyle);
         writeAgreementGuideRows(guideSheet, rowIndex, headerStyle);
     }
 
@@ -376,22 +367,6 @@ public class AdminUserService {
             Row row = guideSheet.createRow(rowIndex++);
             row.createCell(0).setCellValue(question.getFindPwdQuestionId());
             row.createCell(1).setCellValue(question.getFindPwdQuestionTitle());
-        }
-        return rowIndex + 1;
-    }
-
-    private int writeAppServiceGuideRows(Sheet guideSheet, int rowIndex, CellStyle headerStyle) {
-        Row appServiceHeader = guideSheet.createRow(rowIndex++);
-        appServiceHeader.createCell(0).setCellValue("appServiceId");
-        appServiceHeader.createCell(1).setCellValue("serviceName");
-        appServiceHeader.getCell(0).setCellStyle(headerStyle);
-        appServiceHeader.getCell(1).setCellStyle(headerStyle);
-
-        List<AppService> appServices = appServiceRepository.findAll();
-        for (AppService appService : appServices) {
-            Row row = guideSheet.createRow(rowIndex++);
-            row.createCell(0).setCellValue(appService.getAppServiceId());
-            row.createCell(1).setCellValue(appService.getName());
         }
         return rowIndex + 1;
     }
@@ -426,8 +401,7 @@ public class AdminUserService {
         String phoneNumber = getStringValue(row.getCell(4), formatter);
         String questionIdRaw = getStringValue(row.getCell(5), formatter);
         String findPwdAnswer = getStringValue(row.getCell(6), formatter);
-        String appServiceIdsRaw = getStringValue(row.getCell(7), formatter);
-        String agreementIdsRaw = getStringValue(row.getCell(8), formatter);
+        String agreementIdsRaw = getStringValue(row.getCell(7), formatter);
 
         validateRequiredText(loginId, "아이디");
         validateRequiredText(password, "비밀번호");
@@ -454,15 +428,6 @@ public class AdminUserService {
         }
 
         GenderType gender = parseGender(genderRaw);
-        List<Long> appServiceIds = parseIdList(appServiceIdsRaw, "서비스 ID");
-        if (appServiceIds.isEmpty()) {
-            appServiceIds = new ArrayList<>(reference.allAppServiceIds);
-        }
-        if (appServiceIds.isEmpty()) {
-            throw new BadRequestApiException("등록 가능한 서비스가 없습니다.");
-        }
-        validateIds(appServiceIds, reference.appServiceMap.keySet(), "존재하지 않는 서비스 ID가 포함되어 있습니다.");
-
         List<Long> agreementIds = parseIdList(agreementIdsRaw, "약관 ID");
         if (agreementIds.isEmpty()) {
             agreementIds = new ArrayList<>(reference.requiredAgreementIds);
@@ -482,27 +447,14 @@ public class AdminUserService {
                 .successCount(0)
                 .build());
 
-        List<UserToAppService> userToAppServices = appServiceIds.stream()
-                .distinct()
-                .map(serviceId -> UserToAppService.builder()
-                        .user(user)
-                        .appService(reference.appServiceMap.get(serviceId))
-                        .build())
-                .toList();
-        userToAppServiceRepository.saveAll(userToAppServices);
         serviceAgreementConsentService.saveUserServiceAgreements(user.getUserId(), agreementIds);
         fileLoginIdSet.add(loginId);
     }
 
     private BulkUploadReference getBulkUploadReference() {
-        List<AppService> appServices = appServiceRepository.findAll();
         List<FindPwdQuestion> findPwdQuestions = findPwdQuestionRepository.findAll(Sort.by(Sort.Direction.ASC, "findPwdQuestionSort"));
         List<ServiceAgreement> serviceAgreements = serviceAgreementRepository.findAll(Sort.by(Sort.Direction.ASC, "serviceAgreeSort"));
 
-        Map<Long, AppService> appServiceMap = new HashMap<>();
-        for (AppService appService : appServices) {
-            appServiceMap.put(appService.getAppServiceId(), appService);
-        }
 
         Map<Long, FindPwdQuestion> questionMap = new HashMap<>();
         for (FindPwdQuestion findPwdQuestion : findPwdQuestions) {
@@ -519,10 +471,8 @@ public class AdminUserService {
         }
 
         return new BulkUploadReference(
-                appServiceMap,
                 questionMap,
                 serviceAgreementMap,
-                appServices.stream().map(AppService::getAppServiceId).toList(),
                 requiredAgreementIds
         );
     }
@@ -635,10 +585,8 @@ public class AdminUserService {
     }
 
     private record BulkUploadReference(
-            Map<Long, AppService> appServiceMap,
             Map<Long, FindPwdQuestion> questionMap,
             Map<Long, ServiceAgreement> serviceAgreementMap,
-            List<Long> allAppServiceIds,
             List<Long> requiredAgreementIds
     ) {}
 }

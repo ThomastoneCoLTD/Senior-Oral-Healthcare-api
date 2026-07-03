@@ -3,7 +3,6 @@ package com.kaii.dentix.domain.user.domain;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
-import com.kaii.dentix.domain.appService.domain.UserToAppService;
 import com.kaii.dentix.global.common.entity.TimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,9 +10,7 @@ import org.hibernate.annotations.Where;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 @Entity
 @Getter @Builder
@@ -91,9 +88,6 @@ public class User extends TimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizationId")
     private Organization organization;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UserToAppService> userToAppServices = new ArrayList<>();
 
     /**
      * RefreshToken, 최근 로그인 일자 업데이트

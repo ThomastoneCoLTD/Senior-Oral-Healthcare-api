@@ -1,8 +1,7 @@
-package com.kaii.dentix.domain.admin.dao.user;
+﻿package com.kaii.dentix.domain.admin.dao.user;
 
 import com.kaii.dentix.domain.admin.dto.AdminStatisticDto;
 import com.kaii.dentix.domain.admin.dto.AdminUserDto;
-import com.kaii.dentix.domain.appService.domain.QAppService;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.domain.QOralCheck;
 import com.kaii.dentix.domain.oralStatus.domain.QOralStatus;
@@ -15,7 +14,6 @@ import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.domain.QUser;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.oralStatusAssignment.domain.QOralStatusAssignment;
-import com.kaii.dentix.domain.appService.domain.QUserToAppService;
 import com.kaii.dentix.global.common.dto.PagingRequest;
 import com.kaii.dentix.global.common.util.DateFormatUtil;
 import com.querydsl.core.BooleanBuilder;
@@ -49,23 +47,24 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
     private final QOralStatusAssignment oralStatusAssignment = QOralStatusAssignment.oralStatusAssignment;
     private final QOralStatus oralStatus = QOralStatus.oralStatus;
     private final QOrganization organization = QOrganization.organization;
+    private static final List<String> DEFAULT_SERVICE_NAMES = List.of("PLAQUE", "PERIODONTAL");
 
     /**
-     * 사용자 목록 조회
+     * ?ъ슜??紐⑸줉 議고쉶
      */
     @Override
-    public Page<AdminUserDto.Info> findAll(AdminUserDto.SearchRequest request) { //타입 변경
+    public Page<AdminUserDto.Info> findAll(AdminUserDto.SearchRequest request) { //???蹂寃?
 
         Pageable paging = new PagingRequest(request.getPage(), request.getSize()).of();
 
         BooleanBuilder builder = new BooleanBuilder();
-        builder.and(whereSearch(request)); //하단 메서드도 수정 필요
+        builder.and(whereSearch(request)); //?섎떒 硫붿꽌?쒕룄 ?섏젙 ?꾩슂
 
         if (request.getOrganizationId() != null) {
             builder.and(user.organization.organizationId.eq(request.getOrganizationId()));
         }
 
-        // 1) 사용자 목록 조회
+        // 1) ?ъ슜??紐⑸줉 議고쉶
         List<User> users = queryFactory
                 .selectFrom(user)
                 .leftJoin(user.organization, organization).fetchJoin()
@@ -81,13 +80,13 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
         List<Long> userIds = users.stream().map(User::getUserId).toList();
 
-        // 2~5) 연관 데이터 조회 (기존 로직 유지)
+        // 2~5) ?곌? ?곗씠??議고쉶 (湲곗〈 濡쒖쭅 ?좎?)
         Map<Long, OralCheck> latestOralChecks = getLatestOralChecks(userIds);
         Map<Long, List<String>> serviceNames = getUserServices(userIds);
 
-        // 6) DTO 리스트 조립 (AdminUserDto.Info 생성자 사용)
+        // 6) DTO 由ъ뒪??議곕┰ (AdminUserDto.Info ?앹꽦???ъ슜)
         List<AdminUserDto.Info> result = users.stream()
-                .map(u -> new AdminUserDto.Info( //생성자 호출 변경
+                .map(u -> new AdminUserDto.Info( //?앹꽦???몄텧 蹂寃?
                         u.getUserId(),
                         u.getUserLoginIdentifier(),
                         u.getUserName(),
@@ -105,7 +104,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
                         u.getIsVerify(),
 
-                        // serviceNames (List -> String 변환해서 넘김, DTO 내부에서 다시 List로 변환)
+                        // serviceNames (List -> String 蹂?섑빐???섍?, DTO ?대??먯꽌 ?ㅼ떆 List濡?蹂??
                         serviceNames.get(u.getUserId()) != null
                                 ? String.join(",", serviceNames.get(u.getUserId()))
                                 : ""
@@ -124,9 +123,9 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
     }
 
     @Override
-    public Page<AdminUserDto.Info> findAllByOrganization(AdminUserDto.SearchRequest request) { //타입 변경
+    public Page<AdminUserDto.Info> findAllByOrganization(AdminUserDto.SearchRequest request) { //???蹂寃?
         if (request.getOrganizationId() == null)
-            throw new IllegalArgumentException("organizationId가 필요합니다.");
+            throw new IllegalArgumentException("organizationId媛 ?꾩슂?⑸땲??");
         return findAll(request);
     }
 
@@ -207,41 +206,22 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
     }
 
     private Map<Long, List<String>> getUserServices(List<Long> userIds) {
-
-        QUserToAppService uta = QUserToAppService.userToAppService;
-        QAppService as = QAppService.appService;
-
-        List<Tuple> list = queryFactory
-                .select(uta.user.userId, as.name)
-                .from(uta)
-                .leftJoin(uta.appService, as)
-                .where(uta.user.userId.in(userIds))
-                .fetch();
-
-        return list.stream()
-                //key null 제거
-                .filter(t -> {
-                    Long key = t.get(uta.user.userId);
-                    return key != null;
-                })
-                .collect(Collectors.groupingBy(
-                        t -> t.get(uta.user.userId),
-                        Collectors.mapping(
-                                t -> Optional.ofNullable(t.get(as.name)).orElse(""),
-                                Collectors.toList()
-                        )
+        return userIds.stream()
+                .collect(Collectors.toMap(
+                        id -> id,
+                        id -> DEFAULT_SERVICE_NAMES
                 ));
     }
 
 
     /**
-     * WHERE 조건 생성
+     * WHERE 議곌굔 ?앹꽦
      */
     private Predicate whereSearch(AdminUserDto.SearchRequest request) {
 
         BooleanBuilder builder = new BooleanBuilder();
 
-        // 1. 검색어
+        // 1. 寃?됱뼱
         if (StringUtils.isNotBlank(request.getKeyword())) {
             String keyword = request.getKeyword();
             builder.and(
@@ -250,7 +230,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
             );
         }
 
-        // 2. 구강검사 결과
+        // 2. 援ш컯寃??寃곌낵
         if (request.getOralCheckResultTotalType() != null) {
             builder.and(
                     user.userId.in(
@@ -262,7 +242,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
             );
         }
 
-        // 3. 문진표 유형
+        // 3. 臾몄쭊???좏삎
         if (StringUtils.isNotBlank(request.getOralStatus())) {
             builder.and(
                     user.userId.in(
@@ -276,22 +256,22 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
             );
         }
 
-        // 4. 성별
+        // 4. ?깅퀎
         if (request.getGender() != null) {
             builder.and(user.userGender.eq(request.getGender()));
         }
 
-        // 5. 인증 여부
+        // 5. ?몄쬆 ?щ?
         if (request.getIsVerify() != null) {
             builder.and(user.isVerify.eq(request.getIsVerify()));
         }
 
-        // 6. 자동 기간
+        // 6. ?먮룞 湲곌컙
         if (request.getDatePeriodType() != null) {
             builder.and(whereAllDatePeriodAuto(request.getDatePeriodType()));
         }
 
-        // 7. 날짜 범위
+        // 7. ?좎쭨 踰붿쐞
         builder.and(whereDateRange(request.getStartDate(), request.getEndDate()));
 
         return builder;
@@ -299,7 +279,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
 
     /**
-     * 시작일 / 종료일 (Date 타입 기준)
+     * ?쒖옉??/ 醫낅즺??(Date ???湲곗?)
      */
     private BooleanExpression whereDateRange(String start, String end) {
 
@@ -317,7 +297,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
             if (StringUtils.isNotBlank(end)) {
                 Date endDt = DateFormatUtil.stringToDate("yyyy-MM-dd", end);
 
-                // 종료일 포함(+1)
+                // 醫낅즺???ы븿(+1)
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(endDt);
                 cal.add(Calendar.DATE, 1);
@@ -342,7 +322,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
 
     /**
-     * 자동 기간 (오늘 / 1주 / 1달 / 3달 / 1년)
+     * ?먮룞 湲곌컙 (?ㅻ뒛 / 1二?/ 1??/ 3??/ 1??
      */
     private BooleanExpression whereAllDatePeriodAuto(DatePeriodType type) {
 
@@ -371,13 +351,13 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
 
     /**
-     * 가입자 수 통계 (수정됨)
+     * 媛?낆옄 ???듦퀎 (?섏젙??
      */
     @Override
-    public AdminStatisticDto.SignUpCount userSignUpCount(AdminStatisticDto.SearchRequest request) { // 타입 변경
+    public AdminStatisticDto.SignUpCount userSignUpCount(AdminStatisticDto.SearchRequest request) { // ???蹂寃?
 
         return queryFactory
-                .select(Projections.constructor(AdminStatisticDto.SignUpCount.class, //생성자 변경
+                .select(Projections.constructor(AdminStatisticDto.SignUpCount.class, //?앹꽦??蹂寃?
                         user.count().as("countAll"),
                         new CaseBuilder()
                                 .when(user.userGender.eq(GenderType.M)).then(1L)
@@ -388,7 +368,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                 ))
                 .from(user)
                 .where(
-                        // request.getDatePeriodType() 등 통계용 검색 조건 사용
+                        // request.getDatePeriodType() ???듦퀎??寃??議곌굔 ?ъ슜
                         whereDateRange(request.getStartDate(), request.getEndDate()),
                         request.getOrganizationId() != null ? user.organization.organizationId.eq(request.getOrganizationId()) : null
                 )
@@ -415,32 +395,32 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
 
 
     /**
-     * 기관별 통계
+     * 湲곌?蹂??듦퀎
      */
     @Override
-    public List<SuperAdminStatisticDto.OrgUserStats> getAllOrganizationUserStats() { //리턴 타입 변경
+    public List<SuperAdminStatisticDto.OrgUserStats> getAllOrganizationUserStats() { //由ы꽩 ???蹂寃?
 
         LocalDateTime oneMonthAgo = LocalDateTime.now().minusDays(30);
         Date oneMonthAgoDate = Date.from(oneMonthAgo.atZone(ZoneId.systemDefault()).toInstant());
 
         return queryFactory
                 .select(Projections.constructor(
-                        SuperAdminStatisticDto.OrgUserStats.class, //타겟 클래스 변경
+                        SuperAdminStatisticDto.OrgUserStats.class, //?寃??대옒??蹂寃?
                         organization.organizationId,
                         organization.organizationName,
                         user.countDistinct(),
 
-                        // 남성
+                        // ?⑥꽦
                         new CaseBuilder()
                                 .when(user.userGender.eq(GenderType.M)).then(1L)
                                 .otherwise(0L).sum(),
 
-                        // 여성
+                        // ?ъ꽦
                         new CaseBuilder()
                                 .when(user.userGender.eq(GenderType.W)).then(1L)
                                 .otherwise(0L).sum(),
 
-                        // 신규 가입
+                        // ?좉퇋 媛??
                         new CaseBuilder()
                                 .when(user.created.gt(oneMonthAgoDate)).then(1L)
                                 .otherwise(0L).sum()

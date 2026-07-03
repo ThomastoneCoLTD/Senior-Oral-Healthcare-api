@@ -12,7 +12,6 @@ import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -61,11 +60,6 @@ public class UserController {
         return new DataResponse<>(userService.userModifyQnA(request, dto));
     }
 
-    /** 서비스 목록 변경 */
-    @PostMapping("/service")
-    public ResponseEntity<?> updateUserServices(HttpServletRequest request, @RequestBody UserDto.ServiceUpdateRequest dto) {
-        return ResponseEntity.ok(new DataResponse<>(userService.updateUserServices(request, dto)));
-    }
 
     /** 양치 기록 */
     @PostMapping("/brushing")
