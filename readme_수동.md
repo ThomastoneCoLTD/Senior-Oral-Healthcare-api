@@ -697,6 +697,7 @@ Final snapshot: 삭제 시 반드시 생성
 RDS endpoint를 기록한다.
 Secrets Manager에서 master credential secret ARN과 password를 확인한다.
 GitHub Secret SOH_API_ENV_DEV / SOH_API_ENV_PROD의 SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD에 반영한다.
+Reward reclaim을 사용할 경우 SOH_API_ENV_DEV / SOH_API_ENV_PROD에 DID_DB_URL, DID_DB_USERNAME, DID_DB_PASSWORD, DID_DB_TABLE=DID를 추가하고, API EC2에서 DID DB TCP 3306 접속이 가능한지 확인한다.
 ```
 
 주의:

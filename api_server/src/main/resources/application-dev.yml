@@ -134,6 +134,15 @@ daegu-chain:
   login-user-credential-valid-until: ${DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_UNTIL:}
   login-user-credential-valid-days: ${DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS:3650}
 
+did-db:
+  url: ${DID_DB_URL:}
+  username: ${DID_DB_USERNAME:}
+  password: ${DID_DB_PASSWORD:}
+  table-name: ${DID_DB_TABLE:DID}
+  did-column: ${DID_DB_DID_COLUMN:DID}
+  private-key-column: ${DID_DB_PRIVATE_KEY_COLUMN:private_key}
+  account-address-column: ${DID_DB_ACCOUNT_ADDRESS_COLUMN:account_address}
+
 user-reward:
   oral-exercise-coin-amount: ${ORAL_EXERCISE_COIN_REWARD_AMOUNT:1}
   point-mint-enabled: ${USER_REWARD_POINT_MINT_ENABLED:false}

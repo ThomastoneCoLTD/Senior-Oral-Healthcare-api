@@ -114,4 +114,16 @@ public class UserRewardDto {
     public static class TransactionListResponse {
         private List<TransactionResponse> transactions;
     }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ReclaimResponse {
+        private int reclaimedCount;
+        private int skippedCount;
+        private int failedCount;
+        private long reclaimedAmount;
+        private List<TransactionResponse> transactions;
+    }
 }

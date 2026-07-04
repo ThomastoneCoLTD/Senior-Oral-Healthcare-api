@@ -323,6 +323,10 @@ DAEGU_CHAIN_APP_KEY=<DEV_DAEGU_CHAIN_APP_KEY>
 DAEGU_CHAIN_ID=mitumt
 DID_SERVER_BASE_URL=http://43.201.125.82
 DID_CREATE_PATH=/did/create
+DID_DB_URL=jdbc:mysql://<DID_DB_HOST>:3306/<DID_DB_NAME>?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
+DID_DB_USERNAME=<DID_DB_READONLY_USER>
+DID_DB_PASSWORD=<DID_DB_READONLY_PASSWORD>
+DID_DB_TABLE=DID
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID=VLVSWVRSOPZJMPINTBNA
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS=3650
 DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<DEV_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
@@ -348,6 +352,10 @@ DAEGU_CHAIN_APP_KEY=<PROD_DAEGU_CHAIN_APP_KEY>
 DAEGU_CHAIN_ID=mitumt
 DID_SERVER_BASE_URL=<PROD_DID_SERVER_BASE_URL>
 DID_CREATE_PATH=/did/create
+DID_DB_URL=jdbc:mysql://<PROD_DID_DB_HOST>:3306/<PROD_DID_DB_NAME>?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
+DID_DB_USERNAME=<PROD_DID_DB_READONLY_USER>
+DID_DB_PASSWORD=<PROD_DID_DB_READONLY_PASSWORD>
+DID_DB_TABLE=DID
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID=VLVSWVRSOPZJMPINTBNA
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS=3650
 DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<PROD_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
@@ -361,6 +369,7 @@ Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3
 Terraform outputs `db_address`, `db_endpoint`, and `db_master_user_secret_arn`; use the Secrets Manager secret value to populate the datasource password in the GitHub environment secret.
 DaeguChain API requests use `DAEGU_CHAIN_APP_KEY` for every outbound request body field named `token`; keep app keys and token owner private keys only in environment secrets.
 `DID_SERVER_BASE_URL` must point to the reachable DID creation service used by `/did/create`; development currently uses `http://43.201.125.82`.
+`DID_DB_URL`, `DID_DB_USERNAME`, `DID_DB_PASSWORD`, and `DID_DB_TABLE` are required only when oral-exercise reward reclaim is enabled. Use a read-only DID DB account that can read `DID`, `private_key`, and `account_address`, and make sure the API EC2 security group can reach that database.
 `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID` controls the DID login credential template. Optional `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_FROM` and `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_UNTIL` can pin the validity window; otherwise `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS` is applied from the issue date.
 When `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, oral-exercise video rewards are transferred through DaeguChain token contracts by reward token name. Development keeps this disabled by default so token transfer outages do not block exercise completion.
 
