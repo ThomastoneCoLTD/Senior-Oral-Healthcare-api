@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -366,9 +367,12 @@ public class UserRewardService {
         }
 
         try {
+            RewardTokenRef rewardToken = resolveRewardTokenRef(transaction, rewardTokenName);
+            transaction.updateTokenContractAddress(rewardToken.contractAddress());
             JsonNode response = externalTokenClient.transferToken(
                     wallet.getDaeguDid(),
-                    rewardTokenName,
+                    rewardToken.tokenName(),
+                    rewardToken.contractAddress(),
                     wallet.getWalletAddress(),
                     transaction.getAmount()
             );
@@ -380,6 +384,27 @@ public class UserRewardService {
             transaction.markTokenTransferFailed();
             throwRewardFailure();
         }
+    }
+
+    private RewardTokenRef resolveRewardTokenRef(UserRewardTransaction transaction, String rewardTokenName) {
+        if (!isBlank(transaction.getTokenContractAddress())) {
+            return new RewardTokenRef(rewardTokenName, transaction.getTokenContractAddress());
+        }
+
+        JsonNode tokens = findTokenArray(externalTokenClient.getTokenList());
+        if (tokens != null && tokens.isArray()) {
+            for (JsonNode token : tokens) {
+                String tokenName = findFirstText(token, "token_name", "tokenName", "name");
+                String contractAddress = findFirstText(token, "contract", "contract_address", "contractAddress", "cont_addr", "address");
+                if (!isBlank(tokenName)
+                        && !isBlank(contractAddress)
+                        && tokenName.equalsIgnoreCase(rewardTokenName)) {
+                    return new RewardTokenRef(tokenName, contractAddress);
+                }
+            }
+        }
+
+        throw new BadRequestApiException("reward token contract address is not found: " + rewardTokenName);
     }
 
     private void assertRewardSucceeded(UserRewardTransaction transaction) {
@@ -465,6 +490,23 @@ public class UserRewardService {
         return null;
     }
 
+    private JsonNode findTokenArray(JsonNode payload) {
+        if (payload == null || payload.isNull()) {
+            return null;
+        }
+        if (payload.isArray()) {
+            return payload;
+        }
+        for (String fieldName : List.of("response", "data", "result", "tokens", "tokenList", "token_list")) {
+            JsonNode child = payload.get(fieldName);
+            JsonNode found = findTokenArray(child);
+            if (found != null && found.isArray()) {
+                return found;
+            }
+        }
+        return null;
+    }
+
     private DidWallet createDidWallet(Long userId) {
         try {
             DaeguChainDto.ApiResponse<JsonNode> response = daeguChainDidService.createAccount(Map.of());
@@ -509,5 +551,8 @@ public class UserRewardService {
     }
 
     private record DidWallet(String did, String walletAddress) {
+    }
+
+    private record RewardTokenRef(String tokenName, String contractAddress) {
     }
 }

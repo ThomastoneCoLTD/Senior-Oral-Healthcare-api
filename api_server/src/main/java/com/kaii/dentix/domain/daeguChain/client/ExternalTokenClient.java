@@ -35,10 +35,15 @@ public class ExternalTokenClient {
         return post(properties.getTokenCreatePath(), body);
     }
 
-    public JsonNode transferToken(String userDid, String tokenName, String receiver, long amount) {
+    public JsonNode transferToken(String userDid, String tokenName, String contractAddress, String receiver, long amount) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("user_DID", userDid);
         body.put("token_name", tokenName);
+        if (contractAddress != null && !contractAddress.isBlank()) {
+            body.put("contract", contractAddress);
+            body.put("contract_address", contractAddress);
+            body.put("cont_addr", contractAddress);
+        }
         body.put("receiver", receiver);
         body.put("wallet_address", receiver);
         body.put("amount", amount);

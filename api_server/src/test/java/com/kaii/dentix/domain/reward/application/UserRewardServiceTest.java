@@ -221,9 +221,11 @@ class UserRewardServiceTest {
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(externalTokenClient.getTokenList()).thenReturn(rewardTokenList());
         when(externalTokenClient.transferToken(
                 "did:mitum:minic:0x-user-wallet",
-                "essential_video_1",
+                "ESSENTIAL_VIDEO_1",
+                "0x-token-contract",
                 "0x-user-wallet",
                 1L
         )).thenReturn(new ObjectMapper().readTree("""
@@ -243,17 +245,19 @@ class UserRewardServiceTest {
         assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
         verify(externalTokenClient).transferToken(
                 "did:mitum:minic:0x-user-wallet",
-                "essential_video_1",
+                "ESSENTIAL_VIDEO_1",
+                "0x-token-contract",
                 "0x-user-wallet",
                 1L
         );
         verify(transactionRepository).save(argThat(transaction ->
                 transaction.getCoinId().equals("essential_video_1")
+                        && transaction.getTokenContractAddress().equals("0x-token-contract")
         ));
     }
 
     @Test
-    void rewardOralExerciseButtonClickThrowsWhenTokenTransferFails() {
+    void rewardOralExerciseButtonClickThrowsWhenTokenTransferFails() throws Exception {
         UserRewardProperties properties = new UserRewardProperties();
         properties.setOralExerciseCoinAmount(1L);
         properties.setTokenTransferEnabled(true);
@@ -284,9 +288,11 @@ class UserRewardServiceTest {
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(externalTokenClient.getTokenList()).thenReturn(rewardTokenList());
         when(externalTokenClient.transferToken(
                 "did:mitum:minic:0x-user-wallet",
-                "essential_video_1",
+                "ESSENTIAL_VIDEO_1",
+                "0x-token-contract",
                 "0x-user-wallet",
                 1L
         )).thenThrow(new BadRequestApiException("token transfer failed"));
@@ -301,7 +307,7 @@ class UserRewardServiceTest {
     }
 
     @Test
-    void rewardOralExerciseButtonClickThrowsWhenExistingTokenTransferStillFailed() {
+    void rewardOralExerciseButtonClickThrowsWhenExistingTokenTransferStillFailed() throws Exception {
         UserRewardProperties properties = new UserRewardProperties();
         properties.setOralExerciseCoinAmount(1L);
         properties.setTokenTransferEnabled(true);
@@ -340,7 +346,8 @@ class UserRewardServiceTest {
                 .walletAddress("0x-user-wallet")
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(externalTokenClient.transferToken(any(), any(), any(), anyLong()))
+        when(externalTokenClient.getTokenList()).thenReturn(rewardTokenList());
+        when(externalTokenClient.transferToken(any(), any(), any(), any(), anyLong()))
                 .thenThrow(new BadRequestApiException("token transfer failed"));
 
         assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
@@ -391,9 +398,11 @@ class UserRewardServiceTest {
                 .walletAddress("0x-user-wallet")
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(externalTokenClient.getTokenList()).thenReturn(rewardTokenList());
         when(externalTokenClient.transferToken(
                 "did:mitum:minic:0x-user-wallet",
-                "essential_video_1",
+                "ESSENTIAL_VIDEO_1",
+                "0x-token-contract",
                 "0x-user-wallet",
                 1L
         )).thenReturn(new ObjectMapper().readTree("""
@@ -412,7 +421,8 @@ class UserRewardServiceTest {
         assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
         verify(externalTokenClient).transferToken(
                 "did:mitum:minic:0x-user-wallet",
-                "essential_video_1",
+                "ESSENTIAL_VIDEO_1",
+                "0x-token-contract",
                 "0x-user-wallet",
                 1L
         );
@@ -490,5 +500,22 @@ class UserRewardServiceTest {
                 .build();
         ReflectionTestUtils.setField(content, "oralExerciseContentId", 11L);
         return content;
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode rewardTokenList() throws Exception {
+        return new ObjectMapper().readTree("""
+                {
+                  "data": [
+                    {
+                      "contract": "0x-token-contract",
+                      "data": {
+                        "name": "ESSENTIAL_VIDEO_1",
+                        "symbol": "MYT",
+                        "supply": 100
+                      }
+                    }
+                  ]
+                }
+                """);
     }
 }

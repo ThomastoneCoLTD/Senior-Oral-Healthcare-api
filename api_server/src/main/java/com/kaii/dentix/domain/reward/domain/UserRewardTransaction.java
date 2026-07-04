@@ -53,6 +53,9 @@ public class UserRewardTransaction extends TimeEntity {
     private String coinId;
 
     @Column(length = 255)
+    private String tokenContractAddress;
+
+    @Column(length = 255)
     private String daeguChainTxHash;
 
     @Column(length = 255)
@@ -72,6 +75,10 @@ public class UserRewardTransaction extends TimeEntity {
         this.status = UserRewardTransactionStatus.TOKEN_TRANSFERRED;
         this.daeguChainTxHash = txHash;
         this.daeguChainFactHash = factHash;
+    }
+
+    public void updateTokenContractAddress(String tokenContractAddress) {
+        this.tokenContractAddress = tokenContractAddress;
     }
 
     public void markTokenTransferFailed() {

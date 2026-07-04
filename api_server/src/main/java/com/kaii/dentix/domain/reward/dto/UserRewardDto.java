@@ -82,6 +82,7 @@ public class UserRewardDto {
         private String contentTitle;
         private String sessionId;
         private String coinId;
+        private String tokenContractAddress;
         private String daeguChainTxHash;
         private String daeguChainFactHash;
         private Date created;
@@ -98,6 +99,7 @@ public class UserRewardDto {
                             : transaction.getOralExerciseContent().getTitle())
                     .sessionId(transaction.getSessionId())
                     .coinId(transaction.getCoinId())
+                    .tokenContractAddress(transaction.getTokenContractAddress())
                     .daeguChainTxHash(transaction.getDaeguChainTxHash())
                     .daeguChainFactHash(transaction.getDaeguChainFactHash())
                     .created(transaction.getCreated())

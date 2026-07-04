@@ -24,8 +24,8 @@ public class AdminDaeguChainTokenController {
     private final AdminDaeguChainTokenService adminDaeguChainTokenService;
 
     @PostMapping("/options")
-    public DataResponse<List<String>> getTokenNames() {
-        return new DataResponse<>(adminDaeguChainTokenService.getTokenNames());
+    public DataResponse<List<AdminDaeguChainTokenDto.TokenOption>> getTokenNames() {
+        return new DataResponse<>(adminDaeguChainTokenService.getTokenOptions());
     }
 
     @PostMapping("/list")
