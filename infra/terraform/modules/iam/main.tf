@@ -33,6 +33,23 @@ resource "aws_iam_role_policy" "artifact_read" {
           "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/.env",
           "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/video/*"
         ]
+      },
+      {
+        Sid    = "WriteSohApiRuntimeUploads"
+        Effect = "Allow"
+        Action = ["s3:PutObject"]
+        Resource = [
+          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/*"
+        ]
+      },
+      {
+        Sid    = "DenyRuntimeOverwriteOfDeployArtifacts"
+        Effect = "Deny"
+        Action = ["s3:PutObject"]
+        Resource = [
+          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/app.jar",
+          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/.env"
+        ]
       }
     ]
   })

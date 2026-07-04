@@ -55,7 +55,7 @@ Health URL: https://soh.thomabio.com/api/actuator/health
 ```
 
 Never swap the dev/prod artifact paths.
-EC2 roles must be able to read their environment `app.jar` and `.env` plus the shared `s3://denti-backends/soh/video/*` prefix used for presigned oral-exercise video playback.
+EC2 roles must be able to read their environment `app.jar` and `.env`, read the shared `s3://denti-backends/soh/video/*` prefix used for presigned oral-exercise video playback, and write runtime uploads such as oral-check photos under their environment prefix (`s3://denti-backends/soh/dev/*` or `s3://denti-backends/soh/prod/*`). Runtime write permissions must not allow overwriting `app.jar` or `.env`.
 
 ## Terraform
 

@@ -428,6 +428,23 @@ Dev EC2 role:
         "arn:aws:s3:::denti-backends/soh/dev/.env",
         "arn:aws:s3:::denti-backends/soh/video/*"
       ]
+    },
+    {
+      "Sid": "WriteSohDevRuntimeUploads",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": [
+        "arn:aws:s3:::denti-backends/soh/dev/*"
+      ]
+    },
+    {
+      "Sid": "DenySohDevDeployArtifactOverwrite",
+      "Effect": "Deny",
+      "Action": ["s3:PutObject"],
+      "Resource": [
+        "arn:aws:s3:::denti-backends/soh/dev/app.jar",
+        "arn:aws:s3:::denti-backends/soh/dev/.env"
+      ]
     }
   ]
 }
@@ -447,6 +464,23 @@ Prod EC2 role:
         "arn:aws:s3:::denti-backends/soh/prod/app.jar",
         "arn:aws:s3:::denti-backends/soh/prod/.env",
         "arn:aws:s3:::denti-backends/soh/video/*"
+      ]
+    },
+    {
+      "Sid": "WriteSohProdRuntimeUploads",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": [
+        "arn:aws:s3:::denti-backends/soh/prod/*"
+      ]
+    },
+    {
+      "Sid": "DenySohProdDeployArtifactOverwrite",
+      "Effect": "Deny",
+      "Action": ["s3:PutObject"],
+      "Resource": [
+        "arn:aws:s3:::denti-backends/soh/prod/app.jar",
+        "arn:aws:s3:::denti-backends/soh/prod/.env"
       ]
     }
   ]
