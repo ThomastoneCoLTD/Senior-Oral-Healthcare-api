@@ -1,4 +1,4 @@
-﻿package com.kaii.dentix.domain.user.application;
+package com.kaii.dentix.domain.user.application;
 
 import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.admin.domain.Admin;

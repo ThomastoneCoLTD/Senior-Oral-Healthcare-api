@@ -121,7 +121,7 @@ Use this checklist whenever starting a new SOH-style project or moving this proj
 
 6. Prepare AWS IAM.
    - GitHub Actions IAM user needs artifact upload, ASG refresh, and Terraform plan/apply permissions.
-   - EC2 instance roles should read only their own `app.jar` and `.env` from S3.
+   - EC2 instance roles should read only their own `app.jar` and `.env`, plus shared `soh/video/*` assets for presigned oral-exercise playback, from S3.
    - EC2 User Data must use the instance profile, not long-lived AWS access keys.
 
 7. Prepare CloudFront/API routing.
@@ -425,7 +425,8 @@ Dev EC2 role:
       "Action": ["s3:GetObject"],
       "Resource": [
         "arn:aws:s3:::denti-backends/soh/dev/app.jar",
-        "arn:aws:s3:::denti-backends/soh/dev/.env"
+        "arn:aws:s3:::denti-backends/soh/dev/.env",
+        "arn:aws:s3:::denti-backends/soh/video/*"
       ]
     }
   ]
@@ -444,7 +445,8 @@ Prod EC2 role:
       "Action": ["s3:GetObject"],
       "Resource": [
         "arn:aws:s3:::denti-backends/soh/prod/app.jar",
-        "arn:aws:s3:::denti-backends/soh/prod/.env"
+        "arn:aws:s3:::denti-backends/soh/prod/.env",
+        "arn:aws:s3:::denti-backends/soh/video/*"
       ]
     }
   ]

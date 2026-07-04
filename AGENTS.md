@@ -35,6 +35,7 @@ Workflow: .github/workflows/deploy-api-dev.yml
 Branch: dev
 Artifact path: s3://denti-backends/soh/dev/app.jar
 Env path: s3://denti-backends/soh/dev/.env
+Shared video path: s3://denti-backends/soh/video/
 ASG: soh-api-dev-asg
 Secret: SOH_API_ENV_DEV
 Health URL: https://soh-dev.thomabio.com/api/actuator/health
@@ -47,12 +48,14 @@ Workflow: .github/workflows/deploy-api-prod.yml
 Branch: prod
 Artifact path: s3://denti-backends/soh/prod/app.jar
 Env path: s3://denti-backends/soh/prod/.env
+Shared video path: s3://denti-backends/soh/video/
 ASG: soh-api-prod-asg
 Secret: SOH_API_ENV_PROD
 Health URL: https://soh.thomabio.com/api/actuator/health
 ```
 
 Never swap the dev/prod artifact paths.
+EC2 roles must be able to read their environment `app.jar` and `.env` plus the shared `s3://denti-backends/soh/video/*` prefix used for presigned oral-exercise video playback.
 
 ## Terraform
 

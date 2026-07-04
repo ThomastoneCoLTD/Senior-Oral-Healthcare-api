@@ -11,5 +11,5 @@ public interface ServiceAgreementRepository extends JpaRepository<ServiceAgreeme
 
     List<ServiceAgreement> findAll(Sort sort);
 
-    Optional<ServiceAgreement> findByServiceAgreeSort(Long serviceAgreeSort);
+    List<ServiceAgreement> findByServiceAgreeSort(Long serviceAgreeSort);
 }

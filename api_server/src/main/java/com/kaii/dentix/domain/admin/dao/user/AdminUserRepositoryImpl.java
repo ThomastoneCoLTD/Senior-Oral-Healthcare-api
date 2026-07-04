@@ -1,4 +1,4 @@
-﻿package com.kaii.dentix.domain.admin.dao.user;
+package com.kaii.dentix.domain.admin.dao.user;
 
 import com.kaii.dentix.domain.admin.dto.AdminStatisticDto;
 import com.kaii.dentix.domain.admin.dto.AdminUserDto;
