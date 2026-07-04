@@ -296,7 +296,36 @@ public class OralCheckService {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
         }
 
-        GingivitisAnalysisResponse analysisData = aiModelService.getGingivitisAiModel(picture).get();
+        GingivitisAnalysisResponse analysisData;
+        try {
+            analysisData = aiModelService.getGingivitisAiModel(picture).get();
+        } catch (ExecutionException e) {
+            log.error("[Gingivitis analysis fail] AI 모델 실행 실패 - userId={}, organizationId={}",
+                    user.getUserId(),
+                    organization != null ? organization.getOrganizationId() : null,
+                    e.getCause()
+            );
+
+            if ("dev".equals(activeProfile)) {
+                log.warn("[Gingivitis analysis replacement] 개발 환경 더미 데이터 사용");
+                analysisData = buildDevGingivitisAnalysisResponse();
+            } else {
+                return new DataResponse<>(502, "치은염 분석 서버 오류가 발생했습니다.", null);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("[Gingivitis analysis fail] AI 요청 인터럽트 - userId={}, organizationId={}",
+                    user.getUserId(),
+                    organization != null ? organization.getOrganizationId() : null,
+                    e
+            );
+            return new DataResponse<>(500, "요청 처리 중 오류가 발생했습니다.", null);
+        }
+
+        if ((analysisData == null || analysisData.getResultCode() == null) && "dev".equals(activeProfile)) {
+            log.warn("[Gingivitis analysis replacement] 개발 환경 빈 응답 더미 데이터 사용");
+            analysisData = buildDevGingivitisAnalysisResponse();
+        }
         if (analysisData == null || analysisData.getResultCode() == null) {
             throw new BadRequestApiException("치은염 분석 결과를 확인할 수 없습니다.");
         }
@@ -344,8 +373,23 @@ public class OralCheckService {
     }
 
     /**
-     * 4등분 코멘트 유형 계산
+     * 개발 환경 치은염 더미 분석 응답 생성
      */
+    private GingivitisAnalysisResponse buildDevGingivitisAnalysisResponse() {
+        Random random = new Random();
+        int upCheck = random.nextInt(3);
+        int downCheck = random.nextInt(3);
+        float allTeethCheck = Utils.getDeleteDecimalValue(random.nextFloat(30), 1);
+
+        return new GingivitisAnalysisResponse(
+                null,
+                "DEV_DUMMY",
+                200,
+                null,
+                new GingivitisAnalysisResponse.GingivitisCheck(upCheck, downCheck, allTeethCheck)
+        );
+    }
+
     public List<String> calcDivisionCommentType(OralCheck oralCheck) {
 
         // 부위별 구강 상태 Comment
