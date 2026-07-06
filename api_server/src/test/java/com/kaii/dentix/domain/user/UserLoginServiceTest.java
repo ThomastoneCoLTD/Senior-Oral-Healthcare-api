@@ -15,6 +15,7 @@ import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.domain.user.dto.UserDto;
+import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +27,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -75,6 +78,31 @@ class UserLoginServiceTest {
         assertThat(response.getAccessToken()).isEqualTo("access-token");
         assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
         assertThat(user.getUserRefreshToken()).isEqualTo("refresh-token");
-        verify(passwordEncoder, never()).matches(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    void userLoginUsesDidFlowEvenWhenPasswordIsPresent() {
+        User user = User.builder()
+                .userId(1L)
+                .userLoginIdentifier("dentix123")
+                .userName("user")
+                .userPassword("encoded-password")
+                .userPhoneNumber("01012345678")
+                .findPwdQuestionId(1L)
+                .findPwdAnswer("answer")
+                .isVerify(YnType.Y)
+                .build();
+
+        given(userRepository.findByUserLoginIdentifier("dentix123")).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userLoginService.userLogin(UserDto.LoginRequest.builder()
+                .userLoginIdentifier("dentix123")
+                .userPassword("wrong-password")
+                .build()))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage("DID is not issued.");
+
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
     }
 }

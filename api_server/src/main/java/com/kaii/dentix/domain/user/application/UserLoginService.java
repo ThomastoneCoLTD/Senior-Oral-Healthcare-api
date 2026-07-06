@@ -161,28 +161,9 @@ public class UserLoginService {
 
     @Transactional
     public UserDto.LoginResponse userLogin(UserDto.LoginRequest request) {
-        if (StringUtils.isBlank(request.getUserPassword())) {
-            return userDidLogin(UserDto.DidLoginRequest.builder()
-                    .userLoginIdentifier(request.getUserLoginIdentifier())
-                    .build());
-        }
-
-        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
-                .orElseThrow(() -> new UnauthorizedException("Invalid login identifier or password."));
-
-        if (!passwordEncoder.matches(request.getUserPassword(), user.getUserPassword())) {
-            throw new UnauthorizedException("Invalid login identifier or password.");
-        }
-
-        if (user.getIsVerify() != YnType.Y) {
-            throw new UnauthorizedException("User is not verified.");
-        }
-
-        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
-        String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
-        user.updateLogin(refreshToken);
-
-        return buildLoginResponse(user, accessToken, refreshToken);
+        return userDidLogin(UserDto.DidLoginRequest.builder()
+                .userLoginIdentifier(request.getUserLoginIdentifier())
+                .build());
     }
 
     @Transactional
