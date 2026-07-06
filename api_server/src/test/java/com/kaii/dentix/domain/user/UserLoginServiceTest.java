@@ -32,6 +32,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class UserLoginServiceTest {
@@ -104,5 +105,35 @@ class UserLoginServiceTest {
                 .hasMessage("DID is not issued.");
 
         verify(passwordEncoder, never()).matches(anyString(), anyString());
+    }
+
+    @Test
+    void userLoginReissuesLoginCredentialWhenStoredCredentialCannotBeVerified() {
+        User user = User.builder()
+                .userId(1L)
+                .userLoginIdentifier("dentix123")
+                .userName("김덴티")
+                .userPassword("DID_ONLY:dentix123")
+                .userPhoneNumber("01012345678")
+                .findPwdQuestionId(1L)
+                .findPwdAnswer("answer")
+                .isVerify(YnType.Y)
+                .daeguDid("did:mitum:minic:0x123")
+                .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
+                .daeguCredentialJwt("old-or-non-login-credential")
+                .build();
+
+        given(userRepository.findByUserLoginIdentifier("dentix123")).willReturn(Optional.of(user));
+        given(daeguChainDidService.verifyLoginUserCredential(user)).willReturn(false, true);
+        given(jwtTokenUtil.createToken(user, TokenType.AccessToken)).willReturn("access-token");
+        given(jwtTokenUtil.createToken(user, TokenType.RefreshToken)).willReturn("refresh-token");
+
+        UserDto.LoginResponse response = userLoginService.userDidLogin(UserDto.DidLoginRequest.builder()
+                .userLoginIdentifier("dentix123")
+                .build());
+
+        assertThat(response.getAccessToken()).isEqualTo("access-token");
+        verify(daeguChainDidService).issueLoginUserCredential(user);
+        verify(daeguChainDidService, times(2)).verifyLoginUserCredential(user);
     }
 }
