@@ -38,7 +38,7 @@ public class OralExerciseContentInitializer {
         for (OralExerciseContent defaultContent : defaultContents()) {
             oralExerciseContentRepository.findByContentSort(defaultContent.getContentSort())
                     .ifPresentOrElse(
-                            content -> content.applyDefaultVideoUrl(defaultContent.getVideoUrl(), TEST_VIDEO_URL),
+                            content -> content.applyDefaultContent(defaultContent, TEST_VIDEO_URL),
                             () -> oralExerciseContentRepository.save(defaultContent)
                     );
         }
@@ -48,39 +48,39 @@ public class OralExerciseContentInitializer {
         return List.of(
                 content(
                         1,
-                        "구강체조의 효능",
-                        "구강노쇠(Oral Frailty)를 이해하고 구강체조가 필요한 이유를 학습합니다.",
-                        "구강기능과 전신건강의 관계"
+                        "목 스트레칭",
+                        "경부 근육 이완, 어깨 가동성 향상, 자세 교정 운동을 학습합니다.",
+                        "경부 근육 이완, 어깨 가동성 향상, 자세 교정 운동"
                 ),
                 content(
                         2,
-                        "목 스트레칭",
-                        "경부 근육을 이완하고 어깨 가동성 향상과 자세 교정 운동을 익힙니다.",
-                        "경부 근육 이완, 어깨 가동성 향상, 자세 교정"
-                ),
-                content(
-                        3,
-                        "타액이 나오는 구강체조",
-                        "침샘 마사지, 혀 운동, 입술 운동으로 타액분비를 촉진합니다.",
+                        "타액이 나오는 입체조",
+                        "침샘 마사지, 혀 운동, 입술 운동을 통해 타액분비 촉진 방법을 학습합니다.",
                         "침샘 마사지, 혀 운동, 입술 운동, 타액분비 촉진"
                 ),
                 content(
-                        4,
-                        "삼키는 힘 기르는 구강체조",
-                        "연하근육과 목 근육을 강화하고 삼킴 훈련을 따라 합니다.",
+                        3,
+                        "삼키는 힘 기르는 입체조",
+                        "연하근육 강화, 목 근육 강화, 삼킴 훈련을 학습합니다.",
                         "연하근육 강화, 목 근육 강화, 삼킴 훈련"
                 ),
                 content(
-                        5,
-                        "말하는 힘 기르는 구강체조",
-                        "파·타·카·라 발성 훈련으로 혀 민첩성과 입술 근력을 높입니다.",
+                        4,
+                        "말하는 힘 기르는 입체조",
+                        "파·타·카·라 발성 훈련, 혀 민첩성 향상, 입술 근력 강화 운동을 학습합니다.",
                         "파·타·카·라 발성 훈련, 혀 민첩성 향상, 입술 근력 강화"
                 ),
                 content(
-                        6,
-                        "씹는 힘 기르는 구강체조",
-                        "저작근 강화, 턱관절 운동, 볼 근육 강화를 실습합니다.",
+                        5,
+                        "씹는 힘 기르는 입체조",
+                        "저작근 강화, 턱관절 운동, 볼 근육 강화를 학습합니다.",
                         "저작근 강화, 턱관절 운동, 볼 근육 강화"
+                ),
+                content(
+                        6,
+                        "입체조의 효능",
+                        "구강노쇠(Oral Frailty)를 이해하고 입체조가 필요한 이유를 학습합니다.",
+                        "구강기능과 전신건강의 관계"
                 ),
                 content(
                         7,
@@ -108,17 +108,15 @@ public class OralExerciseContentInitializer {
                 ),
                 content(
                         11,
-                        "테스트 동영상",
-                        "구강체조 콘텐츠 영상 재생을 확인하기 위한 테스트 영상입니다.",
-                        "영상 업로드 및 재생 테스트",
-                        TEST_VIDEO_URL,
-                        "테스트"
+                        "삼킴건강과 식사의 관계",
+                        "연하장애 자가점검, 음식 선택 및 식사 방법을 학습합니다.",
+                        "연하장애 자가점검, 음식 선택 및 식사 방법"
                 ),
                 content(
                         12,
-                        "구강 건강 생활습관",
-                        "일상에서 실천할 수 있는 구강 건강 관리 습관을 학습합니다.",
-                        "구강 건강 생활습관, 정기 관리, 예방 중심 관리"
+                        "구강건강 스스로 지키는 습관",
+                        "정기검진, 자기관리방법, 실천계획수립 방법을 학습합니다.",
+                        "정기검진, 자기관리방법, 실천계획수립"
                 )
         );
     }
@@ -129,7 +127,7 @@ public class OralExerciseContentInitializer {
             String description,
             String learningPoint
     ) {
-        return content(sort, title, description, learningPoint, videoUrlForSort(sort), sort == 1 ? "교육" : "실습");
+        return content(sort, title, description, learningPoint, videoUrlForSort(sort), sort <= 5 ? "필수" : "선택");
     }
 
     private OralExerciseContent content(
@@ -147,7 +145,7 @@ public class OralExerciseContentInitializer {
                 .learningPoint(learningPoint)
                 .thumbnailUrl(null)
                 .videoUrl(videoUrl)
-                .durationSeconds(300)
+                .durationSeconds(durationSecondsForSort(sort))
                 .level(level)
                 .active(true)
                 .build();
@@ -155,13 +153,25 @@ public class OralExerciseContentInitializer {
 
     private String videoUrlForSort(int sort) {
         return switch (sort) {
-            case 1 -> VIDEO_1_URL;
-            case 2 -> VIDEO_2_URL;
-            case 3 -> VIDEO_3_URL;
-            case 4 -> VIDEO_4_URL;
-            case 5 -> VIDEO_5_URL;
-            case 6 -> VIDEO_6_URL;
-            default -> TEST_VIDEO_URL;
+            case 1 -> VIDEO_2_URL;
+            case 2 -> VIDEO_3_URL;
+            case 3 -> VIDEO_4_URL;
+            case 4 -> VIDEO_5_URL;
+            case 5 -> VIDEO_6_URL;
+            case 6 -> VIDEO_1_URL;
+            default -> null;
+        };
+    }
+
+    private int durationSecondsForSort(int sort) {
+        return switch (sort) {
+            case 1 -> 212;
+            case 2 -> 176;
+            case 3 -> 172;
+            case 4 -> 428;
+            case 5 -> 232;
+            case 6 -> 114;
+            default -> 300;
         };
     }
 }

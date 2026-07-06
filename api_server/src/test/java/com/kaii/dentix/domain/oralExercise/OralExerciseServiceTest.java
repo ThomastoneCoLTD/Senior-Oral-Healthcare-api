@@ -15,6 +15,7 @@ import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.application.UserRewardService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.global.common.aws.AWSS3Service;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,7 @@ class OralExerciseServiceTest {
     private UserRewardService userRewardService;
     private UserRepository userRepository;
     private JwtTokenUtil jwtTokenUtil;
+    private AWSS3Service awss3Service;
     private OralExerciseService service;
     private HttpServletRequest request;
 
@@ -54,6 +56,7 @@ class OralExerciseServiceTest {
         userRewardService = mock(UserRewardService.class);
         userRepository = mock(UserRepository.class);
         jwtTokenUtil = mock(JwtTokenUtil.class);
+        awss3Service = mock(AWSS3Service.class);
         request = mock(HttpServletRequest.class);
 
         service = new OralExerciseService(
@@ -63,7 +66,8 @@ class OralExerciseServiceTest {
                 rewardTransactionRepository,
                 userRewardService,
                 userRepository,
-                jwtTokenUtil
+                jwtTokenUtil,
+                awss3Service
         );
 
         when(jwtTokenUtil.getAccessToken(request)).thenReturn("access-token");
