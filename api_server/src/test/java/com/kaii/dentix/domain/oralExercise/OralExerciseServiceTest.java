@@ -102,6 +102,34 @@ class OralExerciseServiceTest {
         assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
                 .containsExactly(6);
         assertThat(response.getExtraContents()).allSatisfy(content -> {
+            assertThat(content.getWeek()).isEqualTo(1);
+            assertThat(content.isAvailable()).isTrue();
+            assertThat(content.isCurrentWeekContent()).isTrue();
+        });
+    }
+
+    @Test
+    void getContentsKeepsAllExtraContentsUnlockedFromFirstWeek() {
+        User user = userCreatedDaysAgo(0);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(
+                content(1),
+                content(2),
+                content(6),
+                content(7),
+                content(8)
+        ));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        assertThat(response.getCurrentWeek()).isEqualTo(1);
+        assertThat(response.getCurrentContent().getSort()).isEqualTo(1);
+        assertThat(response.getPreviousContents()).isEmpty();
+        assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
+                .containsExactly(6, 7, 8);
+        assertThat(response.getExtraContents()).allSatisfy(content -> {
+            assertThat(content.getWeek()).isEqualTo(1);
             assertThat(content.isAvailable()).isTrue();
             assertThat(content.isCurrentWeekContent()).isTrue();
         });

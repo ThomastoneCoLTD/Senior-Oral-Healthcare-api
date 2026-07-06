@@ -44,6 +44,7 @@ public class OralExerciseDto {
             boolean currentWeekContent = coreContent
                     ? currentWeek == content.getContentSort()
                     : available;
+            int displayWeek = coreContent ? content.getContentSort() : 1;
             return ContentResponse.builder()
                     .id(content.getOralExerciseContentId())
                     .sort(content.getContentSort())
@@ -55,7 +56,7 @@ public class OralExerciseDto {
                     .durationSeconds(content.getDurationSeconds())
                     .duration(formatDuration(content.getDurationSeconds()))
                     .level(content.getLevel())
-                    .week(content.getContentSort())
+                    .week(displayWeek)
                     .coreContent(coreContent)
                     .available(available)
                     .currentWeekContent(currentWeekContent)
