@@ -357,6 +357,30 @@ public class UserLoginControllerTest {
     }
 
     @Test
+    public void userLoginDoesNotExposePasswordCheckMessage() throws Exception {
+        given(userLoginService.userLogin(any(UserDto.LoginRequest.class)))
+                .willThrow(new UnauthorizedException("Invalid login identifier or password."));
+
+        String request = """
+                {
+                  "userType": "user",
+                  "loginId": "dentix123",
+                  "password": "password!"
+                }
+                """;
+
+        mockMvc.perform(
+                        RestDocumentationRequestBuilders.post("/login")
+                                .header("Accept-Language", "en-US")
+                                .content(request)
+                                .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(401))
+                .andExpect(jsonPath("rtMsg").value("DID credential verification failed."));
+    }
+
+    @Test
     public void userLoginRequiresAdminApprovalMessageInKorean() throws Exception {
         given(userLoginService.userLogin(any(UserDto.LoginRequest.class)))
                 .willThrow(new UnauthorizedException("관리자 승인을 받아야 로그인할 수 있습니다."));

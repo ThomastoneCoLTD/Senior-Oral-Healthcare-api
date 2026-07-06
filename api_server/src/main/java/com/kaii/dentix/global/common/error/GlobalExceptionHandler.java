@@ -239,8 +239,9 @@ public class GlobalExceptionHandler {
     private String translateUnauthorizedMessage(HttpServletRequest request, String message) {
         boolean english = isEnglishRequest(request);
 
-        if ("아이디 혹은 비밀번호가 올바르지 않습니다.".equals(message)) {
-            return english ? "Please check your ID or password." : message;
+        if ("아이디 혹은 비밀번호가 올바르지 않습니다.".equals(message)
+                || "Invalid login identifier or password.".equals(message)) {
+            return "DID credential verification failed.";
         }
 
         if ("관리자 승인을 받아야 로그인할 수 있습니다.".equals(message)
