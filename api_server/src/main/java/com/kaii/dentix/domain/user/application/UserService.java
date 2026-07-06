@@ -18,7 +18,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +31,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtTokenUtil jwtTokenUtil;
     private final ApplicationEventPublisher publisher;
-    private final PasswordEncoder passwordEncoder;
     private final FindPwdQuestionRepository findPwdQuestionRepository;
 
     public User getTokenUser(HttpServletRequest request) {
@@ -112,21 +110,6 @@ public class UserService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
-    }
-
-    @Transactional
-    public void userPasswordVerify(HttpServletRequest httpServletRequest, UserDto.PasswordVerifyRequest request) {
-        User user = this.getTokenUser(httpServletRequest);
-
-        if (!passwordEncoder.matches(request.getUserPassword(), user.getUserPassword())) {
-            throw new UnauthorizedException("Password does not match.");
-        }
-    }
-
-    @Transactional
-    public void userModifyPassword(HttpServletRequest httpServletRequest, UserDto.ModifyPasswordRequest request) {
-        User user = this.getTokenUser(httpServletRequest);
-        user.modifyUserPassword(passwordEncoder, request.getUserPassword());
     }
 
     @Transactional

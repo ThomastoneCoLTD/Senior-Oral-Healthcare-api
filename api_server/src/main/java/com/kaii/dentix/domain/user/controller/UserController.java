@@ -40,20 +40,6 @@ public class UserController {
         return new DataResponse<>(userService.userModifyInfo(request, dto));
     }
 
-    /** 비밀번호 확인 */
-    @PostMapping("/password-verify")
-    public SuccessResponse userPasswordVerify(HttpServletRequest request, @Valid @RequestBody UserDto.PasswordVerifyRequest dto) {
-        userService.userPasswordVerify(request, dto);
-        return new SuccessResponse();
-    }
-
-    /** 비밀번호 변경 */
-    @PutMapping("/password")
-    public SuccessResponse userModifyPassword(HttpServletRequest request, @Valid @RequestBody UserDto.ModifyPasswordRequest dto) {
-        userService.userModifyPassword(request, dto);
-        return new SuccessResponse();
-    }
-
     /** QnA 수정 */
     @PutMapping("/qna")
     public DataResponse<UserDto.ModifyQnAResponse> userModifyQnA(HttpServletRequest request, @Valid @RequestBody UserDto.ModifyQnARequest dto) {

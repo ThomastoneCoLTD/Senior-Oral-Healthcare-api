@@ -224,14 +224,6 @@ public class UserDto {
         private String userPassword;
     }
 
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class PasswordVerifyRequest {
-        @NotBlank(message = "비밀번호는 필수입니다.")
-        @JsonSerialize(using = PasswordSerializer.class)
-        private String userPassword;
-    }
-
     // =================================================================
     // 5. 비밀번호 찾기 (FindPassword)
     // =================================================================

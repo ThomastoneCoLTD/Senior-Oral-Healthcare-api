@@ -184,45 +184,6 @@ include::{snippets}/login/password/request-fields.adoc[]
 include::{snippets}/login/password/response-fields.adoc[]
 include::{snippets}/login/password/response-body.adoc[]
 
-[[userPasswordVerify]]
-== 10. 사용자 비밀번호 확인
-*보안정보 수정을 위한 비밀번호 확인 API*
-
-*[ 비밀번호 확인 실패 ]*::
-
-- 사용자 조회 불가능 : `"존재하지 않는 사용자입니다."` (rt : 416)
-- 비밀번호 불일치 : `"비밀번호가 일치하지 않습니다."` (rt : 401)
-
-*[ 개발 중 잘못된 Request나 데이터 오류로 인해 발생할 수 있는 경우 ]*::
-- 사용자 권한이 아닌 경우 : `"권한이 없는 사용자입니다."` (rt : 401)
-
-=== Http
-include::{snippets}/user/password-verify/http-request.adoc[]
-=== Request
-include::{snippets}/user/password-verify/request-fields.adoc[]
-=== Response
-include::{snippets}/user/password-verify/response-fields.adoc[]
-include::{snippets}/user/password-verify/response-body.adoc[]
-
-[[userInfoModifyPassword]]
-== 11. 사용자 보안정보 수정 - 비밀번호 변경
-*보안정보 수정 시, 비밀번호 변경 API*
-
-*[ 비밀번호 변경 실패 ]*::
-
-- 사용자 조회 불가능 : `"존재하지 않는 사용자입니다."` (rt : 416)
-
-*[ 개발 중 잘못된 Request나 데이터 오류로 인해 발생할 수 있는 경우 ]*::
-- 사용자 권한이 아닌 경우 : `"권한이 없는 사용자입니다."` (rt : 401)
-
-=== Http
-include::{snippets}/user/password/http-request.adoc[]
-=== Request
-include::{snippets}/user/password/request-fields.adoc[]
-=== Response
-include::{snippets}/user/password/response-fields.adoc[]
-include::{snippets}/user/password/response-body.adoc[]
-
 [[userInfoModifyQnA]]
 == 12. 사용자 보안정보 수정 - 질문과 답변 수정
 *보안정보 수정 시, 질문과 답변 수정 API*

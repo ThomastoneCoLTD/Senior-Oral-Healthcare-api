@@ -33,7 +33,6 @@ import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -70,9 +69,6 @@ public class UserControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @MockBean
-    private PasswordEncoder passwordEncoder;
 
     @MockBean
     private UserService userService;
@@ -257,94 +253,6 @@ public class UserControllerTest {
                 ));
 
         verify(userService).userAutoLogin(any(HttpServletRequest.class));
-
-    }
-
-    /**
-     *  사용자 비밀번호 확인
-     */
-    @Test
-    public void userPasswordVerify() throws Exception{
-
-        // given
-        doNothing().when(userService).userPasswordVerify(any(HttpServletRequest.class), any(UserDto.PasswordVerifyRequest.class));
-
-        String password = "password";
-        UserDto.PasswordVerifyRequest userPasswordVerifyRequest = UserDto.PasswordVerifyRequest.builder()
-                .userPassword(password)
-                .build();
-        given(passwordEncoder.encode(any(String.class))).willReturn(password);
-
-        // when
-        ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.post("/user/password-verify")
-                        .content(objectMapper.writeValueAsString(userPasswordVerifyRequest))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
-                        .with(user("user").roles("USER"))
-        );
-
-        // then
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(document("user/password-verify",
-                        getDocumentRequest(),
-                        getDocumentResponse(),
-                        requestFields(
-                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호")
-                        ),
-                        responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지")
-                        )
-                ));
-
-        verify(userService).userPasswordVerify(any(HttpServletRequest.class), any(UserDto.PasswordVerifyRequest.class));
-
-    }
-
-    /**
-     *  사용자 보안정보수정 - 비밀번호 변경
-     */
-    @Test
-    public void userModifyPassword() throws Exception{
-
-        // given
-        doNothing().when(userService).userModifyPassword(any(HttpServletRequest.class), any(UserDto.ModifyPasswordRequest.class));
-
-        String password = "password!";
-        UserDto.ModifyPasswordRequest userInfoModifyPasswordRequest = UserDto.ModifyPasswordRequest.builder()
-                .userPassword(password)
-                .build();
-        given(passwordEncoder.encode(any(String.class))).willReturn(password);
-
-        // when
-        ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.put("/user/password")
-                        .content(objectMapper.writeValueAsString(userInfoModifyPasswordRequest))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
-                        .with(user("user").roles("USER"))
-        );
-
-        // then
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(document("user/password",
-                        getDocumentRequest(),
-                        getDocumentResponse(),
-                        requestFields(
-                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호")
-                        ),
-                        responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지")
-                        )
-                ));
-
-        verify(userService).userModifyPassword(any(HttpServletRequest.class), any(UserDto.ModifyPasswordRequest.class));
 
     }
 
