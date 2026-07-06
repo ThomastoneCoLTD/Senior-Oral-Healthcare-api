@@ -34,6 +34,7 @@ public class WebSecurityConfig {
 
     public static String[] EXCLUDE_URLS = {
             "/actuator/health",
+            "/api/actuator/health",
             "/docs/*",
             "/login", "/login/**",
             "/admin/user/bulk-upload/template/*",
@@ -122,6 +123,8 @@ public class WebSecurityConfig {
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/health/**",
+                                "/api/actuator/health",
+                                "/api/actuator/health/**",
                                 "/admin/billing/export/excel/**",
                                 "/admin/user/bulk-upload/template/**"
                         ).permitAll()
