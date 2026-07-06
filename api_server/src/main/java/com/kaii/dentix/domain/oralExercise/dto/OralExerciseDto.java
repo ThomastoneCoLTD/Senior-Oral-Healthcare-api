@@ -41,6 +41,9 @@ public class OralExerciseDto {
         ) {
             boolean coreContent = content.getContentSort() <= 5;
             boolean available = !coreContent || currentWeek <= 0 || content.getContentSort() <= currentWeek;
+            boolean currentWeekContent = coreContent
+                    ? currentWeek == content.getContentSort()
+                    : available;
             return ContentResponse.builder()
                     .id(content.getOralExerciseContentId())
                     .sort(content.getContentSort())
@@ -55,7 +58,7 @@ public class OralExerciseDto {
                     .week(content.getContentSort())
                     .coreContent(coreContent)
                     .available(available)
-                    .currentWeekContent(coreContent && currentWeek == content.getContentSort())
+                    .currentWeekContent(currentWeekContent)
                     .rewardReceived(rewardReceived)
                     .buttonChallenge(ButtonChallengeResponse.forContent(rewardReceived))
                     .progress(ProgressResponse.from(progress))

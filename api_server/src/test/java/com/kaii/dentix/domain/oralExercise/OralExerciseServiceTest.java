@@ -101,6 +101,10 @@ class OralExerciseServiceTest {
                 .satisfies(content -> assertThat(content.isAvailable()).isFalse());
         assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
                 .containsExactly(6);
+        assertThat(response.getExtraContents()).allSatisfy(content -> {
+            assertThat(content.isAvailable()).isTrue();
+            assertThat(content.isCurrentWeekContent()).isTrue();
+        });
     }
 
     @Test
