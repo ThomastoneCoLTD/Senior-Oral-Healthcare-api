@@ -307,7 +307,7 @@ public class UserLoginControllerTest {
                         requestFields(
                                 fieldWithPath("userType").type(JsonFieldType.STRING).description("로그인 사용자 타입"),
                                 fieldWithPath("loginId").type(JsonFieldType.STRING).description("사용자 아이디"),
-                                fieldWithPath("password").type(JsonFieldType.STRING).description("사용자 비밀번호")
+                                fieldWithPath("password").type(JsonFieldType.STRING).optional().description("관리자 비밀번호. 사용자 로그인은 비밀번호 없이 요청 가능")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
@@ -328,6 +328,30 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("DaeguChain DID status")
                         )
                 ));
+
+        verify(userLoginService).userLogin(any(UserDto.LoginRequest.class));
+    }
+
+    @Test
+    public void userLoginAllowsPasswordlessUserRequest() throws Exception {
+        given(userLoginService.userLogin(any(UserDto.LoginRequest.class))).willReturn(userLoginDto());
+
+        String request = """
+                {
+                  "userType": "user",
+                  "loginId": "dentix123"
+                }
+                """;
+
+        ResultActions resultActions = mockMvc.perform(
+                RestDocumentationRequestBuilders.post("/login")
+                        .content(request)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .with(user("user").roles("USER"))
+        );
+
+        resultActions.andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200));
 
         verify(userLoginService).userLogin(any(UserDto.LoginRequest.class));
     }

@@ -41,7 +41,6 @@ public class UserDto {
         @NotBlank(message = "아이디는 필수입니다.")
         private String userLoginIdentifier;
 
-        @NotBlank(message = "비밀번호는 필수입니다.")
         @JsonSerialize(using = PasswordSerializer.class)
         private String userPassword;
     }

@@ -161,6 +161,12 @@ public class UserLoginService {
 
     @Transactional
     public UserDto.LoginResponse userLogin(UserDto.LoginRequest request) {
+        if (StringUtils.isBlank(request.getUserPassword())) {
+            return userDidLogin(UserDto.DidLoginRequest.builder()
+                    .userLoginIdentifier(request.getUserLoginIdentifier())
+                    .build());
+        }
+
         User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
                 .orElseThrow(() -> new UnauthorizedException("Invalid login identifier or password."));
 

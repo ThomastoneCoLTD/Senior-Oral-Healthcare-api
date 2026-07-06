@@ -5,6 +5,7 @@ import com.kaii.dentix.domain.admin.dto.AdminAuthDto;
 import com.kaii.dentix.domain.auth.dto.AuthDto;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.dto.UserDto;
+import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -33,6 +34,10 @@ public class AuthController {
 
         switch (userType) {
             case "admin":
+                if (loginRequest.getPassword() == null || loginRequest.getPassword().isBlank()) {
+                    throw new BadRequestApiException("관리자 비밀번호를 입력해주세요.");
+                }
+
                 // 1. Admin DTO로 변환
                 AdminAuthDto.LoginRequest adminReq = AdminAuthDto.LoginRequest.builder()
                         .loginId(loginRequest.getLoginId())
