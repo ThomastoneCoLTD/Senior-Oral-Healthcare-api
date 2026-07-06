@@ -291,6 +291,10 @@ public class OralCheckService {
         User user = userService.getTokenUser(request);
         Organization organization = user.getOrganization();
 
+        if (picture == null || picture.isEmpty()) {
+            throw new BadRequestApiException("치은염 분석 이미지 파일이 필요합니다.");
+        }
+
         String uploadedUrl = awss3Service.upload(picture, folderPath, true);
         if (StringUtils.isBlank(uploadedUrl)) {
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");

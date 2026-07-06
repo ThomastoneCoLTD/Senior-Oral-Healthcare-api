@@ -41,9 +41,11 @@ public class OralCheckController {
     @PostMapping("/gingivitis")
     public DataResponse<GingivitisAnalysisResponse> gingivitisCheck(
             HttpServletRequest request,
-            @RequestParam("picture") MultipartFile picture
+            @RequestParam(value = "picture", required = false) MultipartFile picture,
+            @RequestParam(value = "file", required = false) MultipartFile file
     ) throws Exception {
-        return oralCheckService.gingivitisCheck(request, picture);
+        MultipartFile uploadFile = picture != null ? picture : file;
+        return oralCheckService.gingivitisCheck(request, uploadFile);
     }
 
 

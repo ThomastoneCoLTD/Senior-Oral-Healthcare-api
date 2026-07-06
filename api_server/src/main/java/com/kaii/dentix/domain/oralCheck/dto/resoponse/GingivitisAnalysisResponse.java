@@ -1,5 +1,6 @@
 package com.kaii.dentix.domain.oralCheck.dto.resoponse;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,6 +18,7 @@ public class GingivitisAnalysisResponse {
     @JsonProperty("image_name")
     private String imageName;
 
+    @JsonAlias({"result_code", "status_code", "statusCode"})
     private Integer resultCode;
 
     private Long oralCheckId;
