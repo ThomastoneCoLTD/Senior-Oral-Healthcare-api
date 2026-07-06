@@ -39,6 +39,7 @@ Shared video path: s3://denti-backends/soh/video/
 ASG: soh-api-dev-asg
 Secret: SOH_API_ENV_DEV
 Health URL: https://soh-dev.thomabio.com/api/actuator/health
+Instance refresh: uses MinHealthyPercentage 0 because dev runs a single API instance and must be able to replace an unhealthy target.
 ```
 
 Production API:

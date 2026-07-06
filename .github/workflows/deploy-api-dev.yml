@@ -94,5 +94,5 @@ jobs:
         run: |
           aws autoscaling start-instance-refresh \
             --auto-scaling-group-name "${ASG_NAME}" \
-            --preferences '{"InstanceWarmup":180,"MinHealthyPercentage":100}'
+            --preferences '{"InstanceWarmup":180,"MinHealthyPercentage":0}'
 

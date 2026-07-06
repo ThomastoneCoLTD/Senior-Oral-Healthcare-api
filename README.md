@@ -252,7 +252,7 @@ Development API deployment:
 4. `SOH_API_ENV_DEV` creates `.env`.
 5. Uploads `s3://denti-backends/soh/dev/app.jar`.
 6. Uploads `s3://denti-backends/soh/dev/.env`.
-7. Starts `soh-api-dev-asg` Instance Refresh.
+7. Starts `soh-api-dev-asg` Instance Refresh with `MinHealthyPercentage=0` so the single-instance dev API can recover when the existing target is already unhealthy.
 8. New EC2 instances run User Data and download `app.jar` and `.env` from S3.
 9. systemd starts `soh-api-dev`.
 10. Check `https://soh-dev.thomabio.com/api/actuator/health`.
