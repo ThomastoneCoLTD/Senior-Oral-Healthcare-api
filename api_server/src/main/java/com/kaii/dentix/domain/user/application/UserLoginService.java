@@ -260,30 +260,6 @@ public class UserLoginService {
         }
     }
 
-    @Transactional
-    public UserDto.FindPasswordResponse userFindPassword(UserDto.FindPasswordRequest request) {
-        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
-                .orElseThrow(() -> new NotFoundDataException("User does not exist."));
-
-        if (!user.getFindPwdQuestionId().equals(request.getFindPwdQuestionId())
-                || !user.getFindPwdAnswer().equals(request.getFindPwdAnswer())) {
-            throw new UnauthorizedException("Password question answer does not match.");
-        }
-
-        return UserDto.FindPasswordResponse.builder()
-                .userId(user.getUserId())
-                .userName(user.getUserName())
-                .userLoginIdentifier(user.getUserLoginIdentifier())
-                .build();
-    }
-
-    @Transactional
-    public void userModifyPassword(Long userId, UserDto.ModifyPasswordRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundDataException("User does not exist."));
-        user.setUserPassword(passwordEncoder.encode(request.getUserPassword()));
-    }
-
     private Long resolveDefaultFindPwdQuestionId() {
         return findPwdQuestionRepository.findAll().stream()
                 .findFirst()

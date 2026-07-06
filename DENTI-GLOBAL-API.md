@@ -107,57 +107,6 @@
 | deviceType | iOS |
 
 ---
-#### 비밀번호 찾기
-**POST** `{{host}}/login/find-password`
-### Request Body
-```json
-{
-    "userLoginIdentifier" : "test1111",
-    "findPwdQuestionId" : 1,
-    "findPwdAnswer" : "red"
-}
-```
-
----
-#### 비밀번호 확인
-**POST** `{{host}}/user/password-verify`
-### Request Headers
-| Key | Value |
-|-----|--------|
-| Authorization | eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI1MSIsInJvbGVzIjoiUk9MRV9VU0VSIiwiaWF0IjoxNzYyMjE4MDg2LCJleHAiOjE3NjIyMjUyODZ9.yaqAifj71q2pMsRNzvGhaJCsDvvoV-nDd_ASo_7aafo |
-### Request Body
-```json
-{
-    "userPassword" : "qwer1234!"
-}
-```
-
----
-#### 비밀번호 재설정
-**PUT** `{{host}}/login/password`
-### Request Body
-```json
-{
-    "userId" : 25,
-    "userPassword" : "test1234!"
-}
-```
-
----
-#### 보안정보 수정 : 비밀번호 변경
-**PUT** `{{host}}/user/password`
-### Request Headers
-| Key | Value |
-|-----|--------|
-| Authorization | eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMCIsInJvbGVzIjoiUk9MRV9VU0VSIiwiaWF0IjoxNjkwODcxNDQ1LCJleHAiOjE2OTA4Nzg2NDV9.zcr4-MnLjP48EDRvJzQ9aivg5GggFWmHKV3r3JZN_-Q |
-### Request Body
-```json
-{
-    "userPassword" : "qwer1234!"
-}
-```
-
----
 #### 보안정보 수정 : 질문과 답변 수정
 **PUT** `{{host}}/user/qna`
 ### Request Headers

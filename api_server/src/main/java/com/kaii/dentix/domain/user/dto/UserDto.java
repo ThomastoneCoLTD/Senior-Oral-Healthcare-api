@@ -213,37 +213,8 @@ public class UserDto {
         private GenderType userGender;
     }
 
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class ModifyPasswordRequest {
-        @NotBlank(message = "비밀번호는 필수입니다.")
-        @Size(min = 8, max = 20, message = "비밀번호는 최소 8자부터 최대 20자입니다.")
-        @Pattern(regexp = "^(?=.*[a-zA-Z])(?=.*[!@#$%^&*])[a-zA-Z!@#$%^&*0-9]+$", message = "비밀번호는 영문과 특수문자가 필수입니다.")
-        @JsonSerialize(using = PasswordSerializer.class)
-        private String userPassword;
-    }
-
     // =================================================================
-    // 5. 비밀번호 찾기 (FindPassword)
-    // =================================================================
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class FindPasswordRequest {
-        @NotBlank private String userLoginIdentifier;
-        @NotNull private Long findPwdQuestionId;
-        @NotBlank private String findPwdAnswer;
-    }
-
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class FindPasswordResponse {
-        private Long userId;
-        private String userName;
-        private String userLoginIdentifier;
-    }
-
-    // =================================================================
-    // 6. QnA 수정 및 서비스 변경
+    // 5. QnA 수정 및 서비스 변경
     // =================================================================
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor

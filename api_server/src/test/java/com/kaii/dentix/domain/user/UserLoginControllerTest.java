@@ -35,7 +35,6 @@ import static com.kaii.dentix.common.ApiDocumentUtils.getDocumentRequest;
 import static com.kaii.dentix.common.ApiDocumentUtils.getDocumentResponse;
 import static com.kaii.dentix.common.DocumentOptionalGenerator.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -111,14 +110,6 @@ public class UserLoginControllerTest {
                 .organizationName("테스트 치과")
                 .organizationPlanName("GROWTH")
                 .organizationCustomSurveyEnabled(true)
-                .build();
-    }
-
-    private UserDto.FindPasswordResponse userFindPasswordDto() {
-        return UserDto.FindPasswordResponse.builder()
-                .userId(1L)
-                .userLoginIdentifier("dentix123")
-                .userName("김덴티")
                 .build();
     }
 
@@ -425,92 +416,6 @@ public class UserLoginControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(401))
                 .andExpect(jsonPath("rtMsg").value("Administrator approval is required before you can log in."));
-    }
-
-    /**
-     * 사용자 비밀번호 찾기 (질문/답변 검증)
-     */
-    @Test
-    public void userFindPassword() throws Exception {
-        // given
-        given(userLoginService.userFindPassword(any(UserDto.FindPasswordRequest.class))).willReturn(userFindPasswordDto());
-
-        UserDto.FindPasswordRequest request = UserDto.FindPasswordRequest.builder()
-                .userLoginIdentifier("dentix123")
-                .findPwdQuestionId(1L)
-                .findPwdAnswer("초록색")
-                .build();
-
-        // when
-        ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.post("/login/find-password")
-                        .content(objectMapper.writeValueAsString(request))
-                        .contentType(MediaType.APPLICATION_JSON)
-        );
-
-        // then
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andDo(document("login/find-password",
-                        getDocumentRequest(),
-                        getDocumentResponse(),
-                        requestFields(
-                                fieldWithPath("userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
-                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
-                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변")
-                        ),
-                        responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
-                                fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
-                                fieldWithPath("response.userId").type(JsonFieldType.NUMBER).description("사용자 고유 번호"),
-                                fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 이름"),
-                                fieldWithPath("response.userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디")
-                        )
-                ));
-
-        verify(userLoginService).userFindPassword(any(UserDto.FindPasswordRequest.class));
-    }
-
-    /**
-     * 사용자 비밀번호 재설정
-     */
-    @Test
-    public void modifyPassword() throws Exception {
-        // given
-        doNothing().when(userLoginService).userModifyPassword(any(Long.class), any(UserDto.ModifyPasswordRequest.class));
-
-        UserDto.ModifyPasswordRequest request = UserDto.ModifyPasswordRequest.builder()
-                .userPassword("newPassword!")
-                .build();
-
-        // when
-        ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.put("/login/password")
-                        .param("userId", "1") // Query Param
-                        .content(objectMapper.writeValueAsString(request))
-                        .contentType(MediaType.APPLICATION_JSON)
-        );
-
-        // then
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andDo(document("login/password",
-                        getDocumentRequest(),
-                        getDocumentResponse(),
-                        queryParameters(
-                                parameterWithName("userId").description("사용자 고유 번호")
-                        ),
-                        requestFields(
-                                fieldWithPath("userPassword").type(JsonFieldType.NULL).optional().description("변경할 새 비밀번호")
-                        ),
-                        responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지")
-                        )
-                ));
-
-        verify(userLoginService).userModifyPassword(eq(1L), any(UserDto.ModifyPasswordRequest.class));
     }
 
     /**

@@ -8,7 +8,6 @@ import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -55,19 +54,6 @@ public class UserLoginController {
     @GetMapping("/loginIdentifier-check")
     public SuccessResponse loginIdCheck(@RequestParam @NotBlank String userLoginIdentifier) {
         userLoginService.loginIdCheck(userLoginIdentifier);
-        return new SuccessResponse();
-    }
-
-    /** 비밀번호 찾기 (질문/답변 검증) */
-    @PostMapping("/find-password")
-    public DataResponse<UserDto.FindPasswordResponse> userFindPassword(@Valid @RequestBody UserDto.FindPasswordRequest request) {
-        return new DataResponse<>(userLoginService.userFindPassword(request));
-    }
-
-    /** 비밀번호 재설정 (인증 후) */
-    @PutMapping("/password")
-    public SuccessResponse userModifyPassword(@RequestBody UserDto.ModifyPasswordRequest request, @RequestParam Long userId) {
-        userLoginService.userModifyPassword(userId, request);
         return new SuccessResponse();
     }
 
