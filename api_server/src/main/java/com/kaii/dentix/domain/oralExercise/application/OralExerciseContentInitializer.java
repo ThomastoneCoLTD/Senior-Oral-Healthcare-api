@@ -152,25 +152,29 @@ public class OralExerciseContentInitializer {
     }
 
     private String videoUrlForSort(int sort) {
+        if (sort >= 6) {
+            return VIDEO_1_URL;
+        }
         return switch (sort) {
             case 1 -> VIDEO_2_URL;
             case 2 -> VIDEO_3_URL;
             case 3 -> VIDEO_4_URL;
             case 4 -> VIDEO_5_URL;
             case 5 -> VIDEO_6_URL;
-            case 6 -> VIDEO_1_URL;
             default -> null;
         };
     }
 
     private int durationSecondsForSort(int sort) {
+        if (sort >= 6) {
+            return 114;
+        }
         return switch (sort) {
             case 1 -> 212;
             case 2 -> 176;
             case 3 -> 172;
             case 4 -> 428;
             case 5 -> 232;
-            case 6 -> 114;
             default -> 300;
         };
     }
