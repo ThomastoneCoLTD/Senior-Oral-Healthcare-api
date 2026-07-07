@@ -247,24 +247,15 @@ public class UserLoginService {
         }
 
         if (StringUtils.isBlank(user.getDaeguCredentialJwt())) {
-            issueLoginCredentialOrThrow(user);
+            try {
+                daeguChainDidService.issueLoginUserCredential(user);
+            } catch (RuntimeException exception) {
+                user.markDaeguCredentialFailed();
+                throw new UnauthorizedException("DID credential verification failed.");
+            }
         }
 
-        if (daeguChainDidService.verifyLoginUserCredential(user)) {
-            return;
-        }
-
-        issueLoginCredentialOrThrow(user);
         if (!daeguChainDidService.verifyLoginUserCredential(user)) {
-            throw new UnauthorizedException("DID credential verification failed.");
-        }
-    }
-
-    private void issueLoginCredentialOrThrow(User user) {
-        try {
-            daeguChainDidService.issueLoginUserCredential(user);
-        } catch (RuntimeException exception) {
-            user.markDaeguCredentialFailed();
             throw new UnauthorizedException("DID credential verification failed.");
         }
     }
