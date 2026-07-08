@@ -49,18 +49,23 @@ public class AdminDaeguChainTokenService {
             ));
 
     public List<AdminDaeguChainTokenDto.TokenOption> getTokenOptions() {
-        Map<String, AdminDaeguChainTokenDto.TokenOption> tokenOptions = new LinkedHashMap<>();
-        JsonNode data = externalTokenClient.getTokenList();
-        JsonNode tokens = findTokenArray(data);
+        Map<String, AdminDaeguChainTokenDto.TokenOption> tokenOptions = defaultRewardTokenOptions();
+        JsonNode tokens;
+        try {
+            JsonNode data = externalTokenClient.getTokenList();
+            tokens = findTokenArray(data);
+        } catch (RuntimeException exception) {
+            return sortedRewardTokenOptions(tokenOptions);
+        }
         if (tokens == null || !tokens.isArray()) {
-            return List.of();
+            return sortedRewardTokenOptions(tokenOptions);
         }
 
         for (JsonNode token : tokens) {
             String name = extractTokenName(token);
             String contractAddress = extractContractAddress(token);
             if (!isBlank(name) && !isBlank(contractAddress) && isRewardTokenName(name)) {
-                tokenOptions.putIfAbsent(
+                tokenOptions.put(
                         name.toLowerCase(Locale.ROOT),
                         AdminDaeguChainTokenDto.TokenOption.builder()
                                 .tokenName(name)
@@ -76,6 +81,26 @@ public class AdminDaeguChainTokenService {
                 );
             }
         }
+        return sortedRewardTokenOptions(tokenOptions);
+    }
+
+    private Map<String, AdminDaeguChainTokenDto.TokenOption> defaultRewardTokenOptions() {
+        Map<String, AdminDaeguChainTokenDto.TokenOption> tokenOptions = new LinkedHashMap<>();
+        for (String tokenName : REWARD_TOKEN_NAMES) {
+            tokenOptions.put(
+                    tokenName.toLowerCase(Locale.ROOT),
+                    AdminDaeguChainTokenDto.TokenOption.builder()
+                            .tokenName(tokenName)
+                            .contractAddress(tokenName)
+                            .build()
+            );
+        }
+        return tokenOptions;
+    }
+
+    private List<AdminDaeguChainTokenDto.TokenOption> sortedRewardTokenOptions(
+            Map<String, AdminDaeguChainTokenDto.TokenOption> tokenOptions
+    ) {
         return tokenOptions.values().stream()
                 .sorted(Comparator.comparingInt(option -> rewardTokenOrder(option.getTokenName())))
                 .toList();

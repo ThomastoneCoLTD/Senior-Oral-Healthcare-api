@@ -64,7 +64,20 @@ class AdminDaeguChainTokenServiceTest {
 
         List<String> tokenNames = service.getTokenNames();
 
-        assertThat(tokenNames).containsExactly("ESSENTIAL_VIDEO_1", "ESSENTIAL_VIDEO_2");
+        assertThat(tokenNames).containsExactly(
+                "ESSENTIAL_VIDEO_1",
+                "ESSENTIAL_VIDEO_2",
+                "ESSENTIAL_VIDEO_3",
+                "ESSENTIAL_VIDEO_4",
+                "ESSENTIAL_VIDEO_5",
+                "OPTIONAL_VIDEO_1",
+                "OPTIONAL_VIDEO_2",
+                "OPTIONAL_VIDEO_3",
+                "OPTIONAL_VIDEO_4",
+                "OPTIONAL_VIDEO_5",
+                "OPTIONAL_VIDEO_6",
+                "OPTIONAL_VIDEO_7"
+        );
     }
 
     @Test
@@ -103,13 +116,39 @@ class AdminDaeguChainTokenServiceTest {
         List<AdminDaeguChainTokenDto.TokenOption> tokenOptions = service.getTokenOptions();
 
         assertThat(tokenOptions).extracting(AdminDaeguChainTokenDto.TokenOption::getTokenName)
-                .containsExactly("ESSENTIAL_VIDEO_5", "OPTIONAL_VIDEO_1");
-        assertThat(tokenOptions.get(0).getContractAddress()).isEqualTo("0x-essential-5");
-        assertThat(tokenOptions.get(0).getDecimals()).isEqualTo(9);
-        assertThat(tokenOptions.get(0).getOwner()).isEqualTo("0x-owner");
-        assertThat(tokenOptions.get(0).getTxHash()).isEqualTo("tx-hash");
-        assertThat(tokenOptions.get(0).getFactHash()).isEqualTo("fact-hash");
-        assertThat(tokenOptions.get(0).getIssued()).isEqualTo("2026-07-04T02:56:39.524Z");
+                .containsExactly(
+                        "ESSENTIAL_VIDEO_1",
+                        "ESSENTIAL_VIDEO_2",
+                        "ESSENTIAL_VIDEO_3",
+                        "ESSENTIAL_VIDEO_4",
+                        "ESSENTIAL_VIDEO_5",
+                        "OPTIONAL_VIDEO_1",
+                        "OPTIONAL_VIDEO_2",
+                        "OPTIONAL_VIDEO_3",
+                        "OPTIONAL_VIDEO_4",
+                        "OPTIONAL_VIDEO_5",
+                        "OPTIONAL_VIDEO_6",
+                        "OPTIONAL_VIDEO_7"
+                );
+        AdminDaeguChainTokenDto.TokenOption essential5 = tokenOptions.get(4);
+        assertThat(essential5.getContractAddress()).isEqualTo("0x-essential-5");
+        assertThat(essential5.getDecimals()).isEqualTo(9);
+        assertThat(essential5.getOwner()).isEqualTo("0x-owner");
+        assertThat(essential5.getTxHash()).isEqualTo("tx-hash");
+        assertThat(essential5.getFactHash()).isEqualTo("fact-hash");
+        assertThat(essential5.getIssued()).isEqualTo("2026-07-04T02:56:39.524Z");
+    }
+
+    @Test
+    void getTokenOptionsFallsBackToRewardTokenNamesWhenExternalTokenServerFails() {
+        when(externalTokenClient.getTokenList()).thenThrow(new BadRequestApiException("token server error"));
+
+        List<AdminDaeguChainTokenDto.TokenOption> tokenOptions = service.getTokenOptions();
+
+        assertThat(tokenOptions).hasSize(12);
+        assertThat(tokenOptions.get(0).getTokenName()).isEqualTo("ESSENTIAL_VIDEO_1");
+        assertThat(tokenOptions.get(0).getContractAddress()).isEqualTo("ESSENTIAL_VIDEO_1");
+        assertThat(tokenOptions.get(11).getTokenName()).isEqualTo("OPTIONAL_VIDEO_7");
     }
 
     @Test
