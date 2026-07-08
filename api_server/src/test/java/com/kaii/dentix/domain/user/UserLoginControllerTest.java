@@ -182,7 +182,6 @@ public class UserLoginControllerTest {
                 .userPhoneNumber("01012345678")
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("초록색")
-                .appServiceIds(Arrays.asList(1L, 2L))
                 .organizationId(1L)
                 .userServiceAgreementRequest(Arrays.asList(1L, 2L, 3L))
                 .build();
@@ -210,7 +209,6 @@ public class UserLoginControllerTest {
                                 fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("사용자 휴대폰 번호"),
                                 fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
                                 fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변"),
-                                fieldWithPath("appServiceIds").type(JsonFieldType.ARRAY).description("선택한 앱 서비스 ID 목록"),
                                 fieldWithPath("organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
                                 fieldWithPath("userServiceAgreementRequest").type(JsonFieldType.ARRAY).description("동의한 약관 ID 목록")
                         ),

@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ServiceAgreementController.class)
 @ExtendWith(RestDocumentationExtension.class)
-public class AppServiceAgreementControllerTest {
+public class ServiceAgreementControllerTest {
 
     private MockMvc mockMvc;
 
