@@ -7,6 +7,7 @@ import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
+import com.kaii.dentix.domain.reward.config.UserRewardProperties;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
@@ -38,6 +39,7 @@ public class UserRewardReclaimService {
     private final DidPrivateKeyLookupService didPrivateKeyLookupService;
     private final DaeguChainToken20Service daeguChainToken20Service;
     private final DaeguChainProperties daeguChainProperties;
+    private final UserRewardProperties userRewardProperties;
     private final JwtTokenUtil jwtTokenUtil;
 
     @Transactional
@@ -45,26 +47,31 @@ public class UserRewardReclaimService {
         Long userId = getUserId(request);
         UserRewardWallet wallet = userRewardWalletRepository.findByUserId(userId)
                 .orElseThrow(() -> new BadRequestApiException("reward wallet is not found"));
-        if (isBlank(wallet.getDaeguDid()) || isBlank(wallet.getWalletAddress())) {
-            throw new BadRequestApiException("reward wallet DID is not connected");
-        }
-        if (isBlank(daeguChainProperties.getTokenOwnerAddress())) {
-            throw new BadRequestApiException("token owner address is not configured");
-        }
 
         List<UserRewardTransaction> allTransactions = userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId);
-        Set<String> transferredRewardCoinIds = allTransactions.stream()
-                .filter(this::isTransferredOralExerciseReward)
+        Set<String> receivedRewardCoinIds = allTransactions.stream()
+                .filter(this::isReceivedOralExerciseReward)
                 .map(UserRewardTransaction::getCoinId)
                 .filter(coinId -> !isBlank(coinId))
                 .map(String::toLowerCase)
                 .collect(Collectors.toSet());
         List<String> missingEssentials = IntStream.rangeClosed(1, ESSENTIAL_REWARD_COUNT)
                 .mapToObj(index -> "essential_video_" + index)
-                .filter(tokenName -> !transferredRewardCoinIds.contains(tokenName))
+                .filter(tokenName -> !receivedRewardCoinIds.contains(tokenName))
                 .toList();
         if (!missingEssentials.isEmpty()) {
             throw new BadRequestApiException("essential oral exercise tokens are not completed");
+        }
+
+        if (!userRewardProperties.isTokenTransferEnabled()) {
+            return recordLocalReclaim(userId, allTransactions);
+        }
+
+        if (isBlank(wallet.getDaeguDid()) || isBlank(wallet.getWalletAddress())) {
+            throw new BadRequestApiException("reward wallet DID is not connected");
+        }
+        if (isBlank(daeguChainProperties.getTokenOwnerAddress())) {
+            throw new BadRequestApiException("token owner address is not configured");
         }
 
         List<UserRewardTransaction> rewardTransactions = allTransactions.stream()
@@ -141,9 +148,66 @@ public class UserRewardReclaimService {
                 .build();
     }
 
+    private UserRewardDto.ReclaimResponse recordLocalReclaim(Long userId, List<UserRewardTransaction> allTransactions) {
+        List<UserRewardTransaction> rewardTransactions = allTransactions.stream()
+                .filter(this::isReceivedOralExerciseReward)
+                .filter(transaction -> !isBlank(transaction.getCoinId()))
+                .toList();
+        if (rewardTransactions.isEmpty()) {
+            throw new BadRequestApiException("reclaimable oral exercise token is not found");
+        }
+
+        List<UserRewardTransaction> reclaimTransactions = new ArrayList<>();
+        int reclaimedCount = 0;
+        int skippedCount = 0;
+        long reclaimedAmount = 0L;
+
+        for (UserRewardTransaction rewardTransaction : rewardTransactions) {
+            String idempotencyKey = buildReclaimIdempotencyKey(userId, rewardTransaction);
+            var existingReclaimTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey);
+            if (existingReclaimTransaction.isPresent()
+                    && existingReclaimTransaction.get().getStatus() != UserRewardTransactionStatus.CANCELED) {
+                skippedCount += 1;
+                reclaimTransactions.add(existingReclaimTransaction.get());
+                continue;
+            }
+
+            UserRewardTransaction reclaimTransaction = userRewardTransactionRepository.save(UserRewardTransaction.builder()
+                    .userId(userId)
+                    .oralExerciseContent(rewardTransaction.getOralExerciseContent())
+                    .type(UserRewardTransactionType.ORAL_EXERCISE_RECLAIM)
+                    .status(UserRewardTransactionStatus.LOCAL_RECORDED)
+                    .amount(rewardTransaction.getAmount())
+                    .balanceAfter(rewardTransaction.getBalanceAfter())
+                    .idempotencyKey(idempotencyKey)
+                    .sessionId(rewardTransaction.getSessionId())
+                    .coinId(rewardTransaction.getCoinId())
+                    .tokenContractAddress(rewardTransaction.getTokenContractAddress())
+                    .build());
+            reclaimTransactions.add(reclaimTransaction);
+            reclaimedCount += 1;
+            reclaimedAmount += rewardTransaction.getAmount();
+        }
+
+        return UserRewardDto.ReclaimResponse.builder()
+                .reclaimedCount(reclaimedCount)
+                .skippedCount(skippedCount)
+                .failedCount(0)
+                .reclaimedAmount(reclaimedAmount)
+                .transactions(reclaimTransactions.stream()
+                        .map(UserRewardDto.TransactionResponse::from)
+                        .toList())
+                .build();
+    }
+
     private boolean isTransferredOralExerciseReward(UserRewardTransaction transaction) {
         return transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN
                 && transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFERRED
+                && transaction.isRewardReceived();
+    }
+
+    private boolean isReceivedOralExerciseReward(UserRewardTransaction transaction) {
+        return transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN
                 && transaction.isRewardReceived();
     }
 

@@ -161,7 +161,7 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void getContentsKeepsRewardAvailableWhenTokenTransferFailed() {
+    void getContentsKeepsButtonRewardUnavailableWhenTokenTransferFailed() {
         User user = userCreatedDaysAgo(0);
         OralExerciseContent firstContent = content(2);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
@@ -183,7 +183,7 @@ class OralExerciseServiceTest {
 
         OralExerciseDto.ContentResponse content = response.getContents().get(0);
         assertThat(content.isRewardReceived()).isFalse();
-        assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue();
+        assertThat(content.getButtonChallenge().isRewardAvailable()).isFalse();
     }
 
     private User userCreatedDaysAgo(int daysAgo) {
