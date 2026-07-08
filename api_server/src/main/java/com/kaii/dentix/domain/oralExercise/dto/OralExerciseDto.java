@@ -40,7 +40,7 @@ public class OralExerciseDto {
                 String playableVideoUrl
         ) {
             boolean coreContent = content.getContentSort() <= 5;
-            boolean available = !coreContent || currentWeek <= 0 || content.getContentSort() <= currentWeek;
+            boolean available = true;
             boolean currentWeekContent = coreContent
                     ? currentWeek == content.getContentSort()
                     : available;
