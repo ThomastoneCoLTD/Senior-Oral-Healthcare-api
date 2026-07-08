@@ -18,7 +18,11 @@ public class AdminDaeguChainTokenDto {
         private String contractAddress;
         private String symbol;
         private Long supply;
+        private Integer decimals;
+        private String owner;
         private String issued;
+        private String txHash;
+        private String factHash;
     }
 
     @Getter

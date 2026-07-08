@@ -50,6 +50,13 @@ class AdminDaeguChainTokenServiceTest {
                       "name": "ESSENTIAL_VIDEO_2",
                       "symbol": "MYT"
                     }
+                  },
+                  {
+                    "contract": "0x-other",
+                    "data": {
+                      "name": "UNRELATED_TOKEN",
+                      "symbol": "MYT"
+                    }
                   }
                 ]
                 """);
@@ -58,6 +65,51 @@ class AdminDaeguChainTokenServiceTest {
         List<String> tokenNames = service.getTokenNames();
 
         assertThat(tokenNames).containsExactly("ESSENTIAL_VIDEO_1", "ESSENTIAL_VIDEO_2");
+    }
+
+    @Test
+    void getTokenOptionsReturnsRewardTokensWithIssueMetadata() throws Exception {
+        JsonNode data = objectMapper.readTree("""
+                {
+                  "data": [
+                    {
+                      "contract": "0x-essential-5",
+                      "data": {
+                        "name": "ESSENTIAL_VIDEO_5",
+                        "symbol": "MYT",
+                        "supply": 100,
+                        "decimals": 9,
+                        "owner": "0x-owner"
+                      },
+                      "tx": {
+                        "hash": "tx-hash",
+                        "fact_hash": "fact-hash"
+                      },
+                      "issued": "2026-07-04T02:56:39.524Z"
+                    },
+                    {
+                      "contract": "0x-optional-1",
+                      "data": {
+                        "name": "OPTIONAL_VIDEO_1",
+                        "symbol": "MYT",
+                        "supply": 100
+                      }
+                    }
+                  ]
+                }
+                """);
+        when(externalTokenClient.getTokenList()).thenReturn(data);
+
+        List<AdminDaeguChainTokenDto.TokenOption> tokenOptions = service.getTokenOptions();
+
+        assertThat(tokenOptions).extracting(AdminDaeguChainTokenDto.TokenOption::getTokenName)
+                .containsExactly("ESSENTIAL_VIDEO_5", "OPTIONAL_VIDEO_1");
+        assertThat(tokenOptions.get(0).getContractAddress()).isEqualTo("0x-essential-5");
+        assertThat(tokenOptions.get(0).getDecimals()).isEqualTo(9);
+        assertThat(tokenOptions.get(0).getOwner()).isEqualTo("0x-owner");
+        assertThat(tokenOptions.get(0).getTxHash()).isEqualTo("tx-hash");
+        assertThat(tokenOptions.get(0).getFactHash()).isEqualTo("fact-hash");
+        assertThat(tokenOptions.get(0).getIssued()).isEqualTo("2026-07-04T02:56:39.524Z");
     }
 
     @Test
@@ -83,5 +135,12 @@ class AdminDaeguChainTokenServiceTest {
         assertThatThrownBy(() -> service.createToken(new AdminDaeguChainTokenDto.CreateRequest("ESSENTIAL_VIDEO_1", 1L)))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("daegu-chain.token-symbol is required");
+    }
+
+    @Test
+    void createTokenRejectsUnsupportedTokenName() {
+        assertThatThrownBy(() -> service.createToken(new AdminDaeguChainTokenDto.CreateRequest("UNRELATED_TOKEN", 1L)))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("unsupported reward token name");
     }
 }

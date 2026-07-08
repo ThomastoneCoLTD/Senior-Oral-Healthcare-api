@@ -10,10 +10,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +24,29 @@ public class AdminDaeguChainTokenService {
 
     private final ExternalTokenClient externalTokenClient;
     private final DaeguChainProperties properties;
+    private static final List<String> REWARD_TOKEN_NAMES = List.of(
+            "ESSENTIAL_VIDEO_1",
+            "ESSENTIAL_VIDEO_2",
+            "ESSENTIAL_VIDEO_3",
+            "ESSENTIAL_VIDEO_4",
+            "ESSENTIAL_VIDEO_5",
+            "OPTIONAL_VIDEO_1",
+            "OPTIONAL_VIDEO_2",
+            "OPTIONAL_VIDEO_3",
+            "OPTIONAL_VIDEO_4",
+            "OPTIONAL_VIDEO_5",
+            "OPTIONAL_VIDEO_6",
+            "OPTIONAL_VIDEO_7"
+    );
+    private static final Set<String> REWARD_TOKEN_NAME_SET = REWARD_TOKEN_NAMES.stream()
+            .map(name -> name.toLowerCase(Locale.ROOT))
+            .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    private static final Map<String, Integer> REWARD_TOKEN_ORDER = IntStream.range(0, REWARD_TOKEN_NAMES.size())
+            .boxed()
+            .collect(java.util.stream.Collectors.toUnmodifiableMap(
+                    index -> REWARD_TOKEN_NAMES.get(index).toLowerCase(Locale.ROOT),
+                    index -> index
+            ));
 
     public List<AdminDaeguChainTokenDto.TokenOption> getTokenOptions() {
         Map<String, AdminDaeguChainTokenDto.TokenOption> tokenOptions = new LinkedHashMap<>();
@@ -33,7 +59,7 @@ public class AdminDaeguChainTokenService {
         for (JsonNode token : tokens) {
             String name = extractTokenName(token);
             String contractAddress = extractContractAddress(token);
-            if (!isBlank(name) && !isBlank(contractAddress)) {
+            if (!isBlank(name) && !isBlank(contractAddress) && isRewardTokenName(name)) {
                 tokenOptions.putIfAbsent(
                         name.toLowerCase(Locale.ROOT),
                         AdminDaeguChainTokenDto.TokenOption.builder()
@@ -41,12 +67,18 @@ public class AdminDaeguChainTokenService {
                                 .contractAddress(contractAddress)
                                 .symbol(extractSymbol(token))
                                 .supply(extractLong(token, "supply", "total_supply", "totalSupply", "amount"))
+                                .decimals(extractInteger(token, "decimals", "decimal"))
+                                .owner(extractText(token, "owner", "owner_addr", "ownerAddress"))
                                 .issued(extractText(token, "issued", "created", "created_at", "createdAt"))
+                                .txHash(extractText(token, "tx_hash", "transaction_hash", "hash"))
+                                .factHash(extractText(token, "fact_hash", "factHash"))
                                 .build()
                 );
             }
         }
-        return new ArrayList<>(tokenOptions.values());
+        return tokenOptions.values().stream()
+                .sorted(Comparator.comparingInt(option -> rewardTokenOrder(option.getTokenName())))
+                .toList();
     }
 
     public List<String> getTokenNames() {
@@ -55,8 +87,8 @@ public class AdminDaeguChainTokenService {
                 .toList();
     }
 
-    public JsonNode getTokenList() {
-        return externalTokenClient.getTokenList();
+    public List<AdminDaeguChainTokenDto.TokenOption> getTokenList() {
+        return getTokenOptions();
     }
 
     private JsonNode findTokenArray(JsonNode payload) {
@@ -78,6 +110,9 @@ public class AdminDaeguChainTokenService {
 
     public DaeguChainDto.ApiResponse<JsonNode> createToken(AdminDaeguChainTokenDto.CreateRequest request) {
         validateTokenCreateConfiguration();
+        if (!isRewardTokenName(request.getTokenName())) {
+            throw new BadRequestApiException("unsupported reward token name");
+        }
         JsonNode response = externalTokenClient.createToken(
                 request.getTokenName(),
                 properties.getTokenSymbol(),
@@ -133,6 +168,11 @@ public class AdminDaeguChainTokenService {
         return null;
     }
 
+    private Integer extractInteger(JsonNode token, String... fieldNames) {
+        Long value = extractLong(token, fieldNames);
+        return value == null ? null : value.intValue();
+    }
+
     private String findFirstText(JsonNode node, String... fieldNames) {
         JsonNode value = findFirstNode(node, fieldNames);
         return value == null || value.isNull() ? null : value.asText();
@@ -170,5 +210,13 @@ public class AdminDaeguChainTokenService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private boolean isRewardTokenName(String value) {
+        return !isBlank(value) && REWARD_TOKEN_NAME_SET.contains(value.toLowerCase(Locale.ROOT));
+    }
+
+    private int rewardTokenOrder(String tokenName) {
+        return REWARD_TOKEN_ORDER.getOrDefault(tokenName.toLowerCase(Locale.ROOT), Integer.MAX_VALUE);
     }
 }

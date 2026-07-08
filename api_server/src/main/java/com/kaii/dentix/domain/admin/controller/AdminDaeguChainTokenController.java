@@ -1,9 +1,9 @@
 package com.kaii.dentix.domain.admin.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.admin.application.AdminDaeguChainTokenService;
 import com.kaii.dentix.domain.admin.dto.AdminDaeguChainTokenDto;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class AdminDaeguChainTokenController {
     }
 
     @PostMapping("/list")
-    public DataResponse<JsonNode> getTokenList() {
+    public DataResponse<List<AdminDaeguChainTokenDto.TokenOption>> getTokenList() {
         return new DataResponse<>(adminDaeguChainTokenService.getTokenList());
     }
 
