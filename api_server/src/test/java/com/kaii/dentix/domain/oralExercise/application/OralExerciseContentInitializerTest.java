@@ -31,7 +31,7 @@ class OralExerciseContentInitializerTest {
     }
 
     @Test
-    void seedUsesSelectionOneVideoForAllExtraContentsUntilRealVideosAreReady() {
+    void seedUsesIntroVideoForIntroAndAllExtraContentsUntilRealVideosAreReady() {
         when(oralExerciseContentRepository.findByContentSort(anyInt())).thenReturn(Optional.empty());
 
         initializer.seedOralExerciseContents();
@@ -40,13 +40,16 @@ class OralExerciseContentInitializerTest {
         verify(oralExerciseContentRepository, times(12)).save(contentCaptor.capture());
 
         List<OralExerciseContent> savedContents = contentCaptor.getAllValues();
-        OralExerciseContent selectionOneContent = findBySort(savedContents, 6);
+        OralExerciseContent introContent = findBySort(savedContents, 1);
+
+        assertThat(introContent.getLevel()).isEqualTo("INTRO");
+        assertThat(introContent.getTitle()).isEqualTo("Chapter 1. 입체조의 효능");
 
         assertThat(savedContents)
-                .filteredOn(content -> content.getContentSort() >= 6)
+                .filteredOn(content -> content.getContentSort() >= 7)
                 .allSatisfy(content -> {
-                    assertThat(content.getVideoUrl()).isEqualTo(selectionOneContent.getVideoUrl());
-                    assertThat(content.getDurationSeconds()).isEqualTo(selectionOneContent.getDurationSeconds());
+                    assertThat(content.getVideoUrl()).isEqualTo(introContent.getVideoUrl());
+                    assertThat(content.getDurationSeconds()).isEqualTo(introContent.getDurationSeconds());
                     assertThat(content.getLevel()).isEqualTo("선택");
                     assertThat(content.isActive()).isTrue();
                 });

@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.oralExercise.dto;
 import com.kaii.dentix.domain.oralExercise.domain.OralExerciseContent;
 import com.kaii.dentix.domain.oralExercise.domain.OralExerciseInteractionEventType;
 import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
+import com.kaii.dentix.domain.reward.domain.OralExerciseRewardToken;
 import lombok.*;
 
 import java.util.List;
@@ -39,12 +40,13 @@ public class OralExerciseDto {
                 boolean rewardReceived,
                 String playableVideoUrl
         ) {
-            boolean coreContent = content.getContentSort() <= 5;
+            boolean coreContent = content.getContentSort() >= 2 && content.getContentSort() <= 6;
             boolean available = true;
             boolean currentWeekContent = coreContent
-                    ? currentWeek == content.getContentSort()
+                    ? currentWeek == content.getContentSort() - 1
                     : available;
-            int displayWeek = coreContent ? content.getContentSort() : 1;
+            int displayWeek = coreContent ? content.getContentSort() - 1 : 0;
+            boolean rewardSupported = OralExerciseRewardToken.tokenNameForContentSort(content.getContentSort()) != null;
             return ContentResponse.builder()
                     .id(content.getOralExerciseContentId())
                     .sort(content.getContentSort())
@@ -61,7 +63,7 @@ public class OralExerciseDto {
                     .available(available)
                     .currentWeekContent(currentWeekContent)
                     .rewardReceived(rewardReceived)
-                    .buttonChallenge(ButtonChallengeResponse.forContent(rewardReceived))
+                    .buttonChallenge(ButtonChallengeResponse.forContent(rewardReceived, rewardSupported))
                     .progress(ProgressResponse.from(progress))
                     .build();
         }
@@ -128,11 +130,11 @@ public class OralExerciseDto {
         private boolean rewardAvailable;
         private String promptMessage;
 
-        public static ButtonChallengeResponse forContent(boolean rewardReceived) {
+        public static ButtonChallengeResponse forContent(boolean rewardReceived, boolean rewardSupported) {
             return ButtonChallengeResponse.builder()
                     .buttons(List.of(1, 2, 3, 4, 5))
                     .timeoutSeconds(30)
-                    .rewardAvailable(!rewardReceived)
+                    .rewardAvailable(rewardSupported && !rewardReceived)
                     .promptMessage("1번부터 5번 중 안내된 번호를 클릭하세요.")
                     .build();
         }

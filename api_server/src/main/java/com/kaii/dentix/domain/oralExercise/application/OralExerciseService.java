@@ -213,7 +213,7 @@ public class OralExerciseService {
     }
 
     private boolean isCoreContent(OralExerciseContent content) {
-        return content.getContentSort() >= 1 && content.getContentSort() <= 5;
+        return content.getContentSort() >= 2 && content.getContentSort() <= 6;
     }
 
     private String resolvePlayableVideoUrl(String videoUrl) {

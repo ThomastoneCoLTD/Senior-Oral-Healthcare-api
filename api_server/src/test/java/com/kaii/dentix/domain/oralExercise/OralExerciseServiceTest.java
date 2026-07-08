@@ -93,15 +93,15 @@ class OralExerciseServiceTest {
         OralExerciseDto.ListResponse response = service.getContents(request);
 
         assertThat(response.getCurrentWeek()).isEqualTo(4);
-        assertThat(response.getCurrentContent().getSort()).isEqualTo(4);
+        assertThat(response.getCurrentContent().getSort()).isEqualTo(5);
         assertThat(response.getPreviousContents()).extracting(OralExerciseDto.ContentResponse::getSort)
-                .containsExactly(1, 2, 3);
+                .containsExactly(2, 3, 4);
         assertThat(response.getContents()).filteredOn(OralExerciseDto.ContentResponse::isCoreContent)
                 .allSatisfy(content -> assertThat(content.isAvailable()).isTrue());
         assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
-                .containsExactly(6);
+                .containsExactly(1);
         assertThat(response.getExtraContents()).allSatisfy(content -> {
-            assertThat(content.getWeek()).isEqualTo(1);
+            assertThat(content.getWeek()).isEqualTo(0);
             assertThat(content.isAvailable()).isTrue();
             assertThat(content.isCurrentWeekContent()).isTrue();
         });
@@ -123,12 +123,12 @@ class OralExerciseServiceTest {
         OralExerciseDto.ListResponse response = service.getContents(request);
 
         assertThat(response.getCurrentWeek()).isEqualTo(1);
-        assertThat(response.getCurrentContent().getSort()).isEqualTo(1);
+        assertThat(response.getCurrentContent().getSort()).isEqualTo(2);
         assertThat(response.getPreviousContents()).isEmpty();
         assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
-                .containsExactly(6, 7, 8);
+                .containsExactly(1, 7, 8);
         assertThat(response.getExtraContents()).allSatisfy(content -> {
-            assertThat(content.getWeek()).isEqualTo(1);
+            assertThat(content.getWeek()).isIn(0, 1);
             assertThat(content.isAvailable()).isTrue();
             assertThat(content.isCurrentWeekContent()).isTrue();
         });
@@ -137,7 +137,7 @@ class OralExerciseServiceTest {
     @Test
     void getContentsMarksButtonRewardAsAlreadyReceivedPerRewardTokenName() {
         User user = userCreatedDaysAgo(0);
-        OralExerciseContent firstContent = content(1);
+        OralExerciseContent firstContent = content(2);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(firstContent));
         when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of(
@@ -163,7 +163,7 @@ class OralExerciseServiceTest {
     @Test
     void getContentsKeepsRewardAvailableWhenTokenTransferFailed() {
         User user = userCreatedDaysAgo(0);
-        OralExerciseContent firstContent = content(1);
+        OralExerciseContent firstContent = content(2);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(firstContent));
         when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of(
@@ -211,7 +211,7 @@ class OralExerciseServiceTest {
                 .description("description")
                 .learningPoint("learning point")
                 .durationSeconds(300)
-                .level(sort <= 5 ? "실습" : "엑스트라")
+                .level(sort >= 2 && sort <= 6 ? "실습" : "엑스트라")
                 .active(true)
                 .build();
         ReflectionTestUtils.setField(content, "oralExerciseContentId", (long) sort);

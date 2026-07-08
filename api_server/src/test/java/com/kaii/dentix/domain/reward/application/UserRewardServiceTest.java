@@ -490,7 +490,7 @@ class UserRewardServiceTest {
 
     private OralExerciseContent content() {
         OralExerciseContent content = OralExerciseContent.builder()
-                .contentSort(1)
+                .contentSort(2)
                 .title("입 체조")
                 .description("description")
                 .learningPoint("learning point")
