@@ -29,6 +29,18 @@ public class OralExerciseContentInitializer {
             S3_VIDEO_BASE_URL + "5%ED%99%94%20%EB%A7%90%ED%95%98%EB%8A%94%20%ED%9E%98%20%EA%B8%B0%EB%A5%B4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
     private static final String VIDEO_6_URL =
             S3_VIDEO_BASE_URL + "6%ED%99%94%20%EC%94%B9%EB%8A%94%20%ED%9E%98%20%EA%B8%B0%EB%A5%B4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
+    private static final String VIDEO_7_URL =
+            S3_VIDEO_BASE_URL + "7%ED%99%94%20%EA%B5%AC%EA%B0%95%EA%B1%B4%EC%A1%B0%EC%A6%9D%20%EA%B4%80%EB%A6%AC%EB%B2%95_fin.mp4";
+    private static final String VIDEO_8_URL =
+            S3_VIDEO_BASE_URL + "8%ED%99%94%20%EC%9D%98%EC%B9%98%20%EC%82%AC%EC%9A%A9%20%EB%B0%8F%20%EA%B4%80%EB%A6%AC%EB%B2%95_fin.mp4";
+    private static final String VIDEO_9_URL =
+            S3_VIDEO_BASE_URL + "9%ED%99%94%20%EC%98%AC%EB%B0%94%EB%A5%B8%20%EC%B9%AB%EC%86%94%EC%A7%88_fin.mp4";
+    private static final String VIDEO_10_URL =
+            S3_VIDEO_BASE_URL + "10%ED%99%94%20%EA%B5%AC%EC%B7%A8%20%EC%98%88%EB%B0%A9%EA%B3%BC%20%EA%B4%80%EB%A6%AC_fin.mp4";
+    private static final String VIDEO_11_URL =
+            S3_VIDEO_BASE_URL + "11%ED%99%94%20%EC%82%BC%ED%82%B4%EA%B1%B4%EA%B0%95%EA%B3%BC%20%EC%8B%9D%EC%82%AC%EC%9D%98%20%EA%B4%80%EA%B3%84_fin.mp4";
+    private static final String VIDEO_12_URL =
+            S3_VIDEO_BASE_URL + "12%ED%99%94%20%EA%B5%AC%EA%B0%95%EA%B1%B4%EA%B0%95%20%EC%8A%A4%EC%8A%A4%EB%A1%9C%20%EC%A7%80%ED%82%A4%EB%8A%94%20%EC%8A%B5%EA%B4%80_fin.mp4";
 
     private final OralExerciseContentRepository oralExerciseContentRepository;
 
@@ -48,9 +60,9 @@ public class OralExerciseContentInitializer {
         return List.of(
                 content(
                         1,
-                        "Chapter 1. 입체조의 효능",
+                        "Chapter 1. 인트로",
                         "구강노쇠(Oral Frailty)를 이해하고 입체조가 필요한 이유를 학습합니다.",
-                        "구강노쇠(Oral Frailty) 이해"
+                        "구강노쇠(Oral Frailty) 이해, 입체조가 필요한 이유"
                 ),
                 content(
                         2,
@@ -152,9 +164,6 @@ public class OralExerciseContentInitializer {
     }
 
     private String videoUrlForSort(int sort) {
-        if (sort >= 7) {
-            return VIDEO_1_URL;
-        }
         return switch (sort) {
             case 1 -> VIDEO_1_URL;
             case 2 -> VIDEO_2_URL;
@@ -162,12 +171,18 @@ public class OralExerciseContentInitializer {
             case 4 -> VIDEO_4_URL;
             case 5 -> VIDEO_5_URL;
             case 6 -> VIDEO_6_URL;
+            case 7 -> VIDEO_7_URL;
+            case 8 -> VIDEO_8_URL;
+            case 9 -> VIDEO_9_URL;
+            case 10 -> VIDEO_10_URL;
+            case 11 -> VIDEO_11_URL;
+            case 12 -> VIDEO_12_URL;
             default -> null;
         };
     }
 
     private int durationSecondsForSort(int sort) {
-        if (sort == 1 || sort >= 7) {
+        if (sort == 1) {
             return 114;
         }
         return switch (sort) {

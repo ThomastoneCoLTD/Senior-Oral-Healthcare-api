@@ -152,6 +152,8 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - dev 배포 workflow에서 단일 인스턴스 교체가 가능하도록 ASG instance refresh 설정을 보완했습니다.
 - 구강체조 콘텐츠 제목, 영상 URL, 실제 영상 길이를 초기 데이터에 반영했습니다.
 - 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
+- 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
+- 2~6화 필수영상은 가입 주차에 따라 한 주에 하나씩 열리고, 1화 및 7~12화 상시영상은 계속 열려 있어야 합니다.
 - 사용자 비밀번호 찾기/재설정 API(`/login/find-password`, `/login/password`)와 관련 DTO/서비스/문서 테스트를 제거했습니다.
 - 구강체조 리워드 지급/회수 흐름을 token server 기반으로 정리했습니다.
 - 치은염 검출 화면 및 구강검진 관련 프론트 문구 다국어 처리가 보강되었습니다.
@@ -160,7 +162,8 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 ## 남은 확인 및 할 일
 
 - dev 배포 후 `https://soh-dev.thomabio.com/api/actuator/health`가 `UP`인지 확인합니다.
-- 프론트 dev 배포 후 구강체조 상시영상 전체가 잠금 없이 열리는지 실제 화면에서 확인합니다.
+- 프론트 dev 배포 후 1화 인트로와 7~12화 상시영상 전체가 잠금 없이 열리고, 2~6화 필수영상은 주차별로 열리는지 실제 화면에서 확인합니다.
+- 7~12화의 backend 기본 길이는 S3 private 객체라 로컬에서 자동 산출하지 못했습니다. 프론트는 presigned URL의 video metadata를 읽어 화면 표시 시간을 실제 영상 길이로 보정합니다.
 - 구강체조 영상 썸네일 노출이 필요한 경우 백엔드 응답의 `thumbnailUrl` 생성 방식과 프론트 표시 방식을 함께 구현합니다.
 - 연결된 영상 URL이 있는 콘텐츠는 S3 presigned URL이 정상 생성되는지 확인합니다.
 - 치은염 검출이 실제 이미지 업로드/분석 결과까지 정상 동작하는지 end-to-end로 확인합니다.

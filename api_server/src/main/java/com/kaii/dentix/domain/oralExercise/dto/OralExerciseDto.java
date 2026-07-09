@@ -40,11 +40,11 @@ public class OralExerciseDto {
                 String playableVideoUrl
         ) {
             boolean coreContent = content.getContentSort() >= 2 && content.getContentSort() <= 6;
-            boolean available = true;
-            boolean currentWeekContent = coreContent
-                    ? currentWeek == content.getContentSort() - 1
-                    : available;
             int displayWeek = coreContent ? content.getContentSort() - 1 : 0;
+            boolean available = !coreContent || currentWeek <= 0 || displayWeek <= currentWeek;
+            boolean currentWeekContent = coreContent
+                    ? currentWeek == displayWeek
+                    : available;
             return ContentResponse.builder()
                     .id(content.getOralExerciseContentId())
                     .sort(content.getContentSort())

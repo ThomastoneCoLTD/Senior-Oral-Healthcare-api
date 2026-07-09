@@ -31,7 +31,7 @@ class OralExerciseContentInitializerTest {
     }
 
     @Test
-    void seedUsesIntroVideoForIntroAndAllExtraContentsUntilRealVideosAreReady() {
+    void seedUsesUploadedVideoForEveryChapter() {
         when(oralExerciseContentRepository.findByContentSort(anyInt())).thenReturn(Optional.empty());
 
         initializer.seedOralExerciseContents();
@@ -43,16 +43,17 @@ class OralExerciseContentInitializerTest {
         OralExerciseContent introContent = findBySort(savedContents, 1);
 
         assertThat(introContent.getLevel()).isEqualTo("INTRO");
-        assertThat(introContent.getTitle()).isEqualTo("Chapter 1. 입체조의 효능");
+        assertThat(introContent.getTitle()).isEqualTo("Chapter 1. 인트로");
 
         assertThat(savedContents)
                 .filteredOn(content -> content.getContentSort() >= 7)
                 .allSatisfy(content -> {
-                    assertThat(content.getVideoUrl()).isEqualTo(introContent.getVideoUrl());
-                    assertThat(content.getDurationSeconds()).isEqualTo(introContent.getDurationSeconds());
+                    assertThat(content.getVideoUrl()).contains(content.getContentSort() + "%ED%99%94");
                     assertThat(content.getLevel()).isEqualTo("선택");
                     assertThat(content.isActive()).isTrue();
                 });
+        assertThat(findBySort(savedContents, 7).getVideoUrl()).contains("%EA%B5%AC%EA%B0%95%EA%B1%B4%EC%A1%B0%EC%A6%9D");
+        assertThat(findBySort(savedContents, 12).getVideoUrl()).contains("%EC%8A%B5%EA%B4%80");
     }
 
     private OralExerciseContent findBySort(List<OralExerciseContent> contents, int sort) {

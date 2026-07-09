@@ -12,7 +12,7 @@ public final class OralExerciseRewardToken {
         if (contentSort >= 2 && contentSort <= ESSENTIAL_VIDEO_COUNT + 1) {
             return "essential_video_" + (contentSort - 1);
         }
-        int optionalIndex = contentSort - (ESSENTIAL_VIDEO_COUNT + 1);
+        int optionalIndex = contentSort == 1 ? 1 : contentSort - ESSENTIAL_VIDEO_COUNT;
         if (optionalIndex >= 1 && optionalIndex <= OPTIONAL_VIDEO_COUNT) {
             return "optional_video_" + optionalIndex;
         }
