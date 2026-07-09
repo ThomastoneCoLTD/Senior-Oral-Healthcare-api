@@ -1,10 +1,8 @@
 package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainToken20Service;
-import com.kaii.dentix.domain.daeguChain.application.DidPrivateKeyLookupService;
+import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
-import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.reward.config.UserRewardProperties;
@@ -24,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -36,8 +35,7 @@ public class UserRewardReclaimService {
 
     private final UserRewardTransactionRepository userRewardTransactionRepository;
     private final UserRewardWalletRepository userRewardWalletRepository;
-    private final DidPrivateKeyLookupService didPrivateKeyLookupService;
-    private final DaeguChainToken20Service daeguChainToken20Service;
+    private final ExternalTokenClient externalTokenClient;
     private final DaeguChainProperties daeguChainProperties;
     private final UserRewardProperties userRewardProperties;
     private final JwtTokenUtil jwtTokenUtil;
@@ -82,7 +80,6 @@ public class UserRewardReclaimService {
             throw new BadRequestApiException("reclaimable oral exercise token is not found");
         }
 
-        DidPrivateKeyLookupService.DidAccountKey accountKey = didPrivateKeyLookupService.findByDid(wallet.getDaeguDid());
         List<UserRewardTransaction> reclaimTransactions = new ArrayList<>();
         int skippedCount = 0;
         int failedCount = 0;
@@ -111,15 +108,13 @@ public class UserRewardReclaimService {
             }
 
             try {
-                JsonNode response = daeguChainToken20Service.transferToken(new DaeguChainDto.TokenTransferRequest(
-                        null,
-                        null,
+                JsonNode response = externalTokenClient.transferToken(
+                        wallet.getDaeguDid(),
+                        normalizeTokenName(rewardTransaction.getCoinId()),
                         rewardTransaction.getTokenContractAddress(),
-                        accountKey.accountAddress(),
-                        accountKey.privateKey(),
                         daeguChainProperties.getTokenOwnerAddress(),
-                        String.valueOf(rewardTransaction.getAmount())
-                )).getData();
+                        rewardTransaction.getAmount()
+                );
                 reclaimTransaction.markTokenTransferred(
                         findFirstText(response, "tx_hash", "transaction_hash", "hash", "Date"),
                         findFirstText(response, "fact_hash")
@@ -217,6 +212,13 @@ public class UserRewardReclaimService {
             return "ORAL_EXERCISE_RECLAIM:%d:%d".formatted(userId, transactionId);
         }
         return "ORAL_EXERCISE_RECLAIM:%d:%s".formatted(userId, rewardTransaction.getCoinId());
+    }
+
+    private String normalizeTokenName(String tokenName) {
+        if (isBlank(tokenName)) {
+            throw new BadRequestApiException("reward token name is empty");
+        }
+        return tokenName.toUpperCase(Locale.ROOT);
     }
 
     private Long getUserId(HttpServletRequest request) {

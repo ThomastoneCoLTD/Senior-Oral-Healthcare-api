@@ -2,6 +2,27 @@
 
 This file is for Codex and other agents working on the SOH API repository from any PC. Keep it aligned with `README.md`.
 
+## 한국어 작업 운영 규칙
+
+- 이 파일은 항상 작업 시작 전에 확인하고, 기능/배포/환경/연동 방식이 바뀔 때마다 `README.md`와 함께 업데이트한다.
+- 기능 추가나 수정 시 백엔드만 보지 말고 프론트엔드도 같이 확인한다. 현재 PC의 프론트엔드 경로는 `C:\Users\hana0\workspace\source_code\Senior-Oral-Healthcare-front`이지만, 다른 PC에서는 다를 수 있으므로 매번 workspace에서 `Senior-Oral-Healthcare-front` 저장소 위치를 다시 확인한 뒤 작업한다.
+- 백엔드 저장소와 프론트엔드 저장소의 브랜치/배포 매핑이 다르므로, 커밋/푸시 전 각 저장소의 `AGENTS.md`를 각각 확인한다.
+- 작업 중 사용자가 만들었거나 다른 작업에서 생긴 변경사항은 되돌리지 않는다. 커밋할 때는 이번 작업과 관련된 파일만 명시적으로 stage 한다.
+- 업데이트가 완료되면 가능한 경우 각 저장소에서 `git diff --check`, 관련 빌드/테스트, `git add <관련 파일>`, `git commit`, `git push origin <현재 브랜치>`를 진행한다. 인증/네트워크/권한 문제로 push가 안 되면 최종 응답에 다음 명령을 남긴다.
+
+## 최근 작업 요약
+
+- 구강운동 필수 5개 토큰 수령 후 리워드 지급 버튼이 새로고침 시 다시 나타나던 문제를 프론트엔드에서 수정했다. `/oral-exercise` 조회와 함께 `/user/rewards/transactions`를 확인하고, `ORAL_EXERCISE_RECLAIM` 거래가 이미 있으면 버튼을 숨긴다.
+- 리워드 회수 백엔드 흐름을 실제 회수 방식으로 수정했다. 기존 DID DB private key 조회 및 `/mitum/token/transfer` 방식 대신, 보상 지급과 같은 token server 클라이언트 `ExternalTokenClient.transferToken(...)`을 사용해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`로 전송한다.
+- 리워드 회수는 `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, 기존 보상 거래의 `TOKEN_TRANSFERRED` 상태 및 `tokenContractAddress`가 필요하다. 기존 `LOCAL_RECORDED` 보상은 실제 지급 토큰이 아니므로 실제 회수 대상이 아니다.
+- `UserRewardReclaimServiceTest`를 추가해 5개 필수 토큰 회수와 이미 회수된 거래 스킵 동작을 검증했다.
+
+## 남은 확인/할 일
+
+- 개발/운영 GitHub Secret 또는 EC2 `.env`에 `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`가 올바르게 들어가는지 확인한다.
+- 기존에 `LOCAL_RECORDED`로 쌓인 구강운동 보상 데이터를 실제 토큰 지급/회수 대상으로 보정할지 운영 정책을 결정한다.
+- token server의 `/token/transfer`가 `receiver=DAEGU_CHAIN_TOKEN_OWNER_ADDRESS` 회수 요청을 실제로 받아 처리하는지 개발 환경에서 end-to-end로 확인한다.
+
 ## Project
 
 - Repository: `ThomastoneCoLTD/Senior-Oral-Healthcare-api`
@@ -123,9 +144,9 @@ SOH_TERRAFORM_TFVARS_PROD
 
 Never write AWS access keys, DB credentials, JWT secrets, or real `.env` contents into repository files.
 `SOH_API_ENV_DEV` and `SOH_API_ENV_PROD` must include `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD`; populate the datasource password from the environment RDS Secrets Manager secret, not from repository files.
-`SOH_API_ENV_DEV` and `SOH_API_ENV_PROD` should include DaeguChain and DID app configuration such as `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DID_DB_URL`, `DID_DB_USERNAME`, `DID_DB_PASSWORD`, `DID_DB_TABLE`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, and `USER_REWARD_TOKEN_TRANSFER_ENABLED` when DaeguChain DID login, admin token creation, oral-exercise token rewards, or oral-exercise reward reclaim are enabled.
+`SOH_API_ENV_DEV` and `SOH_API_ENV_PROD` should include DaeguChain and DID app configuration such as `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, and `USER_REWARD_TOKEN_TRANSFER_ENABLED` when DaeguChain DID login, admin token creation, oral-exercise token rewards, or oral-exercise reward reclaim are enabled.
 Development DID creation currently uses `DID_SERVER_BASE_URL=http://43.201.125.82`.
-Reward reclaim reads `private_key` and `account_address` from the DID DB table configured by `DID_DB_TABLE` (default `DID`); use a read-only DB account and never log or persist the private key in SOH.
+Reward reclaim sends collected oral-exercise token contracts back to `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS` through the configured token server; SOH must not read, log, or persist user DID private keys for this reclaim flow.
 Development oral-exercise rewards keep `USER_REWARD_TOKEN_TRANSFER_ENABLED=false` by default so external token transfer failures do not block the exercise flow.
 Optional `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_FROM` and `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_UNTIL` can pin the DID login credential validity window.
 Outbound DaeguChain request body fields named `token` must be populated from the environment app key, not hardcoded in source.
