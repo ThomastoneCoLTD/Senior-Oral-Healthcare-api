@@ -84,7 +84,8 @@ public class OralExerciseService {
                         progressMap.get(content.getOralExerciseContentId()),
                         currentWeek,
                         rewardedTokenNames.contains(resolveRewardTokenName(content)),
-                        resolvePlayableVideoUrl(content.getVideoUrl())
+                        resolvePlayableAssetUrl(content.getVideoUrl()),
+                        resolvePlayableAssetUrl(content.getThumbnailUrl())
                 ))
                 .toList();
 
@@ -216,30 +217,30 @@ public class OralExerciseService {
         return content.getContentSort() >= 2 && content.getContentSort() <= 6;
     }
 
-    private String resolvePlayableVideoUrl(String videoUrl) {
-        String key = extractDentiBackendsS3Key(videoUrl);
+    private String resolvePlayableAssetUrl(String assetUrl) {
+        String key = extractDentiBackendsS3Key(assetUrl);
         if (key == null) {
-            return videoUrl;
+            return assetUrl;
         }
 
         try {
             return awss3Service.getPresignedUrl(key, VIDEO_PRESIGN_EXPIRE_MINUTES);
         } catch (RuntimeException exception) {
             log.warn("구강체조 영상 presigned URL 생성 실패. key={}", key, exception);
-            return videoUrl;
+            return assetUrl;
         }
     }
 
-    private String extractDentiBackendsS3Key(String videoUrl) {
-        if (videoUrl == null || videoUrl.isBlank()) {
+    private String extractDentiBackendsS3Key(String assetUrl) {
+        if (assetUrl == null || assetUrl.isBlank()) {
             return null;
         }
 
         String key = null;
-        if (videoUrl.startsWith(DENTI_BACKENDS_S3_URL_PREFIX)) {
-            key = videoUrl.substring(DENTI_BACKENDS_S3_URL_PREFIX.length());
-        } else if (videoUrl.startsWith(DENTI_BACKENDS_S3_URI_PREFIX)) {
-            key = videoUrl.substring(DENTI_BACKENDS_S3_URI_PREFIX.length());
+        if (assetUrl.startsWith(DENTI_BACKENDS_S3_URL_PREFIX)) {
+            key = assetUrl.substring(DENTI_BACKENDS_S3_URL_PREFIX.length());
+        } else if (assetUrl.startsWith(DENTI_BACKENDS_S3_URI_PREFIX)) {
+            key = assetUrl.substring(DENTI_BACKENDS_S3_URI_PREFIX.length());
         }
 
         return key == null ? null : URLDecoder.decode(key, StandardCharsets.UTF_8);

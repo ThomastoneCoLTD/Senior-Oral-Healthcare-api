@@ -37,7 +37,8 @@ public class OralExerciseDto {
                 UserOralExerciseProgress progress,
                 int currentWeek,
                 boolean rewardReceived,
-                String playableVideoUrl
+                String playableVideoUrl,
+                String playableThumbnailUrl
         ) {
             boolean coreContent = content.getContentSort() >= 2 && content.getContentSort() <= 6;
             int displayWeek = coreContent ? content.getContentSort() - 1 : 0;
@@ -51,7 +52,7 @@ public class OralExerciseDto {
                     .title(content.getTitle())
                     .description(content.getDescription())
                     .learningPoint(content.getLearningPoint())
-                    .thumbnailUrl(content.getThumbnailUrl())
+                    .thumbnailUrl(playableThumbnailUrl)
                     .videoUrl(playableVideoUrl)
                     .durationSeconds(content.getDurationSeconds())
                     .duration(formatDuration(content.getDurationSeconds()))
@@ -67,7 +68,7 @@ public class OralExerciseDto {
         }
 
         public static ContentResponse from(OralExerciseContent content, UserOralExerciseProgress progress) {
-            return from(content, progress, 0, false, content.getVideoUrl());
+            return from(content, progress, 0, false, content.getVideoUrl(), content.getThumbnailUrl());
         }
     }
 

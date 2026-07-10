@@ -136,6 +136,28 @@ class OralExerciseServiceTest {
     }
 
     @Test
+    void getContentsPresignsVideoAndThumbnailAssets() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent content = content(
+                7,
+                "https://denti-backends.s3.ap-northeast-2.amazonaws.com/soh/video/sample.mp4",
+                "https://denti-backends.s3.ap-northeast-2.amazonaws.com/soh/video-thumbnails/optional_video_2.png"
+        );
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(content));
+        when(awss3Service.getPresignedUrl("soh/video/sample.mp4", 180)).thenReturn("signed-video-url");
+        when(awss3Service.getPresignedUrl("soh/video-thumbnails/optional_video_2.png", 180))
+                .thenReturn("signed-thumbnail-url");
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        OralExerciseDto.ContentResponse contentResponse = response.getContents().get(0);
+        assertThat(contentResponse.getVideoUrl()).isEqualTo("signed-video-url");
+        assertThat(contentResponse.getThumbnailUrl()).isEqualTo("signed-thumbnail-url");
+    }
+
+    @Test
     void getContentsMarksButtonRewardAsAlreadyReceivedPerRewardTokenName() {
         User user = userCreatedDaysAgo(0);
         OralExerciseContent firstContent = content(2);
@@ -242,11 +264,17 @@ class OralExerciseServiceTest {
     }
 
     private OralExerciseContent content(int sort) {
+        return content(sort, null, null);
+    }
+
+    private OralExerciseContent content(int sort, String videoUrl, String thumbnailUrl) {
         OralExerciseContent content = OralExerciseContent.builder()
                 .contentSort(sort)
                 .title(sort + "주차")
                 .description("description")
                 .learningPoint("learning point")
+                .thumbnailUrl(thumbnailUrl)
+                .videoUrl(videoUrl)
                 .durationSeconds(300)
                 .level(sort >= 2 && sort <= 6 ? "실습" : "엑스트라")
                 .active(true)
