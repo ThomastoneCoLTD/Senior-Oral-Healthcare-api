@@ -146,6 +146,47 @@ class UserRewardServiceTest {
     }
 
     @Test
+    void rewardOralExerciseCompletionDoesNotReissueTokenAfterReclaim() {
+        UserRewardTransaction rewardedTransaction = UserRewardTransaction.builder()
+                .userId(7L)
+                .oralExerciseContent(content())
+                .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                .status(UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                .amount(3L)
+                .balanceAfter(5L)
+                .idempotencyKey("ORAL_EXERCISE_BUTTON:7:essential_video_1")
+                .coinId("essential_video_1")
+                .tokenContractAddress("0x-token-contract")
+                .build();
+        when(transactionRepository.findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
+                7L,
+                "essential_video_1",
+                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                UserRewardTransactionStatus.CANCELED
+        )).thenReturn(Optional.of(rewardedTransaction));
+        when(transactionRepository.sumRewardedAmount(eq(7L), eq(UserRewardTransactionType.ORAL_EXERCISE_COIN), any()))
+                .thenReturn(5L);
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(5L)
+                .daeguDid("did:mitum:minic:0x-user-wallet")
+                .walletAddress("0x-user-wallet")
+                .build()));
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserRewardDto.RewardResponse response = service.rewardOralExerciseCompletion(
+                7L,
+                content(),
+                "rewatch-session"
+        );
+
+        assertThat(response.isDuplicated()).isTrue();
+        assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
+        assertThat(response.getPointBalance()).isEqualTo(5L);
+        verify(transactionRepository, never()).save(any());
+    }
+
+    @Test
     void getWalletExcludesFailedRewardTransactionsFromPointBalance() {
         when(transactionRepository.sumRewardedAmount(eq(7L), eq(UserRewardTransactionType.ORAL_EXERCISE_COIN), any()))
                 .thenReturn(2L);

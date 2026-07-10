@@ -162,6 +162,42 @@ class OralExerciseServiceTest {
     }
 
     @Test
+    void getContentsKeepsRewardReceivedAfterTokenReclaim() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent firstContent = content(2);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(firstContent));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of(
+                UserRewardTransaction.builder()
+                        .userId(7L)
+                        .oralExerciseContent(firstContent)
+                        .type(UserRewardTransactionType.ORAL_EXERCISE_RECLAIM)
+                        .status(UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                        .amount(3L)
+                        .balanceAfter(3L)
+                        .idempotencyKey("ORAL_EXERCISE_RECLAIM:7:1")
+                        .coinId("essential_video_1")
+                        .build(),
+                UserRewardTransaction.builder()
+                        .userId(7L)
+                        .oralExerciseContent(firstContent)
+                        .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                        .status(UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                        .amount(3L)
+                        .balanceAfter(3L)
+                        .idempotencyKey("ORAL_EXERCISE_BUTTON:7:essential_video_1")
+                        .coinId("essential_video_1")
+                        .build()
+        ));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        OralExerciseDto.ContentResponse content = response.getContents().get(0);
+        assertThat(content.isRewardReceived()).isTrue();
+        assertThat(content.getButtonChallenge().isRewardAvailable()).isFalse();
+    }
+
+    @Test
     void getContentsKeepsButtonRewardUnavailableWhenTokenTransferFailed() {
         User user = userCreatedDaysAgo(0);
         OralExerciseContent firstContent = content(2);
