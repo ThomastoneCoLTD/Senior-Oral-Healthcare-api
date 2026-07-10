@@ -73,9 +73,32 @@ jobs:
       - name: Create env file from GitHub Secret
         env:
           SOH_API_ENV: ${{ secrets.SOH_API_ENV_DEV }}
+          SPRING_DATASOURCE_URL_OVERRIDE: ${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME_OVERRIDE: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD_OVERRIDE: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
         run: |
           test -n "${SOH_API_ENV}" || (echo "SOH_API_ENV_DEV secret is empty" && exit 1)
           printf '%s\n' "${SOH_API_ENV}" > "${ENV_FILE}"
+
+          upsert_env() {
+            key="$1"
+            value="$2"
+
+            if [ -z "${value}" ]; then
+              return
+            fi
+
+            tmp_file="$(mktemp)"
+            grep -v "^${key}=" "${ENV_FILE}" > "${tmp_file}" || true
+            printf '%s=%s\n' "${key}" "${value}" >> "${tmp_file}"
+            mv "${tmp_file}" "${ENV_FILE}"
+            echo "Applied ${key} override from dedicated GitHub Secret."
+          }
+
+          upsert_env "SPRING_DATASOURCE_URL" "${SPRING_DATASOURCE_URL_OVERRIDE}"
+          upsert_env "SPRING_DATASOURCE_USERNAME" "${SPRING_DATASOURCE_USERNAME_OVERRIDE}"
+          upsert_env "SPRING_DATASOURCE_PASSWORD" "${SPRING_DATASOURCE_PASSWORD_OVERRIDE}"
+
           chmod 600 "${ENV_FILE}"
 
       - name: Configure AWS credentials

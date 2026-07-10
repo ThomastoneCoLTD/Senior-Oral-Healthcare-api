@@ -109,6 +109,7 @@ SOH_TERRAFORM_TFVARS_PROD
 ```
 
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`가 들어가야 합니다.
+- dev 배포 workflow는 별도 Repository Secret `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`가 있으면 `SOH_API_ENV_DEV` 안의 같은 키를 배포 시 덮어씁니다. RDS 비밀번호만 급히 교체할 때는 해당 별도 Secret을 수정한 뒤 dev workflow를 재실행할 수 있습니다.
 - datasource 비밀번호는 RDS Secrets Manager 값에서 가져오고, 저장소 파일에 실제 값을 쓰지 않습니다.
 - DaeguChain/DID 기능에는 `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, `USER_REWARD_TOKEN_TRANSFER_ENABLED` 등을 환경별로 확인합니다.
 - 개발 DID 생성 서버는 현재 `DID_SERVER_BASE_URL=http://43.201.125.82`를 사용합니다.
@@ -150,6 +151,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 사용자 로그인 실패 메시지에서 “비밀번호 확인” 문구가 나오지 않고 DID 관련 오류로 나오도록 조정했습니다.
 - API health check 경로 `/api/actuator/health`를 허용했습니다.
 - dev 배포 workflow에서 단일 인스턴스 교체가 가능하도록 ASG instance refresh 설정을 보완했습니다.
+- dev 배포 workflow에서 별도 datasource GitHub Secret 값이 있으면 `SOH_API_ENV_DEV`의 datasource 값을 덮어쓰도록 보완했습니다.
 - 구강체조 콘텐츠 제목, 영상 URL, 실제 영상 길이를 초기 데이터에 반영했습니다.
 - 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.

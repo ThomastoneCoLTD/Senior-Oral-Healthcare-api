@@ -298,6 +298,14 @@ SOH_API_ENV_DEV
 SOH_API_ENV_PROD
 ```
 
+Development datasource override secrets:
+
+```text
+SPRING_DATASOURCE_URL
+SPRING_DATASOURCE_USERNAME
+SPRING_DATASOURCE_PASSWORD
+```
+
 Terraform apply tfvars secrets:
 
 ```text
@@ -306,6 +314,8 @@ SOH_TERRAFORM_TFVARS_PROD
 ```
 
 Each `SOH_TERRAFORM_TFVARS_*` secret should contain the filled content of that environment's `terraform.tfvars.example`. Do not put AWS access keys, DB passwords, JWT secrets, or real `.env` content in these Terraform tfvars secrets.
+
+The dev API deploy workflow first creates `.env` from `SOH_API_ENV_DEV`. If the dedicated repository secrets `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, or `SPRING_DATASOURCE_PASSWORD` are set, the workflow overwrites those matching keys in the generated dev `.env` before uploading it to S3. Use this for urgent dev RDS password rotation without editing the whole `SOH_API_ENV_DEV` blob.
 
 `SOH_API_ENV_DEV` example:
 
