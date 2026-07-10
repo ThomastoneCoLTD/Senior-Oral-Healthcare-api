@@ -459,7 +459,8 @@ Inline policy:
       "Resource": [
         "arn:aws:s3:::denti-backends/soh/dev/app.jar",
         "arn:aws:s3:::denti-backends/soh/dev/.env",
-        "arn:aws:s3:::denti-backends/soh/video/*"
+        "arn:aws:s3:::denti-backends/soh/video/*",
+        "arn:aws:s3:::denti-backends/soh/video-thumbnails/*"
       ]
     },
     {
@@ -504,7 +505,8 @@ Inline policy:
       "Resource": [
         "arn:aws:s3:::denti-backends/soh/prod/app.jar",
         "arn:aws:s3:::denti-backends/soh/prod/.env",
-        "arn:aws:s3:::denti-backends/soh/video/*"
+        "arn:aws:s3:::denti-backends/soh/video/*",
+        "arn:aws:s3:::denti-backends/soh/video-thumbnails/*"
       ]
     },
     {
