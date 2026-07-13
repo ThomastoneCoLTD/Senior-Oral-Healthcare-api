@@ -71,7 +71,7 @@ public class UserDaeguProvisioningService {
         }
         return Map.of(
                 "userIdentifier", user.getUserLoginIdentifier(),
-                "userLoginIdentifier", user.getUserLoginIdentifier()
+                "label", user.getUserLoginIdentifier()
         );
     }
 

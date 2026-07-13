@@ -88,7 +88,8 @@ class UserDaeguProvisioningServiceTest {
         verify(daeguChainDidService).createAccount(createRequestCaptor.capture());
         assertThat(createRequestCaptor.getValue())
                 .containsEntry("userIdentifier", "soh-user-001")
-                .containsEntry("userLoginIdentifier", "soh-user-001");
+                .containsEntry("label", "soh-user-001")
+                .doesNotContainKey("userLoginIdentifier");
         ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
         verify(userRewardWalletRepository).save(captor.capture());
         assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");

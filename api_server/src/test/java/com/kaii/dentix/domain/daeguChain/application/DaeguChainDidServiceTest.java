@@ -361,6 +361,54 @@ class DaeguChainDidServiceTest {
     }
 
     @Test
+    void createAccountSupportsSignupResponseWithDidKeyAndWalletAddress() throws Exception {
+        when(externalDidClient.createDid(any()))
+                .thenReturn(new ObjectMapper().readTree("""
+                        {
+                          "data": {
+                            "did": "did:key:z6MksUrfsCNDrFRy3FsBL1imBc4WhS3JzPEk3uPELa8aWUpe",
+                            "key_pair": {
+                              "address": "0xd860B6b24B8aB58FDD26FFf9A3B9152B854f796Afca",
+                              "privatekey": "private-key",
+                              "publickey": "c190a975a64d933d0095c8e5b72b567c1a03b20ff275d2c3fda2fe4a6dce394f"
+                            },
+                            "wallet": {
+                              "address": "0xd860B6b24B8aB58FDD26FFf9A3B9152B854f796Afca",
+                              "privatekey": "wallet-private-key",
+                              "publickey": "026f50efa08a3c2bc8ff773f3eeb48c06613530dfd7f0ac9cafd83bfb8053b0877fpu"
+                            }
+                          },
+                          "local_db": {
+                            "saved": true,
+                            "userIdentifier": "test-user"
+                          },
+                          "msg": "",
+                          "state": "OK"
+                        }
+                        """));
+
+        var response = service.createAccount(Map.of(
+                "userIdentifier", "test-user",
+                "label", "test-user"
+        ));
+
+        assertThat(response.getState()).isEqualTo("OK");
+        assertThat(response.getData().path("did").asText())
+                .isEqualTo("did:key:z6MksUrfsCNDrFRy3FsBL1imBc4WhS3JzPEk3uPELa8aWUpe");
+        assertThat(response.getData().path("address").asText())
+                .isEqualTo("0xd860B6b24B8aB58FDD26FFf9A3B9152B854f796Afca");
+        assertThat(response.getData().path("key_pair").path("publickey").asText())
+                .isEqualTo("c190a975a64d933d0095c8e5b72b567c1a03b20ff275d2c3fda2fe4a6dce394f");
+        assertThat(response.getData().path("external_response").path("local_db").path("saved").asBoolean())
+                .isTrue();
+        verify(externalDidClient).createDid(Map.of(
+                "userIdentifier", "test-user",
+                "label", "test-user"
+        ));
+        verifyNoMoreInteractions(daeguChainClient);
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void registProjectPostsSohIssuerPayload() {
         service.registProject(Map.ofEntries(
