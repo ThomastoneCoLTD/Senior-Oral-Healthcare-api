@@ -70,7 +70,6 @@ public class UserDaeguProvisioningService {
             return Map.of();
         }
         return Map.of(
-                "userIdentifier", user.getUserLoginIdentifier(),
                 "label", user.getUserLoginIdentifier()
         );
     }
@@ -147,7 +146,8 @@ public class UserDaeguProvisioningService {
             return null;
         }
         int index = did.lastIndexOf(':');
-        return index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
+        String candidate = index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
+        return candidate != null && candidate.startsWith("0x") ? candidate : null;
     }
 
     private boolean isBlank(String value) {

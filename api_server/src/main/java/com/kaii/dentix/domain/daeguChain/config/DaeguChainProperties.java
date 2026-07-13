@@ -24,7 +24,9 @@ public class DaeguChainProperties {
     private Boolean tokenMintable = true;
     private Boolean tokenLockable = true;
     private String didServerBaseUrl = "http://localhost:5000";
-    private String didCreatePath = "/did/signup";
+    private String didCreatePath = "/did/create";
+    private String didIssueVcPath = "/did/issue-vc";
+    private String didVerifyVcPath = "/did/verify-vc";
     private String tokenServerBaseUrl = "http://localhost:5000";
     private String tokenCreatePath = "/token/create";
     private String tokenTransferPath = "/token/transfer";

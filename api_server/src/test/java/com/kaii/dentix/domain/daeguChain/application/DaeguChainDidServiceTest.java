@@ -16,8 +16,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 
@@ -89,42 +87,32 @@ class DaeguChainDidServiceTest {
                 .daeguDid("did:mitum:minic:0xabc")
                 .build();
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
-        when(daeguChainClient.postDid(eq("/mitum/did/issue"), any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "OK",
-                        null,
-                        "",
-                        objectMapper.readTree("""
-                                {
-                                  "issue": {
-                                    "data": {
-                                      "jwt": "credential-jwt"
-                                    }
-                                  }
-                                }
-                                """),
-                        "cid"
-                ));
+        when(externalDidClient.issueVc(any()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "vc_jwt": "credential-jwt",
+                          "exp": 1793404800
+                        }
+                        """));
 
         service.issueLoginUserCredential(7L);
 
         ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
-        verify(daeguChainClient).postDid(eq("/mitum/did/issue"), captor.capture());
+        verify(externalDidClient).issueVc(captor.capture());
 
-        assertThat(captor.getValue().get("token")).isEqualTo("configured-token");
-        assertThat(captor.getValue().get("chain")).isEqualTo("dchain");
-        assertThat(captor.getValue().get("did")).isEqualTo("did:mitum:minic:0xabc");
-        assertThat(captor.getValue().get("template_id")).isEqualTo("VLVSWVRSOPZJMPINTBNA");
-        assertThat(captor.getValue().get("validfrom")).isEqualTo("2026-06-01");
-        assertThat(captor.getValue().get("validuntil")).isEqualTo("2026-12-01");
+        assertThat(captor.getValue().get("issuer")).isEqualTo("did:mitum:minic:0xabc");
+        assertThat(captor.getValue().get("subject")).isEqualTo("did:mitum:minic:0xabc");
+        assertThat(captor.getValue().get("aud")).isEqualTo("VLVSWVRSOPZJMPINTBNA");
+        assertThat(captor.getValue().get("ttl")).isEqualTo(15_811_200L);
 
-        Map<String, Object> subject = (Map<String, Object>) captor.getValue().get("subject");
-        assertThat(subject.get("key")).isEqualTo("id");
-        assertThat(subject.get("value")).isEqualTo("soh-user-001");
+        Map<String, Object> claims = (Map<String, Object>) captor.getValue().get("claims");
+        assertThat(claims.get("id")).isEqualTo("soh-user-001");
+        assertThat(claims.get("userIdentifier")).isEqualTo("soh-user-001");
         assertThat(user.getDaeguCredentialJwt()).isEqualTo("credential-jwt");
         assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.ISSUED);
         assertThat(user.getDaeguCredentialValidFrom()).hasToString("2026-06-01");
         assertThat(user.getDaeguCredentialValidUntil()).hasToString("2026-12-01");
+        verifyNoMoreInteractions(daeguChainClient);
     }
 
     @Test
@@ -151,190 +139,82 @@ class DaeguChainDidServiceTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void verifyLoginUserCredentialAcceptsCredentialAudWithTemplateId() throws Exception {
-        String did = "did:mitum:minic:0xabc";
-        String jwt = jwtWithAud(did + ":VLVSWVRSOPZJMPINTBNA");
+    void verifyLoginUserCredentialCallsExternalVerifyVcAndAcceptsValidPayload() throws Exception {
         User user = User.builder()
                 .userId(7L)
-                .daeguDid(did)
-                .daeguCredentialJwt(jwt)
+                .userLoginIdentifier("soh-user-001")
+                .daeguDid("did:key:z6MkUser")
+                .daeguCredentialJwt("credential-jwt")
                 .build();
-        when(daeguChainClient.postDid(eq("/mitum/did/verification"), any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "OK",
-                        null,
-                        "",
-                        objectMapper.readTree("""
-                                {
-                                  "verify": true
-                                }
-                                """),
-                        "cid"
-                ));
+        when(externalDidClient.verifyVc(any()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "valid": true,
+                          "payload": {
+                            "iss": "did:key:z6MkUser",
+                            "sub": "did:key:z6MkUser",
+                            "vc": {
+                              "credentialSubject": {
+                                "id": "soh-user-001",
+                                "userIdentifier": "soh-user-001"
+                              }
+                            }
+                          }
+                        }
+                        """));
 
         boolean verified = service.verifyLoginUserCredential(user);
 
         assertThat(verified).isTrue();
         ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
-        verify(daeguChainClient).postDid(eq("/mitum/did/verification"), captor.capture());
-        assertThat(captor.getValue().get("token")).isEqualTo("configured-token");
-        assertThat(captor.getValue().get("chain")).isEqualTo("dchain");
-        assertThat(captor.getValue().get("template_id")).isEqualTo("VLVSWVRSOPZJMPINTBNA");
-        assertThat(captor.getValue().get("jwt")).isEqualTo(jwt);
-    }
-
-    @Test
-    void verifyLoginUserCredentialAcceptsStoredCredentialSubject() {
-        String did = "did:mitum:minic:0xabc";
-        String jwt = jwtWithClaims("""
-                {
-                  "aud": "did:mitum:minic:0xabc:VLVSWVRSOPZJMPINTBNA",
-                  "val": "id|soh-user-001"
-                }
-                """);
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .daeguDid(did)
-                .daeguCredentialJwt(jwt)
-                .build();
-
-        boolean verified = service.verifyLoginUserCredential(user);
-
-        assertThat(verified).isTrue();
+        verify(externalDidClient).verifyVc(captor.capture());
+        assertThat(captor.getValue().get("vc_jwt")).isEqualTo("credential-jwt");
+        assertThat(captor.getValue().get("aud")).isEqualTo("VLVSWVRSOPZJMPINTBNA");
         verifyNoMoreInteractions(daeguChainClient);
     }
 
     @Test
-    void verifyLoginUserCredentialAcceptsStoredCredentialSubjectObject() {
-        String did = "did:mitum:minic:0xabc";
-        String jwt = jwtWithClaims("""
-                {
-                  "aud": "did:mitum:minic:0xabc:VLVSWVRSOPZJMPINTBNA",
-                  "val": {
-                    "key": "id",
-                    "value": "soh-user-001"
-                  }
-                }
-                """);
+    void verifyLoginUserCredentialRejectsExternalInvalidResponse() throws Exception {
         User user = User.builder()
                 .userId(7L)
                 .userLoginIdentifier("soh-user-001")
-                .daeguDid(did)
-                .daeguCredentialJwt(jwt)
+                .daeguDid("did:key:z6MkUser")
+                .daeguCredentialJwt("credential-jwt")
                 .build();
-
-        boolean verified = service.verifyLoginUserCredential(user);
-
-        assertThat(verified).isTrue();
-        verifyNoMoreInteractions(daeguChainClient);
-    }
-
-    @Test
-    void verifyLoginUserCredentialAcceptsStoredCredentialSubjectIdObject() {
-        String did = "did:mitum:minic:0xabc";
-        String jwt = jwtWithClaims("""
-                {
-                  "aud": "did:mitum:minic:0xabc:VLVSWVRSOPZJMPINTBNA",
-                  "val": {
-                    "id": "soh-user-001"
-                  }
-                }
-                """);
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .daeguDid(did)
-                .daeguCredentialJwt(jwt)
-                .build();
-
-        boolean verified = service.verifyLoginUserCredential(user);
-
-        assertThat(verified).isTrue();
-        verifyNoMoreInteractions(daeguChainClient);
-    }
-
-    @Test
-    void verifyLoginUserCredentialAcceptsStoredCredentialSubjectJsonString() {
-        String did = "did:mitum:minic:0xabc";
-        String jwt = jwtWithClaims("""
-                {
-                  "aud": "did:mitum:minic:0xabc:VLVSWVRSOPZJMPINTBNA",
-                  "val": "{\\"key\\":\\"id\\",\\"value\\":\\"soh-user-001\\"}"
-                }
-                """);
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .daeguDid(did)
-                .daeguCredentialJwt(jwt)
-                .build();
-
-        boolean verified = service.verifyLoginUserCredential(user);
-
-        assertThat(verified).isTrue();
-        verifyNoMoreInteractions(daeguChainClient);
-    }
-
-    @Test
-    void verifyLoginUserCredentialAcceptsAudWithSameWalletAddress() {
-        String jwt = jwtWithClaims("""
-                {
-                  "aud": "did:mitum:0xabc:VLVSWVRSOPZJMPINTBNA",
-                  "val": "id|soh-user-001"
-                }
-                """);
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .daeguDid("did:mitum:minic:0xabc")
-                .daeguCredentialJwt(jwt)
-                .build();
-
-        boolean verified = service.verifyLoginUserCredential(user);
-
-        assertThat(verified).isTrue();
-        verifyNoMoreInteractions(daeguChainClient);
-    }
-
-    @Test
-    void verifyLoginUserCredentialRejectsStoredCredentialSubjectForDifferentUser() {
-        String jwt = jwtWithClaims("""
-                {
-                  "aud": "did:mitum:minic:0xabc:VLVSWVRSOPZJMPINTBNA",
-                  "val": "id|another-user"
-                }
-                """);
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .daeguDid("did:mitum:minic:0xabc")
-                .daeguCredentialJwt(jwt)
-                .build();
+        when(externalDidClient.verifyVc(any()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "valid": false,
+                          "reason": "expired"
+                        }
+                        """));
 
         assertThat(service.verifyLoginUserCredential(user)).isFalse();
     }
 
     @Test
-    void verifyLoginUserCredentialRejectsDifferentAud() throws Exception {
+    void verifyLoginUserCredentialRejectsCredentialForDifferentUser() throws Exception {
         User user = User.builder()
                 .userId(7L)
-                .daeguDid("did:mitum:minic:0xabc")
-                .daeguCredentialJwt(jwtWithAud("did:mitum:minic:0xdef:VLVSWVRSOPZJMPINTBNA"))
+                .userLoginIdentifier("soh-user-001")
+                .daeguDid("did:key:z6MkUser")
+                .daeguCredentialJwt("credential-jwt")
                 .build();
-        when(daeguChainClient.postDid(eq("/mitum/did/verification"), any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "OK",
-                        null,
-                        "",
-                        objectMapper.readTree("""
-                                {
-                                  "verify": true
-                                }
-                                """),
-                        "cid"
-                ));
+        when(externalDidClient.verifyVc(any()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "valid": true,
+                          "payload": {
+                            "iss": "did:key:z6MkUser",
+                            "sub": "did:key:z6MkUser",
+                            "vc": {
+                              "credentialSubject": {
+                                "id": "another-user"
+                              }
+                            }
+                          }
+                        }
+                        """));
 
         assertThat(service.verifyLoginUserCredential(user)).isFalse();
     }
@@ -361,48 +241,30 @@ class DaeguChainDidServiceTest {
     }
 
     @Test
-    void createAccountSupportsSignupResponseWithDidKeyAndWalletAddress() throws Exception {
+    void createAccountSupportsDidKeyCreateResponse() throws Exception {
         when(externalDidClient.createDid(any()))
                 .thenReturn(new ObjectMapper().readTree("""
                         {
-                          "data": {
-                            "did": "did:key:z6MksUrfsCNDrFRy3FsBL1imBc4WhS3JzPEk3uPELa8aWUpe",
-                            "key_pair": {
-                              "address": "0xd860B6b24B8aB58FDD26FFf9A3B9152B854f796Afca",
-                              "privatekey": "private-key",
-                              "publickey": "c190a975a64d933d0095c8e5b72b567c1a03b20ff275d2c3fda2fe4a6dce394f"
-                            },
-                            "wallet": {
-                              "address": "0xd860B6b24B8aB58FDD26FFf9A3B9152B854f796Afca",
-                              "privatekey": "wallet-private-key",
-                              "publickey": "026f50efa08a3c2bc8ff773f3eeb48c06613530dfd7f0ac9cafd83bfb8053b0877fpu"
-                            }
-                          },
-                          "local_db": {
-                            "saved": true,
-                            "userIdentifier": "test-user"
-                          },
-                          "msg": "",
-                          "state": "OK"
+                          "did": "did:key:z6MksUrfsCNDrFRy3FsBL1imBc4WhS3JzPEk3uPELa8aWUpe",
+                          "fingerprint": "z6MksUrfsCNDrFRy3FsBL1imBc4WhS3JzPEk3uPELa8aWUpe",
+                          "label": "test-user",
+                          "stored": {
+                            "didDocumentPath": "data/dids/z6MksUrfsCNDrFRy3FsBL1imBc4WhS3JzPEk3uPELa8aWUpe.did.json"
+                          }
                         }
                         """));
 
         var response = service.createAccount(Map.of(
-                "userIdentifier", "test-user",
                 "label", "test-user"
         ));
 
         assertThat(response.getState()).isEqualTo("OK");
         assertThat(response.getData().path("did").asText())
                 .isEqualTo("did:key:z6MksUrfsCNDrFRy3FsBL1imBc4WhS3JzPEk3uPELa8aWUpe");
-        assertThat(response.getData().path("address").asText())
-                .isEqualTo("0xd860B6b24B8aB58FDD26FFf9A3B9152B854f796Afca");
-        assertThat(response.getData().path("key_pair").path("publickey").asText())
-                .isEqualTo("c190a975a64d933d0095c8e5b72b567c1a03b20ff275d2c3fda2fe4a6dce394f");
-        assertThat(response.getData().path("external_response").path("local_db").path("saved").asBoolean())
-                .isTrue();
+        assertThat(response.getData().has("address")).isFalse();
+        assertThat(response.getData().path("external_response").path("stored").path("didDocumentPath").asText())
+                .contains("z6MksUrfsCNDrFRy3FsBL1imBc4WhS3JzPEk3uPELa8aWUpe.did.json");
         verify(externalDidClient).createDid(Map.of(
-                "userIdentifier", "test-user",
                 "label", "test-user"
         ));
         verifyNoMoreInteractions(daeguChainClient);
@@ -454,21 +316,5 @@ class DaeguChainDidServiceTest {
         )))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("issuer_name is required");
-    }
-
-    private String jwtWithAud(String aud) {
-        String header = Base64.getUrlEncoder().withoutPadding()
-                .encodeToString("{}".getBytes(StandardCharsets.UTF_8));
-        String payload = Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(("{\"aud\":\"" + aud + "\"}").getBytes(StandardCharsets.UTF_8));
-        return header + "." + payload + ".signature";
-    }
-
-    private String jwtWithClaims(String claims) {
-        String header = Base64.getUrlEncoder().withoutPadding()
-                .encodeToString("{}".getBytes(StandardCharsets.UTF_8));
-        String payload = Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(claims.getBytes(StandardCharsets.UTF_8));
-        return header + "." + payload + ".signature";
     }
 }

@@ -16,9 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
-import java.util.Base64;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -132,17 +131,17 @@ public class DaeguChainDidService {
         LocalDate validFrom = resolveCredentialValidFrom();
         LocalDate validUntil = resolveCredentialValidUntil(validFrom);
         Map<String, Object> request = new LinkedHashMap<>();
-        request.put("did", user.getDaeguDid());
-        request.put("template_id", resolveLoginUserCredentialTemplateId());
-        request.put("subject", Map.of(
-                "key", "id",
-                "value", user.getUserLoginIdentifier()
+        request.put("issuer", user.getDaeguDid());
+        request.put("subject", user.getDaeguDid());
+        request.put("claims", Map.of(
+                "id", user.getUserLoginIdentifier(),
+                "userIdentifier", user.getUserLoginIdentifier()
         ));
-        request.put("validfrom", validFrom.toString());
-        request.put("validuntil", validUntil.toString());
+        request.put("ttl", resolveCredentialTtlSeconds(validFrom, validUntil));
+        request.put("aud", resolveLoginUserCredentialTemplateId());
 
-        DaeguChainDto.ApiResponse<JsonNode> response = issueCredential(request);
-        String credentialJwt = extractCredentialJwt(response);
+        JsonNode externalResponse = externalDidClient.issueVc(request);
+        String credentialJwt = findFirstText(externalResponse, "vc_jwt", "credentialJwt", "jwt");
         if (isBlank(credentialJwt)) {
             throw new BadRequestApiException("credential jwt is empty");
         }
@@ -152,7 +151,7 @@ public class DaeguChainDidService {
                 validFrom,
                 validUntil
         );
-        return response;
+        return new DaeguChainDto.ApiResponse<>("OK", Map.of(), "", externalResponse, null);
     }
 
     public boolean verifyLoginUserCredential(User user) {
@@ -162,48 +161,28 @@ public class DaeguChainDidService {
             return false;
         }
 
-        if (verifyStoredLoginUserCredential(user)) {
-            return true;
-        }
-
         try {
-            DaeguChainDto.ApiResponse<JsonNode> response = verification(Map.of(
-                    "template_id", resolveLoginUserCredentialTemplateId(),
-                    "jwt", user.getDaeguCredentialJwt()
+            JsonNode response = externalDidClient.verifyVc(Map.of(
+                    "vc_jwt", user.getDaeguCredentialJwt(),
+                    "aud", resolveLoginUserCredentialTemplateId()
             ));
-            if (response == null || !"OK".equalsIgnoreCase(response.getState())) {
+            if (response == null || !response.path("valid").asBoolean(false)) {
                 return false;
             }
 
-            String templateId = resolveLoginUserCredentialTemplateId();
-            String verifiedDid = findFirstText(response.getData(), "aud", "did", "DID");
-            if (isBlank(verifiedDid)) {
-                verifiedDid = findJwtClaim(user.getDaeguCredentialJwt(), "aud", "did", "DID");
+            JsonNode payload = response.path("payload");
+            String issuerDid = findFirstText(payload, "iss");
+            String subjectDid = findFirstText(payload, "sub");
+            if (!matchesVerifiedDid(user.getDaeguDid(), resolveLoginUserCredentialTemplateId(), issuerDid)
+                    || !matchesVerifiedDid(user.getDaeguDid(), resolveLoginUserCredentialTemplateId(), subjectDid)) {
+                return false;
             }
-            return matchesVerifiedDid(user.getDaeguDid(), templateId, verifiedDid);
+
+            String subject = findCredentialSubject(payload);
+            return matchesCredentialSubject(subject, user.getUserLoginIdentifier());
         } catch (RuntimeException exception) {
             return false;
         }
-    }
-
-    private boolean verifyStoredLoginUserCredential(User user) {
-        if (isBlank(user.getUserLoginIdentifier())) {
-            return false;
-        }
-
-        JsonNode jwtPayload = readJwtPayload(user.getDaeguCredentialJwt());
-        String templateId = resolveLoginUserCredentialTemplateId();
-        String verifiedDid = findFirstText(jwtPayload, "aud", "did", "DID");
-        if (!isBlank(verifiedDid) && !matchesVerifiedDid(user.getDaeguDid(), templateId, verifiedDid)) {
-            return false;
-        }
-
-        String subject = findCredentialSubject(jwtPayload);
-        if (!isBlank(subject)) {
-            return matchesCredentialSubject(subject, user.getUserLoginIdentifier());
-        }
-
-        return !isBlank(verifiedDid);
     }
 
     private boolean matchesCredentialSubject(String subject, String userLoginIdentifier) {
@@ -287,43 +266,26 @@ public class DaeguChainDidService {
         return validFrom.plusDays(validDays);
     }
 
-    private String extractCredentialJwt(DaeguChainDto.ApiResponse<JsonNode> response) {
-        if (response == null) {
-            return null;
-        }
-        return findFirstText(response.getData(), "jwt");
-    }
-
-    private String findJwtClaim(String jwt, String... claimNames) {
-        return findFirstText(readJwtPayload(jwt), claimNames);
-    }
-
-    private JsonNode readJwtPayload(String jwt) {
-        if (isBlank(jwt)) {
-            return null;
-        }
-        String[] parts = jwt.split("\\.");
-        if (parts.length < 2) {
-            return null;
-        }
-        try {
-            String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
-            return objectMapper.readTree(payload);
-        } catch (Exception exception) {
-            return null;
-        }
+    private long resolveCredentialTtlSeconds(LocalDate validFrom, LocalDate validUntil) {
+        long validDays = ChronoUnit.DAYS.between(validFrom, validUntil);
+        return Math.max(validDays, 1L) * 24L * 60L * 60L;
     }
 
     private String findCredentialSubject(JsonNode jwtPayload) {
         if (jwtPayload == null || jwtPayload.isNull()) {
             return null;
         }
-        for (String claimName : List.of("val", "subject", "sub", "credentialSubject")) {
+        for (String claimName : List.of("val", "subject", "credentialSubject", "claims")) {
             JsonNode claim = jwtPayload.get(claimName);
             String subject = extractCredentialSubjectValue(claim);
             if (!isBlank(subject)) {
                 return subject;
             }
+        }
+        JsonNode vcCredentialSubject = jwtPayload.path("vc").path("credentialSubject");
+        String subject = extractCredentialSubjectValue(vcCredentialSubject);
+        if (!isBlank(subject)) {
+            return subject;
         }
         return null;
     }
@@ -454,7 +416,8 @@ public class DaeguChainDidService {
             return null;
         }
         int index = did.lastIndexOf(':');
-        return index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
+        String candidate = index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
+        return candidate != null && candidate.startsWith("0x") ? candidate : null;
     }
 
     private boolean isBlank(String value) {

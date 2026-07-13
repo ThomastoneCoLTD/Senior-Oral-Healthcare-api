@@ -547,7 +547,8 @@ public class UserRewardService {
             return null;
         }
         int index = did.lastIndexOf(':');
-        return index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
+        String candidate = index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
+        return candidate != null && candidate.startsWith("0x") ? candidate : null;
     }
 
     private record DidWallet(String did, String walletAddress) {

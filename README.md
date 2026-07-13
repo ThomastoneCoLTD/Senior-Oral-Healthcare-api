@@ -332,7 +332,9 @@ JWT_SECRET=<DEV_JWT_SECRET>
 DAEGU_CHAIN_APP_KEY=<DEV_DAEGU_CHAIN_APP_KEY>
 DAEGU_CHAIN_ID=mitumt
 DID_SERVER_BASE_URL=http://43.201.125.82
-DID_CREATE_PATH=/did/signup
+DID_CREATE_PATH=/did/create
+DID_ISSUE_VC_PATH=/did/issue-vc
+DID_VERIFY_VC_PATH=/did/verify-vc
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID=VLVSWVRSOPZJMPINTBNA
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS=3650
 DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<DEV_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
@@ -356,7 +358,9 @@ JWT_SECRET=<PROD_JWT_SECRET>
 DAEGU_CHAIN_APP_KEY=<PROD_DAEGU_CHAIN_APP_KEY>
 DAEGU_CHAIN_ID=mitumt
 DID_SERVER_BASE_URL=<PROD_DID_SERVER_BASE_URL>
-DID_CREATE_PATH=/did/signup
+DID_CREATE_PATH=/did/create
+DID_ISSUE_VC_PATH=/did/issue-vc
+DID_VERIFY_VC_PATH=/did/verify-vc
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID=VLVSWVRSOPZJMPINTBNA
 DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS=3650
 DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<PROD_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
@@ -368,7 +372,7 @@ USER_REWARD_TOKEN_TRANSFER_ENABLED=true
 Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3, and EC2 downloads it through the instance profile.
 Terraform outputs `db_address`, `db_endpoint`, and `db_master_user_secret_arn`; use the Secrets Manager secret value to populate the datasource password in the GitHub environment secret.
 DaeguChain API requests use `DAEGU_CHAIN_APP_KEY` for every outbound request body field named `token`; keep app keys and any private keys only in environment secrets.
-`DID_SERVER_BASE_URL` must point to the reachable DID creation service used by `/did/signup`; development currently uses `http://43.201.125.82`. User signup DID provisioning sends `userIdentifier` and `label` with the user's login identifier.
+`DID_SERVER_BASE_URL` must point to the reachable DID service used by `/did/create`, `/did/issue-vc`, and `/did/verify-vc`; development currently uses `http://43.201.125.82`. User signup DID provisioning sends `label` with the user's login identifier, stores the returned `did:key`, issues a login VC-JWT, and verifies that VC-JWT on DID login.
 Oral-exercise reward reclaim sends collected token contracts back to `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS` through the configured token server; SOH must not read, log, or persist user DID private keys for this reclaim flow.
 `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID` controls the DID login credential template. Optional `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_FROM` and `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_UNTIL` can pin the validity window; otherwise `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS` is applied from the issue date.
 When `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, oral-exercise video rewards are transferred through DaeguChain token contracts by reward token name. Development keeps this disabled by default so token transfer outages do not block exercise completion.

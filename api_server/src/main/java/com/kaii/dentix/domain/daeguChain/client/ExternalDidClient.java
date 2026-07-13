@@ -31,27 +31,40 @@ public class ExternalDidClient {
     }
 
     public JsonNode createDid(Map<String, Object> request) {
+        JsonNode body = post(properties.getDidCreatePath(), request);
+        if (body.has("res") && !body.path("res").asBoolean()) {
+            throw new BadRequestApiException("DID server create failed");
+        }
+        return body;
+    }
+
+    public JsonNode issueVc(Map<String, Object> request) {
+        return post(properties.getDidIssueVcPath(), request);
+    }
+
+    public JsonNode verifyVc(Map<String, Object> request) {
+        return post(properties.getDidVerifyVcPath(), request);
+    }
+
+    private JsonNode post(String path, Map<String, Object> request) {
         try {
             ResponseEntity<JsonNode> response = restTemplate.exchange(
-                    getCreateDidUrl(),
+                    getUrl(path),
                     HttpMethod.POST,
                     new HttpEntity<>(request == null ? Map.of() : request),
                     JsonNode.class
             );
             JsonNode body = Objects.requireNonNull(response.getBody(), "DID server response body is empty");
-            if (body.has("res") && !body.path("res").asBoolean()) {
-                throw new BadRequestApiException("DID server create failed");
-            }
             return body;
         } catch (RestClientException | NullPointerException exception) {
             throw new BadRequestApiException("DID server API call failed: " + exception.getMessage());
         }
     }
 
-    private String getCreateDidUrl() {
+    private String getUrl(String path) {
         return UriComponentsBuilder
                 .fromHttpUrl(trimTrailingSlash(properties.getDidServerBaseUrl()))
-                .path(normalizePath(properties.getDidCreatePath()))
+                .path(normalizePath(path))
                 .toUriString();
     }
 

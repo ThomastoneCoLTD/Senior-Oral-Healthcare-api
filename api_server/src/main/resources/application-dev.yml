@@ -124,7 +124,9 @@ daegu-chain:
   token-mintable: ${DAEGU_CHAIN_TOKEN_MINTABLE:true}
   token-lockable: ${DAEGU_CHAIN_TOKEN_LOCKABLE:true}
   did-server-base-url: ${DID_SERVER_BASE_URL:http://43.201.125.82}
-  did-create-path: ${DID_CREATE_PATH:/did/signup}
+  did-create-path: ${DID_CREATE_PATH:/did/create}
+  did-issue-vc-path: ${DID_ISSUE_VC_PATH:/did/issue-vc}
+  did-verify-vc-path: ${DID_VERIFY_VC_PATH:/did/verify-vc}
   token-server-base-url: ${TOKEN_SERVER_BASE_URL:http://localhost:5000}
   token-create-path: ${TOKEN_CREATE_PATH:/token/create}
   token-transfer-path: ${TOKEN_TRANSFER_PATH:/token/transfer}

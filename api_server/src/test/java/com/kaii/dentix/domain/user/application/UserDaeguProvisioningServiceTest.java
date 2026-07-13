@@ -87,8 +87,8 @@ class UserDaeguProvisioningServiceTest {
         ArgumentCaptor<Map<String, Object>> createRequestCaptor = ArgumentCaptor.forClass(Map.class);
         verify(daeguChainDidService).createAccount(createRequestCaptor.capture());
         assertThat(createRequestCaptor.getValue())
-                .containsEntry("userIdentifier", "soh-user-001")
                 .containsEntry("label", "soh-user-001")
+                .doesNotContainKey("userIdentifier")
                 .doesNotContainKey("userLoginIdentifier");
         ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
         verify(userRewardWalletRepository).save(captor.capture());
