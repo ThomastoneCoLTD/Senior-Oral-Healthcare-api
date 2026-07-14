@@ -157,6 +157,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 구강체조 썸네일은 `s3://denti-backends/soh/video-thumbnails/` 아래 토큰명 기준 PNG 파일을 사용합니다. 예: `optional_video_1.png`, `essential_video_1.png`, `optional_video_7.png`.
 - 구강체조 영상과 썸네일은 private S3 객체일 수 있으므로 API 응답에서 모두 presigned URL로 내려가야 합니다.
 - EC2 instance role에는 `s3://denti-backends/soh/video/*`와 `s3://denti-backends/soh/video-thumbnails/*` 읽기 권한이 모두 필요합니다.
+- TTS API(`/tts/speech`)는 AWS Polly `SynthesizeSpeech` 권한이 필요하며, 로그인 사용자만 호출하도록 둡니다.
 - 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
 - 2~6화 필수영상은 가입 주차에 따라 한 주에 하나씩 열리고, 1화 및 7~12화 상시영상은 계속 열려 있어야 합니다.

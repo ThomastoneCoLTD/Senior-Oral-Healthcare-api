@@ -51,6 +51,12 @@ resource "aws_iam_role_policy" "artifact_read" {
           "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/app.jar",
           "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/.env"
         ]
+      },
+      {
+        Sid      = "SynthesizeTtsSpeech"
+        Effect   = "Allow"
+        Action   = ["polly:SynthesizeSpeech"]
+        Resource = "*"
       }
     ]
   })

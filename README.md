@@ -459,6 +459,12 @@ Dev EC2 role:
         "arn:aws:s3:::denti-backends/soh/dev/app.jar",
         "arn:aws:s3:::denti-backends/soh/dev/.env"
       ]
+    },
+    {
+      "Sid": "SynthesizeTtsSpeech",
+      "Effect": "Allow",
+      "Action": ["polly:SynthesizeSpeech"],
+      "Resource": "*"
     }
   ]
 }
@@ -497,6 +503,12 @@ Prod EC2 role:
         "arn:aws:s3:::denti-backends/soh/prod/app.jar",
         "arn:aws:s3:::denti-backends/soh/prod/.env"
       ]
+    },
+    {
+      "Sid": "SynthesizeTtsSpeech",
+      "Effect": "Allow",
+      "Action": ["polly:SynthesizeSpeech"],
+      "Resource": "*"
     }
   ]
 }
