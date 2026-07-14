@@ -9,6 +9,8 @@ import java.util.List;
 
 public class OralExerciseDto {
 
+    private static final boolean TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST = true;
+
     @Getter
     @Builder
     @NoArgsConstructor
@@ -42,7 +44,10 @@ public class OralExerciseDto {
         ) {
             boolean coreContent = content.getContentSort() >= 2 && content.getContentSort() <= 6;
             int displayWeek = coreContent ? content.getContentSort() - 1 : 0;
-            boolean available = !coreContent || currentWeek <= 0 || displayWeek <= currentWeek;
+            boolean available = TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST
+                    || !coreContent
+                    || currentWeek <= 0
+                    || displayWeek <= currentWeek;
             boolean currentWeekContent = coreContent
                     ? currentWeek == displayWeek
                     : available;
