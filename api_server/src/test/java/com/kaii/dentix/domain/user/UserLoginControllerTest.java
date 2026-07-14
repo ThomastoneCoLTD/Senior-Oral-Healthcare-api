@@ -94,6 +94,7 @@ public class UserLoginControllerTest {
                 .daeguDid("did:mitum:minic:0x123")
                 .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
                 .daeguCredentialStatus(UserDaeguCredentialStatus.ISSUED)
+                .walletAddress("0x123")
                 .build();
     }
 
@@ -226,7 +227,8 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.organizationName").type(JsonFieldType.STRING).description("소속 기관 이름"),
                                 fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("대구 DID"),
                                 fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태"),
-                                fieldWithPath("response.daeguCredentialStatus").type(JsonFieldType.STRING).optional().description("대구 DID credential 발급 상태")
+                                fieldWithPath("response.daeguCredentialStatus").type(JsonFieldType.STRING).optional().description("대구 DID credential 발급 상태"),
+                                fieldWithPath("response.walletAddress").type(JsonFieldType.STRING).optional().description("대구 DID 지갑 주소")
                         )
                 ));
 

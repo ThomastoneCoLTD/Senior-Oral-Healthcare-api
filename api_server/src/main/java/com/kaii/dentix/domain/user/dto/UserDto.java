@@ -165,6 +165,7 @@ public class UserDto {
         private String daeguDid;
         private UserDaeguIdentityStatus daeguDidStatus;
         private UserDaeguCredentialStatus daeguCredentialStatus;
+        private String walletAddress;
     }
 
     @Getter @Builder

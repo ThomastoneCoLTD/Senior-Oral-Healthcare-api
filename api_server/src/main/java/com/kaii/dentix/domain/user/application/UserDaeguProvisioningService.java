@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.user.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
@@ -21,17 +22,19 @@ import java.util.Map;
 public class UserDaeguProvisioningService {
 
     private final DaeguChainDidService daeguChainDidService;
+    private final DaeguChainAccountService daeguChainAccountService;
     private final UserRewardWalletRepository userRewardWalletRepository;
 
-    public void provisionForSignUp(User user) {
+    public String provisionForSignUp(User user) {
         String walletAddress = provisionDid(user);
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED) {
-            return;
+            return null;
         }
-        provisionWallet(user, walletAddress);
+        String provisionedWalletAddress = provisionWallet(user, walletAddress);
         if (isBlank(user.getDaeguCredentialJwt())) {
             provisionCredential(user);
         }
+        return provisionedWalletAddress;
     }
 
     private String provisionDid(User user) {
@@ -74,21 +77,27 @@ public class UserDaeguProvisioningService {
         );
     }
 
-    private void provisionWallet(User user, String didWalletAddress) {
-        userRewardWalletRepository.findByUserId(user.getUserId()).ifPresentOrElse(
-                wallet -> {
-                    if (isBlank(wallet.getWalletAddress())) {
-                        wallet.updateDaeguWallet(user.getDaeguDid(), resolveWalletAddress(user, didWalletAddress));
-                        userRewardWalletRepository.save(wallet);
+    private String provisionWallet(User user, String didWalletAddress) {
+        return userRewardWalletRepository.findByUserId(user.getUserId())
+                .map(wallet -> {
+                    if (!isBlank(wallet.getWalletAddress())) {
+                        return wallet.getWalletAddress();
                     }
-                },
-                () -> userRewardWalletRepository.save(UserRewardWallet.builder()
+                    String walletAddress = resolveWalletAddress(user, didWalletAddress);
+                    wallet.updateDaeguWallet(user.getDaeguDid(), walletAddress);
+                    userRewardWalletRepository.save(wallet);
+                    return walletAddress;
+                })
+                .orElseGet(() -> {
+                    String walletAddress = resolveWalletAddress(user, didWalletAddress);
+                    userRewardWalletRepository.save(UserRewardWallet.builder()
                         .userId(user.getUserId())
                         .pointBalance(0L)
                         .daeguDid(user.getDaeguDid())
-                        .walletAddress(resolveWalletAddress(user, didWalletAddress))
-                        .build())
-        );
+                        .walletAddress(walletAddress)
+                        .build());
+                    return walletAddress;
+                });
     }
 
     private void provisionCredential(User user) {
@@ -108,7 +117,25 @@ public class UserDaeguProvisioningService {
         if (!isBlank(didWalletAddress)) {
             return didWalletAddress;
         }
-        return extractAddressFromDid(user.getDaeguDid());
+        String walletAddress = extractAddressFromDid(user.getDaeguDid());
+        if (!isBlank(walletAddress)) {
+            return walletAddress;
+        }
+        return createDaeguWalletAddress();
+    }
+
+    private String createDaeguWalletAddress() {
+        DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> response =
+                daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null));
+        String walletAddress = response == null
+                || response.getData() == null
+                || response.getData().getKeyPair() == null
+                ? null
+                : response.getData().getKeyPair().getAddress();
+        if (isBlank(walletAddress)) {
+            throw new BadRequestApiException("DaeguChain wallet address is empty");
+        }
+        return walletAddress;
     }
 
     private String findFirstText(JsonNode node, String... fieldNames) {

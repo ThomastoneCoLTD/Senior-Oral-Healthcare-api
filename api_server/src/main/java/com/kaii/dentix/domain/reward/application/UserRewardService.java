@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
@@ -49,6 +50,7 @@ public class UserRewardService {
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final UserRewardTransactionRepository userRewardTransactionRepository;
     private final OralExerciseContentRepository oralExerciseContentRepository;
+    private final DaeguChainAccountService daeguChainAccountService;
     private final DaeguChainDidService daeguChainDidService;
     private final DaeguChainPointService daeguChainPointService;
     private final ExternalTokenClient externalTokenClient;
@@ -517,6 +519,9 @@ public class UserRewardService {
                 walletAddress = extractAddressFromDid(did);
             }
             if (isBlank(walletAddress)) {
+                walletAddress = createDaeguWalletAddress();
+            }
+            if (isBlank(walletAddress)) {
                 throw new BadRequestApiException("DaeguChain DID wallet address is empty");
             }
             return new DidWallet(did, walletAddress);
@@ -531,6 +536,16 @@ public class UserRewardService {
     private String buildLocalTestWalletAddress(Long userId) {
         long hash = Integer.toUnsignedLong(Objects.hash("soh-local-wallet", userId));
         return "0x" + "%040x".formatted(hash);
+    }
+
+    private String createDaeguWalletAddress() {
+        DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> response =
+                daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null));
+        return response == null
+                || response.getData() == null
+                || response.getData().getKeyPair() == null
+                ? null
+                : response.getData().getKeyPair().getAddress();
     }
 
     private boolean isDevProfile() {
