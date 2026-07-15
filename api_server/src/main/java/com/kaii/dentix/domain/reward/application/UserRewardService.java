@@ -62,20 +62,12 @@ public class UserRewardService {
     @Transactional
     public UserRewardDto.WalletResponse getWallet(HttpServletRequest request) {
         Long userId = getUserId(request);
-        long pointBalance = calculateRewardedPointBalance(userId);
-        return userRewardWalletRepository.findByUserIdForUpdate(userId)
-                .map(wallet -> {
-                    wallet.resetPointBalance(pointBalance);
-                    UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
-                    return UserRewardDto.WalletResponse.builder()
-                            .pointBalance(savedWallet.getPointBalance())
-                            .daeguDid(savedWallet.getDaeguDid())
-                            .walletAddress(savedWallet.getWalletAddress())
-                            .build();
-                })
-                .orElseGet(() -> UserRewardDto.WalletResponse.builder()
-                        .pointBalance(pointBalance)
-                        .build());
+        UserRewardWallet wallet = getOrCreateRewardWallet(userId);
+        return UserRewardDto.WalletResponse.builder()
+                .pointBalance(wallet.getPointBalance())
+                .daeguDid(wallet.getDaeguDid())
+                .walletAddress(wallet.getWalletAddress())
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -172,63 +164,6 @@ public class UserRewardService {
                 .balanceAfter(wallet.getPointBalance())
                 .idempotencyKey(idempotencyKey)
                 .sessionId(buttonClickRequest.getSessionId())
-                .coinId(rewardTokenName)
-                .build());
-
-        if (userRewardProperties.isTokenTransferEnabled()) {
-            transferTokenIfConfigured(transaction, wallet, rewardTokenName);
-        } else {
-            mintPointIfConfigured(transaction, wallet);
-        }
-
-        assertRewardSucceeded(transaction);
-        creditReward(wallet, transaction);
-        return UserRewardDto.RewardResponse.from(transaction, false, wallet.getPointBalance());
-    }
-
-    @Transactional
-    public UserRewardDto.RewardResponse rewardOralExerciseCompletion(
-            Long userId,
-            OralExerciseContent content,
-            String sessionId
-    ) {
-        if (userId == null) {
-            throw new UnauthorizedException("?몄쬆 ?뺣낫媛 ?놁뒿?덈떎.");
-        }
-        if (content == null) {
-            throw new BadRequestApiException("content is required");
-        }
-
-        String rewardTokenName = resolveRewardTokenName(content);
-        var existingTokenReward = userRewardTransactionRepository
-                .findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
-                        userId,
-                        rewardTokenName,
-                        UserRewardTransactionType.ORAL_EXERCISE_COIN,
-                        UserRewardTransactionStatus.CANCELED
-        );
-        if (existingTokenReward.isPresent()) {
-            return retryTokenTransferIfNeeded(userId, existingTokenReward.get(), rewardTokenName);
-        }
-
-        String idempotencyKey = buildButtonClickIdempotencyKey(userId, rewardTokenName);
-        var existingIdempotentTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey);
-        if (existingIdempotentTransaction.isPresent() && existingIdempotentTransaction.get().isAlreadyApplied()) {
-            return retryTokenTransferIfNeeded(userId, existingIdempotentTransaction.get(), rewardTokenName);
-        }
-
-        UserRewardWallet wallet = getOrCreateRewardWallet(userId);
-        long amount = userRewardProperties.getOralExerciseCoinAmount();
-
-        UserRewardTransaction transaction = userRewardTransactionRepository.save(UserRewardTransaction.builder()
-                .userId(userId)
-                .oralExerciseContent(content)
-                .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
-                .status(UserRewardTransactionStatus.LOCAL_RECORDED)
-                .amount(amount)
-                .balanceAfter(wallet.getPointBalance())
-                .idempotencyKey(idempotencyKey)
-                .sessionId(sessionId)
                 .coinId(rewardTokenName)
                 .build());
 

@@ -67,7 +67,7 @@ public class OralExerciseDto {
                     .available(available)
                     .currentWeekContent(currentWeekContent)
                     .rewardReceived(rewardReceived)
-                    .buttonChallenge(ButtonChallengeResponse.forContent(rewardReceived))
+                    .buttonChallenge(ButtonChallengeResponse.forContent(coreContent, rewardReceived))
                     .progress(ProgressResponse.from(progress))
                     .build();
         }
@@ -134,12 +134,13 @@ public class OralExerciseDto {
         private boolean rewardAvailable;
         private String promptMessage;
 
-        public static ButtonChallengeResponse forContent(boolean rewardReceived) {
+        public static ButtonChallengeResponse forContent(boolean coreContent, boolean rewardReceived) {
+            boolean rewardAvailable = coreContent && !rewardReceived;
             return ButtonChallengeResponse.builder()
                     .buttons(List.of(1, 2, 3, 4, 5))
                     .timeoutSeconds(30)
-                    .rewardAvailable(false)
-                    .promptMessage("필수 영상을 끝까지 시청하면 토큰이 수령됩니다.")
+                    .rewardAvailable(rewardAvailable)
+                    .promptMessage("음성 안내에 맞는 번호를 누르면 토큰이 수령됩니다.")
                     .build();
         }
     }

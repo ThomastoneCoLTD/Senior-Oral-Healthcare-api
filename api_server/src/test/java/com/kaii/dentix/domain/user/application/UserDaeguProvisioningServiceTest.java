@@ -101,6 +101,55 @@ class UserDaeguProvisioningServiceTest {
     }
 
     @Test
+    void provisionForSignUpStoresRequestedWalletAddressFirst() throws Exception {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .build();
+        JsonNode didData = new ObjectMapper().readTree("""
+                {
+                  "did": "did:mitum:minic:0x123",
+                  "address": "0x-did-wallet"
+                }
+                """);
+        when(daeguChainDidService.createAccount(any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
+        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
+        when(daeguChainDidService.issueLoginUserCredential(user))
+                .thenAnswer(invocation -> {
+                    user.updateDaeguCredential(
+                            "issued.credential.jwt",
+                            UserDaeguCredentialStatus.ISSUED,
+                            null,
+                            null
+                    );
+                    return null;
+                });
+
+        String walletAddress = service.provisionForSignUp(user, " 0x-request-wallet ");
+
+        assertThat(walletAddress).isEqualTo("0x-request-wallet");
+        ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
+        verify(userRewardWalletRepository).save(captor.capture());
+        assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x-request-wallet");
+    }
+
+    @Test
+    void provisionForSignUpRejectsInvalidRequestedWalletAddressBeforeDidCall() {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .build();
+
+        assertThatThrownBy(() -> service.provisionForSignUp(user, "request-wallet"))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessageContaining("지갑주소는 0x로 시작해야 합니다.");
+
+        verify(daeguChainDidService, never()).createAccount(any());
+        verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
+    }
+
+    @Test
     void provisionForSignUpCreatesDaeguWalletWhenDidResponseHasNoAddress() throws Exception {
         User user = User.builder()
                 .userId(7L)

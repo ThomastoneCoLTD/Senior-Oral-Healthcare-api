@@ -109,7 +109,7 @@ public class UserLoginService {
                 .isVerify(YnType.Y)
                 .build());
 
-        String walletAddress = userDaeguProvisioningService.provisionForSignUp(user);
+        String walletAddress = userDaeguProvisioningService.provisionForSignUp(user, request.getWalletAddress());
 
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
@@ -145,7 +145,7 @@ public class UserLoginService {
                 .isVerify(YnType.Y)
                 .build());
 
-        String walletAddress = userDaeguProvisioningService.provisionForSignUp(user);
+        String walletAddress = userDaeguProvisioningService.provisionForSignUp(user, request.getWalletAddress());
 
         serviceAgreementConsentService.saveUserServiceAgreements(
                 user.getUserId(),

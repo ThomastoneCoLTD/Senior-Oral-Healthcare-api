@@ -158,11 +158,13 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 구강체조 영상과 썸네일은 private S3 객체일 수 있으므로 API 응답에서 모두 presigned URL로 내려가야 합니다.
 - EC2 instance role에는 `s3://denti-backends/soh/video/*`와 `s3://denti-backends/soh/video-thumbnails/*` 읽기 권한이 모두 필요합니다.
 - TTS API(`/tts/speech`)는 AWS Polly `SynthesizeSpeech` 권한이 필요하며, 로그인 사용자만 호출하도록 둡니다.
+- 회원가입(`/login/signUp`, `/login/signUp/did`) 시 토큰 수령용 `walletAddress`를 필수로 받아 `UserRewardWallet`에 함께 저장합니다.
 - 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
 - 2~6화 필수영상은 가입 주차에 따라 한 주에 하나씩 열리고, 1화 및 7~12화 상시영상은 계속 열려 있어야 합니다.
 - 사용자 비밀번호 찾기/재설정 API(`/login/find-password`, `/login/password`)와 관련 DTO/서비스/문서 테스트를 제거했습니다.
 - 구강체조 리워드 지급/회수 흐름을 token server 기반으로 정리했습니다.
+- 필수 구강체조 토큰 발급은 영상 완료가 아니라 `/oral-exercise/rewards/button-click` 번호 버튼 성공으로만 처리합니다.
 - 필수 구강체조 5개 토큰을 수령하고 리워드 회수/지급 처리까지 끝난 뒤에도 기존 `ORAL_EXERCISE_COIN` 이력을 유지해, 같은 영상을 다시 봐도 `essential_video_1~5` 토큰이 재발급되지 않도록 테스트로 고정했습니다.
 - 치은염 검출 화면 및 구강검진 관련 프론트 문구 다국어 처리가 보강되었습니다.
 - 프론트에서 리워드 지급 후 버튼이 다시 보이는 문제를 보완했습니다.

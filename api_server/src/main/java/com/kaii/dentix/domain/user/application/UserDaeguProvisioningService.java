@@ -26,11 +26,16 @@ public class UserDaeguProvisioningService {
     private final UserRewardWalletRepository userRewardWalletRepository;
 
     public String provisionForSignUp(User user) {
+        return provisionForSignUp(user, null);
+    }
+
+    public String provisionForSignUp(User user, String requestedWalletAddress) {
+        String normalizedRequestedWalletAddress = normalizeOptionalWalletAddress(requestedWalletAddress);
         String walletAddress = provisionDid(user);
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED) {
             return null;
         }
-        String provisionedWalletAddress = provisionWallet(user, walletAddress);
+        String provisionedWalletAddress = provisionWallet(user, normalizedRequestedWalletAddress, walletAddress);
         if (isBlank(user.getDaeguCredentialJwt())) {
             provisionCredential(user);
         }
@@ -77,19 +82,19 @@ public class UserDaeguProvisioningService {
         );
     }
 
-    private String provisionWallet(User user, String didWalletAddress) {
+    private String provisionWallet(User user, String requestedWalletAddress, String didWalletAddress) {
         return userRewardWalletRepository.findByUserId(user.getUserId())
                 .map(wallet -> {
                     if (!isBlank(wallet.getWalletAddress())) {
                         return wallet.getWalletAddress();
                     }
-                    String walletAddress = resolveWalletAddress(user, didWalletAddress);
+                    String walletAddress = resolveWalletAddress(user, requestedWalletAddress, didWalletAddress);
                     wallet.updateDaeguWallet(user.getDaeguDid(), walletAddress);
                     userRewardWalletRepository.save(wallet);
                     return walletAddress;
                 })
                 .orElseGet(() -> {
-                    String walletAddress = resolveWalletAddress(user, didWalletAddress);
+                    String walletAddress = resolveWalletAddress(user, requestedWalletAddress, didWalletAddress);
                     userRewardWalletRepository.save(UserRewardWallet.builder()
                         .userId(user.getUserId())
                         .pointBalance(0L)
@@ -113,7 +118,10 @@ public class UserDaeguProvisioningService {
         }
     }
 
-    private String resolveWalletAddress(User user, String didWalletAddress) {
+    private String resolveWalletAddress(User user, String requestedWalletAddress, String didWalletAddress) {
+        if (!isBlank(requestedWalletAddress)) {
+            return requestedWalletAddress;
+        }
         if (!isBlank(didWalletAddress)) {
             return didWalletAddress;
         }
@@ -122,6 +130,18 @@ public class UserDaeguProvisioningService {
             return walletAddress;
         }
         return createDaeguWalletAddress();
+    }
+
+    private String normalizeWalletAddress(String walletAddress) {
+        String normalized = walletAddress == null ? null : walletAddress.trim();
+        if (isBlank(normalized) || !normalized.startsWith("0x") || normalized.length() <= 2) {
+            throw new BadRequestApiException("지갑주소는 0x로 시작해야 합니다.");
+        }
+        return normalized;
+    }
+
+    private String normalizeOptionalWalletAddress(String walletAddress) {
+        return isBlank(walletAddress) ? null : normalizeWalletAddress(walletAddress);
     }
 
     private String createDaeguWalletAddress() {

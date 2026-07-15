@@ -184,6 +184,7 @@ public class UserLoginControllerTest {
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("초록색")
                 .organizationId(1L)
+                .walletAddress("0x123")
                 .userServiceAgreementRequest(Arrays.asList(1L, 2L, 3L))
                 .build();
 
@@ -211,6 +212,7 @@ public class UserLoginControllerTest {
                                 fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
                                 fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변"),
                                 fieldWithPath("organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
+                                fieldWithPath("walletAddress").type(JsonFieldType.STRING).description("토큰 수령 지갑 주소"),
                                 fieldWithPath("userServiceAgreementRequest").type(JsonFieldType.ARRAY).description("동의한 약관 ID 목록")
                         ),
                         responseFields(

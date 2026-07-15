@@ -150,7 +150,7 @@ class UserRewardServiceTest {
     }
 
     @Test
-    void rewardOralExerciseCompletionDoesNotReissueTokenAfterReclaim() {
+    void rewardOralExerciseButtonClickDoesNotReissueTokenAfterReclaim() {
         UserRewardTransaction rewardedTransaction = UserRewardTransaction.builder()
                 .userId(7L)
                 .oralExerciseContent(content())
@@ -178,10 +178,9 @@ class UserRewardServiceTest {
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        UserRewardDto.RewardResponse response = service.rewardOralExerciseCompletion(
-                7L,
-                content(),
-                "rewatch-session"
+        UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
+                request,
+                new UserRewardDto.ButtonClickRequest(11L, "rewatch-session", 2, 2)
         );
 
         assertThat(response.isDuplicated()).isTrue();

@@ -161,13 +161,6 @@ public class OralExerciseService {
         );
 
         UserOralExerciseProgress savedProgress = userOralExerciseProgressRepository.save(progress);
-        if (completed && isCoreContent(content)) {
-            userRewardService.rewardOralExerciseCompletion(
-                    userId,
-                    content,
-                    interactionRequest.getSessionId()
-            );
-        }
 
         return OralExerciseDto.ProgressResponse.from(savedProgress);
     }
