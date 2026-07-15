@@ -52,7 +52,8 @@ class OralExerciseContentInitializerTest {
         assertThat(savedContents)
                 .allSatisfy(content -> {
                     assertThat(content.getVideoUrl()).contains(content.getContentSort() + "%ED%99%94");
-                    assertThat(content.getThumbnailUrl()).contains("soh/video-thumbnails/");
+                    assertThat(content.getVideoUrl()).contains("tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/");
+                    assertThat(content.getThumbnailUrl()).contains("tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/");
                     assertThat(content.getThumbnailUrl()).endsWith(".png");
                     assertThat(content.isActive()).isTrue();
                 });

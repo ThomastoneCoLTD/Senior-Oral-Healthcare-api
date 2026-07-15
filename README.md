@@ -121,7 +121,7 @@ Use this checklist whenever starting a new SOH-style project or moving this proj
 
 6. Prepare AWS IAM.
    - GitHub Actions IAM user needs artifact upload, ASG refresh, and Terraform plan/apply permissions.
-   - EC2 instance roles should read only their own `app.jar` and `.env`, plus shared `soh/video/*` and `soh/video-thumbnails/*` assets for presigned oral-exercise playback and thumbnails, from S3.
+   - EC2 instance roles should read only their own `app.jar` and `.env`. Oral-exercise videos and thumbnails are served from the static asset bucket `s3://tms-static-hosting/oral-exercise/`.
    - EC2 User Data must use the instance profile, not long-lived AWS access keys.
 
 7. Prepare CloudFront/API routing.
@@ -439,9 +439,7 @@ Dev EC2 role:
       "Action": ["s3:GetObject"],
       "Resource": [
         "arn:aws:s3:::denti-backends/soh/dev/app.jar",
-        "arn:aws:s3:::denti-backends/soh/dev/.env",
-        "arn:aws:s3:::denti-backends/soh/video/*",
-        "arn:aws:s3:::denti-backends/soh/video-thumbnails/*"
+        "arn:aws:s3:::denti-backends/soh/dev/.env"
       ]
     },
     {
@@ -483,9 +481,7 @@ Prod EC2 role:
       "Action": ["s3:GetObject"],
       "Resource": [
         "arn:aws:s3:::denti-backends/soh/prod/app.jar",
-        "arn:aws:s3:::denti-backends/soh/prod/.env",
-        "arn:aws:s3:::denti-backends/soh/video/*",
-        "arn:aws:s3:::denti-backends/soh/video-thumbnails/*"
+        "arn:aws:s3:::denti-backends/soh/prod/.env"
       ]
     },
     {

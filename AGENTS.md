@@ -73,7 +73,7 @@ Workflow: .github/workflows/deploy-api-dev.yml
 Branch: dev
 Artifact path: s3://denti-backends/soh/dev/app.jar
 Env path: s3://denti-backends/soh/dev/.env
-Shared video path: s3://denti-backends/soh/video/
+Shared oral-exercise asset path: s3://tms-static-hosting/oral-exercise/
 ASG: soh-api-dev-asg
 Secret: SOH_API_ENV_DEV
 Health URL: https://soh-dev.thomabio.com/api/actuator/health
@@ -87,7 +87,7 @@ Workflow: .github/workflows/deploy-api-prod.yml
 Branch: prod
 Artifact path: s3://denti-backends/soh/prod/app.jar
 Env path: s3://denti-backends/soh/prod/.env
-Shared video path: s3://denti-backends/soh/video/
+Shared oral-exercise asset path: s3://tms-static-hosting/oral-exercise/
 ASG: soh-api-prod-asg
 Secret: SOH_API_ENV_PROD
 Health URL: https://soh.thomabio.com/api/actuator/health
@@ -155,9 +155,8 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - dev 배포 workflow에서 단일 인스턴스 교체가 가능하도록 ASG instance refresh 설정을 보완했습니다.
 - dev 배포 workflow에서 별도 datasource GitHub Secret 값이 있으면 `SOH_API_ENV_DEV`의 datasource 값을 덮어쓰도록 보완했습니다.
 - 구강체조 콘텐츠 제목, 영상 URL, 실제 영상 길이를 초기 데이터에 반영했습니다.
-- 구강체조 썸네일은 `s3://denti-backends/soh/video-thumbnails/` 아래 토큰명 기준 PNG 파일을 사용합니다. 예: `optional_video_1.png`, `essential_video_1.png`, `optional_video_7.png`.
-- 구강체조 영상과 썸네일은 private S3 객체일 수 있으므로 API 응답에서 모두 presigned URL로 내려가야 합니다.
-- EC2 instance role에는 `s3://denti-backends/soh/video/*`와 `s3://denti-backends/soh/video-thumbnails/*` 읽기 권한이 모두 필요합니다.
+- 구강체조 영상과 썸네일은 `s3://tms-static-hosting/oral-exercise/` 아래에서 불러옵니다. 썸네일은 토큰명 기준 PNG 파일을 사용합니다. 예: `optional_video_1.png`, `essential_video_1.png`, `optional_video_7.png`.
+- `s3://tms-static-hosting/oral-exercise/...` 형태로 저장된 구강체조 자산 URL은 API 응답에서 `https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/...`로 변환합니다.
 - TTS API(`/tts/speech`)는 AWS Polly `SynthesizeSpeech` 권한이 필요하며, 로그인 사용자만 호출하도록 둡니다.
 - 회원가입(`/login/signUp`, `/login/signUp/did`) 시 토큰 수령용 `walletAddress`를 필수로 받아 `UserRewardWallet`에 함께 저장합니다.
 - 회원가입 사용자는 요청 기관값과 무관하게 `tokenadmin` 관리자 계정의 소속 기관 사용자로 저장합니다. `tokenadmin` 계정 또는 소속 기관이 없으면 가입이 실패합니다.
@@ -176,7 +175,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - dev 배포 후 `https://soh-dev.thomabio.com/api/actuator/health`가 `UP`인지 확인합니다.
 - 프론트 dev 배포 후 1화 인트로와 7~12화 상시영상 전체가 잠금 없이 열리고, 2~6화 필수영상은 주차별로 열리는지 실제 화면에서 확인합니다.
 - 7~12화의 backend 기본 길이는 실제 S3 MP4 메타데이터 기준으로 7화 176초, 8화 171초, 9화 163초, 10화 133초, 11화 172초, 12화 167초입니다.
-- 연결된 영상 URL이 있는 콘텐츠는 S3 presigned URL이 정상 생성되는지 확인합니다.
+- 연결된 영상 URL이 있는 콘텐츠는 `tms-static-hosting` 정적 S3 HTTPS URL이 정상 로드되는지 확인합니다.
 - 치은염 검출이 실제 이미지 업로드/분석 결과까지 정상 동작하는지 end-to-end로 확인합니다.
 - 비밀번호 변경 버튼은 프론트 사용자 화면에서 제거되어야 하며, 관리자 비밀번호 기능은 관리자 계정용으로 유지합니다.
 - 기존에 채팅이나 과거 커밋에 노출된 DB 비밀번호가 있다면 RDS/Secrets Manager에서 회전하는 것을 권장합니다.

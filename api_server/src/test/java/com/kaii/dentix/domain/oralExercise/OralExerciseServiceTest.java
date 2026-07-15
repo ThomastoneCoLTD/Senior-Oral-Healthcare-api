@@ -158,6 +158,27 @@ class OralExerciseServiceTest {
     }
 
     @Test
+    void getContentsConvertsTmsStaticHostingS3UrisToHttpsUrls() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent content = content(
+                7,
+                "s3://tms-static-hosting/oral-exercise/sample.mp4",
+                "s3://tms-static-hosting/oral-exercise/optional_video_2.png"
+        );
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(content));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        OralExerciseDto.ContentResponse contentResponse = response.getContents().get(0);
+        assertThat(contentResponse.getVideoUrl())
+                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/sample.mp4");
+        assertThat(contentResponse.getThumbnailUrl())
+                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/optional_video_2.png");
+    }
+
+    @Test
     void getContentsMarksButtonRewardAsAlreadyReceivedPerRewardTokenName() {
         User user = userCreatedDaysAgo(0);
         OralExerciseContent firstContent = content(2);
