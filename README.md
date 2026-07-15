@@ -121,7 +121,7 @@ Use this checklist whenever starting a new SOH-style project or moving this proj
 
 6. Prepare AWS IAM.
    - GitHub Actions IAM user needs artifact upload, ASG refresh, and Terraform plan/apply permissions.
-   - EC2 instance roles should read only their own `app.jar` and `.env`. Oral-exercise videos and thumbnails are served from the static asset bucket `s3://tms-static-hosting/oral-exercise/`.
+   - EC2 instance roles should read only their own `app.jar` and `.env`. Oral-exercise videos are served from `s3://tms-static-hosting/oral-exercise/video/`, and thumbnails from `s3://tms-static-hosting/oral-exercise/video-thumbnails/`.
    - EC2 User Data must use the instance profile, not long-lived AWS access keys.
 
 7. Prepare CloudFront/API routing.

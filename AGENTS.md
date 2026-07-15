@@ -73,7 +73,8 @@ Workflow: .github/workflows/deploy-api-dev.yml
 Branch: dev
 Artifact path: s3://denti-backends/soh/dev/app.jar
 Env path: s3://denti-backends/soh/dev/.env
-Shared oral-exercise asset path: s3://tms-static-hosting/oral-exercise/
+Shared oral-exercise video path: s3://tms-static-hosting/oral-exercise/video/
+Shared oral-exercise thumbnail path: s3://tms-static-hosting/oral-exercise/video-thumbnails/
 ASG: soh-api-dev-asg
 Secret: SOH_API_ENV_DEV
 Health URL: https://soh-dev.thomabio.com/api/actuator/health
@@ -87,7 +88,8 @@ Workflow: .github/workflows/deploy-api-prod.yml
 Branch: prod
 Artifact path: s3://denti-backends/soh/prod/app.jar
 Env path: s3://denti-backends/soh/prod/.env
-Shared oral-exercise asset path: s3://tms-static-hosting/oral-exercise/
+Shared oral-exercise video path: s3://tms-static-hosting/oral-exercise/video/
+Shared oral-exercise thumbnail path: s3://tms-static-hosting/oral-exercise/video-thumbnails/
 ASG: soh-api-prod-asg
 Secret: SOH_API_ENV_PROD
 Health URL: https://soh.thomabio.com/api/actuator/health
@@ -155,7 +157,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - dev 배포 workflow에서 단일 인스턴스 교체가 가능하도록 ASG instance refresh 설정을 보완했습니다.
 - dev 배포 workflow에서 별도 datasource GitHub Secret 값이 있으면 `SOH_API_ENV_DEV`의 datasource 값을 덮어쓰도록 보완했습니다.
 - 구강체조 콘텐츠 제목, 영상 URL, 실제 영상 길이를 초기 데이터에 반영했습니다.
-- 구강체조 영상과 썸네일은 `s3://tms-static-hosting/oral-exercise/` 아래에서 불러옵니다. 썸네일은 토큰명 기준 PNG 파일을 사용합니다. 예: `optional_video_1.png`, `essential_video_1.png`, `optional_video_7.png`.
+- 구강체조 영상은 `s3://tms-static-hosting/oral-exercise/video/`, 썸네일은 `s3://tms-static-hosting/oral-exercise/video-thumbnails/` 아래에서 불러옵니다. 썸네일은 토큰명 기준 PNG 파일을 사용합니다. 예: `optional_video_1.png`, `essential_video_1.png`, `optional_video_7.png`.
 - `s3://tms-static-hosting/oral-exercise/...` 형태로 저장된 구강체조 자산 URL은 API 응답에서 `https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/...`로 변환합니다.
 - TTS API(`/tts/speech`)는 AWS Polly `SynthesizeSpeech` 권한이 필요하며, 로그인 사용자만 호출하도록 둡니다.
 - 회원가입(`/login/signUp`, `/login/signUp/did`) 시 토큰 수령용 `walletAddress`를 필수로 받아 `UserRewardWallet`에 함께 저장합니다.

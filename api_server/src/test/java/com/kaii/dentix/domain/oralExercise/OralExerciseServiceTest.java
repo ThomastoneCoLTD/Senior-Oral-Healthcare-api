@@ -162,8 +162,8 @@ class OralExerciseServiceTest {
         User user = userCreatedDaysAgo(0);
         OralExerciseContent content = content(
                 7,
-                "s3://tms-static-hosting/oral-exercise/sample.mp4",
-                "s3://tms-static-hosting/oral-exercise/optional_video_2.png"
+                "s3://tms-static-hosting/oral-exercise/video/sample.mp4",
+                "s3://tms-static-hosting/oral-exercise/video-thumbnails/optional_video_2.png"
         );
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
@@ -173,9 +173,9 @@ class OralExerciseServiceTest {
 
         OralExerciseDto.ContentResponse contentResponse = response.getContents().get(0);
         assertThat(contentResponse.getVideoUrl())
-                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/sample.mp4");
+                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/video/sample.mp4");
         assertThat(contentResponse.getThumbnailUrl())
-                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/optional_video_2.png");
+                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/video-thumbnails/optional_video_2.png");
     }
 
     @Test
