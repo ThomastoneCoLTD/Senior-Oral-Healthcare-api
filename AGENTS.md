@@ -116,7 +116,7 @@ SOH_TERRAFORM_TFVARS_PROD
 - datasource 비밀번호는 RDS Secrets Manager 값에서 가져오고, 저장소 파일에 실제 값을 쓰지 않습니다.
 - DaeguChain/DID 기능에는 `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_TEMPLATE_ID`, `DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, `USER_REWARD_TOKEN_TRANSFER_ENABLED` 등을 환경별로 확인합니다.
 - 개발 DID 생성 서버는 현재 `DID_SERVER_BASE_URL=http://43.201.125.82`를 사용합니다.
-- DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 성공 조건은 DID 서버가 자체 생성한 DID와 대구체인 발급 지갑 주소를 함께 내려주는 것입니다. 지갑 주소는 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 지원하며 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. 로그인 credential은 DID 서버 `/did/issue-vc`에서 VC-JWT로 발급하고 로그인 시 `/did/verify-vc`로 검증합니다.
+- DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. 로그인 credential은 DID 서버 `/did/issue-vc`에서 VC-JWT로 발급하고 로그인 시 `/did/verify-vc`로 검증합니다.
 - reward reclaim은 사용자 DID private key를 SOH에서 읽거나 저장하지 않고, token server를 통해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`로 회수합니다.
 
 ## Terraform 및 수동 구축
