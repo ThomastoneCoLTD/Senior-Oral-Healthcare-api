@@ -368,7 +368,7 @@ public class UserLoginControllerTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(401))
-                .andExpect(jsonPath("rtMsg").value("DID credential verification failed."));
+                .andExpect(jsonPath("rtMsg").value("Invalid login ID or DID."));
     }
 
     @Test
