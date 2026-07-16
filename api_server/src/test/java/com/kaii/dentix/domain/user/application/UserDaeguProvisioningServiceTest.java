@@ -79,8 +79,9 @@ class UserDaeguProvisioningServiceTest {
                     return null;
                 });
 
-        service.provisionForSignUp(user);
+        String walletAddress = service.provisionForSignUp(user);
 
+        assertThat(walletAddress).isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
         assertThat(user.getDaeguDid()).isEqualTo("did:mitum:minic:0x123");
         assertThat(user.getDaeguDidKey()).isEqualTo("external-public-key");
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);

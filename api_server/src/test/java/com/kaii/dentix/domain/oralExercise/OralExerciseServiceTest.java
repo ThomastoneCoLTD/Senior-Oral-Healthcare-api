@@ -77,7 +77,7 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void getContentsOpensCoreContentsBySignupWeekAndKeepsIntroOpen() {
+    void getContentsTemporarilyUnlocksAllCoreContentsForTestingAndKeepsIntroOpen() {
         User user = userCreatedDaysAgo(21);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
@@ -98,7 +98,7 @@ class OralExerciseServiceTest {
                 .containsExactly(2, 3, 4);
         assertThat(response.getContents()).filteredOn(content -> content.getSort() == 6)
                 .singleElement()
-                .satisfies(content -> assertThat(content.isAvailable()).isFalse());
+                .satisfies(content -> assertThat(content.isAvailable()).isTrue());
         assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
                 .containsExactly(1);
         assertThat(response.getExtraContents()).allSatisfy(content -> {
@@ -155,6 +155,27 @@ class OralExerciseServiceTest {
         OralExerciseDto.ContentResponse contentResponse = response.getContents().get(0);
         assertThat(contentResponse.getVideoUrl()).isEqualTo("signed-video-url");
         assertThat(contentResponse.getThumbnailUrl()).isEqualTo("signed-thumbnail-url");
+    }
+
+    @Test
+    void getContentsConvertsTmsStaticHostingS3UrisToHttpsUrls() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent content = content(
+                7,
+                "s3://tms-static-hosting/oral-exercise/video/sample.mp4",
+                "s3://tms-static-hosting/oral-exercise/video-thumbnails/optional_video_2.png"
+        );
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(content));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        OralExerciseDto.ContentResponse contentResponse = response.getContents().get(0);
+        assertThat(contentResponse.getVideoUrl())
+                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/video/sample.mp4");
+        assertThat(contentResponse.getThumbnailUrl())
+                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/video-thumbnails/optional_video_2.png");
     }
 
     @Test
@@ -220,7 +241,7 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void getContentsKeepsButtonRewardUnavailableWhenTokenTransferFailed() {
+    void getContentsKeepsButtonRewardAvailableWhenTokenTransferFailed() {
         User user = userCreatedDaysAgo(0);
         OralExerciseContent firstContent = content(2);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
@@ -242,7 +263,7 @@ class OralExerciseServiceTest {
 
         OralExerciseDto.ContentResponse content = response.getContents().get(0);
         assertThat(content.isRewardReceived()).isFalse();
-        assertThat(content.getButtonChallenge().isRewardAvailable()).isFalse();
+        assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue();
     }
 
     private User userCreatedDaysAgo(int daysAgo) {

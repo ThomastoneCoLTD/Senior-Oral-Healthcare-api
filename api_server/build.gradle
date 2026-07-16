@@ -90,6 +90,7 @@ dependencies {
     // --- AWS SDK v2 (BOM 사용하여 버전 통일) ---
     implementation platform('software.amazon.awssdk:bom:2.29.0') // 최신 안정화 버전
     implementation 'software.amazon.awssdk:s3'
+    implementation 'software.amazon.awssdk:polly'
     implementation 'software.amazon.awssdk:sts'
     implementation 'software.amazon.awssdk:auth'
     implementation 'software.amazon.awssdk:regions'

@@ -228,7 +228,7 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("대구 DID"),
                                 fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태"),
                                 fieldWithPath("response.daeguCredentialStatus").type(JsonFieldType.STRING).optional().description("대구 DID credential 발급 상태"),
-                                fieldWithPath("response.walletAddress").type(JsonFieldType.STRING).optional().description("DID server issued DaeguChain wallet address")
+                                fieldWithPath("response.walletAddress").type(JsonFieldType.STRING).optional().description("대구 DID 지갑 주소")
                         )
                 ));
 

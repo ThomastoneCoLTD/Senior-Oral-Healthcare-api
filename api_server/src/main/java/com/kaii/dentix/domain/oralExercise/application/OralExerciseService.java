@@ -44,6 +44,9 @@ public class OralExerciseService {
     private static final String DENTI_BACKENDS_S3_URL_PREFIX =
             "https://denti-backends.s3.ap-northeast-2.amazonaws.com/";
     private static final String DENTI_BACKENDS_S3_URI_PREFIX = "s3://denti-backends/";
+    private static final String TMS_STATIC_HOSTING_S3_URI_PREFIX = "s3://tms-static-hosting/";
+    private static final String TMS_STATIC_HOSTING_S3_URL_PREFIX =
+            "https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/";
     private static final int VIDEO_PRESIGN_EXPIRE_MINUTES = 180;
 
     private final OralExerciseContentRepository oralExerciseContentRepository;
@@ -161,13 +164,6 @@ public class OralExerciseService {
         );
 
         UserOralExerciseProgress savedProgress = userOralExerciseProgressRepository.save(progress);
-        if (completed && isCoreContent(content)) {
-            userRewardService.rewardOralExerciseCompletion(
-                    userId,
-                    content,
-                    interactionRequest.getSessionId()
-            );
-        }
 
         return OralExerciseDto.ProgressResponse.from(savedProgress);
     }
@@ -218,6 +214,11 @@ public class OralExerciseService {
     }
 
     private String resolvePlayableAssetUrl(String assetUrl) {
+        if (assetUrl != null && assetUrl.startsWith(TMS_STATIC_HOSTING_S3_URI_PREFIX)) {
+            String key = assetUrl.substring(TMS_STATIC_HOSTING_S3_URI_PREFIX.length());
+            return TMS_STATIC_HOSTING_S3_URL_PREFIX + key;
+        }
+
         String key = extractDentiBackendsS3Key(assetUrl);
         if (key == null) {
             return assetUrl;

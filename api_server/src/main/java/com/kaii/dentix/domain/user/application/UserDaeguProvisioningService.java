@@ -28,11 +28,11 @@ public class UserDaeguProvisioningService {
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED) {
             return null;
         }
-        provisionWallet(user, walletAddress);
+        String provisionedWalletAddress = provisionWallet(user, walletAddress);
         if (isBlank(user.getDaeguCredentialJwt())) {
             provisionCredential(user);
         }
-        return walletAddress;
+        return provisionedWalletAddress;
     }
 
     private String provisionDid(User user) {
@@ -82,21 +82,27 @@ public class UserDaeguProvisioningService {
         );
     }
 
-    private void provisionWallet(User user, String didWalletAddress) {
-        userRewardWalletRepository.findByUserId(user.getUserId()).ifPresentOrElse(
-                wallet -> {
-                    if (isBlank(wallet.getWalletAddress())) {
-                        wallet.updateDaeguWallet(user.getDaeguDid(), resolveWalletAddress(didWalletAddress));
-                        userRewardWalletRepository.save(wallet);
+    private String provisionWallet(User user, String didWalletAddress) {
+        return userRewardWalletRepository.findByUserId(user.getUserId())
+                .map(wallet -> {
+                    if (!isBlank(wallet.getWalletAddress())) {
+                        return wallet.getWalletAddress();
                     }
-                },
-                () -> userRewardWalletRepository.save(UserRewardWallet.builder()
-                        .userId(user.getUserId())
-                        .pointBalance(0L)
-                        .daeguDid(user.getDaeguDid())
-                        .walletAddress(resolveWalletAddress(didWalletAddress))
-                        .build())
-        );
+                    String walletAddress = resolveWalletAddress(didWalletAddress);
+                    wallet.updateDaeguWallet(user.getDaeguDid(), walletAddress);
+                    userRewardWalletRepository.save(wallet);
+                    return walletAddress;
+                })
+                .orElseGet(() -> {
+                    String walletAddress = resolveWalletAddress(didWalletAddress);
+                    userRewardWalletRepository.save(UserRewardWallet.builder()
+                            .userId(user.getUserId())
+                            .pointBalance(0L)
+                            .daeguDid(user.getDaeguDid())
+                            .walletAddress(walletAddress)
+                            .build());
+                    return walletAddress;
+                });
     }
 
     private void provisionCredential(User user) {
@@ -116,7 +122,7 @@ public class UserDaeguProvisioningService {
         if (!isBlank(didWalletAddress)) {
             return didWalletAddress;
         }
-        return null;
+        throw new BadRequestApiException("DaeguChain wallet address is empty");
     }
 
     private String findFirstText(JsonNode node, String... fieldNames) {

@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
@@ -49,6 +50,7 @@ public class UserRewardService {
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final UserRewardTransactionRepository userRewardTransactionRepository;
     private final OralExerciseContentRepository oralExerciseContentRepository;
+    private final DaeguChainAccountService daeguChainAccountService;
     private final DaeguChainDidService daeguChainDidService;
     private final DaeguChainPointService daeguChainPointService;
     private final ExternalTokenClient externalTokenClient;
@@ -60,20 +62,12 @@ public class UserRewardService {
     @Transactional
     public UserRewardDto.WalletResponse getWallet(HttpServletRequest request) {
         Long userId = getUserId(request);
-        long pointBalance = calculateRewardedPointBalance(userId);
-        return userRewardWalletRepository.findByUserIdForUpdate(userId)
-                .map(wallet -> {
-                    wallet.resetPointBalance(pointBalance);
-                    UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
-                    return UserRewardDto.WalletResponse.builder()
-                            .pointBalance(savedWallet.getPointBalance())
-                            .daeguDid(savedWallet.getDaeguDid())
-                            .walletAddress(savedWallet.getWalletAddress())
-                            .build();
-                })
-                .orElseGet(() -> UserRewardDto.WalletResponse.builder()
-                        .pointBalance(pointBalance)
-                        .build());
+        UserRewardWallet wallet = getOrCreateRewardWallet(userId);
+        return UserRewardDto.WalletResponse.builder()
+                .pointBalance(wallet.getPointBalance())
+                .daeguDid(wallet.getDaeguDid())
+                .walletAddress(wallet.getWalletAddress())
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -170,63 +164,6 @@ public class UserRewardService {
                 .balanceAfter(wallet.getPointBalance())
                 .idempotencyKey(idempotencyKey)
                 .sessionId(buttonClickRequest.getSessionId())
-                .coinId(rewardTokenName)
-                .build());
-
-        if (userRewardProperties.isTokenTransferEnabled()) {
-            transferTokenIfConfigured(transaction, wallet, rewardTokenName);
-        } else {
-            mintPointIfConfigured(transaction, wallet);
-        }
-
-        assertRewardSucceeded(transaction);
-        creditReward(wallet, transaction);
-        return UserRewardDto.RewardResponse.from(transaction, false, wallet.getPointBalance());
-    }
-
-    @Transactional
-    public UserRewardDto.RewardResponse rewardOralExerciseCompletion(
-            Long userId,
-            OralExerciseContent content,
-            String sessionId
-    ) {
-        if (userId == null) {
-            throw new UnauthorizedException("?몄쬆 ?뺣낫媛 ?놁뒿?덈떎.");
-        }
-        if (content == null) {
-            throw new BadRequestApiException("content is required");
-        }
-
-        String rewardTokenName = resolveRewardTokenName(content);
-        var existingTokenReward = userRewardTransactionRepository
-                .findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
-                        userId,
-                        rewardTokenName,
-                        UserRewardTransactionType.ORAL_EXERCISE_COIN,
-                        UserRewardTransactionStatus.CANCELED
-        );
-        if (existingTokenReward.isPresent()) {
-            return retryTokenTransferIfNeeded(userId, existingTokenReward.get(), rewardTokenName);
-        }
-
-        String idempotencyKey = buildButtonClickIdempotencyKey(userId, rewardTokenName);
-        var existingIdempotentTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey);
-        if (existingIdempotentTransaction.isPresent() && existingIdempotentTransaction.get().isAlreadyApplied()) {
-            return retryTokenTransferIfNeeded(userId, existingIdempotentTransaction.get(), rewardTokenName);
-        }
-
-        UserRewardWallet wallet = getOrCreateRewardWallet(userId);
-        long amount = userRewardProperties.getOralExerciseCoinAmount();
-
-        UserRewardTransaction transaction = userRewardTransactionRepository.save(UserRewardTransaction.builder()
-                .userId(userId)
-                .oralExerciseContent(content)
-                .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
-                .status(UserRewardTransactionStatus.LOCAL_RECORDED)
-                .amount(amount)
-                .balanceAfter(wallet.getPointBalance())
-                .idempotencyKey(idempotencyKey)
-                .sessionId(sessionId)
                 .coinId(rewardTokenName)
                 .build());
 
@@ -517,6 +454,9 @@ public class UserRewardService {
                 walletAddress = extractAddressFromDid(did);
             }
             if (isBlank(walletAddress)) {
+                walletAddress = createDaeguWalletAddress();
+            }
+            if (isBlank(walletAddress)) {
                 throw new BadRequestApiException("DaeguChain DID wallet address is empty");
             }
             return new DidWallet(did, walletAddress);
@@ -531,6 +471,16 @@ public class UserRewardService {
     private String buildLocalTestWalletAddress(Long userId) {
         long hash = Integer.toUnsignedLong(Objects.hash("soh-local-wallet", userId));
         return "0x" + "%040x".formatted(hash);
+    }
+
+    private String createDaeguWalletAddress() {
+        DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> response =
+                daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null));
+        return response == null
+                || response.getData() == null
+                || response.getData().getKeyPair() == null
+                ? null
+                : response.getData().getKeyPair().getAddress();
     }
 
     private boolean isDevProfile() {

@@ -96,7 +96,7 @@ public class UserLoginService {
             throw new NotFoundDataException("Password question does not exist.");
         }
 
-        Organization organization = daeguDefaultOrganizationService.getOrCreate();
+        Organization organization = daeguDefaultOrganizationService.getTokenAdminOrganization();
         User user = userRepository.save(User.builder()
                 .userLoginIdentifier(request.getUserLoginIdentifier())
                 .userName(request.getUserName())
@@ -129,7 +129,7 @@ public class UserLoginService {
         String userPhoneNumber = normalizePhoneNumber(request.getUserPhoneNumber());
         assertPhoneNumberAvailable(userPhoneNumber);
 
-        Organization organization = daeguDefaultOrganizationService.getOrCreate();
+        Organization organization = daeguDefaultOrganizationService.getTokenAdminOrganization();
         String loginIdentifier = request.getUserLoginIdentifier().trim();
 
         User user = userRepository.save(User.builder()

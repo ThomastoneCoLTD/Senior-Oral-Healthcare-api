@@ -121,7 +121,7 @@ Use this checklist whenever starting a new SOH-style project or moving this proj
 
 6. Prepare AWS IAM.
    - GitHub Actions IAM user needs artifact upload, ASG refresh, and Terraform plan/apply permissions.
-   - EC2 instance roles should read only their own `app.jar` and `.env`, plus shared `soh/video/*` and `soh/video-thumbnails/*` assets for presigned oral-exercise playback and thumbnails, from S3.
+   - EC2 instance roles should read only their own `app.jar` and `.env`. Oral-exercise videos are served from `s3://tms-static-hosting/oral-exercise/video/`, and thumbnails from `s3://tms-static-hosting/oral-exercise/video-thumbnails/`.
    - EC2 User Data must use the instance profile, not long-lived AWS access keys.
 
 7. Prepare CloudFront/API routing.
@@ -316,6 +316,7 @@ SOH_TERRAFORM_TFVARS_PROD
 Each `SOH_TERRAFORM_TFVARS_*` secret should contain the filled content of that environment's `terraform.tfvars.example`. Do not put AWS access keys, DB passwords, JWT secrets, or real `.env` content in these Terraform tfvars secrets.
 
 The dev API deploy workflow first creates `.env` from `SOH_API_ENV_DEV`. If the dedicated repository secrets `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, or `SPRING_DATASOURCE_PASSWORD` are set, the workflow overwrites those matching keys in the generated dev `.env` before uploading it to S3. Use this for urgent dev RDS password rotation without editing the whole `SOH_API_ENV_DEV` blob.
+The dev/prod deploy workflows also accept dedicated DaeguChain overrides: `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, and `TOKEN_SERVER_BASE_URL_PROD`. At least one of `DAEGU_CHAIN_APP_KEY` or `DAEGU_CHAIN_TOKEN` must be present in the generated `.env` for token list/create/transfer APIs.
 
 `SOH_API_ENV_DEV` example:
 
@@ -438,9 +439,7 @@ Dev EC2 role:
       "Action": ["s3:GetObject"],
       "Resource": [
         "arn:aws:s3:::denti-backends/soh/dev/app.jar",
-        "arn:aws:s3:::denti-backends/soh/dev/.env",
-        "arn:aws:s3:::denti-backends/soh/video/*",
-        "arn:aws:s3:::denti-backends/soh/video-thumbnails/*"
+        "arn:aws:s3:::denti-backends/soh/dev/.env"
       ]
     },
     {
@@ -459,6 +458,12 @@ Dev EC2 role:
         "arn:aws:s3:::denti-backends/soh/dev/app.jar",
         "arn:aws:s3:::denti-backends/soh/dev/.env"
       ]
+    },
+    {
+      "Sid": "SynthesizeTtsSpeech",
+      "Effect": "Allow",
+      "Action": ["polly:SynthesizeSpeech"],
+      "Resource": "*"
     }
   ]
 }
@@ -476,9 +481,7 @@ Prod EC2 role:
       "Action": ["s3:GetObject"],
       "Resource": [
         "arn:aws:s3:::denti-backends/soh/prod/app.jar",
-        "arn:aws:s3:::denti-backends/soh/prod/.env",
-        "arn:aws:s3:::denti-backends/soh/video/*",
-        "arn:aws:s3:::denti-backends/soh/video-thumbnails/*"
+        "arn:aws:s3:::denti-backends/soh/prod/.env"
       ]
     },
     {
@@ -497,6 +500,12 @@ Prod EC2 role:
         "arn:aws:s3:::denti-backends/soh/prod/app.jar",
         "arn:aws:s3:::denti-backends/soh/prod/.env"
       ]
+    },
+    {
+      "Sid": "SynthesizeTtsSpeech",
+      "Effect": "Allow",
+      "Action": ["polly:SynthesizeSpeech"],
+      "Resource": "*"
     }
   ]
 }

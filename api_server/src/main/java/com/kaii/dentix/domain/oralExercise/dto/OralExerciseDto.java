@@ -9,6 +9,8 @@ import java.util.List;
 
 public class OralExerciseDto {
 
+    private static final boolean TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST = true;
+
     @Getter
     @Builder
     @NoArgsConstructor
@@ -42,7 +44,10 @@ public class OralExerciseDto {
         ) {
             boolean coreContent = content.getContentSort() >= 2 && content.getContentSort() <= 6;
             int displayWeek = coreContent ? content.getContentSort() - 1 : 0;
-            boolean available = !coreContent || currentWeek <= 0 || displayWeek <= currentWeek;
+            boolean available = TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST
+                    || !coreContent
+                    || currentWeek <= 0
+                    || displayWeek <= currentWeek;
             boolean currentWeekContent = coreContent
                     ? currentWeek == displayWeek
                     : available;
@@ -62,7 +67,7 @@ public class OralExerciseDto {
                     .available(available)
                     .currentWeekContent(currentWeekContent)
                     .rewardReceived(rewardReceived)
-                    .buttonChallenge(ButtonChallengeResponse.forContent(rewardReceived))
+                    .buttonChallenge(ButtonChallengeResponse.forContent(coreContent, rewardReceived))
                     .progress(ProgressResponse.from(progress))
                     .build();
         }
@@ -129,12 +134,13 @@ public class OralExerciseDto {
         private boolean rewardAvailable;
         private String promptMessage;
 
-        public static ButtonChallengeResponse forContent(boolean rewardReceived) {
+        public static ButtonChallengeResponse forContent(boolean coreContent, boolean rewardReceived) {
+            boolean rewardAvailable = coreContent && !rewardReceived;
             return ButtonChallengeResponse.builder()
                     .buttons(List.of(1, 2, 3, 4, 5))
                     .timeoutSeconds(30)
-                    .rewardAvailable(false)
-                    .promptMessage("필수 영상을 끝까지 시청하면 토큰이 수령됩니다.")
+                    .rewardAvailable(rewardAvailable)
+                    .promptMessage("음성 안내에 맞는 번호를 누르면 토큰이 수령됩니다.")
                     .build();
         }
     }
