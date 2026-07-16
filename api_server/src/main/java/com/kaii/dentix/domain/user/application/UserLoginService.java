@@ -109,7 +109,7 @@ public class UserLoginService {
                 .isVerify(YnType.Y)
                 .build());
 
-        userDaeguProvisioningService.provisionForSignUp(user);
+        String walletAddress = userDaeguProvisioningService.provisionForSignUp(user);
 
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
@@ -120,7 +120,7 @@ public class UserLoginService {
                 request.getUserServiceAgreementRequest()
         );
 
-        return buildSignUpResponse(user, organization, accessToken, refreshToken);
+        return buildSignUpResponse(user, organization, accessToken, refreshToken, walletAddress);
     }
 
     @Transactional
@@ -145,7 +145,7 @@ public class UserLoginService {
                 .isVerify(YnType.Y)
                 .build());
 
-        userDaeguProvisioningService.provisionForSignUp(user);
+        String walletAddress = userDaeguProvisioningService.provisionForSignUp(user);
 
         serviceAgreementConsentService.saveUserServiceAgreements(
                 user.getUserId(),
@@ -156,7 +156,7 @@ public class UserLoginService {
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
 
-        return buildSignUpResponse(user, organization, accessToken, refreshToken);
+        return buildSignUpResponse(user, organization, accessToken, refreshToken, walletAddress);
     }
 
     @Transactional
@@ -190,7 +190,8 @@ public class UserLoginService {
             User user,
             Organization organization,
             String accessToken,
-            String refreshToken
+            String refreshToken,
+            String walletAddress
     ) {
         return UserDto.SignUpResponse.builder()
                 .userId(user.getUserId())
@@ -204,6 +205,7 @@ public class UserLoginService {
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
                 .daeguCredentialStatus(user.getDaeguCredentialStatus())
+                .walletAddress(walletAddress)
                 .build();
     }
 

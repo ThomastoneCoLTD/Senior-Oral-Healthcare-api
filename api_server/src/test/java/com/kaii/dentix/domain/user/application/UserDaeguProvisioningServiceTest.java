@@ -122,6 +122,28 @@ class UserDaeguProvisioningServiceTest {
     }
 
     @Test
+    void provisionForSignUpRequiresDidServerWalletAddress() throws Exception {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .build();
+        JsonNode didData = new ObjectMapper().readTree("""
+                {
+                  "did": "did:key:z6MkSelfGenerated"
+                }
+                """);
+        when(daeguChainDidService.createAccount(any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
+
+        assertThatThrownBy(() -> service.provisionForSignUp(user))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessageContaining("DID provisioning failed");
+
+        assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.FAILED);
+        verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
+    }
+
+    @Test
     void provisionForSignUpFailsWhenExternalApiFails() {
         User user = User.builder()
                 .userId(7L)
@@ -132,7 +154,7 @@ class UserDaeguProvisioningServiceTest {
 
         assertThatThrownBy(() -> service.provisionForSignUp(user))
                 .isInstanceOf(BadRequestApiException.class)
-                .hasMessageContaining("DID 생성에 실패했습니다");
+                .hasMessageContaining("DID provisioning failed");
 
         assertThat(user.getDaeguDid()).isNull();
         assertThat(user.getDaeguDidKey()).isNull();

@@ -23,15 +23,16 @@ public class UserDaeguProvisioningService {
     private final DaeguChainDidService daeguChainDidService;
     private final UserRewardWalletRepository userRewardWalletRepository;
 
-    public void provisionForSignUp(User user) {
+    public String provisionForSignUp(User user) {
         String walletAddress = provisionDid(user);
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED) {
-            return;
+            return null;
         }
         provisionWallet(user, walletAddress);
         if (isBlank(user.getDaeguCredentialJwt())) {
             provisionCredential(user);
         }
+        return walletAddress;
     }
 
     private String provisionDid(User user) {
@@ -40,13 +41,20 @@ public class UserDaeguProvisioningService {
             JsonNode data = response.getData();
             String did = findFirstText(data, "did", "DID", "account");
             String key = findFirstText(data, "publickey", "public_key", "publicKey", "key_id", "keyId");
-            String walletAddress = findFirstText(data, "address");
+            String walletAddress = findFirstText(
+                    data,
+                    "walletAddress",
+                    "wallet_address",
+                    "accountAddress",
+                    "account_address",
+                    "address"
+            );
             String credentialJwt = findFirstText(data, "credentialJwt", "jwt");
-            if (isBlank(walletAddress)) {
-                walletAddress = extractAddressFromDid(did);
-            }
             if (isBlank(did)) {
                 throw new BadRequestApiException("DaeguChain DID is empty");
+            }
+            if (isBlank(walletAddress)) {
+                throw new BadRequestApiException("DaeguChain wallet address is empty");
             }
             user.updateDaeguDid(did, key, UserDaeguIdentityStatus.ISSUED);
             if (!isBlank(credentialJwt)) {
@@ -61,7 +69,7 @@ public class UserDaeguProvisioningService {
         } catch (RuntimeException exception) {
             log.warn("Daegu DID provisioning failed. userId={}", user.getUserId(), exception);
             user.updateDaeguDid(null, null, UserDaeguIdentityStatus.FAILED);
-            throw new BadRequestApiException("DID 생성에 실패했습니다: " + exception.getMessage());
+            throw new BadRequestApiException("DID provisioning failed: " + exception.getMessage());
         }
     }
 
@@ -78,7 +86,7 @@ public class UserDaeguProvisioningService {
         userRewardWalletRepository.findByUserId(user.getUserId()).ifPresentOrElse(
                 wallet -> {
                     if (isBlank(wallet.getWalletAddress())) {
-                        wallet.updateDaeguWallet(user.getDaeguDid(), resolveWalletAddress(user, didWalletAddress));
+                        wallet.updateDaeguWallet(user.getDaeguDid(), resolveWalletAddress(didWalletAddress));
                         userRewardWalletRepository.save(wallet);
                     }
                 },
@@ -86,7 +94,7 @@ public class UserDaeguProvisioningService {
                         .userId(user.getUserId())
                         .pointBalance(0L)
                         .daeguDid(user.getDaeguDid())
-                        .walletAddress(resolveWalletAddress(user, didWalletAddress))
+                        .walletAddress(resolveWalletAddress(didWalletAddress))
                         .build())
         );
     }
@@ -104,11 +112,11 @@ public class UserDaeguProvisioningService {
         }
     }
 
-    private String resolveWalletAddress(User user, String didWalletAddress) {
+    private String resolveWalletAddress(String didWalletAddress) {
         if (!isBlank(didWalletAddress)) {
             return didWalletAddress;
         }
-        return extractAddressFromDid(user.getDaeguDid());
+        return null;
     }
 
     private String findFirstText(JsonNode node, String... fieldNames) {
@@ -139,15 +147,6 @@ public class UserDaeguProvisioningService {
             }
         }
         return null;
-    }
-
-    private String extractAddressFromDid(String did) {
-        if (isBlank(did)) {
-            return null;
-        }
-        int index = did.lastIndexOf(':');
-        String candidate = index < 0 || index == did.length() - 1 ? null : did.substring(index + 1);
-        return candidate != null && candidate.startsWith("0x") ? candidate : null;
     }
 
     private boolean isBlank(String value) {

@@ -74,12 +74,17 @@ public class DaeguChainDidService {
         data.put("did", did);
         data.put("DID", did);
 
-        String address = findFirstText(externalResponse, "address");
-        if (address == null || address.isBlank()) {
-            address = extractAddressFromDid(did);
-        }
+        String address = findFirstText(
+                externalResponse,
+                "walletAddress",
+                "wallet_address",
+                "accountAddress",
+                "account_address",
+                "address"
+        );
         if (address != null && !address.isBlank()) {
             data.put("address", address);
+            data.put("walletAddress", address);
         }
 
         JsonNode keyPair = externalResponse.path("data").path("key_pair");

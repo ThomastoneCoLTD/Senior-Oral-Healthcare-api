@@ -220,12 +220,13 @@ class DaeguChainDidServiceTest {
     }
 
     @Test
-    void createAccountUsesExternalDidServerAndExtractsWalletAddress() throws Exception {
+    void createAccountUsesExternalDidServerIssuedWalletAddress() throws Exception {
         when(externalDidClient.createDid(any()))
                 .thenReturn(new ObjectMapper().readTree("""
                         {
                           "res": true,
-                          "DID": "did:mitum:minic:0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca"
+                          "DID": "did:key:z6MkSelfGenerated",
+                          "wallet_address": "0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca"
                         }
                         """));
 
@@ -233,8 +234,10 @@ class DaeguChainDidServiceTest {
 
         assertThat(response.getState()).isEqualTo("OK");
         assertThat(response.getData().path("did").asText())
-                .isEqualTo("did:mitum:minic:0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
+                .isEqualTo("did:key:z6MkSelfGenerated");
         assertThat(response.getData().path("address").asText())
+                .isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
+        assertThat(response.getData().path("walletAddress").asText())
                 .isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
         verify(externalDidClient).createDid(Map.of());
         verifyNoMoreInteractions(daeguChainClient);
