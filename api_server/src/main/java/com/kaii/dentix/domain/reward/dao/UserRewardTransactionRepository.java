@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.reward.dao;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -30,6 +31,18 @@ public interface UserRewardTransactionRepository extends JpaRepository<UserRewar
     );
 
     List<UserRewardTransaction> findByUserIdOrderByCreatedDesc(Long userId);
+
+    @Query("""
+            select rewardTransaction
+            from UserRewardTransaction rewardTransaction
+            left join fetch rewardTransaction.oralExerciseContent
+            where rewardTransaction.type = :type
+            order by rewardTransaction.created desc
+            """)
+    List<UserRewardTransaction> findRecentByType(
+            @Param("type") UserRewardTransactionType type,
+            Pageable pageable
+    );
 
     @Query("""
             select coalesce(sum(rewardTransaction.amount), 0)

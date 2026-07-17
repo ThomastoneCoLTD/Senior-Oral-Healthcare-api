@@ -5,11 +5,16 @@ import com.kaii.dentix.domain.admin.dto.AdminDaeguChainTokenDto;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
+import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
+import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,10 +25,14 @@ import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AdminDaeguChainTokenService {
 
     private final ExternalTokenClient externalTokenClient;
     private final DaeguChainProperties properties;
+    private final UserRewardTransactionRepository userRewardTransactionRepository;
+    private final UserRepository userRepository;
+    private static final int REWARD_TRANSFER_LIMIT = 200;
     private static final List<String> REWARD_TOKEN_NAMES = List.of(
             "ESSENTIAL_VIDEO_1",
             "ESSENTIAL_VIDEO_2",
@@ -55,32 +64,15 @@ public class AdminDaeguChainTokenService {
             JsonNode data = externalTokenClient.getTokenList();
             tokens = findTokenArray(data);
         } catch (RuntimeException exception) {
+            log.warn("Falling back to reward token names because token server list request failed.", exception);
             return sortedRewardTokenOptions(tokenOptions);
         }
         if (tokens == null || !tokens.isArray()) {
+            log.warn("Falling back to reward token names because token server list response has no token array.");
             return sortedRewardTokenOptions(tokenOptions);
         }
 
-        for (JsonNode token : tokens) {
-            String name = extractTokenName(token);
-            String contractAddress = extractContractAddress(token);
-            if (!isBlank(name) && !isBlank(contractAddress) && isRewardTokenName(name)) {
-                tokenOptions.put(
-                        name.toLowerCase(Locale.ROOT),
-                        AdminDaeguChainTokenDto.TokenOption.builder()
-                                .tokenName(name)
-                                .contractAddress(contractAddress)
-                                .symbol(extractSymbol(token))
-                                .supply(extractLong(token, "supply", "total_supply", "totalSupply", "amount"))
-                                .decimals(extractInteger(token, "decimals", "decimal"))
-                                .owner(extractText(token, "owner", "owner_addr", "ownerAddress"))
-                                .issued(extractText(token, "issued", "created", "created_at", "createdAt"))
-                                .txHash(extractText(token, "tx_hash", "transaction_hash", "hash"))
-                                .factHash(extractText(token, "fact_hash", "factHash"))
-                                .build()
-                );
-            }
-        }
+        mergeTokenServerOptions(tokenOptions, tokens);
         return sortedRewardTokenOptions(tokenOptions);
     }
 
@@ -113,7 +105,39 @@ public class AdminDaeguChainTokenService {
     }
 
     public List<AdminDaeguChainTokenDto.TokenOption> getTokenList() {
-        return getTokenOptions();
+        Map<String, AdminDaeguChainTokenDto.TokenOption> tokenOptions = defaultRewardTokenOptions();
+        JsonNode tokens = findTokenArray(externalTokenClient.getTokenList());
+        if (tokens == null || !tokens.isArray()) {
+            throw new BadRequestApiException("token list response does not include token array");
+        }
+        mergeTokenServerOptions(tokenOptions, tokens);
+        return sortedRewardTokenOptions(tokenOptions);
+    }
+
+    private void mergeTokenServerOptions(
+            Map<String, AdminDaeguChainTokenDto.TokenOption> tokenOptions,
+            JsonNode tokens
+    ) {
+        for (JsonNode token : tokens) {
+            String name = extractTokenName(token);
+            String contractAddress = extractContractAddress(token);
+            if (!isBlank(name) && !isBlank(contractAddress) && isRewardTokenName(name)) {
+                tokenOptions.put(
+                        name.toLowerCase(Locale.ROOT),
+                        AdminDaeguChainTokenDto.TokenOption.builder()
+                                .tokenName(name)
+                                .contractAddress(contractAddress)
+                                .symbol(extractSymbol(token))
+                                .supply(extractLong(token, "supply", "total_supply", "totalSupply", "amount"))
+                                .decimals(extractInteger(token, "decimals", "decimal"))
+                                .owner(extractText(token, "owner", "owner_addr", "ownerAddress"))
+                                .issued(extractText(token, "issued", "created", "created_at", "createdAt"))
+                                .txHash(extractText(token, "tx_hash", "transaction_hash", "hash"))
+                                .factHash(extractText(token, "fact_hash", "factHash"))
+                                .build()
+                );
+            }
+        }
     }
 
     private JsonNode findTokenArray(JsonNode payload) {
@@ -144,6 +168,30 @@ public class AdminDaeguChainTokenService {
                 request.getSupply()
         );
         return new DaeguChainDto.ApiResponse<>("OK", null, "", response, null);
+    }
+
+    public AdminDaeguChainTokenDto.RewardTransferListResponse getRewardTransfers() {
+        var transfers = userRewardTransactionRepository.findRecentByType(
+                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                Pageable.ofSize(REWARD_TRANSFER_LIMIT)
+        );
+        Map<Long, User> usersById = userRepository.findAllById(
+                        transfers.stream()
+                                .map(transaction -> transaction.getUserId())
+                                .filter(userId -> userId != null)
+                                .distinct()
+                                .toList()
+                ).stream()
+                .collect(java.util.stream.Collectors.toMap(User::getUserId, user -> user));
+
+        return AdminDaeguChainTokenDto.RewardTransferListResponse.builder()
+                .transfers(transfers.stream()
+                        .map(transaction -> AdminDaeguChainTokenDto.RewardTransfer.from(
+                                transaction,
+                                usersById.get(transaction.getUserId())
+                        ))
+                        .toList())
+                .build();
     }
 
     private void validateTokenCreateConfiguration() {

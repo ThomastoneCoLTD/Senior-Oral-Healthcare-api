@@ -5,9 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.admin.dto.AdminDaeguChainTokenDto;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
+import com.kaii.dentix.domain.oralExercise.domain.OralExerciseContent;
+import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
+import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -21,6 +30,8 @@ class AdminDaeguChainTokenServiceTest {
 
     private ExternalTokenClient externalTokenClient;
     private DaeguChainProperties properties;
+    private UserRewardTransactionRepository userRewardTransactionRepository;
+    private UserRepository userRepository;
     private AdminDaeguChainTokenService service;
     private ObjectMapper objectMapper;
 
@@ -29,7 +40,14 @@ class AdminDaeguChainTokenServiceTest {
         externalTokenClient = mock(ExternalTokenClient.class);
         properties = new DaeguChainProperties();
         properties.setTokenSymbol("MYT");
-        service = new AdminDaeguChainTokenService(externalTokenClient, properties);
+        userRewardTransactionRepository = mock(UserRewardTransactionRepository.class);
+        userRepository = mock(UserRepository.class);
+        service = new AdminDaeguChainTokenService(
+                externalTokenClient,
+                properties,
+                userRewardTransactionRepository,
+                userRepository
+        );
         objectMapper = new ObjectMapper();
     }
 
@@ -152,6 +170,29 @@ class AdminDaeguChainTokenServiceTest {
     }
 
     @Test
+    void getTokenListDoesNotFallbackWhenExternalTokenServerFails() {
+        when(externalTokenClient.getTokenList()).thenThrow(new BadRequestApiException("token server error"));
+
+        assertThatThrownBy(() -> service.getTokenList())
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("token server error");
+    }
+
+    @Test
+    void getTokenListRejectsResponsesWithoutTokenArray() throws Exception {
+        JsonNode data = objectMapper.readTree("""
+                {
+                  "message": "ok"
+                }
+                """);
+        when(externalTokenClient.getTokenList()).thenReturn(data);
+
+        assertThatThrownBy(() -> service.getTokenList())
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("token list response does not include token array");
+    }
+
+    @Test
     void createTokenCallsExternalTokenServerWithConfiguredSymbol() throws Exception {
         JsonNode responseBody = objectMapper.readTree("""
                 {
@@ -181,5 +222,57 @@ class AdminDaeguChainTokenServiceTest {
         assertThatThrownBy(() -> service.createToken(new AdminDaeguChainTokenDto.CreateRequest("UNRELATED_TOKEN", 1L)))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("unsupported reward token name");
+    }
+
+    @Test
+    void getRewardTransfersReturnsRecentRewardTokenTransactionsWithUserInfo() {
+        OralExerciseContent content = OralExerciseContent.builder()
+                .oralExerciseContentId(10L)
+                .title("1화 인트로")
+                .build();
+        UserRewardTransaction transaction = UserRewardTransaction.builder()
+                .userRewardTransactionId(100L)
+                .userId(1L)
+                .oralExerciseContent(content)
+                .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                .status(UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                .amount(1L)
+                .balanceAfter(3L)
+                .idempotencyKey("ORAL_EXERCISE_BUTTON:1:OPTIONAL_VIDEO_1")
+                .coinId("OPTIONAL_VIDEO_1")
+                .tokenContractAddress("0x-token")
+                .sessionId("session-1")
+                .build();
+        transaction.markTokenTransferred("tx-hash", "fact-hash");
+        User user = User.builder()
+                .userId(1L)
+                .userLoginIdentifier("tester")
+                .userName("테스터")
+                .build();
+        when(userRewardTransactionRepository.findRecentByType(
+                org.mockito.ArgumentMatchers.eq(UserRewardTransactionType.ORAL_EXERCISE_COIN),
+                org.mockito.ArgumentMatchers.any(Pageable.class)
+        )).thenReturn(List.of(transaction));
+        when(userRepository.findAllById(List.of(1L))).thenReturn(List.of(user));
+
+        AdminDaeguChainTokenDto.RewardTransferListResponse response = service.getRewardTransfers();
+
+        assertThat(response.getTransfers()).hasSize(1);
+        AdminDaeguChainTokenDto.RewardTransfer transfer = response.getTransfers().get(0);
+        assertThat(transfer.getTransactionId()).isEqualTo(100L);
+        assertThat(transfer.getUserLoginIdentifier()).isEqualTo("tester");
+        assertThat(transfer.getUserName()).isEqualTo("테스터");
+        assertThat(transfer.getContentTitle()).isEqualTo("1화 인트로");
+        assertThat(transfer.getTokenName()).isEqualTo("OPTIONAL_VIDEO_1");
+        assertThat(transfer.getTokenContractAddress()).isEqualTo("0x-token");
+        assertThat(transfer.getTxHash()).isEqualTo("tx-hash");
+        assertThat(transfer.getFactHash()).isEqualTo("fact-hash");
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(userRewardTransactionRepository).findRecentByType(
+                org.mockito.ArgumentMatchers.eq(UserRewardTransactionType.ORAL_EXERCISE_COIN),
+                pageableCaptor.capture()
+        );
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(200);
     }
 }
