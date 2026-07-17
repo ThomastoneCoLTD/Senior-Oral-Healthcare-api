@@ -174,13 +174,27 @@ public class AdminDaeguChainTokenService {
 
     @Transactional
     public AdminDaeguChainTokenDto.RewardTransferListResponse getRewardTransfers() {
-        var transfers = userRewardTransactionRepository.findRecentByType(
-                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+        var transfers = getRecentRewardTransactions(UserRewardTransactionType.ORAL_EXERCISE_COIN);
+        fillMissingTokenContractAddresses(transfers);
+        return toRewardTransferListResponse(transfers);
+    }
+
+    public AdminDaeguChainTokenDto.RewardTransferListResponse getRewardReclaims() {
+        return toRewardTransferListResponse(getRecentRewardTransactions(UserRewardTransactionType.ORAL_EXERCISE_RECLAIM));
+    }
+
+    private List<UserRewardTransaction> getRecentRewardTransactions(UserRewardTransactionType type) {
+        return userRewardTransactionRepository.findRecentByType(
+                type,
                 Pageable.ofSize(REWARD_TRANSFER_LIMIT)
         );
-        fillMissingTokenContractAddresses(transfers);
+    }
+
+    private AdminDaeguChainTokenDto.RewardTransferListResponse toRewardTransferListResponse(
+            List<UserRewardTransaction> transactions
+    ) {
         Map<Long, User> usersById = userRepository.findAllById(
-                        transfers.stream()
+                        transactions.stream()
                                 .map(transaction -> transaction.getUserId())
                                 .filter(userId -> userId != null)
                                 .distinct()
@@ -189,7 +203,7 @@ public class AdminDaeguChainTokenService {
                 .collect(java.util.stream.Collectors.toMap(User::getUserId, user -> user));
 
         return AdminDaeguChainTokenDto.RewardTransferListResponse.builder()
-                .transfers(transfers.stream()
+                .transfers(transactions.stream()
                         .map(transaction -> AdminDaeguChainTokenDto.RewardTransfer.from(
                                 transaction,
                                 usersById.get(transaction.getUserId())

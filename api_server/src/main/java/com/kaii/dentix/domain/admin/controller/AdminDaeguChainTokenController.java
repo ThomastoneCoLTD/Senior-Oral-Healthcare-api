@@ -38,6 +38,11 @@ public class AdminDaeguChainTokenController {
         return new DataResponse<>(adminDaeguChainTokenService.getRewardTransfers());
     }
 
+    @PostMapping("/reward-reclaims")
+    public DataResponse<AdminDaeguChainTokenDto.RewardTransferListResponse> getRewardReclaims() {
+        return new DataResponse<>(adminDaeguChainTokenService.getRewardReclaims());
+    }
+
     @PostMapping("/create")
     public DataResponse<DaeguChainDto.ApiResponse<JsonNode>> createToken(
             @Valid @RequestBody AdminDaeguChainTokenDto.CreateRequest request

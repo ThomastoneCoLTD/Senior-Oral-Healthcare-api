@@ -312,4 +312,39 @@ class AdminDaeguChainTokenServiceTest {
         assertThat(transaction.getTokenContractAddress()).isEqualTo("0x-essential-5");
         verify(userRewardTransactionRepository).save(transaction);
     }
+
+    @Test
+    void getRewardReclaimsReturnsRecentReclaimTransactions() {
+        UserRewardTransaction transaction = UserRewardTransaction.builder()
+                .userRewardTransactionId(200L)
+                .userId(1L)
+                .type(UserRewardTransactionType.ORAL_EXERCISE_RECLAIM)
+                .status(UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                .amount(1L)
+                .balanceAfter(5L)
+                .idempotencyKey("ORAL_EXERCISE_RECLAIM:1:100")
+                .coinId("essential_video_1")
+                .tokenContractAddress("0x-essential-1")
+                .build();
+        User user = User.builder()
+                .userId(1L)
+                .userLoginIdentifier("tester")
+                .userName("테스터")
+                .build();
+        when(userRewardTransactionRepository.findRecentByType(
+                org.mockito.ArgumentMatchers.eq(UserRewardTransactionType.ORAL_EXERCISE_RECLAIM),
+                org.mockito.ArgumentMatchers.any(Pageable.class)
+        )).thenReturn(List.of(transaction));
+        when(userRepository.findAllById(List.of(1L))).thenReturn(List.of(user));
+
+        AdminDaeguChainTokenDto.RewardTransferListResponse response = service.getRewardReclaims();
+
+        assertThat(response.getTransfers()).singleElement()
+                .satisfies(reclaim -> {
+                    assertThat(reclaim.getTransactionId()).isEqualTo(200L);
+                    assertThat(reclaim.getUserLoginIdentifier()).isEqualTo("tester");
+                    assertThat(reclaim.getTokenName()).isEqualTo("essential_video_1");
+                    assertThat(reclaim.getTokenContractAddress()).isEqualTo("0x-essential-1");
+                });
+    }
 }
