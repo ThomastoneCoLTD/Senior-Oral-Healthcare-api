@@ -275,4 +275,41 @@ class AdminDaeguChainTokenServiceTest {
         );
         assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(200);
     }
+
+    @Test
+    void getRewardTransfersFillsMissingRewardTokenContractAddress() throws Exception {
+        UserRewardTransaction transaction = UserRewardTransaction.builder()
+                .userRewardTransactionId(100L)
+                .userId(1L)
+                .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                .status(UserRewardTransactionStatus.LOCAL_RECORDED)
+                .amount(1L)
+                .balanceAfter(1L)
+                .idempotencyKey("ORAL_EXERCISE_BUTTON:1:essential_video_5")
+                .coinId("essential_video_5")
+                .build();
+        when(userRewardTransactionRepository.findRecentByType(
+                org.mockito.ArgumentMatchers.eq(UserRewardTransactionType.ORAL_EXERCISE_COIN),
+                org.mockito.ArgumentMatchers.any(Pageable.class)
+        )).thenReturn(List.of(transaction));
+        when(userRepository.findAllById(List.of(1L))).thenReturn(List.of());
+        when(userRewardTransactionRepository.save(transaction)).thenReturn(transaction);
+        when(externalTokenClient.getTokenList()).thenReturn(objectMapper.readTree("""
+                {
+                  "data": [
+                    {
+                      "contract": "0x-essential-5",
+                      "data": { "name": "essential_video_5" }
+                    }
+                  ]
+                }
+                """));
+
+        AdminDaeguChainTokenDto.RewardTransferListResponse response = service.getRewardTransfers();
+
+        assertThat(response.getTransfers()).singleElement()
+                .satisfies(transfer -> assertThat(transfer.getTokenContractAddress()).isEqualTo("0x-essential-5"));
+        assertThat(transaction.getTokenContractAddress()).isEqualTo("0x-essential-5");
+        verify(userRewardTransactionRepository).save(transaction);
+    }
 }

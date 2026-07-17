@@ -6,6 +6,7 @@ import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -170,11 +172,13 @@ public class AdminDaeguChainTokenService {
         return new DaeguChainDto.ApiResponse<>("OK", null, "", response, null);
     }
 
+    @Transactional
     public AdminDaeguChainTokenDto.RewardTransferListResponse getRewardTransfers() {
         var transfers = userRewardTransactionRepository.findRecentByType(
                 UserRewardTransactionType.ORAL_EXERCISE_COIN,
                 Pageable.ofSize(REWARD_TRANSFER_LIMIT)
         );
+        fillMissingTokenContractAddresses(transfers);
         Map<Long, User> usersById = userRepository.findAllById(
                         transfers.stream()
                                 .map(transaction -> transaction.getUserId())
@@ -192,6 +196,46 @@ public class AdminDaeguChainTokenService {
                         ))
                         .toList())
                 .build();
+    }
+
+    private void fillMissingTokenContractAddresses(List<UserRewardTransaction> transfers) {
+        if (transfers.stream().noneMatch(transaction -> isBlank(transaction.getTokenContractAddress()))) {
+            return;
+        }
+        Map<String, String> tokenContracts = getRewardTokenContracts();
+        for (var transfer : transfers) {
+            if (!isBlank(transfer.getTokenContractAddress()) || isBlank(transfer.getCoinId())) {
+                continue;
+            }
+            String contractAddress = tokenContracts.get(transfer.getCoinId().toLowerCase(Locale.ROOT));
+            if (!isBlank(contractAddress)) {
+                transfer.updateTokenContractAddress(contractAddress);
+                userRewardTransactionRepository.save(transfer);
+            }
+        }
+    }
+
+    private Map<String, String> getRewardTokenContracts() {
+        JsonNode tokens;
+        try {
+            tokens = findTokenArray(externalTokenClient.getTokenList());
+        } catch (RuntimeException exception) {
+            log.warn("Unable to fill reward token contract addresses because token server list request failed.", exception);
+            return Map.of();
+        }
+        if (tokens == null || !tokens.isArray()) {
+            return Map.of();
+        }
+
+        Map<String, String> tokenContracts = new LinkedHashMap<>();
+        for (JsonNode token : tokens) {
+            String name = extractTokenName(token);
+            String contractAddress = extractContractAddress(token);
+            if (!isBlank(name) && !isBlank(contractAddress) && isRewardTokenName(name)) {
+                tokenContracts.put(name.toLowerCase(Locale.ROOT), contractAddress);
+            }
+        }
+        return tokenContracts;
     }
 
     private void validateTokenCreateConfiguration() {

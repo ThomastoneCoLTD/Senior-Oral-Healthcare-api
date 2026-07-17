@@ -17,18 +17,22 @@ import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserRewardReclaimService {
 
     private static final int ESSENTIAL_REWARD_COUNT = 5;
@@ -73,12 +77,12 @@ public class UserRewardReclaimService {
         }
 
         List<UserRewardTransaction> rewardTransactions = allTransactions.stream()
-                .filter(this::isTransferredOralExerciseReward)
-                .filter(transaction -> !isBlank(transaction.getTokenContractAddress()))
+                .filter(this::isReclaimableOralExerciseReward)
                 .toList();
         if (rewardTransactions.isEmpty()) {
             throw new BadRequestApiException("reclaimable oral exercise token is not found");
         }
+        Map<String, String> tokenContracts = getRewardTokenContractsIfNeeded(rewardTransactions);
 
         List<UserRewardTransaction> reclaimTransactions = new ArrayList<>();
         int skippedCount = 0;
@@ -86,6 +90,7 @@ public class UserRewardReclaimService {
         long reclaimedAmount = 0L;
 
         for (UserRewardTransaction rewardTransaction : rewardTransactions) {
+            String tokenContractAddress = resolveTokenContractAddress(rewardTransaction, tokenContracts);
             String idempotencyKey = buildReclaimIdempotencyKey(userId, rewardTransaction);
             UserRewardTransaction reclaimTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey)
                     .orElseGet(() -> userRewardTransactionRepository.save(UserRewardTransaction.builder()
@@ -98,12 +103,24 @@ public class UserRewardReclaimService {
                             .idempotencyKey(idempotencyKey)
                             .sessionId(rewardTransaction.getSessionId())
                             .coinId(rewardTransaction.getCoinId())
-                            .tokenContractAddress(rewardTransaction.getTokenContractAddress())
+                            .tokenContractAddress(tokenContractAddress)
                             .build()));
+            String reclaimTokenContractAddress = reclaimTransaction.getTokenContractAddress();
+            if (isBlank(reclaimTokenContractAddress) && !isBlank(tokenContractAddress)) {
+                reclaimTransaction.updateTokenContractAddress(tokenContractAddress);
+                reclaimTokenContractAddress = tokenContractAddress;
+            }
 
             if (reclaimTransaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFERRED) {
                 skippedCount += 1;
-                reclaimTransactions.add(reclaimTransaction);
+                reclaimTransactions.add(userRewardTransactionRepository.save(reclaimTransaction));
+                continue;
+            }
+
+            if (isBlank(reclaimTokenContractAddress)) {
+                reclaimTransaction.markTokenTransferFailed();
+                failedCount += 1;
+                reclaimTransactions.add(userRewardTransactionRepository.save(reclaimTransaction));
                 continue;
             }
 
@@ -111,7 +128,7 @@ public class UserRewardReclaimService {
                 JsonNode response = externalTokenClient.transferToken(
                         wallet.getDaeguDid(),
                         normalizeTokenName(rewardTransaction.getCoinId()),
-                        rewardTransaction.getTokenContractAddress(),
+                        reclaimTokenContractAddress,
                         daeguChainProperties.getTokenOwnerAddress(),
                         rewardTransaction.getAmount()
                 );
@@ -195,15 +212,66 @@ public class UserRewardReclaimService {
                 .build();
     }
 
-    private boolean isTransferredOralExerciseReward(UserRewardTransaction transaction) {
-        return transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN
-                && transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFERRED
-                && transaction.isRewardReceived();
+    private boolean isReclaimableOralExerciseReward(UserRewardTransaction transaction) {
+        if (transaction.getType() != UserRewardTransactionType.ORAL_EXERCISE_COIN
+                || !transaction.isRewardReceived()) {
+            return false;
+        }
+        return transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFERRED
+                || transaction.getStatus() == UserRewardTransactionStatus.LOCAL_RECORDED;
     }
 
     private boolean isReceivedOralExerciseReward(UserRewardTransaction transaction) {
         return transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN
                 && transaction.isRewardReceived();
+    }
+
+    private String resolveTokenContractAddress(
+            UserRewardTransaction rewardTransaction,
+            Map<String, String> tokenContracts
+    ) {
+        if (!isBlank(rewardTransaction.getTokenContractAddress())) {
+            return rewardTransaction.getTokenContractAddress();
+        }
+        if (isBlank(rewardTransaction.getCoinId())) {
+            return null;
+        }
+        String contractAddress = tokenContracts.get(rewardTransaction.getCoinId().toLowerCase(Locale.ROOT));
+        if (!isBlank(contractAddress)) {
+            rewardTransaction.updateTokenContractAddress(contractAddress);
+            userRewardTransactionRepository.save(rewardTransaction);
+            return contractAddress;
+        }
+        return null;
+    }
+
+    private Map<String, String> getRewardTokenContractsIfNeeded(List<UserRewardTransaction> rewardTransactions) {
+        boolean hasMissingContractAddress = rewardTransactions.stream()
+                .anyMatch(transaction -> isBlank(transaction.getTokenContractAddress()));
+        if (!hasMissingContractAddress) {
+            return Map.of();
+        }
+
+        JsonNode tokens;
+        try {
+            tokens = findTokenArray(externalTokenClient.getTokenList());
+        } catch (RuntimeException exception) {
+            log.warn("Unable to resolve reward token contract addresses for reclaim.", exception);
+            return Map.of();
+        }
+        if (tokens == null || !tokens.isArray()) {
+            return Map.of();
+        }
+
+        Map<String, String> tokenContracts = new LinkedHashMap<>();
+        for (JsonNode token : tokens) {
+            String tokenName = findFirstText(token, "token_name", "tokenName", "name");
+            String contractAddress = findFirstText(token, "contract", "contract_address", "contractAddress", "cont_addr", "address");
+            if (!isBlank(tokenName) && !isBlank(contractAddress)) {
+                tokenContracts.put(tokenName.toLowerCase(Locale.ROOT), contractAddress);
+            }
+        }
+        return tokenContracts;
     }
 
     private String buildReclaimIdempotencyKey(Long userId, UserRewardTransaction rewardTransaction) {
@@ -254,6 +322,23 @@ public class UserRewardReclaimService {
                 if (!isBlank(found)) {
                     return found;
                 }
+            }
+        }
+        return null;
+    }
+
+    private JsonNode findTokenArray(JsonNode payload) {
+        if (payload == null || payload.isNull()) {
+            return null;
+        }
+        if (payload.isArray()) {
+            return payload;
+        }
+        for (String fieldName : List.of("response", "data", "result", "tokens", "tokenList", "token_list")) {
+            JsonNode child = payload.get(fieldName);
+            JsonNode found = findTokenArray(child);
+            if (found != null && found.isArray()) {
+                return found;
             }
         }
         return null;

@@ -119,6 +119,42 @@ class UserRewardReclaimServiceTest {
         verify(externalTokenClient, never()).transferToken(anyString(), anyString(), anyString(), anyString(), anyLong());
     }
 
+    @Test
+    void reclaimOralExerciseTokensResolvesLocalRecordedRewardContracts() throws Exception {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(localRecordedEssentialRewards());
+        when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
+        when(externalTokenClient.getTokenList()).thenReturn(essentialRewardTokenList());
+        when(externalTokenClient.transferToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "tx_hash": "0x-reclaim-tx",
+                          "fact_hash": "reclaim-fact"
+                        }
+                        """));
+
+        UserRewardDto.ReclaimResponse response = service.reclaimOralExerciseTokens(request);
+
+        assertThat(response.getReclaimedCount()).isEqualTo(5);
+        assertThat(response.getFailedCount()).isZero();
+        assertThat(response.getTransactions())
+                .extracting(UserRewardDto.TransactionResponse::getTokenContractAddress)
+                .containsExactlyInAnyOrder(
+                        "0x-token-contract-1",
+                        "0x-token-contract-2",
+                        "0x-token-contract-3",
+                        "0x-token-contract-4",
+                        "0x-token-contract-5"
+                );
+        verify(externalTokenClient).getTokenList();
+        verify(externalTokenClient).transferToken(
+                eq("did:mitum:minic:0x-user-wallet"),
+                eq("ESSENTIAL_VIDEO_1"),
+                eq("0x-token-contract-1"),
+                eq("0x-token-owner"),
+                eq(1L)
+        );
+    }
+
     private List<UserRewardTransaction> essentialRewards() {
         return java.util.stream.IntStream.rangeClosed(1, 5)
                 .mapToObj(index -> {
@@ -136,5 +172,52 @@ class UserRewardReclaimServiceTest {
                     return transaction;
                 })
                 .toList();
+    }
+
+    private List<UserRewardTransaction> localRecordedEssentialRewards() {
+        return java.util.stream.IntStream.rangeClosed(1, 5)
+                .mapToObj(index -> {
+                    UserRewardTransaction transaction = UserRewardTransaction.builder()
+                            .userId(7L)
+                            .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                            .status(UserRewardTransactionStatus.LOCAL_RECORDED)
+                            .amount(1L)
+                            .balanceAfter(index)
+                            .idempotencyKey("ORAL_EXERCISE_BUTTON:7:essential_video_" + index)
+                            .coinId("essential_video_" + index)
+                            .build();
+                    ReflectionTestUtils.setField(transaction, "userRewardTransactionId", (long) index);
+                    return transaction;
+                })
+                .toList();
+    }
+
+    private com.fasterxml.jackson.databind.JsonNode essentialRewardTokenList() throws Exception {
+        return objectMapper.readTree("""
+                {
+                  "data": [
+                    {
+                      "contract": "0x-token-contract-1",
+                      "data": { "name": "essential_video_1" }
+                    },
+                    {
+                      "contract": "0x-token-contract-2",
+                      "data": { "name": "essential_video_2" }
+                    },
+                    {
+                      "contract": "0x-token-contract-3",
+                      "data": { "name": "essential_video_3" }
+                    },
+                    {
+                      "contract": "0x-token-contract-4",
+                      "data": { "name": "essential_video_4" }
+                    },
+                    {
+                      "contract": "0x-token-contract-5",
+                      "data": { "name": "essential_video_5" }
+                    }
+                  ]
+                }
+                """);
     }
 }
