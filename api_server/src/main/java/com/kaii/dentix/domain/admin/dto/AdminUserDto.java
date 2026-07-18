@@ -158,4 +158,40 @@ public class AdminUserDto {
         private int row;
         private String reason;
     }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class ExerciseProgressResponse {
+        private int contentCount;
+        private int rewardContentCount;
+        private List<ExerciseProgressUser> users;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class ExerciseProgressUser {
+        private Long userId;
+        private String userLoginIdentifier;
+        private String userName;
+        private int completedCount;
+        private int overallCompletionRate;
+        private int rewardReceivedCount;
+        private List<ExerciseProgressContent> contents;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class ExerciseProgressContent {
+        private Long contentId;
+        private int contentSort;
+        private String title;
+        private int completionRate;
+        private boolean completed;
+        private int lastPositionSeconds;
+        private int durationSeconds;
+        private Date lastViewedAt;
+        private boolean rewardEligible;
+        private boolean rewardReceived;
+        private Date rewardReceivedAt;
+    }
 }

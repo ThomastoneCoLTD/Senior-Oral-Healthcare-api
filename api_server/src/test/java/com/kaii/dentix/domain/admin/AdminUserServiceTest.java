@@ -12,8 +12,11 @@ import com.kaii.dentix.domain.agreement.domain.ServiceAgreement;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.findPwdQuestion.domain.FindPwdQuestion;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
+import com.kaii.dentix.domain.oralExercise.dao.OralExerciseContentRepository;
+import com.kaii.dentix.domain.oralExercise.dao.UserOralExerciseProgressRepository;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -60,6 +63,9 @@ class AdminUserServiceTest {
     @Mock private FindPwdQuestionRepository findPwdQuestionRepository;
     @Mock private ServiceAgreementRepository serviceAgreementRepository;
     @Mock private ServiceAgreementConsentService serviceAgreementConsentService;
+    @Mock private OralExerciseContentRepository oralExerciseContentRepository;
+    @Mock private UserOralExerciseProgressRepository oralExerciseProgressRepository;
+    @Mock private UserRewardTransactionRepository userRewardTransactionRepository;
 
     private AdminUserService adminUserService;
 
@@ -78,7 +84,10 @@ class AdminUserServiceTest {
                 findPwdQuestionRepository,
                 serviceAgreementRepository,
                 serviceAgreementConsentService,
-                new NoOpTransactionManager()
+                new NoOpTransactionManager(),
+                oralExerciseContentRepository,
+                oralExerciseProgressRepository,
+                userRewardTransactionRepository
         );
     }
 

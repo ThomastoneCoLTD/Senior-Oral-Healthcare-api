@@ -11,9 +11,16 @@ import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.findPwdQuestion.domain.FindPwdQuestion;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
+import com.kaii.dentix.domain.oralExercise.dao.OralExerciseContentRepository;
+import com.kaii.dentix.domain.oralExercise.dao.UserOralExerciseProgressRepository;
+import com.kaii.dentix.domain.oralExercise.domain.OralExerciseContent;
+import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
+import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
@@ -53,6 +60,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
 @Service
@@ -82,6 +91,9 @@ public class AdminUserService {
     private final ServiceAgreementRepository serviceAgreementRepository;
     private final ServiceAgreementConsentService serviceAgreementConsentService;
     private final PlatformTransactionManager transactionManager;
+    private final OralExerciseContentRepository oralExerciseContentRepository;
+    private final UserOralExerciseProgressRepository oralExerciseProgressRepository;
+    private final UserRewardTransactionRepository userRewardTransactionRepository;
 
     /**
      * 일반관리자 - 본인 기관의 사용자 목록 조회
@@ -200,6 +212,97 @@ public class AdminUserService {
 
         long total = usageList.stream().mapToLong(OralCheckDto.Usage::getSuccessCount).sum();
         return new DataResponse<>(200, "기관 사용자 사용량 조회 성공", Map.of("totalCount", total, "users", usageList));
+    }
+
+    @Transactional(readOnly = true)
+    public AdminUserDto.ExerciseProgressResponse getExerciseProgress(HttpServletRequest request) {
+        Admin admin = adminService.getTokenAdmin(request);
+        List<User> users;
+        if (admin.isSuperAdmin()) {
+            users = userRepository.findAll(Sort.by(Sort.Direction.ASC, "userName"));
+        } else {
+            if (admin.getOrganization() == null) {
+                throw new BadRequestApiException("소속 기관 정보가 없습니다.");
+            }
+            users = userRepository.findByOrganization_OrganizationId(admin.getOrganization().getOrganizationId());
+            users.sort(java.util.Comparator.comparing(User::getUserName, String.CASE_INSENSITIVE_ORDER));
+        }
+
+        List<OralExerciseContent> contents = oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc();
+        List<Long> userIds = users.stream().map(User::getUserId).toList();
+        List<UserOralExerciseProgress> progressList = userIds.isEmpty()
+                ? List.of()
+                : oralExerciseProgressRepository.findByUserIdIn(userIds);
+        List<UserRewardTransaction> rewards = userIds.isEmpty()
+                ? List.of()
+                : userRewardTransactionRepository.findByUserIdInAndType(
+                        userIds,
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN
+                );
+
+        Map<Long, Map<Long, UserOralExerciseProgress>> progressByUser = progressList.stream()
+                .collect(Collectors.groupingBy(
+                        UserOralExerciseProgress::getUserId,
+                        Collectors.toMap(
+                                item -> item.getContent().getOralExerciseContentId(),
+                                Function.identity(),
+                                (left, right) -> left
+                        )
+                ));
+        Map<Long, Map<Long, UserRewardTransaction>> rewardsByUser = rewards.stream()
+                .filter(UserRewardTransaction::isRewardReceived)
+                .filter(item -> item.getOralExerciseContent() != null)
+                .collect(Collectors.groupingBy(
+                        UserRewardTransaction::getUserId,
+                        Collectors.toMap(
+                                item -> item.getOralExerciseContent().getOralExerciseContentId(),
+                                Function.identity(),
+                                (left, right) -> left.getCreated().after(right.getCreated()) ? left : right
+                        )
+                ));
+
+        List<AdminUserDto.ExerciseProgressUser> rows = users.stream().map(user -> {
+            Map<Long, UserOralExerciseProgress> userProgress = progressByUser.getOrDefault(user.getUserId(), Map.of());
+            Map<Long, UserRewardTransaction> userRewards = rewardsByUser.getOrDefault(user.getUserId(), Map.of());
+            List<AdminUserDto.ExerciseProgressContent> contentRows = contents.stream().map(content -> {
+                UserOralExerciseProgress progress = userProgress.get(content.getOralExerciseContentId());
+                UserRewardTransaction reward = userRewards.get(content.getOralExerciseContentId());
+                boolean rewardEligible = content.getContentSort() >= 2 && content.getContentSort() <= 6;
+                return AdminUserDto.ExerciseProgressContent.builder()
+                        .contentId(content.getOralExerciseContentId())
+                        .contentSort(content.getContentSort())
+                        .title(content.getTitle())
+                        .completionRate(progress == null ? 0 : progress.getCompletionRate())
+                        .completed(progress != null && progress.isCompleted())
+                        .lastPositionSeconds(progress == null ? 0 : progress.getLastPositionSeconds())
+                        .durationSeconds(content.getDurationSeconds())
+                        .lastViewedAt(progress == null ? null : progress.getLastViewedAt())
+                        .rewardEligible(rewardEligible)
+                        .rewardReceived(rewardEligible && reward != null)
+                        .rewardReceivedAt(reward == null ? null : reward.getCreated())
+                        .build();
+            }).toList();
+            int completedCount = (int) contentRows.stream().filter(AdminUserDto.ExerciseProgressContent::isCompleted).count();
+            int rewardCount = (int) contentRows.stream().filter(AdminUserDto.ExerciseProgressContent::isRewardReceived).count();
+            int overallRate = contentRows.isEmpty() ? 0 : (int) Math.round(
+                    contentRows.stream().mapToInt(AdminUserDto.ExerciseProgressContent::getCompletionRate).average().orElse(0)
+            );
+            return AdminUserDto.ExerciseProgressUser.builder()
+                    .userId(user.getUserId())
+                    .userLoginIdentifier(user.getUserLoginIdentifier())
+                    .userName(user.getUserName())
+                    .completedCount(completedCount)
+                    .overallCompletionRate(overallRate)
+                    .rewardReceivedCount(rewardCount)
+                    .contents(contentRows)
+                    .build();
+        }).toList();
+
+        return AdminUserDto.ExerciseProgressResponse.builder()
+                .contentCount(contents.size())
+                .rewardContentCount((int) contents.stream().filter(item -> item.getContentSort() >= 2 && item.getContentSort() <= 6).count())
+                .users(rows)
+                .build();
     }
 
     /**
