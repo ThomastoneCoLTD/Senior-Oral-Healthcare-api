@@ -15,6 +15,7 @@ provider "aws" {
 
 locals {
   name_prefix = "${var.project_name}-${var.environment}"
+  origin_domain_name = "api.soh.thomabio.com"
   common_tags = {
     Project     = var.project_name
     Environment = var.environment
@@ -22,25 +23,67 @@ locals {
   }
 }
 
-module "network" {
-  source = "../../modules/network"
+data "aws_vpc" "shared_dev" {
+  filter {
+    name   = "tag:Name"
+    values = [var.shared_vpc_name]
+  }
+}
 
-  project_name             = var.project_name
-  environment              = var.environment
-  aws_region               = var.aws_region
-  vpc_cidr                 = var.vpc_cidr
-  public_subnet_cidrs      = var.public_subnet_cidrs
-  private_app_subnet_cidrs = var.private_app_subnet_cidrs
-  private_db_subnet_cidrs  = var.private_db_subnet_cidrs
-  single_nat_gateway       = var.single_nat_gateway
-  tags                     = local.common_tags
+data "aws_subnet" "shared_public" {
+  for_each = toset(var.shared_public_subnet_names)
+
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.shared_dev.id]
+  }
+
+  filter {
+    name   = "tag:Name"
+    values = [each.value]
+  }
+}
+
+data "aws_subnet" "shared_private_app" {
+  for_each = toset(var.shared_private_app_subnet_names)
+
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.shared_dev.id]
+  }
+
+  filter {
+    name   = "tag:Name"
+    values = [each.value]
+  }
+}
+
+data "aws_subnet" "shared_private_db" {
+  for_each = toset(var.shared_private_db_subnet_names)
+
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.shared_dev.id]
+  }
+
+  filter {
+    name   = "tag:Name"
+    values = [each.value]
+  }
+}
+
+locals {
+  vpc_id                 = data.aws_vpc.shared_dev.id
+  public_subnet_ids      = [for name in var.shared_public_subnet_names : data.aws_subnet.shared_public[name].id]
+  private_app_subnet_ids = [for name in var.shared_private_app_subnet_names : data.aws_subnet.shared_private_app[name].id]
+  private_db_subnet_ids  = [for name in var.shared_private_db_subnet_names : data.aws_subnet.shared_private_db[name].id]
 }
 
 module "security" {
   source = "../../modules/security"
 
   name_prefix = local.name_prefix
-  vpc_id      = module.network.vpc_id
+  vpc_id      = local.vpc_id
   app_port    = var.app_port
   tags        = local.common_tags
 }
@@ -49,8 +92,8 @@ module "rds" {
   source = "../../modules/rds"
 
   name_prefix           = local.name_prefix
-  vpc_id                = module.network.vpc_id
-  db_subnet_ids         = module.network.private_db_subnet_ids
+  vpc_id                = local.vpc_id
+  db_subnet_ids         = local.private_db_subnet_ids
   app_security_group_id = module.security.ec2_sg_id
 
   db_identifier              = var.db_identifier
@@ -90,20 +133,20 @@ module "iam" {
 module "alb" {
   source = "../../modules/alb"
 
-  name_prefix          = local.name_prefix
-  vpc_id               = module.network.vpc_id
-  public_subnet_ids    = module.network.public_subnet_ids
-  alb_sg_id            = module.security.alb_sg_id
-  alb_name             = var.alb_name
-  target_group_name    = var.target_group_name
-  app_port             = var.app_port
-  health_path          = var.health_path
-  certificate_arn      = var.certificate_arn
-  enable_http_redirect = var.enable_http_redirect
+  name_prefix           = local.name_prefix
+  vpc_id                = local.vpc_id
+  public_subnet_ids     = local.public_subnet_ids
+  alb_sg_id             = module.security.alb_sg_id
+  alb_name              = var.alb_name
+  target_group_name     = var.target_group_name
+  app_port              = var.app_port
+  health_path           = var.health_path
+  certificate_arn       = var.certificate_arn
+  enable_http_redirect  = var.enable_http_redirect
   create_route53_record = var.create_route53_record
-  hosted_zone_name     = var.hosted_zone_name
-  origin_domain_name   = var.origin_domain_name
-  tags                 = local.common_tags
+  hosted_zone_name      = var.hosted_zone_name
+  origin_domain_name    = local.origin_domain_name
+  tags                  = local.common_tags
 }
 
 module "launch_template" {
@@ -129,7 +172,7 @@ module "autoscaling" {
   source = "../../modules/autoscaling"
 
   asg_name                = var.asg_name
-  private_app_subnet_ids  = module.network.private_app_subnet_ids
+  private_app_subnet_ids  = local.private_app_subnet_ids
   launch_template_id      = module.launch_template.launch_template_id
   launch_template_version = module.launch_template.launch_template_latest_version
   target_group_arn        = module.alb.target_group_arn
@@ -140,7 +183,11 @@ module "autoscaling" {
 }
 
 output "vpc_id" {
-  value = module.network.vpc_id
+  value = local.vpc_id
+}
+
+output "origin_domain_name" {
+  value = local.origin_domain_name
 }
 
 output "alb_dns_name" {

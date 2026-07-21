@@ -227,19 +227,23 @@ terraform apply tfplan
 The prod defaults create:
 
 ```text
-VPC CIDR: 10.80.0.0/16
+VPC: existing development VPC soh-api-dev-vpc
+Public subnets: soh-api-dev-public-1, soh-api-dev-public-2
+Private app subnets: soh-api-dev-private-app-1, soh-api-dev-private-app-2
+Private DB subnets: soh-api-dev-private-db-1, soh-api-dev-private-db-2
 ALB: soh-api-prod-alb
 Target group: soh-api-prod-tg
 Launch template: soh-api-prod-lt
 ASG: soh-api-prod-asg
-Origin domain: soh-api.thomabio.com
+Origin domain: api.soh.thomabio.com
 Release type: prod
 EC2 instance type: t3.medium
 RDS: soh-api-prod-mysql, MySQL 8.0, db.t3.small, single-AZ
 RDS database: thomastone
 ```
 
-Prod defaults to one NAT Gateway per AZ. Production Terraform apply is workflow-dispatch only and should use GitHub Environment approval through `production-infra`.
+Prod intentionally reuses the development VPC and its existing public, private app, and private DB subnets. Do not create a separate prod VPC unless the deployment policy is explicitly changed. Production Terraform apply is workflow-dispatch only and should use GitHub Environment approval through `production-infra`.
+If an older prod VPC was already created by Terraform, review the prod plan before apply and migrate or remove state intentionally; do not approve an unexpected VPC/subnet/NAT destroy plan during production deployment.
 Prod RDS has deletion protection enabled and requires a final snapshot on destroy unless intentionally changed.
 
 ## API Deployment Flow
@@ -268,7 +272,7 @@ Production API deployment:
 7. Starts `soh-api-prod-asg` Instance Refresh.
 8. New EC2 instances run User Data and download `app.jar` and `.env` from S3.
 9. systemd starts `soh-api-prod`.
-10. Check `https://soh.thomabio.com/api/actuator/health`.
+10. Check `https://api.soh.thomabio.com/api/actuator/health`.
 
 ## GitHub Actions Workflows
 
@@ -534,14 +538,13 @@ Development CloudFront `E14WPL6NG95U7H`:
 5. Cache policy: CachingDisabled.
 6. Origin request policy: forward Authorization, Content-Type, query string, and other API-required values.
 
-Production CloudFront `E3BD44T0U5EBYT`:
+Production API:
 
-1. Add origin: `soh-api.thomabio.com`.
-2. Origin protocol policy: HTTPS only.
-3. Add behavior path pattern: `/api/*`.
-4. Allowed methods: GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE.
-5. Cache policy: CachingDisabled.
-6. Origin request policy: forward Authorization, Content-Type, query string, and other API-required values.
+1. Use the dedicated backend domain: `api.soh.thomabio.com`.
+2. Point the Route 53 record to `soh-api-prod-alb`.
+3. Configure the frontend production `VITE_API_BASE_URL` as `https://api.soh.thomabio.com/api`.
+4. Ensure backend CORS allows `https://soh.thomabio.com`.
+5. A frontend CloudFront `/api/*` behavior is not required for production when the dedicated API domain is used.
 
 If SPA fallback uses CloudFront custom error response 403/404 -> `/index.html` 200, API 403/404 can accidentally become `index.html`. Prefer a CloudFront Function that rewrites only non-API frontend routes:
 
@@ -599,7 +602,7 @@ Health checks:
 ```bash
 curl -i http://localhost:8080/api/actuator/health
 curl -i https://soh-dev.thomabio.com/api/actuator/health
-curl -i https://soh.thomabio.com/api/actuator/health
+curl -i https://api.soh.thomabio.com/api/actuator/health
 ```
 
 ## Validation

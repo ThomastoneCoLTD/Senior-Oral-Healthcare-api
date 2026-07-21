@@ -8,8 +8,8 @@
 
 ```text
 사용자
--> 기존 Front CloudFront
--> /api/* behavior
+-> Front CloudFront 또는 Front domain
+-> API domain
 -> API ALB
 -> Target Group
 -> Auto Scaling Group
@@ -36,10 +36,12 @@ RDS MySQL
 Launch Template
 Auto Scaling Group
 Route 53 API origin record
-CloudFront /api/* behavior
+CloudFront /api/* behavior 또는 dedicated API domain 연결
 S3 artifact upload
 ASG Instance Refresh
 ```
+
+운영 API는 개발 API와 같은 VPC를 사용한다. 운영용 VPC/subnet/NAT/S3 endpoint를 따로 만들지 말고, 개발 VPC `soh-api-dev-vpc`와 그 안의 dev public/private app/private DB subnet을 선택한다.
 
 ## 1. 환경 매핑
 
@@ -74,9 +76,9 @@ ALB: soh-api-prod-alb
 Target Group: soh-api-prod-tg
 RDS: soh-api-prod-mysql
 RDS class: db.t3.small
-API origin domain: soh-api.thomabio.com
+API origin domain: api.soh.thomabio.com
 Frontend URL: https://soh.thomabio.com
-Health URL: https://soh.thomabio.com/api/actuator/health
+Health URL: https://api.soh.thomabio.com/api/actuator/health
 ```
 
 `main` 브랜치는 배포하지 않는다.
@@ -90,7 +92,7 @@ AWS Account ID: 160885266674
 Region: ap-northeast-2
 Artifact bucket: denti-backends
 Hosted zone: thomabio.com
-ACM certificate: soh-api-dev.thomabio.com / soh-api.thomabio.com에 사용할 인증서
+ACM certificate: soh-api-dev.thomabio.com / api.soh.thomabio.com에 사용할 인증서
 RDS engine: MySQL 8.0
 RDS instance class: db.t3.small
 EC2 instance type: t3.medium
@@ -163,10 +165,9 @@ Tenancy: Default
 운영 VPC:
 
 ```text
-Name: soh-api-prod-vpc
-IPv4 CIDR: 10.80.0.0/16
-IPv6: 없음
-Tenancy: Default
+새로 만들지 않음
+사용 VPC: soh-api-dev-vpc
+운영 ALB, EC2 ASG, RDS도 dev VPC의 subnet을 공유 사용
 ```
 
 생성 후 VPC 설정에서 아래를 확인한다.
@@ -223,37 +224,11 @@ CIDR: 10.70.21.0/24
 운영:
 
 ```text
-VPC: soh-api-prod-vpc
-
-Public subnet 1
-Name: soh-api-prod-public-1
-AZ: ap-northeast-2a
-CIDR: 10.80.0.0/24
-
-Public subnet 2
-Name: soh-api-prod-public-2
-AZ: ap-northeast-2c
-CIDR: 10.80.1.0/24
-
-Private app subnet 1
-Name: soh-api-prod-private-app-1
-AZ: ap-northeast-2a
-CIDR: 10.80.10.0/24
-
-Private app subnet 2
-Name: soh-api-prod-private-app-2
-AZ: ap-northeast-2c
-CIDR: 10.80.11.0/24
-
-Private DB subnet 1
-Name: soh-api-prod-private-db-1
-AZ: ap-northeast-2a
-CIDR: 10.80.20.0/24
-
-Private DB subnet 2
-Name: soh-api-prod-private-db-2
-AZ: ap-northeast-2c
-CIDR: 10.80.21.0/24
+새로 만들지 않음
+사용 VPC: soh-api-dev-vpc
+ALB subnet: soh-api-dev-public-1, soh-api-dev-public-2
+ASG subnet: soh-api-dev-private-app-1, soh-api-dev-private-app-2
+RDS subnet: soh-api-dev-private-db-1, soh-api-dev-private-db-2
 ```
 
 Public subnet은 생성 후:
@@ -283,8 +258,9 @@ Attach to VPC: soh-api-dev-vpc
 운영:
 
 ```text
-Name: soh-api-prod-igw
-Attach to VPC: soh-api-prod-vpc
+새로 만들지 않음
+dev VPC의 기존 Internet Gateway 사용
+사용 IGW: soh-api-dev-igw
 ```
 
 ## 7. Route Table 구성
@@ -307,10 +283,10 @@ Subnet associations: soh-api-dev-public-1, soh-api-dev-public-2
 운영 public route table:
 
 ```text
-Name: soh-api-prod-public-rt
-VPC: soh-api-prod-vpc
-Route: 0.0.0.0/0 -> soh-api-prod-igw
-Subnet associations: soh-api-prod-public-1, soh-api-prod-public-2
+새로 만들지 않음
+dev VPC의 기존 public route table 사용
+사용 route table: soh-api-dev-public-rt
+Subnet associations: soh-api-dev-public-1, soh-api-dev-public-2
 ```
 
 Private route table은 NAT Gateway 생성 후 연결한다.
@@ -332,19 +308,15 @@ Connectivity type: Public
 Elastic IP: Allocate Elastic IP
 ```
 
-운영은 권장 2개:
+운영:
 
 ```text
-Name: soh-api-prod-nat-1
-Subnet: soh-api-prod-public-1
-Elastic IP: Allocate Elastic IP
-
-Name: soh-api-prod-nat-2
-Subnet: soh-api-prod-public-2
-Elastic IP: Allocate Elastic IP
+새로 만들지 않음
+dev VPC의 기존 NAT Gateway 사용
+사용 NAT Gateway: soh-api-dev-nat-1
 ```
 
-운영 비용을 줄여야 하면 NAT 1개로 시작할 수 있지만, AZ 장애 내성은 낮아진다.
+운영이 dev VPC를 공유하므로 NAT 비용과 장애 특성도 dev VPC와 공유된다.
 
 ## 9. Private Route Table 구성
 
@@ -361,22 +333,17 @@ Subnet associations:
   soh-api-dev-private-db-2
 ```
 
-운영 NAT 2개 구성:
+운영:
 
 ```text
-Name: soh-api-prod-private-rt-1
-VPC: soh-api-prod-vpc
-Route: 0.0.0.0/0 -> soh-api-prod-nat-1
+새로 만들지 않음
+dev VPC의 기존 private route table 사용
+사용 route table: soh-api-dev-private-rt
 Subnet associations:
-  soh-api-prod-private-app-1
-  soh-api-prod-private-db-1
-
-Name: soh-api-prod-private-rt-2
-VPC: soh-api-prod-vpc
-Route: 0.0.0.0/0 -> soh-api-prod-nat-2
-Subnet associations:
-  soh-api-prod-private-app-2
-  soh-api-prod-private-db-2
+  soh-api-dev-private-app-1
+  soh-api-dev-private-app-2
+  soh-api-dev-private-db-1
+  soh-api-dev-private-db-2
 ```
 
 ## 10. S3 Gateway Endpoint 생성
@@ -411,11 +378,10 @@ Route tables: soh-api-dev-private-rt
 운영:
 
 ```text
-Name: soh-api-prod-s3-gateway-endpoint
-VPC: soh-api-prod-vpc
-Route tables:
-  soh-api-prod-private-rt-1
-  soh-api-prod-private-rt-2
+새로 만들지 않음
+dev VPC의 기존 S3 Gateway Endpoint 사용
+사용 endpoint: soh-api-dev-s3-gateway-endpoint
+Route tables: soh-api-dev-private-rt
 ```
 
 주의:
@@ -556,7 +522,7 @@ Outbound:
 
 ```text
 Name: soh-api-prod-alb-sg
-VPC: soh-api-prod-vpc
+VPC: soh-api-dev-vpc
 Inbound:
   HTTPS 443 from 0.0.0.0/0
   HTTPS 443 from ::/0
@@ -587,7 +553,7 @@ Outbound:
 
 ```text
 Name: soh-api-prod-ec2-sg
-VPC: soh-api-prod-vpc
+VPC: soh-api-dev-vpc
 Inbound:
   TCP 8080 from soh-api-prod-alb-sg
 Outbound:
@@ -609,7 +575,7 @@ Outbound:
 
 ```text
 Name: soh-api-prod-rds-sg
-VPC: soh-api-prod-vpc
+VPC: soh-api-dev-vpc
 Inbound:
   TCP 3306 from soh-api-prod-ec2-sg
 Outbound:
@@ -637,10 +603,10 @@ dev subnets:
   soh-api-dev-private-db-2
 
 prod name: soh-api-prod-db-subnet-group
-prod VPC: soh-api-prod-vpc
+prod VPC: soh-api-dev-vpc
 prod subnets:
-  soh-api-prod-private-db-1
-  soh-api-prod-private-db-2
+  soh-api-dev-private-db-1
+  soh-api-dev-private-db-2
 ```
 
 공통 선택:
@@ -681,11 +647,11 @@ Deletion protection: Off
 
 ```text
 DB instance identifier: soh-api-prod-mysql
-VPC: soh-api-prod-vpc
+VPC: soh-api-dev-vpc
 DB subnet group: soh-api-prod-db-subnet-group
 Subnets:
-  soh-api-prod-private-db-1
-  soh-api-prod-private-db-2
+  soh-api-dev-private-db-1
+  soh-api-dev-private-db-2
 VPC security group: soh-api-prod-rds-sg
 Multi-AZ: No, 운영 HA가 승인되면 Yes로 변경
 Backup retention: 7 days 이상
@@ -742,7 +708,7 @@ Target type: Instances
 Name: soh-api-prod-tg
 Protocol: HTTP
 Port: 8080
-VPC: soh-api-prod-vpc
+VPC: soh-api-dev-vpc
 Health check path: /api/actuator/health
 Success codes: 200
 Deregistration delay: 45 seconds
@@ -780,10 +746,10 @@ Certificate: ap-northeast-2 ACM certificate
 Name: soh-api-prod-alb
 Scheme: Internet-facing
 IP address type: IPv4
-VPC: soh-api-prod-vpc
+VPC: soh-api-dev-vpc
 Mappings:
-  ap-northeast-2a -> soh-api-prod-public-1
-  ap-northeast-2c -> soh-api-prod-public-2
+  ap-northeast-2a -> soh-api-dev-public-1
+  ap-northeast-2c -> soh-api-dev-public-2
 Security group: soh-api-prod-alb-sg
 Listener:
   HTTPS 443 -> forward to soh-api-prod-tg
@@ -822,7 +788,7 @@ Load balancer: soh-api-dev-alb
 운영:
 
 ```text
-Record name: soh-api
+Record name: api.soh
 Record type: A
 Alias: ON
 Route traffic to: Alias to Application and Classic Load Balancer
@@ -834,7 +800,7 @@ Load balancer: soh-api-prod-alb
 
 ```bash
 nslookup soh-api-dev.thomabio.com
-nslookup soh-api.thomabio.com
+nslookup api.soh.thomabio.com
 ```
 
 ## 17. Launch Template 생성
@@ -1003,10 +969,10 @@ Group size:
 ```text
 Name: soh-api-prod-asg
 Launch template: soh-api-prod-lt
-VPC: soh-api-prod-vpc
+VPC: soh-api-dev-vpc
 Subnets:
-  soh-api-prod-private-app-1
-  soh-api-prod-private-app-2
+  soh-api-dev-private-app-1
+  soh-api-dev-private-app-2
 Load balancing: Attach to existing load balancer target group
 Target group: soh-api-prod-tg
 Health checks:
@@ -1124,9 +1090,9 @@ EC2 -> Instances -> 새 인스턴스 상태 확인
 Target Groups -> Targets -> health 상태 확인
 ```
 
-## 21. CloudFront /api/* 연결
+## 21. API 도메인 및 CloudFront 연결
 
-기존 프론트 CloudFront distribution을 수정한다.
+개발은 기존 프론트 CloudFront distribution의 `/api/*` behavior로 API를 연결할 수 있다. 운영은 dedicated backend domain `api.soh.thomabio.com`을 사용하므로 프론트 CloudFront에 `/api/*` behavior를 추가하지 않아도 된다.
 
 개발 CloudFront:
 
@@ -1136,15 +1102,15 @@ Domain: soh-dev.thomabio.com
 API origin: soh-api-dev.thomabio.com
 ```
 
-운영 CloudFront:
+운영 API:
 
 ```text
-Distribution ID: E3BD44T0U5EBYT
-Domain: soh.thomabio.com
-API origin: soh-api.thomabio.com
+Frontend domain: soh.thomabio.com
+Backend API domain: api.soh.thomabio.com
+Frontend VITE_API_BASE_URL: https://api.soh.thomabio.com/api
 ```
 
-AWS 콘솔:
+개발 CloudFront 수정이 필요할 때 AWS 콘솔:
 
 ```text
 CloudFront -> Distributions -> 대상 distribution 선택
@@ -1156,7 +1122,6 @@ Origin 설정:
 ```text
 Origin domain:
   dev -> soh-api-dev.thomabio.com
-  prod -> soh-api.thomabio.com
 Protocol: HTTPS only
 HTTPS port: 443
 ```
@@ -1172,6 +1137,8 @@ Allowed methods: GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE
 Cache policy: CachingDisabled
 Origin request policy: Authorization, Content-Type, query string 등 API에 필요한 값 전달
 ```
+
+운영에서 legacy `/api/*` 경유를 유지해야 하는 경우에만 위와 같은 behavior를 추가하고 origin은 `api.soh.thomabio.com`으로 둔다. 기본 운영 정책은 `https://soh.thomabio.com` 프론트가 `https://api.soh.thomabio.com/api`를 직접 호출하는 방식이다.
 
 SPA fallback 주의:
 
@@ -1240,7 +1207,7 @@ curl -i http://localhost:8080/api/actuator/health
 
 ```bash
 curl -i https://soh-dev.thomabio.com/api/actuator/health
-curl -i https://soh.thomabio.com/api/actuator/health
+curl -i https://api.soh.thomabio.com/api/actuator/health
 ```
 
 ## 23. 장애 대응 체크리스트
@@ -1304,7 +1271,7 @@ CloudFront에서 API가 index.html로 반환됨:
 [ ] S3 app.jar/.env 업로드
 [ ] ASG Instance Refresh 실행
 [ ] Target Group healthy 확인
-[ ] CloudFront /api/* behavior 추가
+[ ] dev CloudFront /api/* behavior 또는 prod dedicated API domain 연결 확인
 [ ] Health endpoint 확인
 [ ] README.md / AGENTS.md 변경사항 반영
 ```

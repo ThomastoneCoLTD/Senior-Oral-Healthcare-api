@@ -3,11 +3,11 @@ project_name = "soh-api"
 environment  = "prod"
 account_id   = "160885266674"
 
-vpc_cidr                 = "10.80.0.0/16"
-public_subnet_cidrs      = ["10.80.0.0/24", "10.80.1.0/24"]
-private_app_subnet_cidrs = ["10.80.10.0/24", "10.80.11.0/24"]
-private_db_subnet_cidrs  = ["10.80.20.0/24", "10.80.21.0/24"]
-single_nat_gateway       = false
+# Production intentionally reuses the existing development VPC.
+shared_vpc_name                 = "soh-api-dev-vpc"
+shared_public_subnet_names      = ["soh-api-dev-public-1", "soh-api-dev-public-2"]
+shared_private_app_subnet_names = ["soh-api-dev-private-app-1", "soh-api-dev-private-app-2"]
+shared_private_db_subnet_names  = ["soh-api-dev-private-db-1", "soh-api-dev-private-db-2"]
 
 artifact_bucket = "denti-backends"
 artifact_prefix = "soh"
@@ -48,5 +48,5 @@ db_apply_immediately          = false
 # Replace with the real ap-northeast-2 ALB certificate ARN before apply.
 certificate_arn       = "arn:aws:acm:ap-northeast-2:160885266674:certificate/00000000-0000-0000-0000-000000000000"
 hosted_zone_name      = "thomabio.com"
-origin_domain_name    = "soh-api.thomabio.com"
+origin_domain_name    = "api.soh.thomabio.com"
 create_route53_record = false

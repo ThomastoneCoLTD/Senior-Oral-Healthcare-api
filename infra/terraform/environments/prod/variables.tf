@@ -15,25 +15,57 @@ variable "account_id" {
 }
 
 variable "vpc_cidr" {
-  type = string
+  type        = string
+  default     = ""
+  description = "Deprecated for prod. Production reuses the development VPC instead of creating a dedicated VPC."
 }
 
 variable "public_subnet_cidrs" {
-  type = list(string)
+  type        = list(string)
+  default     = []
+  description = "Deprecated for prod. Production uses shared_public_subnet_names."
 }
 
 variable "private_app_subnet_cidrs" {
-  type = list(string)
+  type        = list(string)
+  default     = []
+  description = "Deprecated for prod. Production uses shared_private_app_subnet_names."
 }
 
 variable "private_db_subnet_cidrs" {
-  type    = list(string)
-  default = []
+  type        = list(string)
+  default     = []
+  description = "Deprecated for prod. Production uses shared_private_db_subnet_names."
 }
 
 variable "single_nat_gateway" {
-  type    = bool
-  default = true
+  type        = bool
+  default     = true
+  description = "Deprecated for prod. NAT is provided by the shared development VPC route tables."
+}
+
+variable "shared_vpc_name" {
+  type        = string
+  default     = "soh-api-dev-vpc"
+  description = "Existing development VPC Name tag that production API resources must reuse."
+}
+
+variable "shared_public_subnet_names" {
+  type        = list(string)
+  default     = ["soh-api-dev-public-1", "soh-api-dev-public-2"]
+  description = "Existing development public subnet Name tags for the production ALB."
+}
+
+variable "shared_private_app_subnet_names" {
+  type        = list(string)
+  default     = ["soh-api-dev-private-app-1", "soh-api-dev-private-app-2"]
+  description = "Existing development private app subnet Name tags for the production ASG."
+}
+
+variable "shared_private_db_subnet_names" {
+  type        = list(string)
+  default     = ["soh-api-dev-private-db-1", "soh-api-dev-private-db-2"]
+  description = "Existing development private DB subnet Name tags for the production RDS subnet group."
 }
 
 variable "artifact_bucket" {
@@ -107,7 +139,9 @@ variable "hosted_zone_name" {
 }
 
 variable "origin_domain_name" {
-  type = string
+  type        = string
+  default     = "api.soh.thomabio.com"
+  description = "Deprecated for prod. Production is pinned to api.soh.thomabio.com in main.tf so old tfvars cannot deploy the legacy domain."
 }
 
 variable "create_route53_record" {
