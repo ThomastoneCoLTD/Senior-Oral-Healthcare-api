@@ -69,9 +69,12 @@ When working from another PC or with another Codex agent, read both files before
 README.md
 AGENTS.md
 readme_수동.md
+readme_배포.md
 ```
 
-Keep them aligned. Whenever CI/CD, Terraform, branch policy, AWS constants, GitHub Secrets, S3 paths, ASG names, CloudFront/API routing, manual AWS setup steps, or deployment commands change, update the relevant documentation in the same commit.
+Keep them aligned. Whenever CI/CD, Terraform, branch policy, AWS constants, GitHub Secrets, S3 paths, ASG names, CloudFront/API routing, manual AWS setup steps, deployment order, or deployment commands change, update the relevant documentation in the same commit.
+
+Use `readme_배포.md` as the production deployment runbook. It documents the order for API Terraform, backend app deployment, frontend deployment, verification, and troubleshooting.
 
 After a successful update, commit and push when possible:
 
