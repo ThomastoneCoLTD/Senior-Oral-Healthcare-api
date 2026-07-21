@@ -15,6 +15,7 @@ import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.application.UserRewardService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.global.common.aws.AWSS3Service;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,7 @@ class OralExerciseServiceTest {
     private UserRewardService userRewardService;
     private UserRepository userRepository;
     private JwtTokenUtil jwtTokenUtil;
+    private AWSS3Service awss3Service;
     private OralExerciseService service;
     private HttpServletRequest request;
 
@@ -54,6 +56,7 @@ class OralExerciseServiceTest {
         userRewardService = mock(UserRewardService.class);
         userRepository = mock(UserRepository.class);
         jwtTokenUtil = mock(JwtTokenUtil.class);
+        awss3Service = mock(AWSS3Service.class);
         request = mock(HttpServletRequest.class);
 
         service = new OralExerciseService(
@@ -63,7 +66,8 @@ class OralExerciseServiceTest {
                 rewardTransactionRepository,
                 userRewardService,
                 userRepository,
-                jwtTokenUtil
+                jwtTokenUtil,
+                awss3Service
         );
 
         when(jwtTokenUtil.getAccessToken(request)).thenReturn("access-token");
@@ -73,7 +77,7 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void getContentsSeparatesCurrentAndPreviousContentsByUserSignupWeek() {
+    void getContentsTemporarilyUnlocksAllCoreContentsForTestingAndKeepsIntroOpen() {
         User user = userCreatedDaysAgo(21);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
@@ -89,20 +93,95 @@ class OralExerciseServiceTest {
         OralExerciseDto.ListResponse response = service.getContents(request);
 
         assertThat(response.getCurrentWeek()).isEqualTo(4);
-        assertThat(response.getCurrentContent().getSort()).isEqualTo(4);
+        assertThat(response.getCurrentContent().getSort()).isEqualTo(5);
         assertThat(response.getPreviousContents()).extracting(OralExerciseDto.ContentResponse::getSort)
-                .containsExactly(1, 2, 3);
-        assertThat(response.getContents()).filteredOn(content -> content.getSort() == 5)
+                .containsExactly(2, 3, 4);
+        assertThat(response.getContents()).filteredOn(content -> content.getSort() == 6)
                 .singleElement()
-                .satisfies(content -> assertThat(content.isAvailable()).isFalse());
+                .satisfies(content -> assertThat(content.isAvailable()).isTrue());
         assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
-                .containsExactly(6);
+                .containsExactly(1);
+        assertThat(response.getExtraContents()).allSatisfy(content -> {
+            assertThat(content.getWeek()).isEqualTo(0);
+            assertThat(content.isAvailable()).isTrue();
+            assertThat(content.isCurrentWeekContent()).isTrue();
+        });
+    }
+
+    @Test
+    void getContentsKeepsAllExtraContentsUnlockedFromFirstWeek() {
+        User user = userCreatedDaysAgo(0);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(
+                content(1),
+                content(2),
+                content(6),
+                content(7),
+                content(8)
+        ));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        assertThat(response.getCurrentWeek()).isEqualTo(1);
+        assertThat(response.getCurrentContent().getSort()).isEqualTo(2);
+        assertThat(response.getPreviousContents()).isEmpty();
+        assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
+                .containsExactly(1, 7, 8);
+        assertThat(response.getExtraContents()).allSatisfy(content -> {
+            assertThat(content.getWeek()).isEqualTo(0);
+            assertThat(content.isAvailable()).isTrue();
+            assertThat(content.isCurrentWeekContent()).isTrue();
+        });
+    }
+
+    @Test
+    void getContentsPresignsVideoAndThumbnailAssets() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent content = content(
+                7,
+                "https://denti-backends.s3.ap-northeast-2.amazonaws.com/soh/video/sample.mp4",
+                "https://denti-backends.s3.ap-northeast-2.amazonaws.com/soh/video-thumbnails/optional_video_2.png"
+        );
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(content));
+        when(awss3Service.getPresignedUrl("soh/video/sample.mp4", 180)).thenReturn("signed-video-url");
+        when(awss3Service.getPresignedUrl("soh/video-thumbnails/optional_video_2.png", 180))
+                .thenReturn("signed-thumbnail-url");
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        OralExerciseDto.ContentResponse contentResponse = response.getContents().get(0);
+        assertThat(contentResponse.getVideoUrl()).isEqualTo("signed-video-url");
+        assertThat(contentResponse.getThumbnailUrl()).isEqualTo("signed-thumbnail-url");
+    }
+
+    @Test
+    void getContentsConvertsTmsStaticHostingS3UrisToHttpsUrls() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent content = content(
+                7,
+                "s3://tms-static-hosting/oral-exercise/video/sample.mp4",
+                "s3://tms-static-hosting/oral-exercise/video-thumbnails/optional_video_2.png"
+        );
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(content));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        OralExerciseDto.ContentResponse contentResponse = response.getContents().get(0);
+        assertThat(contentResponse.getVideoUrl())
+                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/video/sample.mp4");
+        assertThat(contentResponse.getThumbnailUrl())
+                .isEqualTo("https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/video-thumbnails/optional_video_2.png");
     }
 
     @Test
     void getContentsMarksButtonRewardAsAlreadyReceivedPerRewardTokenName() {
         User user = userCreatedDaysAgo(0);
-        OralExerciseContent firstContent = content(1);
+        OralExerciseContent firstContent = content(2);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(firstContent));
         when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of(
@@ -125,6 +204,68 @@ class OralExerciseServiceTest {
         assertThat(content.getButtonChallenge().isRewardAvailable()).isFalse();
     }
 
+    @Test
+    void getContentsKeepsRewardReceivedAfterTokenReclaim() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent firstContent = content(2);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(firstContent));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of(
+                UserRewardTransaction.builder()
+                        .userId(7L)
+                        .oralExerciseContent(firstContent)
+                        .type(UserRewardTransactionType.ORAL_EXERCISE_RECLAIM)
+                        .status(UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                        .amount(3L)
+                        .balanceAfter(3L)
+                        .idempotencyKey("ORAL_EXERCISE_RECLAIM:7:1")
+                        .coinId("essential_video_1")
+                        .build(),
+                UserRewardTransaction.builder()
+                        .userId(7L)
+                        .oralExerciseContent(firstContent)
+                        .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                        .status(UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                        .amount(3L)
+                        .balanceAfter(3L)
+                        .idempotencyKey("ORAL_EXERCISE_BUTTON:7:essential_video_1")
+                        .coinId("essential_video_1")
+                        .build()
+        ));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        OralExerciseDto.ContentResponse content = response.getContents().get(0);
+        assertThat(content.isRewardReceived()).isTrue();
+        assertThat(content.getButtonChallenge().isRewardAvailable()).isFalse();
+    }
+
+    @Test
+    void getContentsKeepsButtonRewardAvailableWhenTokenTransferFailed() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent firstContent = content(2);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(firstContent));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of(
+                UserRewardTransaction.builder()
+                        .userId(7L)
+                        .oralExerciseContent(firstContent)
+                        .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                        .status(UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED)
+                        .amount(3L)
+                        .balanceAfter(3L)
+                        .idempotencyKey("ORAL_EXERCISE_BUTTON:7:essential_video_1")
+                        .coinId("essential_video_1")
+                        .build()
+        ));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        OralExerciseDto.ContentResponse content = response.getContents().get(0);
+        assertThat(content.isRewardReceived()).isFalse();
+        assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue();
+    }
+
     private User userCreatedDaysAgo(int daysAgo) {
         User user = User.builder()
                 .userId(7L)
@@ -144,13 +285,19 @@ class OralExerciseServiceTest {
     }
 
     private OralExerciseContent content(int sort) {
+        return content(sort, null, null);
+    }
+
+    private OralExerciseContent content(int sort, String videoUrl, String thumbnailUrl) {
         OralExerciseContent content = OralExerciseContent.builder()
                 .contentSort(sort)
                 .title(sort + "주차")
                 .description("description")
                 .learningPoint("learning point")
+                .thumbnailUrl(thumbnailUrl)
+                .videoUrl(videoUrl)
                 .durationSeconds(300)
-                .level(sort <= 5 ? "실습" : "엑스트라")
+                .level(sort >= 2 && sort <= 6 ? "실습" : "엑스트라")
                 .active(true)
                 .build();
         ReflectionTestUtils.setField(content, "oralExerciseContentId", (long) sort);

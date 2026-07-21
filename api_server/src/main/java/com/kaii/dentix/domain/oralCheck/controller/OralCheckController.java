@@ -2,6 +2,7 @@ package com.kaii.dentix.domain.oralCheck.controller;
 
 import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
+import com.kaii.dentix.domain.oralCheck.dto.resoponse.GingivitisAnalysisResponse;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,17 @@ public class OralCheckController {
             @RequestParam("file") MultipartFile file
     ) throws Exception {
         return oralCheckService.oralCheckPhoto(request, file, "업로드");
+    }
+
+    // 치은염 검출
+    @PostMapping("/gingivitis")
+    public DataResponse<GingivitisAnalysisResponse> gingivitisCheck(
+            HttpServletRequest request,
+            @RequestParam(value = "picture", required = false) MultipartFile picture,
+            @RequestParam(value = "file", required = false) MultipartFile file
+    ) throws Exception {
+        MultipartFile uploadFile = picture != null ? picture : file;
+        return oralCheckService.gingivitisCheck(request, uploadFile);
     }
 
 

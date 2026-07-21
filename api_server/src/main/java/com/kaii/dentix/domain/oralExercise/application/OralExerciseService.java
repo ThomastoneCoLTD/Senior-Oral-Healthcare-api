@@ -12,18 +12,21 @@ import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.oralExercise.dto.OralExerciseDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.domain.OralExerciseRewardToken;
-import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.application.UserRewardService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.global.common.aws.AWSS3Service;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -35,7 +38,16 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OralExerciseService {
+
+    private static final String DENTI_BACKENDS_S3_URL_PREFIX =
+            "https://denti-backends.s3.ap-northeast-2.amazonaws.com/";
+    private static final String DENTI_BACKENDS_S3_URI_PREFIX = "s3://denti-backends/";
+    private static final String TMS_STATIC_HOSTING_S3_URI_PREFIX = "s3://tms-static-hosting/";
+    private static final String TMS_STATIC_HOSTING_S3_URL_PREFIX =
+            "https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/";
+    private static final int VIDEO_PRESIGN_EXPIRE_MINUTES = 180;
 
     private final OralExerciseContentRepository oralExerciseContentRepository;
     private final OralExerciseInteractionLogRepository oralExerciseInteractionLogRepository;
@@ -44,6 +56,7 @@ public class OralExerciseService {
     private final UserRewardService userRewardService;
     private final UserRepository userRepository;
     private final JwtTokenUtil jwtTokenUtil;
+    private final AWSS3Service awss3Service;
 
     @Transactional(readOnly = true)
     public OralExerciseDto.ListResponse getContents(HttpServletRequest request) {
@@ -63,7 +76,7 @@ public class OralExerciseService {
                 .stream()
                 .filter(transaction -> transaction.getCoinId() != null)
                 .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
-                .filter(transaction -> transaction.getStatus() != UserRewardTransactionStatus.CANCELED)
+                .filter(transaction -> transaction.isRewardReceived())
                 .map(transaction -> transaction.getCoinId().toLowerCase())
                 .collect(Collectors.toSet());
         int currentWeek = calculateCurrentWeek(userId);
@@ -73,21 +86,25 @@ public class OralExerciseService {
                         content,
                         progressMap.get(content.getOralExerciseContentId()),
                         currentWeek,
-                        rewardedTokenNames.contains(resolveRewardTokenName(content))
+                        rewardedTokenNames.contains(resolveRewardTokenName(content)),
+                        resolvePlayableAssetUrl(content.getVideoUrl()),
+                        resolvePlayableAssetUrl(content.getThumbnailUrl())
                 ))
                 .toList();
 
         return OralExerciseDto.ListResponse.builder()
                 .currentWeek(Math.max(currentWeek, 1))
                 .currentContent(contents.stream()
+                        .filter(OralExerciseDto.ContentResponse::isCoreContent)
                         .filter(OralExerciseDto.ContentResponse::isCurrentWeekContent)
                         .findFirst()
                         .orElse(null))
                 .previousContents(contents.stream()
+                        .filter(OralExerciseDto.ContentResponse::isCoreContent)
                         .filter(content -> currentWeek > 0 && content.getWeek() < currentWeek)
                         .toList())
                 .extraContents(contents.stream()
-                        .filter(content -> content.getWeek() > 5)
+                        .filter(content -> !content.isCoreContent())
                         .toList())
                 .contents(contents)
                 .build();
@@ -147,13 +164,6 @@ public class OralExerciseService {
         );
 
         UserOralExerciseProgress savedProgress = userOralExerciseProgressRepository.save(progress);
-        if (completed && isCoreContent(content)) {
-            userRewardService.rewardOralExerciseCompletion(
-                    userId,
-                    content,
-                    interactionRequest.getSessionId()
-            );
-        }
 
         return OralExerciseDto.ProgressResponse.from(savedProgress);
     }
@@ -200,7 +210,41 @@ public class OralExerciseService {
     }
 
     private boolean isCoreContent(OralExerciseContent content) {
-        return content.getContentSort() >= 1 && content.getContentSort() <= 5;
+        return content.getContentSort() >= 2 && content.getContentSort() <= 6;
+    }
+
+    private String resolvePlayableAssetUrl(String assetUrl) {
+        if (assetUrl != null && assetUrl.startsWith(TMS_STATIC_HOSTING_S3_URI_PREFIX)) {
+            String key = assetUrl.substring(TMS_STATIC_HOSTING_S3_URI_PREFIX.length());
+            return TMS_STATIC_HOSTING_S3_URL_PREFIX + key;
+        }
+
+        String key = extractDentiBackendsS3Key(assetUrl);
+        if (key == null) {
+            return assetUrl;
+        }
+
+        try {
+            return awss3Service.getPresignedUrl(key, VIDEO_PRESIGN_EXPIRE_MINUTES);
+        } catch (RuntimeException exception) {
+            log.warn("구강체조 영상 presigned URL 생성 실패. key={}", key, exception);
+            return assetUrl;
+        }
+    }
+
+    private String extractDentiBackendsS3Key(String assetUrl) {
+        if (assetUrl == null || assetUrl.isBlank()) {
+            return null;
+        }
+
+        String key = null;
+        if (assetUrl.startsWith(DENTI_BACKENDS_S3_URL_PREFIX)) {
+            key = assetUrl.substring(DENTI_BACKENDS_S3_URL_PREFIX.length());
+        } else if (assetUrl.startsWith(DENTI_BACKENDS_S3_URI_PREFIX)) {
+            key = assetUrl.substring(DENTI_BACKENDS_S3_URI_PREFIX.length());
+        }
+
+        return key == null ? null : URLDecoder.decode(key, StandardCharsets.UTF_8);
     }
 
     private int calculateCompletionRate(

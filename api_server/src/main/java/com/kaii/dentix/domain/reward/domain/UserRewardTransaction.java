@@ -53,6 +53,9 @@ public class UserRewardTransaction extends TimeEntity {
     private String coinId;
 
     @Column(length = 255)
+    private String tokenContractAddress;
+
+    @Column(length = 255)
     private String daeguChainTxHash;
 
     @Column(length = 255)
@@ -74,11 +77,28 @@ public class UserRewardTransaction extends TimeEntity {
         this.daeguChainFactHash = factHash;
     }
 
+    public void updateTokenContractAddress(String tokenContractAddress) {
+        this.tokenContractAddress = tokenContractAddress;
+    }
+
     public void markTokenTransferFailed() {
         this.status = UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED;
     }
 
+    public void updateBalanceAfter(long balanceAfter) {
+        if (balanceAfter < 0) {
+            throw new IllegalArgumentException("balanceAfter must not be negative");
+        }
+        this.balanceAfter = balanceAfter;
+    }
+
     public boolean isAlreadyApplied() {
         return status != UserRewardTransactionStatus.CANCELED;
+    }
+
+    public boolean isRewardReceived() {
+        return status != UserRewardTransactionStatus.CANCELED
+                && status != UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED
+                && status != UserRewardTransactionStatus.POINT_MINT_FAILED;
     }
 }

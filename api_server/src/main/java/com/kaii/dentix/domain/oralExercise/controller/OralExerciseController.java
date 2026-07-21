@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.oralExercise.controller;
 import com.kaii.dentix.domain.oralExercise.application.OralExerciseService;
 import com.kaii.dentix.domain.oralExercise.dto.OralExerciseDto;
 import com.kaii.dentix.domain.reward.application.UserRewardService;
+import com.kaii.dentix.domain.reward.application.UserRewardReclaimService;
 import com.kaii.dentix.domain.reward.dto.UserRewardDto;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +17,7 @@ public class OralExerciseController {
 
     private final OralExerciseService oralExerciseService;
     private final UserRewardService userRewardService;
+    private final UserRewardReclaimService userRewardReclaimService;
 
     @GetMapping
     public DataResponse<OralExerciseDto.ListResponse> getContents(HttpServletRequest request) {
@@ -36,5 +38,10 @@ public class OralExerciseController {
             @RequestBody UserRewardDto.ButtonClickRequest buttonClickRequest
     ) {
         return new DataResponse<>(userRewardService.rewardOralExerciseButtonClick(request, buttonClickRequest));
+    }
+
+    @PostMapping("/rewards/reclaim")
+    public DataResponse<UserRewardDto.ReclaimResponse> reclaimRewards(HttpServletRequest request) {
+        return new DataResponse<>(userRewardReclaimService.reclaimOralExerciseTokens(request));
     }
 }

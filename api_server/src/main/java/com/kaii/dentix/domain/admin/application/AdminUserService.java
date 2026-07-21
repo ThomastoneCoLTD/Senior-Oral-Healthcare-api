@@ -7,17 +7,20 @@ import com.kaii.dentix.domain.admin.dto.AdminUserDto;
 import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
 import com.kaii.dentix.domain.agreement.dao.ServiceAgreementRepository;
 import com.kaii.dentix.domain.agreement.domain.ServiceAgreement;
-import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
-import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
-import com.kaii.dentix.domain.appService.domain.AppService;
-import com.kaii.dentix.domain.appService.domain.UserToAppService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.findPwdQuestion.domain.FindPwdQuestion;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
+import com.kaii.dentix.domain.oralExercise.dao.OralExerciseContentRepository;
+import com.kaii.dentix.domain.oralExercise.dao.UserOralExerciseProgressRepository;
+import com.kaii.dentix.domain.oralExercise.domain.OralExerciseContent;
+import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
+import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
@@ -57,6 +60,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 
 @Service
@@ -66,7 +71,7 @@ public class AdminUserService {
     private static final String[] TEMPLATE_HEADERS = {
             "userLoginIdentifier", "userPassword", "userName", "userGender",
             "userPhoneNumber", "findPwdQuestionId", "findPwdAnswer",
-            "appServiceIds", "userServiceAgreementIds"
+            "userServiceAgreementIds"
     };
     private static final Pattern LOGIN_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9]+$");
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-zA-Z])(?=.*[!@#$%^&*])[a-zA-Z!@#$%^&*0-9]+$");
@@ -82,12 +87,13 @@ public class AdminUserService {
     private final AdminUserRepositoryImpl adminUserRepository;
     private final AdminUserCustomRepository adminUserCustomRepository;
     private final OrganizationSubscriptionService organizationSubscriptionService;
-    private final AppServiceRepository appServiceRepository;
-    private final UserToAppServiceRepository userToAppServiceRepository;
     private final FindPwdQuestionRepository findPwdQuestionRepository;
     private final ServiceAgreementRepository serviceAgreementRepository;
     private final ServiceAgreementConsentService serviceAgreementConsentService;
     private final PlatformTransactionManager transactionManager;
+    private final OralExerciseContentRepository oralExerciseContentRepository;
+    private final UserOralExerciseProgressRepository oralExerciseProgressRepository;
+    private final UserRewardTransactionRepository userRewardTransactionRepository;
 
     /**
      * 일반관리자 - 본인 기관의 사용자 목록 조회
@@ -208,6 +214,97 @@ public class AdminUserService {
         return new DataResponse<>(200, "기관 사용자 사용량 조회 성공", Map.of("totalCount", total, "users", usageList));
     }
 
+    @Transactional(readOnly = true)
+    public AdminUserDto.ExerciseProgressResponse getExerciseProgress(HttpServletRequest request) {
+        Admin admin = adminService.getTokenAdmin(request);
+        List<User> users;
+        if (admin.isSuperAdmin()) {
+            users = userRepository.findAll(Sort.by(Sort.Direction.ASC, "userName"));
+        } else {
+            if (admin.getOrganization() == null) {
+                throw new BadRequestApiException("소속 기관 정보가 없습니다.");
+            }
+            users = userRepository.findByOrganization_OrganizationId(admin.getOrganization().getOrganizationId());
+            users.sort(java.util.Comparator.comparing(User::getUserName, String.CASE_INSENSITIVE_ORDER));
+        }
+
+        List<OralExerciseContent> contents = oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc();
+        List<Long> userIds = users.stream().map(User::getUserId).toList();
+        List<UserOralExerciseProgress> progressList = userIds.isEmpty()
+                ? List.of()
+                : oralExerciseProgressRepository.findByUserIdIn(userIds);
+        List<UserRewardTransaction> rewards = userIds.isEmpty()
+                ? List.of()
+                : userRewardTransactionRepository.findByUserIdInAndType(
+                        userIds,
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN
+                );
+
+        Map<Long, Map<Long, UserOralExerciseProgress>> progressByUser = progressList.stream()
+                .collect(Collectors.groupingBy(
+                        UserOralExerciseProgress::getUserId,
+                        Collectors.toMap(
+                                item -> item.getContent().getOralExerciseContentId(),
+                                Function.identity(),
+                                (left, right) -> left
+                        )
+                ));
+        Map<Long, Map<Long, UserRewardTransaction>> rewardsByUser = rewards.stream()
+                .filter(UserRewardTransaction::isRewardReceived)
+                .filter(item -> item.getOralExerciseContent() != null)
+                .collect(Collectors.groupingBy(
+                        UserRewardTransaction::getUserId,
+                        Collectors.toMap(
+                                item -> item.getOralExerciseContent().getOralExerciseContentId(),
+                                Function.identity(),
+                                (left, right) -> left.getCreated().after(right.getCreated()) ? left : right
+                        )
+                ));
+
+        List<AdminUserDto.ExerciseProgressUser> rows = users.stream().map(user -> {
+            Map<Long, UserOralExerciseProgress> userProgress = progressByUser.getOrDefault(user.getUserId(), Map.of());
+            Map<Long, UserRewardTransaction> userRewards = rewardsByUser.getOrDefault(user.getUserId(), Map.of());
+            List<AdminUserDto.ExerciseProgressContent> contentRows = contents.stream().map(content -> {
+                UserOralExerciseProgress progress = userProgress.get(content.getOralExerciseContentId());
+                UserRewardTransaction reward = userRewards.get(content.getOralExerciseContentId());
+                boolean rewardEligible = content.getContentSort() >= 2 && content.getContentSort() <= 6;
+                return AdminUserDto.ExerciseProgressContent.builder()
+                        .contentId(content.getOralExerciseContentId())
+                        .contentSort(content.getContentSort())
+                        .title(content.getTitle())
+                        .completionRate(progress == null ? 0 : progress.getCompletionRate())
+                        .completed(progress != null && progress.isCompleted())
+                        .lastPositionSeconds(progress == null ? 0 : progress.getLastPositionSeconds())
+                        .durationSeconds(content.getDurationSeconds())
+                        .lastViewedAt(progress == null ? null : progress.getLastViewedAt())
+                        .rewardEligible(rewardEligible)
+                        .rewardReceived(rewardEligible && reward != null)
+                        .rewardReceivedAt(reward == null ? null : reward.getCreated())
+                        .build();
+            }).toList();
+            int completedCount = (int) contentRows.stream().filter(AdminUserDto.ExerciseProgressContent::isCompleted).count();
+            int rewardCount = (int) contentRows.stream().filter(AdminUserDto.ExerciseProgressContent::isRewardReceived).count();
+            int overallRate = contentRows.isEmpty() ? 0 : (int) Math.round(
+                    contentRows.stream().mapToInt(AdminUserDto.ExerciseProgressContent::getCompletionRate).average().orElse(0)
+            );
+            return AdminUserDto.ExerciseProgressUser.builder()
+                    .userId(user.getUserId())
+                    .userLoginIdentifier(user.getUserLoginIdentifier())
+                    .userName(user.getUserName())
+                    .completedCount(completedCount)
+                    .overallCompletionRate(overallRate)
+                    .rewardReceivedCount(rewardCount)
+                    .contents(contentRows)
+                    .build();
+        }).toList();
+
+        return AdminUserDto.ExerciseProgressResponse.builder()
+                .contentCount(contents.size())
+                .rewardContentCount((int) contents.stream().filter(item -> item.getContentSort() >= 2 && item.getContentSort() <= 6).count())
+                .users(rows)
+                .build();
+    }
+
     /**
      * 일반관리자 - 기관 사용자 일괄등록 엑셀 양식 다운로드
      */
@@ -311,8 +408,7 @@ public class AdminUserService {
         example.createCell(4).setCellValue("01012345678");
         example.createCell(5).setCellValue("1");
         example.createCell(6).setCellValue("우리집");
-        example.createCell(7).setCellValue("1,2");
-        example.createCell(8).setCellValue("1,2,3");
+        example.createCell(7).setCellValue("1,2,3");
     }
 
     private void createGuideSheet(Workbook workbook) {
@@ -336,7 +432,6 @@ public class AdminUserService {
                 {"userPhoneNumber", "숫자만 10~11자리", "01012345678"},
                 {"findPwdQuestionId", "비밀번호 찾기 질문 ID", "1"},
                 {"findPwdAnswer", "비밀번호 찾기 답변", "우리집"},
-                {"appServiceIds", "서비스 ID를 쉼표로 구분, 비우면 전체 서비스로 등록", "1,2"},
                 {"userServiceAgreementIds", "약관 ID를 쉼표로 구분, 비우면 필수 약관만 동의 처리", "1,2,3"}
         };
 
@@ -349,7 +444,6 @@ public class AdminUserService {
         }
 
         rowIndex = writeQuestionGuideRows(guideSheet, rowIndex, headerStyle);
-        rowIndex = writeAppServiceGuideRows(guideSheet, rowIndex, headerStyle);
         writeAgreementGuideRows(guideSheet, rowIndex, headerStyle);
     }
 
@@ -376,22 +470,6 @@ public class AdminUserService {
             Row row = guideSheet.createRow(rowIndex++);
             row.createCell(0).setCellValue(question.getFindPwdQuestionId());
             row.createCell(1).setCellValue(question.getFindPwdQuestionTitle());
-        }
-        return rowIndex + 1;
-    }
-
-    private int writeAppServiceGuideRows(Sheet guideSheet, int rowIndex, CellStyle headerStyle) {
-        Row appServiceHeader = guideSheet.createRow(rowIndex++);
-        appServiceHeader.createCell(0).setCellValue("appServiceId");
-        appServiceHeader.createCell(1).setCellValue("serviceName");
-        appServiceHeader.getCell(0).setCellStyle(headerStyle);
-        appServiceHeader.getCell(1).setCellStyle(headerStyle);
-
-        List<AppService> appServices = appServiceRepository.findAll();
-        for (AppService appService : appServices) {
-            Row row = guideSheet.createRow(rowIndex++);
-            row.createCell(0).setCellValue(appService.getAppServiceId());
-            row.createCell(1).setCellValue(appService.getName());
         }
         return rowIndex + 1;
     }
@@ -426,8 +504,7 @@ public class AdminUserService {
         String phoneNumber = getStringValue(row.getCell(4), formatter);
         String questionIdRaw = getStringValue(row.getCell(5), formatter);
         String findPwdAnswer = getStringValue(row.getCell(6), formatter);
-        String appServiceIdsRaw = getStringValue(row.getCell(7), formatter);
-        String agreementIdsRaw = getStringValue(row.getCell(8), formatter);
+        String agreementIdsRaw = getStringValue(row.getCell(7), formatter);
 
         validateRequiredText(loginId, "아이디");
         validateRequiredText(password, "비밀번호");
@@ -454,15 +531,6 @@ public class AdminUserService {
         }
 
         GenderType gender = parseGender(genderRaw);
-        List<Long> appServiceIds = parseIdList(appServiceIdsRaw, "서비스 ID");
-        if (appServiceIds.isEmpty()) {
-            appServiceIds = new ArrayList<>(reference.allAppServiceIds);
-        }
-        if (appServiceIds.isEmpty()) {
-            throw new BadRequestApiException("등록 가능한 서비스가 없습니다.");
-        }
-        validateIds(appServiceIds, reference.appServiceMap.keySet(), "존재하지 않는 서비스 ID가 포함되어 있습니다.");
-
         List<Long> agreementIds = parseIdList(agreementIdsRaw, "약관 ID");
         if (agreementIds.isEmpty()) {
             agreementIds = new ArrayList<>(reference.requiredAgreementIds);
@@ -482,27 +550,14 @@ public class AdminUserService {
                 .successCount(0)
                 .build());
 
-        List<UserToAppService> userToAppServices = appServiceIds.stream()
-                .distinct()
-                .map(serviceId -> UserToAppService.builder()
-                        .user(user)
-                        .appService(reference.appServiceMap.get(serviceId))
-                        .build())
-                .toList();
-        userToAppServiceRepository.saveAll(userToAppServices);
         serviceAgreementConsentService.saveUserServiceAgreements(user.getUserId(), agreementIds);
         fileLoginIdSet.add(loginId);
     }
 
     private BulkUploadReference getBulkUploadReference() {
-        List<AppService> appServices = appServiceRepository.findAll();
         List<FindPwdQuestion> findPwdQuestions = findPwdQuestionRepository.findAll(Sort.by(Sort.Direction.ASC, "findPwdQuestionSort"));
         List<ServiceAgreement> serviceAgreements = serviceAgreementRepository.findAll(Sort.by(Sort.Direction.ASC, "serviceAgreeSort"));
 
-        Map<Long, AppService> appServiceMap = new HashMap<>();
-        for (AppService appService : appServices) {
-            appServiceMap.put(appService.getAppServiceId(), appService);
-        }
 
         Map<Long, FindPwdQuestion> questionMap = new HashMap<>();
         for (FindPwdQuestion findPwdQuestion : findPwdQuestions) {
@@ -519,10 +574,8 @@ public class AdminUserService {
         }
 
         return new BulkUploadReference(
-                appServiceMap,
                 questionMap,
                 serviceAgreementMap,
-                appServices.stream().map(AppService::getAppServiceId).toList(),
                 requiredAgreementIds
         );
     }
@@ -635,10 +688,8 @@ public class AdminUserService {
     }
 
     private record BulkUploadReference(
-            Map<Long, AppService> appServiceMap,
             Map<Long, FindPwdQuestion> questionMap,
             Map<Long, ServiceAgreement> serviceAgreementMap,
-            List<Long> allAppServiceIds,
             List<Long> requiredAgreementIds
     ) {}
 }

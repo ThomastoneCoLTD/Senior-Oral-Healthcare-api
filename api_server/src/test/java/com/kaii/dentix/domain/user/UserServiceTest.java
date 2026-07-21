@@ -2,8 +2,6 @@ package com.kaii.dentix.domain.user;
 
 import com.kaii.dentix.domain.agreement.dao.ServiceAgreementCustomRepository;
 import com.kaii.dentix.domain.agreement.dao.ServiceAgreementRepository;
-import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
-import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
@@ -37,8 +35,6 @@ class UserServiceTest {
     @Mock private FindPwdQuestionRepository findPwdQuestionRepository;
     @Mock private ServiceAgreementRepository serviceAgreementRepository;
     @Mock private ServiceAgreementCustomRepository serviceAgreementCustomRepository;
-    @Mock private AppServiceRepository appServiceRepository;
-    @Mock private UserToAppServiceRepository userToAppServiceRepository;
 
     @InjectMocks
     private UserService userService;
@@ -64,7 +60,7 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.getTokenUser(request))
                 .isInstanceOf(UnauthorizedException.class)
-                .hasMessage("인증 정보가 올바르지 않습니다.");
+                .hasMessage("Invalid authentication information.");
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.user.dto;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.ServiceType;
+import com.kaii.dentix.domain.user.domain.UserDaeguCredentialStatus;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.config.PasswordSerializer;
 import jakarta.validation.constraints.NotBlank;
@@ -40,7 +41,6 @@ public class UserDto {
         @NotBlank(message = "아이디는 필수입니다.")
         private String userLoginIdentifier;
 
-        @NotBlank(message = "비밀번호는 필수입니다.")
         @JsonSerialize(using = PasswordSerializer.class)
         private String userPassword;
     }
@@ -80,13 +80,13 @@ public class UserDto {
     @NoArgsConstructor @AllArgsConstructor
     public static class VerifyRequest {
         @NotBlank(message = "휴대폰 번호는 필수입니다.")
-        @Size(min = 10, max = 11, message = "휴대폰 번호는 최소 10자부터 최대 11자입니다.")
-        @Pattern(regexp = "^[0-9]+$", message = "휴대폰 번호는 숫자만 입력해 주세요.")
+        @Size(max = 20, message = "Phone number must be 20 characters or less.")
+        @Pattern(regexp = "^[0-9\\-\\s()]+$", message = "Phone number can contain only numbers, hyphens, spaces, and parentheses.")
         private String userPhoneNumber;
 
         @NotBlank(message = "이름은 필수입니다.")
         @Size(min = 2, max = 100, message = "이름 최소 2자 이상 입력해야 됩니다.")
-        @Pattern(regexp = "^[ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z\\s]+$", message = "이름은 한글이나 영문으로만 입력해 주세요.")
+        @Pattern(regexp = "^[\\p{L}\\s]+$", message = "Name can contain only letters and spaces.")
         private String userName;
     }
 
@@ -102,6 +102,21 @@ public class UserDto {
         private Long serviceId;
         private String name;
         private ServiceType serviceType;
+    }
+
+    public static List<ServiceInfo> defaultServiceInfo() {
+        return List.of(
+                ServiceInfo.builder()
+                        .serviceId(1L)
+                        .name("PLAQUE")
+                        .serviceType(ServiceType.PLAQUE_DETECTION)
+                        .build(),
+                ServiceInfo.builder()
+                        .serviceId(2L)
+                        .name("PERIODONTAL")
+                        .serviceType(ServiceType.PERIODONTAL_DETECTION)
+                        .build()
+        );
     }
 
     // =================================================================
@@ -130,13 +145,11 @@ public class UserDto {
         private Long findPwdQuestionId;
         @NotBlank(message = "답변은 필수입니다.")
         private String findPwdAnswer;
-
-        @NotNull(message = "서비스 선택 필수입니다.")
-        private List<Long> appServiceIds;
         private Long organizationId;
 
         @NotNull(message = "서비스 동의 체크는 필수입니다.")
         private List<Long> userServiceAgreementRequest;
+
     }
 
     @Getter @Builder
@@ -152,6 +165,8 @@ public class UserDto {
         private String organizationName;
         private String daeguDid;
         private UserDaeguIdentityStatus daeguDidStatus;
+        private UserDaeguCredentialStatus daeguCredentialStatus;
+        private String walletAddress;
     }
 
     @Getter @Builder
@@ -166,8 +181,8 @@ public class UserDto {
         private String userName;
 
         @NotBlank(message = "전화번호는 필수입니다.")
-        @Size(min = 10, max = 11, message = "전화번호는 최소 10자부터 최대 11자입니다.")
-        @Pattern(regexp = "^[0-9]+$", message = "전화번호는 숫자만 입력해 주세요.")
+        @Size(max = 20, message = "Phone number must be 20 characters or less.")
+        @Pattern(regexp = "^[0-9\\-\\s()]+$", message = "Phone number can contain only numbers, hyphens, spaces, and parentheses.")
         private String userPhoneNumber;
 
         @NotBlank(message = "생년월일은 필수입니다.")
@@ -176,6 +191,7 @@ public class UserDto {
 
         @NotNull(message = "서비스 이용 동의는 필수입니다.")
         private List<Long> userServiceAgreementRequest;
+
     }
 
     // =================================================================
@@ -200,45 +216,8 @@ public class UserDto {
         private GenderType userGender;
     }
 
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class ModifyPasswordRequest {
-        @NotBlank(message = "비밀번호는 필수입니다.")
-        @Size(min = 8, max = 20, message = "비밀번호는 최소 8자부터 최대 20자입니다.")
-        @Pattern(regexp = "^(?=.*[a-zA-Z])(?=.*[!@#$%^&*])[a-zA-Z!@#$%^&*0-9]+$", message = "비밀번호는 영문과 특수문자가 필수입니다.")
-        @JsonSerialize(using = PasswordSerializer.class)
-        private String userPassword;
-    }
-
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class PasswordVerifyRequest {
-        @NotBlank(message = "비밀번호는 필수입니다.")
-        @JsonSerialize(using = PasswordSerializer.class)
-        private String userPassword;
-    }
-
     // =================================================================
-    // 5. 비밀번호 찾기 (FindPassword)
-    // =================================================================
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class FindPasswordRequest {
-        @NotBlank private String userLoginIdentifier;
-        @NotNull private Long findPwdQuestionId;
-        @NotBlank private String findPwdAnswer;
-    }
-
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class FindPasswordResponse {
-        private Long userId;
-        private String userName;
-        private String userLoginIdentifier;
-    }
-
-    // =================================================================
-    // 6. QnA 수정 및 서비스 변경
+    // 5. QnA 수정 및 서비스 변경
     // =================================================================
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor
@@ -254,18 +233,6 @@ public class UserDto {
         private String findPwdAnswer;
     }
 
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class ServiceUpdateRequest {
-        private List<Long> serviceIds;
-    }
-
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
-    public static class ServiceUpdateResponse {
-        private String userName;
-        private List<ServiceInfo> services;
-    }
 
     // =================================================================
     // 7. 서비스 사용 통계 (Usage)

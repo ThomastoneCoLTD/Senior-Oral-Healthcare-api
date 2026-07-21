@@ -28,17 +28,22 @@ public class ExternalTokenClient {
     }
 
     public JsonNode createToken(String tokenName, String tokenSymbol, Long supply) {
-        Map<String, Object> body = new LinkedHashMap<>();
+        Map<String, Object> body = baseBody();
         body.put("token_name", tokenName);
         body.put("token_symbol", tokenSymbol);
         body.put("supply", supply);
         return post(properties.getTokenCreatePath(), body);
     }
 
-    public JsonNode transferToken(String userDid, String tokenName, String receiver, long amount) {
-        Map<String, Object> body = new LinkedHashMap<>();
+    public JsonNode transferToken(String userDid, String tokenName, String contractAddress, String receiver, long amount) {
+        Map<String, Object> body = baseBody();
         body.put("user_DID", userDid);
         body.put("token_name", tokenName);
+        if (contractAddress != null && !contractAddress.isBlank()) {
+            body.put("contract", contractAddress);
+            body.put("contract_address", contractAddress);
+            body.put("cont_addr", contractAddress);
+        }
         body.put("receiver", receiver);
         body.put("wallet_address", receiver);
         body.put("amount", amount);
@@ -46,7 +51,17 @@ public class ExternalTokenClient {
     }
 
     public JsonNode getTokenList() {
-        return post(properties.getTokenListPath(), Map.of());
+        return post(properties.getTokenListPath(), baseBody());
+    }
+
+    private Map<String, Object> baseBody() {
+        String appToken = properties.resolveAppKey();
+        if (appToken == null || appToken.isBlank()) {
+            throw new BadRequestApiException("daegu-chain.app-key or daegu-chain.token is required");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("token", appToken);
+        return body;
     }
 
     private JsonNode post(String path, Object body) {
@@ -57,7 +72,12 @@ public class ExternalTokenClient {
                     new HttpEntity<>(body),
                     JsonNode.class
             );
-            return Objects.requireNonNull(response.getBody(), "Token server response body is empty");
+            JsonNode responseBody = Objects.requireNonNull(response.getBody(), "Token server response body is empty");
+            if (responseBody.has("res") && !responseBody.path("res").asBoolean()) {
+                String message = responseBody.path("message").asText(responseBody.path("msg").asText("Token server request failed"));
+                throw new BadRequestApiException(message);
+            }
+            return responseBody;
         } catch (RestClientException | NullPointerException exception) {
             throw new BadRequestApiException("Token server API call failed: " + exception.getMessage());
         }

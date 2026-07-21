@@ -17,7 +17,7 @@ public class UserLoginDto extends TokenDto{
 
 
     //사용자와 연결된 서비스 전체 목록
-    private List<AppServiceInfo> services;
+    private List<ServiceInfo> services;
     private Long organizationId;
     private String organizationName;
 
@@ -29,7 +29,7 @@ public class UserLoginDto extends TokenDto{
     @Builder
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class AppServiceInfo {
+    public static class ServiceInfo {
         private Long serviceId;
         private String name;
         private ServiceType serviceType;

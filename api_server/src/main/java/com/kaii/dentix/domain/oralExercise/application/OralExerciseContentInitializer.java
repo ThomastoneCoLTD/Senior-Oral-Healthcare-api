@@ -15,6 +15,34 @@ import java.util.List;
 public class OralExerciseContentInitializer {
 
     private static final String TEST_VIDEO_URL = "/videos/oral-exercise/test.mp4";
+    private static final String S3_ORAL_EXERCISE_VIDEO_BASE_URL =
+            "https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/video/";
+    private static final String S3_ORAL_EXERCISE_THUMBNAIL_BASE_URL =
+            "https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/video-thumbnails/";
+    private static final String VIDEO_1_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "1%ED%99%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0%EC%9D%98%20%ED%9A%A8%EB%8A%A5_fin.mp4";
+    private static final String VIDEO_2_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "2%ED%99%94%20%EB%AA%A9%EC%8A%A4%ED%8A%B8%EB%A0%88%EC%B9%AD_fin.mp4";
+    private static final String VIDEO_3_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "3%ED%99%94%20%ED%83%80%EC%95%A1%20%EB%82%98%EC%98%A4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
+    private static final String VIDEO_4_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "4%ED%99%94%20%EC%82%BC%ED%82%A4%EB%8A%94%20%ED%9E%98%20%EA%B8%B0%EB%A5%B4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
+    private static final String VIDEO_5_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "5%ED%99%94%20%EB%A7%90%ED%95%98%EB%8A%94%20%ED%9E%98%20%EA%B8%B0%EB%A5%B4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
+    private static final String VIDEO_6_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "6%ED%99%94%20%EC%94%B9%EB%8A%94%20%ED%9E%98%20%EA%B8%B0%EB%A5%B4%EB%8A%94%20%EC%9E%85%EC%B2%B4%EC%A1%B0_fin.mp4";
+    private static final String VIDEO_7_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "7%ED%99%94%20%EA%B5%AC%EA%B0%95%EA%B1%B4%EC%A1%B0%EC%A6%9D%20%EA%B4%80%EB%A6%AC%EB%B2%95_fin.mp4";
+    private static final String VIDEO_8_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "8%ED%99%94%20%EC%9D%98%EC%B9%98%EA%B4%80%EB%A6%AC%EB%B2%95_fin.mp4";
+    private static final String VIDEO_9_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "9%ED%99%94%20%EC%98%AC%EB%B0%94%EB%A5%B8%20%EC%B9%AB%EC%86%94%EC%A7%88_fin.mp4";
+    private static final String VIDEO_10_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "10%ED%99%94%20%EA%B5%AC%EC%B7%A8%20%EC%98%88%EB%B0%A9%EA%B3%BC%20%EA%B4%80%EB%A6%AC_fin.mp4";
+    private static final String VIDEO_11_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "11%ED%99%94%20%EC%82%BC%ED%82%B4%20%EA%B1%B4%EA%B0%95%EA%B3%BC%20%EC%8B%9D%EC%82%AC%EC%9D%98%20%EA%B4%80%EA%B3%84_fin.mp4";
+    private static final String VIDEO_12_URL =
+            S3_ORAL_EXERCISE_VIDEO_BASE_URL + "12%ED%99%94%20%EA%B5%AC%EA%B0%95%EA%B1%B4%EA%B0%95%2C%20%EC%8A%A4%EC%8A%A4%EB%A1%9C%20%EC%A7%80%ED%82%A4%EB%8A%94%20%EC%8A%B5%EA%B4%80%20%EC%A0%95%EA%B8%B0%EA%B2%80%EC%A7%84%EA%B3%BC%20%EC%A7%80%EC%86%8D%20%EC%8B%A4%EC%B2%9C_fin.mp4";
 
     private final OralExerciseContentRepository oralExerciseContentRepository;
 
@@ -24,7 +52,7 @@ public class OralExerciseContentInitializer {
         for (OralExerciseContent defaultContent : defaultContents()) {
             oralExerciseContentRepository.findByContentSort(defaultContent.getContentSort())
                     .ifPresentOrElse(
-                            content -> content.fillVideoUrlIfBlank(TEST_VIDEO_URL),
+                            content -> content.applyDefaultContent(defaultContent, TEST_VIDEO_URL),
                             () -> oralExerciseContentRepository.save(defaultContent)
                     );
         }
@@ -34,77 +62,75 @@ public class OralExerciseContentInitializer {
         return List.of(
                 content(
                         1,
-                        "구강체조의 효능",
-                        "구강노쇠(Oral Frailty)를 이해하고 구강체조가 필요한 이유를 학습합니다.",
-                        "구강기능과 전신건강의 관계"
+                        "Chapter 1. 인트로",
+                        "구강노쇠(Oral Frailty)를 이해하고 입체조가 필요한 이유를 학습합니다.",
+                        "구강노쇠(Oral Frailty) 이해, 입체조가 필요한 이유"
                 ),
                 content(
                         2,
-                        "목 스트레칭",
-                        "경부 근육을 이완하고 어깨 가동성 향상과 자세 교정 운동을 익힙니다.",
-                        "경부 근육 이완, 어깨 가동성 향상, 자세 교정"
+                        "Chapter 2. 목 스트레칭",
+                        "경부 근육 이완과 자세 교정 운동을 학습합니다.",
+                        "경부 근육 이완과 자세 교정"
                 ),
                 content(
                         3,
-                        "타액이 나오는 구강체조",
-                        "침샘 마사지, 혀 운동, 입술 운동으로 타액분비를 촉진합니다.",
-                        "침샘 마사지, 혀 운동, 입술 운동, 타액분비 촉진"
+                        "Chapter 3. 타액이 나오는 입체조",
+                        "침샘 마사지와 혀 운동을 통해 타액분비 촉진 방법을 학습합니다.",
+                        "침샘 마사지와 혀 운동"
                 ),
                 content(
                         4,
-                        "삼키는 힘 기르는 구강체조",
-                        "연하근육과 목 근육을 강화하고 삼킴 훈련을 따라 합니다.",
-                        "연하근육 강화, 목 근육 강화, 삼킴 훈련"
+                        "Chapter 4. 삼키는 힘 기르는 입체조",
+                        "연하근육 강화 훈련을 학습합니다.",
+                        "연하근육 강화 훈련"
                 ),
                 content(
                         5,
-                        "말하는 힘 기르는 구강체조",
-                        "파·타·카·라 발성 훈련으로 혀 민첩성과 입술 근력을 높입니다.",
-                        "파·타·카·라 발성 훈련, 혀 민첩성 향상, 입술 근력 강화"
+                        "Chapter 5. 말하는 힘 기르는 입체조",
+                        "파·타·카·라 발성 훈련을 학습합니다.",
+                        "파·타·카·라 발성 훈련"
                 ),
                 content(
                         6,
-                        "씹는 힘 기르는 구강체조",
-                        "저작근 강화, 턱관절 운동, 볼 근육 강화를 실습합니다.",
-                        "저작근 강화, 턱관절 운동, 볼 근육 강화"
+                        "Chapter 6. 씹는 힘 기르는 입체조",
+                        "저작근 강화와 턱관절 운동을 학습합니다.",
+                        "저작근 강화와 턱관절 운동"
                 ),
                 content(
                         7,
-                        "구강건조증 관리법",
-                        "구강건조증 원인과 생활관리 방법, 수분 섭취 습관을 학습합니다.",
-                        "구강건조증 원인, 생활관리 방법, 수분 섭취 및 타액분비 촉진"
+                        "Chapter 7. 구강건조증 관리법",
+                        "구강건조증의 원인과 타액분비 촉진 방법을 학습합니다.",
+                        "원인과 타액분비 촉진"
                 ),
                 content(
                         8,
-                        "의치 사용 및 관리법",
-                        "의치 사용 방법과 세척·보관법, 사용 시 주의사항을 안내합니다.",
-                        "의치 사용 방법, 의치 세척 및 보관법, 의치 사용 시 주의사항"
+                        "Chapter 8. 의치 사용 및 관리법",
+                        "의치의 올바른 착용과 세척·보관 방법을 안내합니다.",
+                        "올바른 착용과 세척·보관"
                 ),
                 content(
                         9,
-                        "올바른 칫솔질",
-                        "올바른 칫솔 선택과 칫솔질 방법, 치간관리 및 혀 관리를 익힙니다.",
-                        "올바른 칫솔 선택, 올바른 칫솔질 방법, 치간관리 및 혀 관리"
+                        "Chapter 9. 올바른 칫솔질",
+                        "칫솔 선택부터 치간관리까지 올바른 칫솔질 방법을 익힙니다.",
+                        "칫솔 선택부터 치간관리까지"
                 ),
                 content(
                         10,
-                        "구취 예방과 관리",
-                        "구취 발생 원인을 이해하고 관리 방법과 생활습관 개선법을 학습합니다.",
-                        "구취 발생 원인, 구취 관리 방법, 생활습관 개선"
+                        "Chapter 10. 구취 예방과 관리",
+                        "구취 원인을 파악하고 생활습관 개선법을 학습합니다.",
+                        "원인 파악과 생활습관 개선"
                 ),
                 content(
                         11,
-                        "테스트 동영상",
-                        "구강체조 콘텐츠 영상 재생을 확인하기 위한 테스트 영상입니다.",
-                        "영상 업로드 및 재생 테스트",
-                        TEST_VIDEO_URL,
-                        "테스트"
+                        "Chapter 11. 삼킴 건강과 식사의 관계",
+                        "연하장애 자가점검 방법을 학습합니다.",
+                        "연하장애 자가점검"
                 ),
                 content(
                         12,
-                        "구강 건강 생활습관",
-                        "일상에서 실천할 수 있는 구강 건강 관리 습관을 학습합니다.",
-                        "구강 건강 생활습관, 정기 관리, 예방 중심 관리"
+                        "Chapter 12. 구강건강, 스스로 지키는 습관",
+                        "정기검진과 지속 실천 방법을 학습합니다.",
+                        "정기검진과 지속 실천"
                 )
         );
     }
@@ -115,7 +141,7 @@ public class OralExerciseContentInitializer {
             String description,
             String learningPoint
     ) {
-        return content(sort, title, description, learningPoint, TEST_VIDEO_URL, sort == 1 ? "교육" : "실습");
+        return content(sort, title, description, learningPoint, videoUrlForSort(sort), levelForSort(sort));
     }
 
     private OralExerciseContent content(
@@ -131,11 +157,75 @@ public class OralExerciseContentInitializer {
                 .title(title)
                 .description(description)
                 .learningPoint(learningPoint)
-                .thumbnailUrl(null)
+                .thumbnailUrl(thumbnailUrlForSort(sort))
                 .videoUrl(videoUrl)
-                .durationSeconds(300)
+                .durationSeconds(durationSecondsForSort(sort))
                 .level(level)
                 .active(true)
                 .build();
+    }
+
+    private String videoUrlForSort(int sort) {
+        return switch (sort) {
+            case 1 -> VIDEO_1_URL;
+            case 2 -> VIDEO_2_URL;
+            case 3 -> VIDEO_3_URL;
+            case 4 -> VIDEO_4_URL;
+            case 5 -> VIDEO_5_URL;
+            case 6 -> VIDEO_6_URL;
+            case 7 -> VIDEO_7_URL;
+            case 8 -> VIDEO_8_URL;
+            case 9 -> VIDEO_9_URL;
+            case 10 -> VIDEO_10_URL;
+            case 11 -> VIDEO_11_URL;
+            case 12 -> VIDEO_12_URL;
+            default -> null;
+        };
+    }
+
+    private String thumbnailUrlForSort(int sort) {
+        String tokenName = switch (sort) {
+            case 1 -> "optional_video_1";
+            case 2 -> "essential_video_1";
+            case 3 -> "essential_video_2";
+            case 4 -> "essential_video_3";
+            case 5 -> "essential_video_4";
+            case 6 -> "essential_video_5";
+            case 7 -> "optional_video_2";
+            case 8 -> "optional_video_3";
+            case 9 -> "optional_video_4";
+            case 10 -> "optional_video_5";
+            case 11 -> "optional_video_6";
+            case 12 -> "optional_video_7";
+            default -> null;
+        };
+        return tokenName == null ? null : S3_ORAL_EXERCISE_THUMBNAIL_BASE_URL + tokenName + ".png";
+    }
+
+    private int durationSecondsForSort(int sort) {
+        if (sort == 1) {
+            return 114;
+        }
+        return switch (sort) {
+            case 2 -> 212;
+            case 3 -> 176;
+            case 4 -> 172;
+            case 5 -> 428;
+            case 6 -> 232;
+            case 7 -> 176;
+            case 8 -> 171;
+            case 9 -> 163;
+            case 10 -> 133;
+            case 11 -> 172;
+            case 12 -> 167;
+            default -> 300;
+        };
+    }
+
+    private String levelForSort(int sort) {
+        if (sort == 1) {
+            return "INTRO";
+        }
+        return sort <= 6 ? "필수" : "선택";
     }
 }

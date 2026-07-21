@@ -1,6 +1,5 @@
 package com.kaii.dentix.domain.oralCheck.domain;
 
-import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.domain.user.domain.User;
@@ -22,9 +21,8 @@ public class OralCheck extends TimeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long oralCheckId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subscription_history_id", nullable = false)
-    private OrganizationSubscriptionHistory subscriptionHistory;
+    @Column(name = "subscription_history_id")
+    private Long subscriptionHistoryId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

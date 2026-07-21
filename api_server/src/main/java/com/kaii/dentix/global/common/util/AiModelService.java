@@ -1,6 +1,7 @@
 package com.kaii.dentix.global.common.util;
 
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
+import com.kaii.dentix.domain.oralCheck.dto.resoponse.GingivitisAnalysisResponse;
 import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireAnalysisResponse;
 import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +25,9 @@ public class AiModelService {
 
     @Value("${aiModel.apiUrl.oralCheck}")
     private String oralCheckAiModelApiUrl;
+
+    @Value("${aiModel.apiUrl.gingivitis}")
+    private String gingivitisAiModelApiUrl;
 
     @Value("${aiModel.apiUrl.questionnaire}")
     private String questionnaireAiModelApiUrl;
@@ -63,6 +67,40 @@ public class AiModelService {
                         oralCheckAiModelApiUrl,
                         entity,
                         OralCheckAnalysisResponse.class
+                );
+
+        return CompletableFuture.completedFuture(response);
+    }
+
+    /**
+     *  치은염 검출 AI Model
+     */
+    @SneakyThrows
+    @Async
+    public CompletableFuture<GingivitisAnalysisResponse> getGingivitisAiModel(MultipartFile picture) {
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        MultiValueMap<String, Object> params = new LinkedMultiValueMap<>();
+
+        ByteArrayResource fileResource = new ByteArrayResource(picture.getBytes()) {
+            @Override
+            public String getFilename() {
+                return picture.getOriginalFilename();
+            }
+        };
+
+        params.add("picture", fileResource);
+
+        HttpEntity<MultiValueMap<String, Object>> entity =
+                new HttpEntity<>(params, headers);
+
+        GingivitisAnalysisResponse response =
+                restTemplate.postForObject(
+                        gingivitisAiModelApiUrl,
+                        entity,
+                        GingivitisAnalysisResponse.class
                 );
 
         return CompletableFuture.completedFuture(response);

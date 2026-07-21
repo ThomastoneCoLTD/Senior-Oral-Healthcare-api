@@ -33,7 +33,6 @@ import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -70,9 +69,6 @@ public class UserControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @MockBean
-    private PasswordEncoder passwordEncoder;
 
     @MockBean
     private UserService userService;
@@ -125,16 +121,6 @@ public class UserControllerTest {
         return UserDto.ModifyQnAResponse.builder()
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("수정된 답변")
-                .build();
-    }
-
-    private UserDto.ServiceUpdateResponse serviceUpdateResponse() {
-        return UserDto.ServiceUpdateResponse.builder()
-                .userName("강덴티")
-                .services(List.of(
-                        new UserDto.ServiceInfo(1L, "구강 검진", ServiceType.PLAQUE_DETECTION),
-                        new UserDto.ServiceInfo(2L, "치주 진단", ServiceType.PERIODONTAL_DETECTION)
-                ))
                 .build();
     }
 
@@ -257,94 +243,6 @@ public class UserControllerTest {
                 ));
 
         verify(userService).userAutoLogin(any(HttpServletRequest.class));
-
-    }
-
-    /**
-     *  사용자 비밀번호 확인
-     */
-    @Test
-    public void userPasswordVerify() throws Exception{
-
-        // given
-        doNothing().when(userService).userPasswordVerify(any(HttpServletRequest.class), any(UserDto.PasswordVerifyRequest.class));
-
-        String password = "password";
-        UserDto.PasswordVerifyRequest userPasswordVerifyRequest = UserDto.PasswordVerifyRequest.builder()
-                .userPassword(password)
-                .build();
-        given(passwordEncoder.encode(any(String.class))).willReturn(password);
-
-        // when
-        ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.post("/user/password-verify")
-                        .content(objectMapper.writeValueAsString(userPasswordVerifyRequest))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
-                        .with(user("user").roles("USER"))
-        );
-
-        // then
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(document("user/password-verify",
-                        getDocumentRequest(),
-                        getDocumentResponse(),
-                        requestFields(
-                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호")
-                        ),
-                        responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지")
-                        )
-                ));
-
-        verify(userService).userPasswordVerify(any(HttpServletRequest.class), any(UserDto.PasswordVerifyRequest.class));
-
-    }
-
-    /**
-     *  사용자 보안정보수정 - 비밀번호 변경
-     */
-    @Test
-    public void userModifyPassword() throws Exception{
-
-        // given
-        doNothing().when(userService).userModifyPassword(any(HttpServletRequest.class), any(UserDto.ModifyPasswordRequest.class));
-
-        String password = "password!";
-        UserDto.ModifyPasswordRequest userInfoModifyPasswordRequest = UserDto.ModifyPasswordRequest.builder()
-                .userPassword(password)
-                .build();
-        given(passwordEncoder.encode(any(String.class))).willReturn(password);
-
-        // when
-        ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.put("/user/password")
-                        .content(objectMapper.writeValueAsString(userInfoModifyPasswordRequest))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
-                        .with(user("user").roles("USER"))
-        );
-
-        // then
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(document("user/password",
-                        getDocumentRequest(),
-                        getDocumentResponse(),
-                        requestFields(
-                                fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호")
-                        ),
-                        responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지")
-                        )
-                ));
-
-        verify(userService).userModifyPassword(any(HttpServletRequest.class), any(UserDto.ModifyPasswordRequest.class));
 
     }
 
@@ -515,55 +413,6 @@ public class UserControllerTest {
                 ));
 
         verify(userService).userRevoke(any(HttpServletRequest.class));
-
-    }
-
-    /**
-     *  사용자 서비스 이용 동의 수정
-     */
-    @Test
-    public void userModifyServiceAgree() throws Exception{
-
-        // given
-        given(userService.updateUserServices(any(HttpServletRequest.class), any(UserDto.ServiceUpdateRequest.class)))
-                .willReturn(serviceUpdateResponse());
-
-        UserDto.ServiceUpdateRequest userModifyServiceAgreeRequest = UserDto.ServiceUpdateRequest.builder()
-                .serviceIds(List.of(1L, 2L))
-                .build();
-
-        // when
-        ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.post("/user/service")
-                        .content(objectMapper.writeValueAsString(userModifyServiceAgreeRequest))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
-                        .with(user("user").roles("USER"))
-        );
-
-        // then
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(document("user/service",
-                        getDocumentRequest(),
-                        getDocumentResponse(),
-                        requestFields(
-                                fieldWithPath("serviceIds").type(JsonFieldType.ARRAY).description("선택한 서비스 ID 목록")
-                        ),
-                        responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
-                                fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
-                                fieldWithPath("response.userName").type(JsonFieldType.STRING).description("사용자 이름"),
-                                fieldWithPath("response.services").type(JsonFieldType.ARRAY).description("선택된 서비스 목록"),
-                                fieldWithPath("response.services[].serviceId").type(JsonFieldType.NUMBER).description("서비스 ID"),
-                                fieldWithPath("response.services[].name").type(JsonFieldType.STRING).description("서비스 이름"),
-                                fieldWithPath("response.services[].serviceType").type(JsonFieldType.STRING).description("서비스 타입")
-                        )
-                ));
-
-        verify(userService).updateUserServices(any(HttpServletRequest.class), any(UserDto.ServiceUpdateRequest.class));
 
     }
 

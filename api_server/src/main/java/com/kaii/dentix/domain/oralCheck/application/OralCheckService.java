@@ -1,19 +1,18 @@
 package com.kaii.dentix.domain.oralCheck.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
-import com.kaii.dentix.domain.billing.application.BillingService;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
+import com.kaii.dentix.domain.oralCheck.dto.resoponse.GingivitisAnalysisResponse;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
 import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
 import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
 import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
 import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.application.OrganizationSubscriptionHistoryService;
-import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
@@ -67,7 +66,6 @@ public class OralCheckService {
     private final AWSS3Service awss3Service;
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
-    private final BillingService billingService;
     private final UserRepository userRepository;
     private final OralCheckRepository oralCheckRepository;
     private final OralStatusRepository oralStatusRepository;
@@ -76,7 +74,6 @@ public class OralCheckService {
     private final OralStatusAssignmentRepository oralStatusAssignmentRepository;
     private final ToothBrushingCustomRepository toothBrushingCustomRepository;
     private final QuestionnaireCustomRepository questionnaireCustomRepository;
-    private final OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
 
 
     @Value("${spring.profiles.active}")
@@ -124,26 +121,13 @@ public class OralCheckService {
                 organization != null ? organization.getOrganizationId() : null
         );
 
-        if (organization == null) {
-            log.error("[Server reception] 기관 정보 없음 - userId={}", user.getUserId());
-            throw new BadRequestApiException("기관 정보를 찾을 수 없습니다.");
-        }
-
-        OrganizationSubscriptionHistory activeHistory =
-                organizationSubscriptionHistoryService.getActiveHistory(organization);
-
-        if (activeHistory == null) {
-            log.error("[Server reception] 활성 구독 정보 없음 - organizationId={}", organization.getOrganizationId());
-            throw new BadRequestApiException("기관의 구독 정보가 없습니다.");
-        }
-
         // 2. 파일 업로드
         String uploadedUrl = awss3Service.upload(file, folderPath, true);
 
         if (StringUtils.isBlank(uploadedUrl)) {
             log.error("[Image Upload Fail] 파일 업로드 실패 - userId={}, organizationId={}, originalFilename={}",
                     user.getUserId(),
-                    organization.getOrganizationId(),
+                    organization != null ? organization.getOrganizationId() : null,
                     file != null ? file.getOriginalFilename() : "null"
             );
             throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
@@ -151,7 +135,7 @@ public class OralCheckService {
 
         log.info("[Upload Image URL] 업로드 완료 - userId={}, organizationId={}, originalFilename={}, uploadedUrl={}",
                 user.getUserId(),
-                organization.getOrganizationId(),
+                organization != null ? organization.getOrganizationId() : null,
                 file != null ? file.getOriginalFilename() : "null",
                 uploadedUrl
         );
@@ -162,7 +146,7 @@ public class OralCheckService {
         try {
             log.info("[Analysis started] AI 분석 요청 시작 - userId={}, organizationId={}, uploadedUrl={}",
                     user.getUserId(),
-                    organization.getOrganizationId(),
+                    organization != null ? organization.getOrganizationId() : null,
                     uploadedUrl
             );
 
@@ -187,7 +171,7 @@ public class OralCheckService {
         } catch (ExecutionException e) {
             log.error("[Analysis fail] AI 모델 실행 실패 - userId={}, organizationId={}",
                     user.getUserId(),
-                    organization.getOrganizationId(),
+                    organization != null ? organization.getOrganizationId() : null,
                     e.getCause()
             );
 
@@ -233,8 +217,7 @@ public class OralCheckService {
             oralCheck = registAnalysisSuccessData(
                     user.getUserId(),
                     uploadedUrl,
-                    analysisData,
-                    activeHistory
+                    analysisData
             );
             success = true;
         } else {
@@ -247,8 +230,7 @@ public class OralCheckService {
             oralCheck = registAnalysisFailedData(
                     user.getUserId(),
                     uploadedUrl,
-                    analysisData,
-                    activeHistory
+                    analysisData
             );
         }
 
@@ -266,28 +248,17 @@ public class OralCheckService {
                 success,
                 oralCheck.getOralCheckAnalysisState(),
                 user.getUserId(),
-                organization.getOrganizationId(),
+                organization != null ? organization.getOrganizationId() : null,
                 uploadedUrl
         );
-
-        // 5. 과금 처리
-        if (success) {
-            activeHistory.increaseSuccessCount();
-            if (activeHistory.isOverused()) {
-                log.warn("[OVERUSES] 기관 [{}] 사용량 초과 감지 → 자동 과금 생성", organization.getOrganizationId());
-                billingService.createOveruseBatchBilling(organization);
-            }
-        }
-
-        int remaining = Math.max(activeHistory.getRemainingResponses(), 0);
 
         String responseMessage = success ? "AI 분석이 완료되었습니다." : "AI 분석에 실패했습니다.";
 
         OralCheckDto.PhotoResponse responseBody = OralCheckDto.PhotoResponse.builder()
                 .oralCheckId(oralCheck.getOralCheckId())
                 .success(success)
-                .remainingResponses(remaining)
-                .organizationId(organization.getOrganizationId())
+                .remainingResponses(null)
+                .organizationId(organization != null ? organization.getOrganizationId() : null)
                 .build();
 
         DataResponse<OralCheckDto.PhotoResponse> response = new DataResponse<>(
@@ -308,6 +279,75 @@ public class OralCheckService {
         return response;
     }
 
+    @Transactional
+    @CacheEvict(
+            value = "dashboard",
+            key = "@userService.getTokenUser(#p0).getUserId() + '_' + T(java.time.LocalDate).now()"
+    )
+    public DataResponse<GingivitisAnalysisResponse> gingivitisCheck(
+            HttpServletRequest request,
+            MultipartFile picture
+    ) throws IOException, ExecutionException, InterruptedException {
+        User user = userService.getTokenUser(request);
+        Organization organization = user.getOrganization();
+
+        if (picture == null || picture.isEmpty()) {
+            throw new BadRequestApiException("치은염 분석 이미지 파일이 필요합니다.");
+        }
+
+        String uploadedUrl = awss3Service.upload(picture, folderPath, true);
+        if (StringUtils.isBlank(uploadedUrl)) {
+            throw new BadRequestApiException("구강 촬영 결과 저장에 실패했어요.\n관리자에게 문의해 주세요.");
+        }
+
+        GingivitisAnalysisResponse analysisData;
+        try {
+            analysisData = aiModelService.getGingivitisAiModel(picture).get();
+        } catch (ExecutionException e) {
+            log.error("[Gingivitis analysis fail] AI 모델 실행 실패 - userId={}, organizationId={}",
+                    user.getUserId(),
+                    organization != null ? organization.getOrganizationId() : null,
+                    e.getCause()
+            );
+
+            if ("dev".equals(activeProfile)) {
+                log.warn("[Gingivitis analysis replacement] 개발 환경 더미 데이터 사용");
+                analysisData = buildDevGingivitisAnalysisResponse();
+            } else {
+                return new DataResponse<>(502, "치은염 분석 서버 오류가 발생했습니다.", null);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("[Gingivitis analysis fail] AI 요청 인터럽트 - userId={}, organizationId={}",
+                    user.getUserId(),
+                    organization != null ? organization.getOrganizationId() : null,
+                    e
+            );
+            return new DataResponse<>(500, "요청 처리 중 오류가 발생했습니다.", null);
+        }
+
+        if ((analysisData == null || analysisData.getResultCode() == null) && "dev".equals(activeProfile)) {
+            log.warn("[Gingivitis analysis replacement] 개발 환경 빈 응답 더미 데이터 사용");
+            analysisData = buildDevGingivitisAnalysisResponse();
+        }
+        if (analysisData == null || analysisData.getResultCode() == null) {
+            throw new BadRequestApiException("치은염 분석 결과를 확인할 수 없습니다.");
+        }
+
+        if (analysisData.getResultCode() != 200) {
+            return new DataResponse<>(analysisData.getResultCode(), "치은염 분석에 실패했습니다.", analysisData);
+        }
+
+        OralCheck oralCheck = registGingivitisSuccessData(
+                user.getUserId(),
+                uploadedUrl,
+                analysisData
+        );
+        analysisData.setOralCheckId(oralCheck.getOralCheckId());
+
+        return new DataResponse<>(200, "치은염 분석이 완료되었습니다.", analysisData);
+    }
+
     /**
      * 4등분 점수 유형 계산
      *
@@ -321,9 +361,39 @@ public class OralCheckService {
                 : OralCheckResultType.DANGER;
     }
 
+    private OralCheckResultType calcGingivitisScoreType(Integer checkValue) {
+        if (checkValue == null || checkValue <= 0) {
+            return OralCheckResultType.HEALTHY;
+        }
+        if (checkValue == 1) {
+            return OralCheckResultType.ATTENTION;
+        }
+        return OralCheckResultType.DANGER;
+    }
+
+    private OralCheckResultType calcGingivitisTotalType(Integer upCheck, Integer downCheck) {
+        int maxCheck = Math.max(upCheck != null ? upCheck : 0, downCheck != null ? downCheck : 0);
+        return calcGingivitisScoreType(maxCheck);
+    }
+
     /**
-     * 4등분 코멘트 유형 계산
+     * 개발 환경 치은염 더미 분석 응답 생성
      */
+    private GingivitisAnalysisResponse buildDevGingivitisAnalysisResponse() {
+        Random random = new Random();
+        int upCheck = random.nextInt(3);
+        int downCheck = random.nextInt(3);
+        float allTeethCheck = Utils.getDeleteDecimalValue(random.nextFloat(30), 1);
+
+        return new GingivitisAnalysisResponse(
+                null,
+                "DEV_DUMMY",
+                200,
+                null,
+                new GingivitisAnalysisResponse.GingivitisCheck(upCheck, downCheck, allTeethCheck)
+        );
+    }
+
     public List<String> calcDivisionCommentType(OralCheck oralCheck) {
 
         // 부위별 구강 상태 Comment
@@ -371,8 +441,7 @@ public class OralCheckService {
     public OralCheck registAnalysisSuccessData(
             Long userId,
             String filePath,
-            OralCheckDto.AnalysisResponse resource,
-            OrganizationSubscriptionHistory subscriptionHistory
+            OralCheckDto.AnalysisResponse resource
     ) throws JsonProcessingException {
         OralCheckDto.AnalysisDivision tDivision = resource.getPlaqueStats();
 
@@ -398,7 +467,6 @@ public class OralCheckService {
         OralCheck insertData = OralCheck.builder()
                 .user(user)
                 .oralCheckPicturePath(filePath)
-                .subscriptionHistory(subscriptionHistory)
                 .oralCheckAnalysisState(OralCheckAnalysisState.SUCCESS)
                 .oralCheckTotalRange(totalRange)
                 .oralCheckUpRightRange(upRightRange)
@@ -415,6 +483,52 @@ public class OralCheckService {
 
         return oralCheckRepository.save(insertData);
     }
+
+    @Transactional
+    public OralCheck registGingivitisSuccessData(
+            Long userId,
+            String filePath,
+            GingivitisAnalysisResponse resource
+    ) throws JsonProcessingException {
+        GingivitisAnalysisResponse.GingivitisCheck gingivitisCheck = resource.getGingCheck();
+        Integer upCheck = gingivitisCheck != null && gingivitisCheck.getUpCheck() != null
+                ? gingivitisCheck.getUpCheck()
+                : 0;
+        Integer downCheck = gingivitisCheck != null && gingivitisCheck.getDownCheck() != null
+                ? gingivitisCheck.getDownCheck()
+                : 0;
+        Float allTeethCheck = gingivitisCheck != null && gingivitisCheck.getAllTeethCheck() != null
+                ? Utils.getDeleteDecimalValue(gingivitisCheck.getAllTeethCheck(), 1)
+                : 0F;
+
+        OralCheckResultType upScoreType = this.calcGingivitisScoreType(upCheck);
+        OralCheckResultType downScoreType = this.calcGingivitisScoreType(downCheck);
+        OralCheckResultType resultTotalType = this.calcGingivitisTotalType(upCheck, downCheck);
+        String resultJsonData = objectMapper.writeValueAsString(resource);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("유저 없음"));
+
+        OralCheck insertData = OralCheck.builder()
+                .user(user)
+                .oralCheckPicturePath(filePath)
+                .oralCheckAnalysisState(OralCheckAnalysisState.SUCCESS)
+                .oralCheckTotalRange(allTeethCheck)
+                .oralCheckUpRightRange(Float.valueOf(upCheck))
+                .oralCheckUpLeftRange(Float.valueOf(upCheck))
+                .oralCheckDownRightRange(Float.valueOf(downCheck))
+                .oralCheckDownLeftRange(Float.valueOf(downCheck))
+                .oralCheckResultJsonData(resultJsonData)
+                .oralCheckResultTotalType(resultTotalType)
+                .oralCheckUpRightScoreType(upScoreType)
+                .oralCheckUpLeftScoreType(upScoreType)
+                .oralCheckDownRightScoreType(downScoreType)
+                .oralCheckDownLeftScoreType(downScoreType)
+                .build();
+
+        return oralCheckRepository.save(insertData);
+    }
+
     /**
      * 구강 사진 분석 실패
      */
@@ -422,8 +536,7 @@ public class OralCheckService {
     public OralCheck registAnalysisFailedData(
             Long userId,
             String filePath,
-            OralCheckDto.AnalysisResponse resource,
-            OrganizationSubscriptionHistory subscriptionHistory
+            OralCheckDto.AnalysisResponse resource
     ) throws JsonProcessingException {
 
         String resultJsonData = objectMapper.writeValueAsString(resource);
@@ -433,7 +546,6 @@ public class OralCheckService {
 
         OralCheck insertData = OralCheck.builder()
                 .user(user)
-                .subscriptionHistory(subscriptionHistory)
                 .oralCheckPicturePath(filePath)
                 .oralCheckAnalysisState(OralCheckAnalysisState.FAIL)
                 .oralCheckResultJsonData(resultJsonData)
@@ -467,6 +579,33 @@ public class OralCheckService {
                     .build();
         }
 
+        GingivitisAnalysisResponse gingivitisAnalysis = getGingivitisAnalysis(oralCheck);
+        if (gingivitisAnalysis != null) {
+            GingivitisAnalysisResponse.GingivitisCheck gingivitisCheck = gingivitisAnalysis.getGingCheck();
+            return OralCheckDto.ResultResponse.builder()
+                    .userId(user.getUserId())
+                    .organizationId(user.getOrganization().getOrganizationId())
+                    .success(true)
+                    .oralCheckAnalysisType("GINGIVITIS")
+                    .oralCheckResultTotalType(oralCheck.getOralCheckResultTotalType())
+                    .created(oralCheck.getCreated())
+                    .oralCheckTotalRange(oralCheck.getOralCheckTotalRange())
+                    .oralCheckUpRightRange(oralCheck.getOralCheckUpRightRange())
+                    .oralCheckUpRightScoreType(oralCheck.getOralCheckUpRightScoreType())
+                    .oralCheckUpLeftRange(oralCheck.getOralCheckUpLeftRange())
+                    .oralCheckUpLeftScoreType(oralCheck.getOralCheckUpLeftScoreType())
+                    .oralCheckDownLeftRange(oralCheck.getOralCheckDownLeftRange())
+                    .oralCheckDownLeftScoreType(oralCheck.getOralCheckDownLeftScoreType())
+                    .oralCheckDownRightRange(oralCheck.getOralCheckDownRightRange())
+                    .oralCheckDownRightScoreType(oralCheck.getOralCheckDownRightScoreType())
+                    .oralCheckCommentList(List.of())
+                    .gingivitisUpCheck(gingivitisCheck != null ? gingivitisCheck.getUpCheck() : null)
+                    .gingivitisDownCheck(gingivitisCheck != null ? gingivitisCheck.getDownCheck() : null)
+                    .gingivitisAllTeethCheck(gingivitisCheck != null ? gingivitisCheck.getAllTeethCheck() : null)
+                    .gingivitisImageName(gingivitisAnalysis.getImageName())
+                    .build();
+        }
+
         List<String> oralCheckCommentList = this.calcDivisionCommentType(oralCheck);
 
         // [수정] 통합 DTO의 내부 클래스(ResultResponse) 빌더 사용
@@ -486,8 +625,30 @@ public class OralCheckService {
                 .oralCheckDownRightRange(oralCheck.getOralCheckDownRightRange())
                 .oralCheckDownRightScoreType(oralCheck.getOralCheckDownRightScoreType())
                 .oralCheckCommentList(oralCheckCommentList)
+                .oralCheckAnalysisType("PLAQUE")
                 // 필요하다면 remainingResponses 값도 설정 (구독 정보 등에서 조회 필요 시)
                 .build();
+    }
+
+    private GingivitisAnalysisResponse getGingivitisAnalysis(OralCheck oralCheck) {
+        if (StringUtils.isBlank(oralCheck.getOralCheckResultJsonData())) {
+            return null;
+        }
+
+        try {
+            JsonNode resultJson = objectMapper.readTree(oralCheck.getOralCheckResultJsonData());
+            if (!resultJson.has("ging_check")) {
+                return null;
+            }
+            return objectMapper.treeToValue(resultJson, GingivitisAnalysisResponse.class);
+        } catch (Exception e) {
+            log.warn("치은염 결과 JSON 파싱 실패 - oralCheckId={}", oralCheck.getOralCheckId(), e);
+            return null;
+        }
+    }
+
+    private String getOralCheckAnalysisType(OralCheck oralCheck) {
+        return getGingivitisAnalysis(oralCheck) != null ? "GINGIVITIS" : "PLAQUE";
     }
 
     /**
@@ -583,6 +744,7 @@ public class OralCheckService {
                             .identifier(oc.getOralCheckId())
                             .oralCheckId(oc.getOralCheckId())
                             .oralCheckResultTotalType(oc.getOralCheckResultTotalType())
+                            .oralCheckAnalysisType(getOralCheckAnalysisType(oc))
                             .build())
                     .toList());
 

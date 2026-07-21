@@ -26,6 +26,15 @@ import java.util.Objects;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final List<String> DID_LOGIN_UNAUTHORIZED_MESSAGES = List.of(
+            "아이디 혹은 비밀번호가 올바르지 않습니다.",
+            "Invalid login identifier or password.",
+            "Invalid login identifier or DID.",
+            "DID is not issued.",
+            "DID credential is not issued.",
+            "DID credential verification failed."
+    );
+
     /**
      * 잘못된 요청
      * HttpStatus 400
@@ -239,8 +248,10 @@ public class GlobalExceptionHandler {
     private String translateUnauthorizedMessage(HttpServletRequest request, String message) {
         boolean english = isEnglishRequest(request);
 
-        if ("아이디 혹은 비밀번호가 올바르지 않습니다.".equals(message)) {
-            return english ? "Please check your ID or password." : message;
+        if (DID_LOGIN_UNAUTHORIZED_MESSAGES.contains(message)) {
+            return english
+                    ? "Invalid login ID or DID."
+                    : "아이디 혹은 DID가 올바르지 않습니다.";
         }
 
         if ("관리자 승인을 받아야 로그인할 수 있습니다.".equals(message)

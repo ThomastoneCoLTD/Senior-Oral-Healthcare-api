@@ -52,6 +52,11 @@ public class OralCheckDto {
         private OralCheckResultType oralCheckDownRightScoreType;
         private List<String> oralCheckCommentList;
         private Integer remainingResponses;
+        private String oralCheckAnalysisType;
+        private Integer gingivitisUpCheck;
+        private Integer gingivitisDownCheck;
+        private Float gingivitisAllTeethCheck;
+        private String gingivitisImageName;
     }
 
     // =================================================================
@@ -138,6 +143,7 @@ public class OralCheckDto {
         private Long questionnaireId;
         private Long toothBrushingId;
         private OralCheckResultType oralCheckResultTotalType;
+        private String oralCheckAnalysisType;
         private Integer toothBrushingCount;
         @Builder.Default
         private List<OralStatusDto.OralStatusType> oralStatusList = new ArrayList<>();

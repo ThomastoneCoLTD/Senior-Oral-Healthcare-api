@@ -1,0 +1,25 @@
+# Build outputs
+api_server/build/
+out/
+app.jar
+
+# Runtime env files
+.env
+**/.env
+*.env
+!*.env.example
+
+# Terraform local files and state
+**/.terraform/
+**/terraform.tfvars
+**/*.auto.tfvars
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

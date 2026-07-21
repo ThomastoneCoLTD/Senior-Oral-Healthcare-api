@@ -48,4 +48,11 @@ public class UserRewardWallet extends TimeEntity {
         }
         this.pointBalance += amount;
     }
+
+    public void resetPointBalance(long pointBalance) {
+        if (pointBalance < 0) {
+            throw new IllegalArgumentException("pointBalance must not be negative");
+        }
+        this.pointBalance = pointBalance;
+    }
 }

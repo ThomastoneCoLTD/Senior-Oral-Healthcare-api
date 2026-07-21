@@ -34,13 +34,13 @@ public class WebSecurityConfig {
 
     public static String[] EXCLUDE_URLS = {
             "/actuator/health",
+            "/api/actuator/health",
             "/docs/*",
             "/login", "/login/**",
             "/admin/user/bulk-upload/template/*",
             "/password", "/password/*",
             "/service-agreement",
             "/contents", "/contents/*",
-            "/login/password/*",
             "/organizations/check/**",
             "/admin/login",
             "/admin/register", "/admin/register/*",
@@ -76,13 +76,16 @@ public class WebSecurityConfig {
                                                 "style-src 'self' 'unsafe-inline'; " +
                                                 "img-src 'self' data: blob: " +
                                                 "https://denti-dev.s3.ap-southeast-1.amazonaws.com " +
+                                                "https://denti-backends.s3.ap-northeast-2.amazonaws.com " +
                                                 "https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com; " +
                                                 "font-src 'self'; " +
                                                 "connect-src 'self' " +
                                                 "https://denti-dev.s3.ap-southeast-1.amazonaws.com " +
+                                                "https://denti-backends.s3.ap-northeast-2.amazonaws.com " +
                                                 "https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com; " +
                                                 "media-src 'self' " +
                                                 "https://denti-dev.s3.ap-southeast-1.amazonaws.com " +
+                                                "https://denti-backends.s3.ap-northeast-2.amazonaws.com " +
                                                 "https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com; " +
                                                 "object-src 'none'; " +
                                                 "frame-ancestors 'none';"
@@ -119,6 +122,8 @@ public class WebSecurityConfig {
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/health/**",
+                                "/api/actuator/health",
+                                "/api/actuator/health/**",
                                 "/admin/billing/export/excel/**",
                                 "/admin/user/bulk-upload/template/**"
                         ).permitAll()

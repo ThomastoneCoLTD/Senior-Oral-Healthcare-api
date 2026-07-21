@@ -98,6 +98,13 @@ public class AdminUserController {
         return ResponseEntity.ok(adminUserService.getOrganizationUserUsage(request));
     }
 
+    @GetMapping(value = "/exercise-progress", name = "사용자별 구강체조 진도 및 토큰 수령 현황")
+    public DataResponse<AdminUserDto.ExerciseProgressResponse> getExerciseProgress(
+            HttpServletRequest request
+    ) {
+        return new DataResponse<>(adminUserService.getExerciseProgress(request));
+    }
+
     /**
      * 일반관리자 - 기관 사용자 일괄등록 엑셀 양식 다운로드
      */

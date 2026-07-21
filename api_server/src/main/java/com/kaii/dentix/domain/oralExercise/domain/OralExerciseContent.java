@@ -43,9 +43,22 @@ public class OralExerciseContent extends TimeEntity {
     @Column(nullable = false)
     private boolean active;
 
-    public void fillVideoUrlIfBlank(String videoUrl) {
-        if ((this.videoUrl == null || this.videoUrl.isBlank()) && videoUrl != null && !videoUrl.isBlank()) {
-            this.videoUrl = videoUrl;
+    public void applyDefaultContent(OralExerciseContent defaultContent, String legacyVideoUrl) {
+        this.title = defaultContent.getTitle();
+        this.description = defaultContent.getDescription();
+        this.learningPoint = defaultContent.getLearningPoint();
+        this.thumbnailUrl = defaultContent.getThumbnailUrl();
+        this.durationSeconds = defaultContent.getDurationSeconds();
+        this.level = defaultContent.getLevel();
+        this.active = defaultContent.isActive();
+
+        String defaultVideoUrl = defaultContent.getVideoUrl();
+        if (defaultVideoUrl != null && !defaultVideoUrl.isBlank()) {
+            this.videoUrl = defaultVideoUrl;
+            return;
+        }
+        if (this.videoUrl != null && this.videoUrl.equals(legacyVideoUrl)) {
+            this.videoUrl = null;
         }
     }
 

@@ -90,11 +90,11 @@ include::{snippets}/login/loginIdentifier-check/response-body.adoc[]
 
 [[userLogin]]
 == 4. 사용자 로그인
-*사용자 로그인 API*
+*사용자 로그인 API. 사용자 로그인은 비밀번호 없이 `userType=user`, `loginId`로 요청합니다. 관리자 로그인은 비밀번호가 필요합니다.*
 
 *[ 로그인 실패 ]*::
 
-- 존재하지 않는 아이디, 비밀번호 불일치 : `"아이디 혹은 비밀번호가 올바르지 않습니다."` (rt : 401)
+- 존재하지 않는 아이디 또는 DID 미발급/검증 실패 : `"아이디 혹은 DID가 올바르지 않습니다."` (rt : 401)
 - 앱 버전이 낮은 경우 : `"앱 업데이트가 필요합니다."` (rt : 426)
 
 *[ 개발 중 잘못된 Request나 데이터 오류로 인해 발생할 수 있는 경우 ]*::
@@ -148,80 +148,6 @@ include::{snippets}/password/questions/http-request.adoc[]
 === Response
 include::{snippets}/password/questions/response-fields.adoc[]
 include::{snippets}/password/questions/response-body.adoc[]
-
-[[userFindPassword]]
-== 8. 사용자 비밀번호 찾기
-*비밀번호 재설정을 위한 아이디와 질문, 답변을 통한 비밀번호 찾기 API*
-
-*[ 비밀번호 찾기 실패 ]*::
-
-- 존재하지 않는 아이디 : `"존재하지 않는 아이디입니다."` (rt : 416)
-- 질문 혹은 답변 불일치 : `"질문 혹은 답변이 일치하지 않습니다."` (rt : 401)
-
-=== Http
-include::{snippets}/login/find-password/http-request.adoc[]
-=== Request
-include::{snippets}/login/find-password/request-fields.adoc[]
-=== Response
-include::{snippets}/login/find-password/response-fields.adoc[]
-include::{snippets}/login/find-password/response-body.adoc[]
-
-[[userModifyPassword]]
-== 9. 사용자 비밀번호 재설정
-*비밀번호 찾기 후 비밀번호 재설정 API*
-
-: 비밀번호 찾기 API 성공 시 return 된 `userId` 를 담아서 요청합니다.
-
-*[ 비밀번호 재설정 실패 ]*::
-
-- 존재하지 않는 사용자 : `"존재하지 않는 회원입니다."` (rt : 416)
-
-=== Http
-include::{snippets}/login/password/http-request.adoc[]
-=== Request
-include::{snippets}/login/password/request-fields.adoc[]
-=== Reponse
-include::{snippets}/login/password/response-fields.adoc[]
-include::{snippets}/login/password/response-body.adoc[]
-
-[[userPasswordVerify]]
-== 10. 사용자 비밀번호 확인
-*보안정보 수정을 위한 비밀번호 확인 API*
-
-*[ 비밀번호 확인 실패 ]*::
-
-- 사용자 조회 불가능 : `"존재하지 않는 사용자입니다."` (rt : 416)
-- 비밀번호 불일치 : `"비밀번호가 일치하지 않습니다."` (rt : 401)
-
-*[ 개발 중 잘못된 Request나 데이터 오류로 인해 발생할 수 있는 경우 ]*::
-- 사용자 권한이 아닌 경우 : `"권한이 없는 사용자입니다."` (rt : 401)
-
-=== Http
-include::{snippets}/user/password-verify/http-request.adoc[]
-=== Request
-include::{snippets}/user/password-verify/request-fields.adoc[]
-=== Response
-include::{snippets}/user/password-verify/response-fields.adoc[]
-include::{snippets}/user/password-verify/response-body.adoc[]
-
-[[userInfoModifyPassword]]
-== 11. 사용자 보안정보 수정 - 비밀번호 변경
-*보안정보 수정 시, 비밀번호 변경 API*
-
-*[ 비밀번호 변경 실패 ]*::
-
-- 사용자 조회 불가능 : `"존재하지 않는 사용자입니다."` (rt : 416)
-
-*[ 개발 중 잘못된 Request나 데이터 오류로 인해 발생할 수 있는 경우 ]*::
-- 사용자 권한이 아닌 경우 : `"권한이 없는 사용자입니다."` (rt : 401)
-
-=== Http
-include::{snippets}/user/password/http-request.adoc[]
-=== Request
-include::{snippets}/user/password/request-fields.adoc[]
-=== Response
-include::{snippets}/user/password/response-fields.adoc[]
-include::{snippets}/user/password/response-body.adoc[]
 
 [[userInfoModifyQnA]]
 == 12. 사용자 보안정보 수정 - 질문과 답변 수정

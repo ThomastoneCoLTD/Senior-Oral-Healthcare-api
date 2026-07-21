@@ -9,15 +9,14 @@ import com.kaii.dentix.domain.admin.dto.AdminUserDto;
 import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
 import com.kaii.dentix.domain.agreement.dao.ServiceAgreementRepository;
 import com.kaii.dentix.domain.agreement.domain.ServiceAgreement;
-import com.kaii.dentix.domain.appService.dao.AppServiceRepository;
-import com.kaii.dentix.domain.appService.dao.UserToAppServiceRepository;
-import com.kaii.dentix.domain.appService.domain.AppService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.findPwdQuestion.domain.FindPwdQuestion;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
+import com.kaii.dentix.domain.oralExercise.dao.OralExerciseContentRepository;
+import com.kaii.dentix.domain.oralExercise.dao.UserOralExerciseProgressRepository;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.type.ServiceType;
+import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -61,11 +60,12 @@ class AdminUserServiceTest {
     @Mock private AdminUserRepositoryImpl adminUserRepository;
     @Mock private AdminUserCustomRepository adminUserCustomRepository;
     @Mock private OrganizationSubscriptionService organizationSubscriptionService;
-    @Mock private AppServiceRepository appServiceRepository;
-    @Mock private UserToAppServiceRepository userToAppServiceRepository;
     @Mock private FindPwdQuestionRepository findPwdQuestionRepository;
     @Mock private ServiceAgreementRepository serviceAgreementRepository;
     @Mock private ServiceAgreementConsentService serviceAgreementConsentService;
+    @Mock private OralExerciseContentRepository oralExerciseContentRepository;
+    @Mock private UserOralExerciseProgressRepository oralExerciseProgressRepository;
+    @Mock private UserRewardTransactionRepository userRewardTransactionRepository;
 
     private AdminUserService adminUserService;
 
@@ -81,12 +81,13 @@ class AdminUserServiceTest {
                 adminUserRepository,
                 adminUserCustomRepository,
                 organizationSubscriptionService,
-                appServiceRepository,
-                userToAppServiceRepository,
                 findPwdQuestionRepository,
                 serviceAgreementRepository,
                 serviceAgreementConsentService,
-                new NoOpTransactionManager()
+                new NoOpTransactionManager(),
+                oralExerciseContentRepository,
+                oralExerciseProgressRepository,
+                userRewardTransactionRepository
         );
     }
 
@@ -94,7 +95,6 @@ class AdminUserServiceTest {
     void processExcelUpload_returnsSuccessAndFailCounts() throws Exception {
         Organization organization = Organization.builder().organizationId(2L).build();
         Admin admin = Admin.builder().adminId(1L).organization(organization).build();
-        AppService appService = AppService.builder().appServiceId(1L).name("PLAQUE").serviceType(ServiceType.PLAQUE_DETECTION).build();
         FindPwdQuestion question = FindPwdQuestion.builder().findPwdQuestionId(1L).findPwdQuestionSort(1L).findPwdQuestionTitle("질문").build();
         ServiceAgreement requiredAgreement = ServiceAgreement.builder()
                 .serviceAgreeId(1L)
@@ -105,7 +105,6 @@ class AdminUserServiceTest {
                 .serviceAgreePath("/required")
                 .build();
 
-        given(appServiceRepository.findAll()).willReturn(List.of(appService));
         given(findPwdQuestionRepository.findAll(any(org.springframework.data.domain.Sort.class))).willReturn(List.of(question));
         given(serviceAgreementRepository.findAll(any(org.springframework.data.domain.Sort.class))).willReturn(List.of(requiredAgreement));
         given(passwordEncoder.encode("test1234!")).willReturn("encoded-password");
@@ -135,7 +134,6 @@ class AdminUserServiceTest {
         assertThat(response.getFailList().get(0).getReason()).isEqualTo("아이디 중복");
 
         verify(userRepository).save(any(User.class));
-        verify(userToAppServiceRepository).saveAll(any());
         verify(serviceAgreementConsentService).saveUserServiceAgreements(any(Long.class), ArgumentMatchers.anyList());
     }
 
@@ -147,7 +145,7 @@ class AdminUserServiceTest {
             String[] headers = {
                     "userLoginIdentifier", "userPassword", "userName", "userGender",
                     "userPhoneNumber", "findPwdQuestionId", "findPwdAnswer",
-                    "appServiceIds", "userServiceAgreementIds"
+                    "userServiceAgreementIds"
             };
             for (int i = 0; i < headers.length; i++) {
                 header.createCell(i).setCellValue(headers[i]);
@@ -162,7 +160,6 @@ class AdminUserServiceTest {
             validRow.createCell(5).setCellValue("1");
             validRow.createCell(6).setCellValue("답변");
             validRow.createCell(7).setCellValue("1");
-            validRow.createCell(8).setCellValue("1");
 
             var failRow = sheet.createRow(2);
             failRow.createCell(0).setCellValue("valid02");
@@ -173,7 +170,6 @@ class AdminUserServiceTest {
             failRow.createCell(5).setCellValue("1");
             failRow.createCell(6).setCellValue("답변");
             failRow.createCell(7).setCellValue("1");
-            failRow.createCell(8).setCellValue("1");
 
             workbook.write(outputStream);
             return outputStream.toByteArray();

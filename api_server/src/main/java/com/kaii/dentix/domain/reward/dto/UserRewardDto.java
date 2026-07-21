@@ -31,9 +31,13 @@ public class UserRewardDto {
         private Long transactionId;
 
         public static RewardResponse from(UserRewardTransaction transaction, boolean duplicated) {
+            return from(transaction, duplicated, transaction.getBalanceAfter());
+        }
+
+        public static RewardResponse from(UserRewardTransaction transaction, boolean duplicated, long pointBalance) {
             return RewardResponse.builder()
                     .amount(transaction.getAmount())
-                    .pointBalance(transaction.getBalanceAfter())
+                    .pointBalance(pointBalance)
                     .duplicated(duplicated)
                     .status(transaction.getStatus())
                     .transactionId(transaction.getUserRewardTransactionId())
@@ -78,6 +82,7 @@ public class UserRewardDto {
         private String contentTitle;
         private String sessionId;
         private String coinId;
+        private String tokenContractAddress;
         private String daeguChainTxHash;
         private String daeguChainFactHash;
         private Date created;
@@ -87,13 +92,14 @@ public class UserRewardDto {
                     .id(transaction.getUserRewardTransactionId())
                     .type(transaction.getType().name())
                     .status(transaction.getStatus())
-                    .amount(transaction.getAmount())
+                    .amount(transaction.isRewardReceived() ? transaction.getAmount() : 0L)
                     .balanceAfter(transaction.getBalanceAfter())
                     .contentTitle(transaction.getOralExerciseContent() == null
                             ? null
                             : transaction.getOralExerciseContent().getTitle())
                     .sessionId(transaction.getSessionId())
                     .coinId(transaction.getCoinId())
+                    .tokenContractAddress(transaction.getTokenContractAddress())
                     .daeguChainTxHash(transaction.getDaeguChainTxHash())
                     .daeguChainFactHash(transaction.getDaeguChainFactHash())
                     .created(transaction.getCreated())
@@ -106,6 +112,18 @@ public class UserRewardDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class TransactionListResponse {
+        private List<TransactionResponse> transactions;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ReclaimResponse {
+        private int reclaimedCount;
+        private int skippedCount;
+        private int failedCount;
+        private long reclaimedAmount;
         private List<TransactionResponse> transactions;
     }
 }

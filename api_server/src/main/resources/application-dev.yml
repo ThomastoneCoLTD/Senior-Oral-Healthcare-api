@@ -3,10 +3,9 @@ spring:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:mysql://db-block-chain-2026-dev-aurora-mysql-instance-1.cfq0uo8ms95m.ap-southeast-1.rds.amazonaws.com:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
-    username: thomastone
-    # [보안 권고] 소스코드에 비밀번호 평문 저장 금지 -> 환경변수 또는 Jasypt 암호화 사용 권장
-    password: ${DB_PASSWORD:dPqkd0923!}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.zaxxer.hikari.HikariDataSource
     hikari:
@@ -86,6 +85,7 @@ server:
     max-http-form-post-size: 500MB
   forward-headers-strategy: native
   servlet:
+    context-path: ${SERVER_SERVLET_CONTEXT_PATH:/api}
     encoding:
       charset: UTF-8
       force: true
@@ -107,6 +107,7 @@ server:
 aiModel:
   apiUrl:
     oralCheck: 'https://ai-backend-gpu.kai-i.com/denti/api/plaque_navy'
+    gingivitis: 'https://ai-backend-gpu.kai-i.com/denti/api/gingivitis'
     questionnaire: 'https://ai-backend-gpu.kai-i.com/denti/api/prsc_dku'
 
 daegu-chain:
@@ -122,8 +123,10 @@ daegu-chain:
   token-decimals: ${DAEGU_CHAIN_TOKEN_DECIMALS:18}
   token-mintable: ${DAEGU_CHAIN_TOKEN_MINTABLE:true}
   token-lockable: ${DAEGU_CHAIN_TOKEN_LOCKABLE:true}
-  did-server-base-url: ${DID_SERVER_BASE_URL:http://localhost:5000}
+  did-server-base-url: ${DID_SERVER_BASE_URL:http://43.201.125.82}
   did-create-path: ${DID_CREATE_PATH:/did/create}
+  did-issue-vc-path: ${DID_ISSUE_VC_PATH:/did/issue-vc}
+  did-verify-vc-path: ${DID_VERIFY_VC_PATH:/did/verify-vc}
   token-server-base-url: ${TOKEN_SERVER_BASE_URL:http://localhost:5000}
   token-create-path: ${TOKEN_CREATE_PATH:/token/create}
   token-transfer-path: ${TOKEN_TRANSFER_PATH:/token/transfer}
@@ -133,23 +136,32 @@ daegu-chain:
   login-user-credential-valid-until: ${DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_UNTIL:}
   login-user-credential-valid-days: ${DAEGU_CHAIN_LOGIN_USER_CREDENTIAL_VALID_DAYS:3650}
 
+did-db:
+  url: ${DID_DB_URL:}
+  username: ${DID_DB_USERNAME:}
+  password: ${DID_DB_PASSWORD:}
+  table-name: ${DID_DB_TABLE:DID}
+  did-column: ${DID_DB_DID_COLUMN:DID}
+  private-key-column: ${DID_DB_PRIVATE_KEY_COLUMN:private_key}
+  account-address-column: ${DID_DB_ACCOUNT_ADDRESS_COLUMN:account_address}
+
 user-reward:
   oral-exercise-coin-amount: ${ORAL_EXERCISE_COIN_REWARD_AMOUNT:1}
   point-mint-enabled: ${USER_REWARD_POINT_MINT_ENABLED:false}
   point-contract-address: ${USER_REWARD_POINT_CONTRACT_ADDRESS:}
   point-owner-address: ${USER_REWARD_POINT_OWNER_ADDRESS:}
   point-owner-private-key: ${USER_REWARD_POINT_OWNER_PRIVATE_KEY:}
-  token-transfer-enabled: ${USER_REWARD_TOKEN_TRANSFER_ENABLED:true}
+  token-transfer-enabled: ${USER_REWARD_TOKEN_TRANSFER_ENABLED:false}
 s3:
   storage:
     bucketName: ${S3_BUCKET_NAME:denti-backends}
-    region: ap-southeast-1
+    region: ${S3_REGION:ap-northeast-2}
 
   folderPath:
     oralCheck: soh/dev/
 
 aws:
-  region: ap-southeast-1
+  region: ${AWS_REGION:ap-northeast-2}
 
 
 

@@ -1,9 +1,9 @@
 package com.kaii.dentix.domain.admin.controller;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.admin.application.AdminDaeguChainTokenService;
 import com.kaii.dentix.domain.admin.dto.AdminDaeguChainTokenDto;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,13 +24,23 @@ public class AdminDaeguChainTokenController {
     private final AdminDaeguChainTokenService adminDaeguChainTokenService;
 
     @PostMapping("/options")
-    public DataResponse<List<String>> getTokenNames() {
-        return new DataResponse<>(adminDaeguChainTokenService.getTokenNames());
+    public DataResponse<List<AdminDaeguChainTokenDto.TokenOption>> getTokenNames() {
+        return new DataResponse<>(adminDaeguChainTokenService.getTokenOptions());
     }
 
     @PostMapping("/list")
-    public DataResponse<JsonNode> getTokenList() {
+    public DataResponse<List<AdminDaeguChainTokenDto.TokenOption>> getTokenList() {
         return new DataResponse<>(adminDaeguChainTokenService.getTokenList());
+    }
+
+    @PostMapping("/reward-transfers")
+    public DataResponse<AdminDaeguChainTokenDto.RewardTransferListResponse> getRewardTransfers() {
+        return new DataResponse<>(adminDaeguChainTokenService.getRewardTransfers());
+    }
+
+    @PostMapping("/reward-reclaims")
+    public DataResponse<AdminDaeguChainTokenDto.RewardTransferListResponse> getRewardReclaims() {
+        return new DataResponse<>(adminDaeguChainTokenService.getRewardReclaims());
     }
 
     @PostMapping("/create")

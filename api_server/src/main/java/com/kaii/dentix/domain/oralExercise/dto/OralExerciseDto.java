@@ -9,6 +9,8 @@ import java.util.List;
 
 public class OralExerciseDto {
 
+    private static final boolean TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST = true;
+
     @Getter
     @Builder
     @NoArgsConstructor
@@ -36,33 +38,42 @@ public class OralExerciseDto {
                 OralExerciseContent content,
                 UserOralExerciseProgress progress,
                 int currentWeek,
-                boolean rewardReceived
+                boolean rewardReceived,
+                String playableVideoUrl,
+                String playableThumbnailUrl
         ) {
-            boolean coreContent = content.getContentSort() <= 5;
-            boolean available = !coreContent || currentWeek <= 0 || content.getContentSort() <= currentWeek;
+            boolean coreContent = content.getContentSort() >= 2 && content.getContentSort() <= 6;
+            int displayWeek = coreContent ? content.getContentSort() - 1 : 0;
+            boolean available = TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST
+                    || !coreContent
+                    || currentWeek <= 0
+                    || displayWeek <= currentWeek;
+            boolean currentWeekContent = coreContent
+                    ? currentWeek == displayWeek
+                    : available;
             return ContentResponse.builder()
                     .id(content.getOralExerciseContentId())
                     .sort(content.getContentSort())
                     .title(content.getTitle())
                     .description(content.getDescription())
                     .learningPoint(content.getLearningPoint())
-                    .thumbnailUrl(content.getThumbnailUrl())
-                    .videoUrl(content.getVideoUrl())
+                    .thumbnailUrl(playableThumbnailUrl)
+                    .videoUrl(playableVideoUrl)
                     .durationSeconds(content.getDurationSeconds())
                     .duration(formatDuration(content.getDurationSeconds()))
                     .level(content.getLevel())
-                    .week(content.getContentSort())
+                    .week(displayWeek)
                     .coreContent(coreContent)
                     .available(available)
-                    .currentWeekContent(coreContent && currentWeek == content.getContentSort())
+                    .currentWeekContent(currentWeekContent)
                     .rewardReceived(rewardReceived)
-                    .buttonChallenge(ButtonChallengeResponse.forContent(rewardReceived))
+                    .buttonChallenge(ButtonChallengeResponse.forContent(coreContent, rewardReceived))
                     .progress(ProgressResponse.from(progress))
                     .build();
         }
 
         public static ContentResponse from(OralExerciseContent content, UserOralExerciseProgress progress) {
-            return from(content, progress, 0, false);
+            return from(content, progress, 0, false, content.getVideoUrl(), content.getThumbnailUrl());
         }
     }
 
@@ -123,12 +134,13 @@ public class OralExerciseDto {
         private boolean rewardAvailable;
         private String promptMessage;
 
-        public static ButtonChallengeResponse forContent(boolean rewardReceived) {
+        public static ButtonChallengeResponse forContent(boolean coreContent, boolean rewardReceived) {
+            boolean rewardAvailable = coreContent && !rewardReceived;
             return ButtonChallengeResponse.builder()
                     .buttons(List.of(1, 2, 3, 4, 5))
                     .timeoutSeconds(30)
-                    .rewardAvailable(!rewardReceived)
-                    .promptMessage("1번부터 5번 중 안내된 번호를 클릭하세요.")
+                    .rewardAvailable(rewardAvailable)
+                    .promptMessage("음성 안내에 맞는 번호를 누르면 토큰이 수령됩니다.")
                     .build();
         }
     }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.controller.OralCheckController;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
+import com.kaii.dentix.domain.oralCheck.dto.resoponse.GingivitisAnalysisResponse;
 import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
 import com.kaii.dentix.domain.type.OralDateStatusType;
 import com.kaii.dentix.domain.type.OralSectionType;
@@ -117,6 +118,38 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.remainingResponses").type(JsonFieldType.NUMBER).description("남은 검진 횟수")
                         )
                 ));
+    }
+
+    @Test
+    @DisplayName("치은염 검출은 file 필드명으로도 업로드할 수 있다")
+    public void gingivitisCheckAcceptsFilePart() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "gum.jpg", "image/jpeg", "test data".getBytes(StandardCharsets.UTF_8));
+        GingivitisAnalysisResponse mockResponse = new GingivitisAnalysisResponse(
+                1L,
+                "gum.jpg",
+                200,
+                10L,
+                new GingivitisAnalysisResponse.GingivitisCheck(1, 0, 12.3F)
+        );
+
+        given(oralCheckService.gingivitisCheck(any(HttpServletRequest.class), any(MultipartFile.class)))
+                .willReturn(new DataResponse<>(mockResponse));
+
+        ResultActions result = mockMvc.perform(
+                RestDocumentationRequestBuilders.multipart("/oralCheck/gingivitis")
+                        .file(file)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer AccessToken")
+                        .contentType(MediaType.MULTIPART_FORM_DATA)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .with(user("user").roles("USER"))
+        );
+
+        result.andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(jsonPath("response.resultCode").value(200))
+                .andExpect(jsonPath("response.oralCheckId").value(10));
+
+        verify(oralCheckService).gingivitisCheck(any(HttpServletRequest.class), any(MultipartFile.class));
     }
 
     @Test
