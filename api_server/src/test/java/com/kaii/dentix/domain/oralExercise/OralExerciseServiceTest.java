@@ -106,6 +106,9 @@ class OralExerciseServiceTest {
             assertThat(content.isAvailable()).isTrue();
             assertThat(content.isCurrentWeekContent()).isTrue();
         });
+        assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() == 1)
+                .singleElement()
+                .satisfies(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue());
     }
 
     @Test
@@ -133,6 +136,11 @@ class OralExerciseServiceTest {
             assertThat(content.isAvailable()).isTrue();
             assertThat(content.isCurrentWeekContent()).isTrue();
         });
+        assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() == 1)
+                .singleElement()
+                .satisfies(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue());
+        assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() > 6)
+                .allSatisfy(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isFalse());
     }
 
     @Test

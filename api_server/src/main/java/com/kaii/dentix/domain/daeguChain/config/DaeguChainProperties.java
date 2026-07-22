@@ -5,6 +5,9 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 @Getter
 @Setter
 @Component
@@ -31,6 +34,7 @@ public class DaeguChainProperties {
     private String tokenCreatePath = "/token/create";
     private String tokenTransferPath = "/token/transfer";
     private String tokenListPath = "/token/token_list";
+    private Map<String, String> rewardTokenContracts = new LinkedHashMap<>();
     private String loginUserCredentialTemplateId = "VLVSWVRSOPZJMPINTBNA";
     private String loginUserCredentialValidFrom;
     private String loginUserCredentialValidUntil;

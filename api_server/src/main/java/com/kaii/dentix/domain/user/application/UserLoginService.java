@@ -13,9 +13,11 @@ import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
+import com.kaii.dentix.domain.user.domain.UserLoginHistory;
 import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
@@ -46,6 +48,7 @@ public class UserLoginService {
     private final ServiceAgreementConsentService serviceAgreementConsentService;
     private final UserDaeguProvisioningService userDaeguProvisioningService;
     private final DaeguChainDidService daeguChainDidService;
+    private final UserLoginHistoryRepository userLoginHistoryRepository;
 
     @Transactional(readOnly = true)
     public UserDto.VerifyResponse userPhoneCheck(String userPhoneNumber) {
@@ -182,8 +185,15 @@ public class UserLoginService {
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
+        recordLoginHistory(user);
 
         return buildLoginResponse(user, accessToken, refreshToken);
+    }
+
+    private void recordLoginHistory(User user) {
+        userLoginHistoryRepository.save(UserLoginHistory.builder()
+                .userId(user.getUserId())
+                .build());
     }
 
     private UserDto.SignUpResponse buildSignUpResponse(

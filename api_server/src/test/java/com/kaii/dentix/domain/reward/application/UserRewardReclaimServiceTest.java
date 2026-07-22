@@ -31,6 +31,7 @@ class UserRewardReclaimServiceTest {
     private UserRewardTransactionRepository transactionRepository;
     private UserRewardWalletRepository walletRepository;
     private ExternalTokenClient externalTokenClient;
+    private DaeguChainProperties daeguChainProperties;
     private JwtTokenUtil jwtTokenUtil;
     private UserRewardReclaimService service;
     private HttpServletRequest request;
@@ -44,7 +45,7 @@ class UserRewardReclaimServiceTest {
         jwtTokenUtil = mock(JwtTokenUtil.class);
         request = mock(HttpServletRequest.class);
 
-        DaeguChainProperties daeguChainProperties = new DaeguChainProperties();
+        daeguChainProperties = new DaeguChainProperties();
         daeguChainProperties.setTokenOwnerAddress("0x-token-owner");
         UserRewardProperties userRewardProperties = new UserRewardProperties();
         userRewardProperties.setTokenTransferEnabled(true);
@@ -150,6 +151,33 @@ class UserRewardReclaimServiceTest {
                 eq("did:mitum:minic:0x-user-wallet"),
                 eq("ESSENTIAL_VIDEO_1"),
                 eq("0x-token-contract-1"),
+                eq("0x-token-owner"),
+                eq(1L)
+        );
+    }
+
+    @Test
+    void reclaimOralExerciseTokensUsesConfiguredContractsBeforeTokenServerList() throws Exception {
+        java.util.stream.IntStream.rangeClosed(1, 5)
+                .forEach(index -> daeguChainProperties.getRewardTokenContracts()
+                        .put("ESSENTIAL_VIDEO_" + index, "0x-allowed-contract-" + index));
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(localRecordedEssentialRewards());
+        when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
+        when(externalTokenClient.transferToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "tx_hash": "0x-reclaim-tx"
+                        }
+                        """));
+
+        UserRewardDto.ReclaimResponse response = service.reclaimOralExerciseTokens(request);
+
+        assertThat(response.getReclaimedCount()).isEqualTo(5);
+        verify(externalTokenClient, never()).getTokenList();
+        verify(externalTokenClient).transferToken(
+                eq("did:mitum:minic:0x-user-wallet"),
+                eq("ESSENTIAL_VIDEO_1"),
+                eq("0x-allowed-contract-1"),
                 eq("0x-token-owner"),
                 eq(1L)
         );

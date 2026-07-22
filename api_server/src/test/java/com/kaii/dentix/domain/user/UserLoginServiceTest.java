@@ -10,6 +10,7 @@ import com.kaii.dentix.domain.organization.application.DaeguDefaultOrganizationS
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserDaeguProvisioningService;
+import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
@@ -45,6 +46,7 @@ class UserLoginServiceTest {
     @Mock private ServiceAgreementConsentService serviceAgreementConsentService;
     @Mock private UserDaeguProvisioningService userDaeguProvisioningService;
     @Mock private DaeguChainDidService daeguChainDidService;
+    @Mock private UserLoginHistoryRepository userLoginHistoryRepository;
 
     @InjectMocks
     private UserLoginService userLoginService;

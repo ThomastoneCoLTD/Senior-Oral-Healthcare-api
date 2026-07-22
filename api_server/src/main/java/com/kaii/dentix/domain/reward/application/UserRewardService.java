@@ -5,6 +5,7 @@ import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
+import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
@@ -56,6 +57,7 @@ public class UserRewardService {
     private final ExternalTokenClient externalTokenClient;
     private final UserRepository userRepository;
     private final UserRewardProperties userRewardProperties;
+    private final DaeguChainProperties daeguChainProperties;
     private final JwtTokenUtil jwtTokenUtil;
     private final Environment environment;
 
@@ -324,6 +326,11 @@ public class UserRewardService {
     }
 
     private RewardTokenRef resolveRewardTokenRef(UserRewardTransaction transaction, String rewardTokenName) {
+        String configuredContractAddress = configuredRewardTokenContract(rewardTokenName);
+        if (!isBlank(configuredContractAddress)) {
+            return new RewardTokenRef(rewardTokenName.toUpperCase(java.util.Locale.ROOT), configuredContractAddress);
+        }
+
         if (!isBlank(transaction.getTokenContractAddress())) {
             return new RewardTokenRef(rewardTokenName, transaction.getTokenContractAddress());
         }
@@ -335,13 +342,38 @@ public class UserRewardService {
                 String contractAddress = findFirstText(token, "contract", "contract_address", "contractAddress", "cont_addr", "address");
                 if (!isBlank(tokenName)
                         && !isBlank(contractAddress)
-                        && tokenName.equalsIgnoreCase(rewardTokenName)) {
+                        && tokenName.equalsIgnoreCase(rewardTokenName)
+                        && isAllowedRewardToken(tokenName, contractAddress)) {
                     return new RewardTokenRef(tokenName, contractAddress);
                 }
             }
         }
 
         throw new BadRequestApiException("reward token contract address is not found: " + rewardTokenName);
+    }
+
+    private boolean isAllowedRewardToken(String tokenName, String contractAddress) {
+        String configuredContractAddress = configuredRewardTokenContract(tokenName);
+        return isBlank(configuredContractAddress)
+                || contractAddressEquals(configuredContractAddress, contractAddress);
+    }
+
+    private String configuredRewardTokenContract(String tokenName) {
+        if (daeguChainProperties.getRewardTokenContracts() == null
+                || daeguChainProperties.getRewardTokenContracts().isEmpty()
+                || isBlank(tokenName)) {
+            return null;
+        }
+        for (var entry : daeguChainProperties.getRewardTokenContracts().entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(tokenName)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private boolean contractAddressEquals(String expected, String actual) {
+        return !isBlank(expected) && !isBlank(actual) && expected.equalsIgnoreCase(actual);
     }
 
     private void assertRewardSucceeded(UserRewardTransaction transaction) {

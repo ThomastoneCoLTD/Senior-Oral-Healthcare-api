@@ -9,6 +9,11 @@ import com.kaii.dentix.global.common.dto.PagingDTO;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
+import com.kaii.dentix.domain.user.domain.UserDaeguCredentialStatus;
+import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
+
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -193,5 +198,76 @@ public class AdminUserDto {
         private boolean rewardEligible;
         private boolean rewardReceived;
         private Date rewardReceivedAt;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class DaeguRewardStatusResponse {
+        private int essentialRewardContentCount;
+        private List<DaeguRewardStatusUser> users;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class DaeguRewardStatusUser {
+        private Long userId;
+        private String userLoginIdentifier;
+        private String userName;
+        private String organizationName;
+        private Date created;
+        private Date userLastLoginDate;
+        private String daeguDid;
+        private UserDaeguIdentityStatus daeguDidStatus;
+        private UserDaeguCredentialStatus daeguCredentialStatus;
+        private LocalDate daeguCredentialValidFrom;
+        private LocalDate daeguCredentialValidUntil;
+        private boolean didIssued;
+        private String walletDaeguDid;
+        private String walletAddress;
+        private long pointBalance;
+        private boolean walletCreated;
+        private int loginHistoryCount;
+        private List<LoginHistory> loginHistories;
+        private int essentialRewardReceivedCount;
+        private boolean essentialRewardCompleted;
+        private List<EssentialReward> essentialRewards;
+        private int reclaimCount;
+        private long reclaimedAmount;
+        private boolean rewardReclaimed;
+        private List<RewardTransactionSummary> reclaims;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class LoginHistory {
+        private Long historyId;
+        private Date loggedInAt;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class EssentialReward {
+        private Long contentId;
+        private int contentSort;
+        private String title;
+        private boolean rewardReceived;
+        private Date rewardReceivedAt;
+        private Long transactionId;
+        private String tokenName;
+        private UserRewardTransactionStatus status;
+        private String txHash;
+        private String factHash;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class RewardTransactionSummary {
+        private Long transactionId;
+        private String tokenName;
+        private UserRewardTransactionStatus status;
+        private long amount;
+        private String txHash;
+        private String factHash;
+        private Date created;
     }
 }

@@ -19,13 +19,18 @@ import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionS
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
+import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
+import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
+import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
+import com.kaii.dentix.domain.user.domain.UserLoginHistory;
 import com.kaii.dentix.global.common.dto.PagingDTO;
 import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
@@ -94,6 +99,8 @@ public class AdminUserService {
     private final OralExerciseContentRepository oralExerciseContentRepository;
     private final UserOralExerciseProgressRepository oralExerciseProgressRepository;
     private final UserRewardTransactionRepository userRewardTransactionRepository;
+    private final UserRewardWalletRepository userRewardWalletRepository;
+    private final UserLoginHistoryRepository userLoginHistoryRepository;
 
     /**
      * 일반관리자 - 본인 기관의 사용자 목록 조회
@@ -216,17 +223,7 @@ public class AdminUserService {
 
     @Transactional(readOnly = true)
     public AdminUserDto.ExerciseProgressResponse getExerciseProgress(HttpServletRequest request) {
-        Admin admin = adminService.getTokenAdmin(request);
-        List<User> users;
-        if (admin.isSuperAdmin()) {
-            users = userRepository.findAll(Sort.by(Sort.Direction.ASC, "userName"));
-        } else {
-            if (admin.getOrganization() == null) {
-                throw new BadRequestApiException("소속 기관 정보가 없습니다.");
-            }
-            users = userRepository.findByOrganization_OrganizationId(admin.getOrganization().getOrganizationId());
-            users.sort(java.util.Comparator.comparing(User::getUserName, String.CASE_INSENSITIVE_ORDER));
-        }
+        List<User> users = getVisibleUsers(request);
 
         List<OralExerciseContent> contents = oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc();
         List<Long> userIds = users.stream().map(User::getUserId).toList();
@@ -303,6 +300,162 @@ public class AdminUserService {
                 .rewardContentCount((int) contents.stream().filter(item -> item.getContentSort() >= 2 && item.getContentSort() <= 6).count())
                 .users(rows)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AdminUserDto.DaeguRewardStatusResponse getDaeguRewardStatus(HttpServletRequest request) {
+        List<User> users = getVisibleUsers(request);
+        List<Long> userIds = users.stream().map(User::getUserId).toList();
+        List<OralExerciseContent> essentialContents = oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc()
+                .stream()
+                .filter(content -> content.getContentSort() >= 2 && content.getContentSort() <= 6)
+                .toList();
+
+        Map<Long, UserRewardWallet> walletsByUserId = userIds.isEmpty()
+                ? Map.of()
+                : userRewardWalletRepository.findByUserIdIn(userIds).stream()
+                        .collect(Collectors.toMap(UserRewardWallet::getUserId, Function.identity(), (left, right) -> left));
+        Map<Long, List<UserLoginHistory>> loginHistoriesByUserId = userIds.isEmpty()
+                ? Map.of()
+                : userLoginHistoryRepository.findByUserIdInOrderByCreatedDesc(userIds).stream()
+                        .collect(Collectors.groupingBy(UserLoginHistory::getUserId));
+        List<UserRewardTransaction> rewardTransactions = userIds.isEmpty()
+                ? List.of()
+                : userRewardTransactionRepository.findByUserIdInAndTypeOrderByCreatedDesc(
+                        userIds,
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN
+                );
+        List<UserRewardTransaction> reclaimTransactions = userIds.isEmpty()
+                ? List.of()
+                : userRewardTransactionRepository.findByUserIdInAndTypeOrderByCreatedDesc(
+                        userIds,
+                        UserRewardTransactionType.ORAL_EXERCISE_RECLAIM
+                );
+
+        Map<Long, Map<Long, UserRewardTransaction>> rewardsByUserAndContent = rewardTransactions.stream()
+                .filter(UserRewardTransaction::isRewardReceived)
+                .filter(transaction -> transaction.getOralExerciseContent() != null)
+                .collect(Collectors.groupingBy(
+                        UserRewardTransaction::getUserId,
+                        Collectors.toMap(
+                                transaction -> transaction.getOralExerciseContent().getOralExerciseContentId(),
+                                Function.identity(),
+                                (left, right) -> left.getCreated().after(right.getCreated()) ? left : right
+                        )
+                ));
+        Map<Long, List<UserRewardTransaction>> reclaimsByUserId = reclaimTransactions.stream()
+                .filter(UserRewardTransaction::isRewardReceived)
+                .collect(Collectors.groupingBy(UserRewardTransaction::getUserId));
+
+        List<AdminUserDto.DaeguRewardStatusUser> rows = users.stream().map(user -> {
+            UserRewardWallet wallet = walletsByUserId.get(user.getUserId());
+            List<UserLoginHistory> loginHistories = loginHistoriesByUserId.getOrDefault(user.getUserId(), List.of());
+            Map<Long, UserRewardTransaction> userRewards = rewardsByUserAndContent.getOrDefault(user.getUserId(), Map.of());
+            List<UserRewardTransaction> userReclaims = reclaimsByUserId.getOrDefault(user.getUserId(), List.of());
+            List<AdminUserDto.EssentialReward> essentialRewards = essentialContents.stream()
+                    .map(content -> toEssentialReward(content, userRewards.get(content.getOralExerciseContentId())))
+                    .toList();
+            int essentialRewardReceivedCount = (int) essentialRewards.stream()
+                    .filter(AdminUserDto.EssentialReward::isRewardReceived)
+                    .count();
+            long reclaimedAmount = userReclaims.stream().mapToLong(UserRewardTransaction::getAmount).sum();
+            boolean didIssued = user.getDaeguDidStatus() == UserDaeguIdentityStatus.ISSUED && StringUtils.hasText(user.getDaeguDid());
+            boolean walletCreated = wallet != null && StringUtils.hasText(wallet.getWalletAddress());
+
+            return AdminUserDto.DaeguRewardStatusUser.builder()
+                    .userId(user.getUserId())
+                    .userLoginIdentifier(user.getUserLoginIdentifier())
+                    .userName(user.getUserName())
+                    .organizationName(user.getOrganization() == null ? null : user.getOrganization().getOrganizationName())
+                    .created(user.getCreated())
+                    .userLastLoginDate(user.getUserLastLoginDate())
+                    .daeguDid(user.getDaeguDid())
+                    .daeguDidStatus(user.getDaeguDidStatus())
+                    .daeguCredentialStatus(user.getDaeguCredentialStatus())
+                    .daeguCredentialValidFrom(user.getDaeguCredentialValidFrom())
+                    .daeguCredentialValidUntil(user.getDaeguCredentialValidUntil())
+                    .didIssued(didIssued)
+                    .walletDaeguDid(wallet == null ? null : wallet.getDaeguDid())
+                    .walletAddress(wallet == null ? null : wallet.getWalletAddress())
+                    .pointBalance(wallet == null ? 0 : wallet.getPointBalance())
+                    .walletCreated(walletCreated)
+                    .loginHistoryCount(loginHistories.size())
+                    .loginHistories(loginHistories.stream()
+                            .limit(20)
+                            .map(this::toLoginHistory)
+                            .toList())
+                    .essentialRewardReceivedCount(essentialRewardReceivedCount)
+                    .essentialRewardCompleted(essentialRewardReceivedCount >= essentialContents.size() && !essentialContents.isEmpty())
+                    .essentialRewards(essentialRewards)
+                    .reclaimCount(userReclaims.size())
+                    .reclaimedAmount(reclaimedAmount)
+                    .rewardReclaimed(!userReclaims.isEmpty())
+                    .reclaims(userReclaims.stream()
+                            .limit(20)
+                            .map(this::toRewardTransactionSummary)
+                            .toList())
+                    .build();
+        }).toList();
+
+        return AdminUserDto.DaeguRewardStatusResponse.builder()
+                .essentialRewardContentCount(essentialContents.size())
+                .users(rows)
+                .build();
+    }
+
+    private AdminUserDto.EssentialReward toEssentialReward(
+            OralExerciseContent content,
+            UserRewardTransaction reward
+    ) {
+        return AdminUserDto.EssentialReward.builder()
+                .contentId(content.getOralExerciseContentId())
+                .contentSort(content.getContentSort())
+                .title(content.getTitle())
+                .rewardReceived(reward != null)
+                .rewardReceivedAt(reward == null ? null : reward.getCreated())
+                .transactionId(reward == null ? null : reward.getUserRewardTransactionId())
+                .tokenName(reward == null ? null : reward.getCoinId())
+                .status(reward == null ? null : reward.getStatus())
+                .txHash(reward == null ? null : reward.getDaeguChainTxHash())
+                .factHash(reward == null ? null : reward.getDaeguChainFactHash())
+                .build();
+    }
+
+    private AdminUserDto.LoginHistory toLoginHistory(UserLoginHistory history) {
+        return AdminUserDto.LoginHistory.builder()
+                .historyId(history.getUserLoginHistoryId())
+                .loggedInAt(history.getCreated())
+                .build();
+    }
+
+    private AdminUserDto.RewardTransactionSummary toRewardTransactionSummary(UserRewardTransaction transaction) {
+        return AdminUserDto.RewardTransactionSummary.builder()
+                .transactionId(transaction.getUserRewardTransactionId())
+                .tokenName(transaction.getCoinId())
+                .status(transaction.getStatus())
+                .amount(transaction.getAmount())
+                .txHash(transaction.getDaeguChainTxHash())
+                .factHash(transaction.getDaeguChainFactHash())
+                .created(transaction.getCreated())
+                .build();
+    }
+
+    private List<User> getVisibleUsers(HttpServletRequest request) {
+        Admin admin = adminService.getTokenAdmin(request);
+        List<User> users;
+        if (admin.isSuperAdmin()) {
+            users = userRepository.findAll(Sort.by(Sort.Direction.ASC, "userName"));
+        } else {
+            if (admin.getOrganization() == null) {
+                throw new BadRequestApiException("소속 기관 정보가 없습니다.");
+            }
+            users = userRepository.findByOrganization_OrganizationId(admin.getOrganization().getOrganizationId());
+            users.sort(java.util.Comparator.comparing(
+                    user -> user.getUserName() == null ? "" : user.getUserName(),
+                    String.CASE_INSENSITIVE_ORDER
+            ));
+        }
+        return users;
     }
 
     /**

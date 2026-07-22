@@ -5,6 +5,7 @@ import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
+import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
@@ -43,6 +44,7 @@ class UserRewardServiceTest {
     private DaeguChainPointService daeguChainPointService;
     private ExternalTokenClient externalTokenClient;
     private UserRepository userRepository;
+    private DaeguChainProperties daeguChainProperties;
     private JwtTokenUtil jwtTokenUtil;
     private Environment environment;
     private UserRewardService service;
@@ -58,6 +60,7 @@ class UserRewardServiceTest {
         daeguChainPointService = mock(DaeguChainPointService.class);
         externalTokenClient = mock(ExternalTokenClient.class);
         userRepository = mock(UserRepository.class);
+        daeguChainProperties = new DaeguChainProperties();
         jwtTokenUtil = mock(JwtTokenUtil.class);
         environment = mock(Environment.class);
         request = mock(HttpServletRequest.class);
@@ -74,6 +77,7 @@ class UserRewardServiceTest {
                 externalTokenClient,
                 userRepository,
                 properties,
+                daeguChainProperties,
                 jwtTokenUtil,
                 environment
         );
@@ -248,6 +252,7 @@ class UserRewardServiceTest {
                 externalTokenClient,
                 userRepository,
                 properties,
+                daeguChainProperties,
                 jwtTokenUtil,
                 environment
         );
@@ -302,6 +307,72 @@ class UserRewardServiceTest {
     }
 
     @Test
+    void rewardOralExerciseButtonClickUsesConfiguredContractWhenTokenNamesAreDuplicated() throws Exception {
+        UserRewardProperties properties = new UserRewardProperties();
+        properties.setOralExerciseCoinAmount(1L);
+        properties.setTokenTransferEnabled(true);
+        daeguChainProperties.getRewardTokenContracts().put("ESSENTIAL_VIDEO_1", "0x-allowed-contract");
+        service = new UserRewardService(
+                walletRepository,
+                transactionRepository,
+                contentRepository,
+                daeguChainAccountService,
+                daeguChainDidService,
+                daeguChainPointService,
+                externalTokenClient,
+                userRepository,
+                properties,
+                daeguChainProperties,
+                jwtTokenUtil,
+                environment
+        );
+        when(transactionRepository.findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
+                7L,
+                "essential_video_1",
+                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                UserRewardTransactionStatus.CANCELED
+        )).thenReturn(Optional.empty());
+        when(transactionRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(0L)
+                .daeguDid("did:mitum:minic:0x-user-wallet")
+                .walletAddress("0x-user-wallet")
+                .build()));
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(externalTokenClient.transferToken(
+                "did:mitum:minic:0x-user-wallet",
+                "ESSENTIAL_VIDEO_1",
+                "0x-allowed-contract",
+                "0x-user-wallet",
+                1L
+        )).thenReturn(new ObjectMapper().readTree("""
+                {
+                  "Date": "2026-06-25T01:00:00Z"
+                }
+                """));
+
+        service.rewardOralExerciseButtonClick(
+                request,
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
+        );
+
+        verify(externalTokenClient, never()).getTokenList();
+        verify(externalTokenClient).transferToken(
+                "did:mitum:minic:0x-user-wallet",
+                "ESSENTIAL_VIDEO_1",
+                "0x-allowed-contract",
+                "0x-user-wallet",
+                1L
+        );
+        verify(transactionRepository).save(argThat(transaction ->
+                transaction.getCoinId().equals("essential_video_1")
+                        && transaction.getTokenContractAddress().equals("0x-allowed-contract")
+        ));
+    }
+
+    @Test
     void rewardOralExerciseButtonClickThrowsWhenTokenTransferFails() throws Exception {
         UserRewardProperties properties = new UserRewardProperties();
         properties.setOralExerciseCoinAmount(1L);
@@ -316,6 +387,7 @@ class UserRewardServiceTest {
                 externalTokenClient,
                 userRepository,
                 properties,
+                daeguChainProperties,
                 jwtTokenUtil,
                 environment
         );
@@ -367,6 +439,7 @@ class UserRewardServiceTest {
                 externalTokenClient,
                 userRepository,
                 properties,
+                daeguChainProperties,
                 jwtTokenUtil,
                 environment
         );
@@ -420,6 +493,7 @@ class UserRewardServiceTest {
                 externalTokenClient,
                 userRepository,
                 properties,
+                daeguChainProperties,
                 jwtTokenUtil,
                 environment
         );

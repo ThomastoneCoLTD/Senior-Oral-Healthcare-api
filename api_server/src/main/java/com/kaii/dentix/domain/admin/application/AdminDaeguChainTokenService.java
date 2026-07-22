@@ -85,7 +85,7 @@ public class AdminDaeguChainTokenService {
                     tokenName.toLowerCase(Locale.ROOT),
                     AdminDaeguChainTokenDto.TokenOption.builder()
                             .tokenName(tokenName)
-                            .contractAddress(tokenName)
+                            .contractAddress(defaultContractAddress(tokenName))
                             .build()
             );
         }
@@ -123,7 +123,7 @@ public class AdminDaeguChainTokenService {
         for (JsonNode token : tokens) {
             String name = extractTokenName(token);
             String contractAddress = extractContractAddress(token);
-            if (!isBlank(name) && !isBlank(contractAddress) && isRewardTokenName(name)) {
+            if (!isBlank(name) && !isBlank(contractAddress) && isAllowedRewardToken(name, contractAddress)) {
                 tokenOptions.put(
                         name.toLowerCase(Locale.ROOT),
                         AdminDaeguChainTokenDto.TokenOption.builder()
@@ -245,7 +245,7 @@ public class AdminDaeguChainTokenService {
         for (JsonNode token : tokens) {
             String name = extractTokenName(token);
             String contractAddress = extractContractAddress(token);
-            if (!isBlank(name) && !isBlank(contractAddress) && isRewardTokenName(name)) {
+            if (!isBlank(name) && !isBlank(contractAddress) && isAllowedRewardToken(name, contractAddress)) {
                 tokenContracts.put(name.toLowerCase(Locale.ROOT), contractAddress);
             }
         }
@@ -345,6 +345,36 @@ public class AdminDaeguChainTokenService {
 
     private boolean isRewardTokenName(String value) {
         return !isBlank(value) && REWARD_TOKEN_NAME_SET.contains(value.toLowerCase(Locale.ROOT));
+    }
+
+    private boolean isAllowedRewardToken(String tokenName, String contractAddress) {
+        if (!isRewardTokenName(tokenName)) {
+            return false;
+        }
+        String configuredContractAddress = configuredRewardTokenContract(tokenName);
+        return isBlank(configuredContractAddress)
+                || contractAddressEquals(configuredContractAddress, contractAddress);
+    }
+
+    private String defaultContractAddress(String tokenName) {
+        String configuredContractAddress = configuredRewardTokenContract(tokenName);
+        return isBlank(configuredContractAddress) ? tokenName : configuredContractAddress;
+    }
+
+    private String configuredRewardTokenContract(String tokenName) {
+        if (properties.getRewardTokenContracts() == null || properties.getRewardTokenContracts().isEmpty()) {
+            return null;
+        }
+        for (var entry : properties.getRewardTokenContracts().entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(tokenName)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private boolean contractAddressEquals(String expected, String actual) {
+        return !isBlank(expected) && !isBlank(actual) && expected.equalsIgnoreCase(actual);
     }
 
     private int rewardTokenOrder(String tokenName) {

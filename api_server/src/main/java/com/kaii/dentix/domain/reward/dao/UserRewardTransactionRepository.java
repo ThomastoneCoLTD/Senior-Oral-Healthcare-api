@@ -37,6 +37,11 @@ public interface UserRewardTransactionRepository extends JpaRepository<UserRewar
             UserRewardTransactionType type
     );
 
+    List<UserRewardTransaction> findByUserIdInAndTypeOrderByCreatedDesc(
+            Collection<Long> userIds,
+            UserRewardTransactionType type
+    );
+
     @Query("""
             select rewardTransaction
             from UserRewardTransaction rewardTransaction

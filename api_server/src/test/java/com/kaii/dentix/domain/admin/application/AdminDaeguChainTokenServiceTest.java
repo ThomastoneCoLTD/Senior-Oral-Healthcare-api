@@ -158,6 +158,37 @@ class AdminDaeguChainTokenServiceTest {
     }
 
     @Test
+    void getTokenOptionsKeepsOnlyConfiguredContractWhenTokenNamesAreDuplicated() throws Exception {
+        properties.getRewardTokenContracts().put("ESSENTIAL_VIDEO_1", "0x-allowed-contract");
+        JsonNode data = objectMapper.readTree("""
+                {
+                  "data": [
+                    {
+                      "contract": "0x-wrong-contract",
+                      "data": {
+                        "name": "ESSENTIAL_VIDEO_1",
+                        "symbol": "MYT"
+                      }
+                    },
+                    {
+                      "contract": "0x-allowed-contract",
+                      "data": {
+                        "name": "ESSENTIAL_VIDEO_1",
+                        "symbol": "MYT"
+                      }
+                    }
+                  ]
+                }
+                """);
+        when(externalTokenClient.getTokenList()).thenReturn(data);
+
+        List<AdminDaeguChainTokenDto.TokenOption> tokenOptions = service.getTokenOptions();
+
+        assertThat(tokenOptions.get(0).getTokenName()).isEqualTo("ESSENTIAL_VIDEO_1");
+        assertThat(tokenOptions.get(0).getContractAddress()).isEqualTo("0x-allowed-contract");
+    }
+
+    @Test
     void getTokenOptionsFallsBackToRewardTokenNamesWhenExternalTokenServerFails() {
         when(externalTokenClient.getTokenList()).thenThrow(new BadRequestApiException("token server error"));
 

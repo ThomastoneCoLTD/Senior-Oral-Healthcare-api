@@ -105,6 +105,13 @@ public class AdminUserController {
         return new DataResponse<>(adminUserService.getExerciseProgress(request));
     }
 
+    @GetMapping(value = "/daegu-reward-status", name = "사용자별 DID/지갑/로그인/리워드 회수 현황")
+    public DataResponse<AdminUserDto.DaeguRewardStatusResponse> getDaeguRewardStatus(
+            HttpServletRequest request
+    ) {
+        return new DataResponse<>(adminUserService.getDaeguRewardStatus(request));
+    }
+
     /**
      * 일반관리자 - 기관 사용자 일괄등록 엑셀 양식 다운로드
      */

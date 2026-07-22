@@ -30,7 +30,7 @@ public class UserDaeguProvisioningService {
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED) {
             return null;
         }
-        String provisionedWalletAddress = provisionWallet(user, walletAddress);
+        String provisionedWalletAddress = provisionWalletForSignUp(user, walletAddress);
         if (isBlank(user.getDaeguCredentialJwt())) {
             provisionCredential(user);
         }
@@ -68,7 +68,17 @@ public class UserDaeguProvisioningService {
         } catch (RuntimeException exception) {
             log.warn("Daegu DID provisioning failed. userId={}", user.getUserId(), exception);
             user.updateDaeguDid(null, null, UserDaeguIdentityStatus.FAILED);
-            throw new BadRequestApiException("DID provisioning failed: " + exception.getMessage());
+            user.markDaeguCredentialFailed();
+            return null;
+        }
+    }
+
+    private String provisionWalletForSignUp(User user, String didWalletAddress) {
+        try {
+            return provisionWallet(user, didWalletAddress);
+        } catch (RuntimeException exception) {
+            log.warn("Daegu DID wallet provisioning failed. userId={}", user.getUserId(), exception);
+            return null;
         }
     }
 

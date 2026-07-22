@@ -17,8 +17,10 @@ import com.kaii.dentix.domain.oralExercise.dao.UserOralExerciseProgressRepositor
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
+import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
+import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -66,6 +68,8 @@ class AdminUserServiceTest {
     @Mock private OralExerciseContentRepository oralExerciseContentRepository;
     @Mock private UserOralExerciseProgressRepository oralExerciseProgressRepository;
     @Mock private UserRewardTransactionRepository userRewardTransactionRepository;
+    @Mock private UserRewardWalletRepository userRewardWalletRepository;
+    @Mock private UserLoginHistoryRepository userLoginHistoryRepository;
 
     private AdminUserService adminUserService;
 
@@ -87,7 +91,9 @@ class AdminUserServiceTest {
                 new NoOpTransactionManager(),
                 oralExerciseContentRepository,
                 oralExerciseProgressRepository,
-                userRewardTransactionRepository
+                userRewardTransactionRepository,
+                userRewardWalletRepository,
+                userLoginHistoryRepository
         );
     }
 

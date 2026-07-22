@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -176,7 +175,7 @@ class UserDaeguProvisioningServiceTest {
     }
 
     @Test
-    void provisionForSignUpFailsWhenExternalApiFails() {
+    void provisionForSignUpMarksDidFailedWhenExternalApiFails() {
         User user = User.builder()
                 .userId(7L)
                 .build();
@@ -184,15 +183,52 @@ class UserDaeguProvisioningServiceTest {
                 .thenThrow(new BadRequestApiException("token is required"));
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.provisionForSignUp(user))
-                .isInstanceOf(BadRequestApiException.class)
-                .hasMessageContaining("DID provisioning failed");
+        String walletAddress = service.provisionForSignUp(user);
 
+        assertThat(walletAddress).isNull();
         assertThat(user.getDaeguDid()).isNull();
         assertThat(user.getDaeguDidKey()).isNull();
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.FAILED);
+        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.FAILED);
         verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
         verify(daeguChainDidService, never()).issueLoginUserCredential(any(User.class));
+    }
+
+    @Test
+    void provisionForSignUpDoesNotFailWhenWalletProvisioningFails() throws Exception {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("soh-user-001")
+                .build();
+        JsonNode didData = new ObjectMapper().readTree("""
+                {
+                  "did": "did:key:z6MkSelfGenerated"
+                }
+                """);
+        when(daeguChainDidService.createAccount(any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
+        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
+        when(daeguChainAccountService.createAccount(any()))
+                .thenThrow(new BadRequestApiException("token is required"));
+        when(daeguChainDidService.issueLoginUserCredential(user))
+                .thenAnswer(invocation -> {
+                    user.updateDaeguCredential(
+                            "issued.credential.jwt",
+                            UserDaeguCredentialStatus.ISSUED,
+                            null,
+                            null
+                    );
+                    return null;
+                });
+
+        String walletAddress = service.provisionForSignUp(user);
+
+        assertThat(walletAddress).isNull();
+        assertThat(user.getDaeguDid()).isEqualTo("did:key:z6MkSelfGenerated");
+        assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
+        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.ISSUED);
+        verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
+        verify(daeguChainDidService).issueLoginUserCredential(user);
     }
 
     @Test

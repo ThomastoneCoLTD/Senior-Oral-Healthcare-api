@@ -230,6 +230,14 @@ public class UserRewardReclaimService {
             UserRewardTransaction rewardTransaction,
             Map<String, String> tokenContracts
     ) {
+        String configuredContractAddress = configuredRewardTokenContract(rewardTransaction.getCoinId());
+        if (!isBlank(configuredContractAddress)) {
+            if (!contractAddressEquals(configuredContractAddress, rewardTransaction.getTokenContractAddress())) {
+                rewardTransaction.updateTokenContractAddress(configuredContractAddress);
+                userRewardTransactionRepository.save(rewardTransaction);
+            }
+            return configuredContractAddress;
+        }
         if (!isBlank(rewardTransaction.getTokenContractAddress())) {
             return rewardTransaction.getTokenContractAddress();
         }
@@ -246,9 +254,16 @@ public class UserRewardReclaimService {
     }
 
     private Map<String, String> getRewardTokenContractsIfNeeded(List<UserRewardTransaction> rewardTransactions) {
-        boolean hasMissingContractAddress = rewardTransactions.stream()
-                .anyMatch(transaction -> isBlank(transaction.getTokenContractAddress()));
-        if (!hasMissingContractAddress) {
+        List<UserRewardTransaction> missingContractAddressTransactions = rewardTransactions.stream()
+                .filter(transaction -> isBlank(transaction.getTokenContractAddress()))
+                .toList();
+        if (missingContractAddressTransactions.isEmpty()) {
+            return Map.of();
+        }
+        boolean everyMissingContractAddressIsConfigured = missingContractAddressTransactions.stream()
+                .filter(transaction -> !isBlank(transaction.getCoinId()))
+                .allMatch(transaction -> !isBlank(configuredRewardTokenContract(transaction.getCoinId())));
+        if (everyMissingContractAddressIsConfigured) {
             return Map.of();
         }
 
@@ -267,11 +282,35 @@ public class UserRewardReclaimService {
         for (JsonNode token : tokens) {
             String tokenName = findFirstText(token, "token_name", "tokenName", "name");
             String contractAddress = findFirstText(token, "contract", "contract_address", "contractAddress", "cont_addr", "address");
-            if (!isBlank(tokenName) && !isBlank(contractAddress)) {
+            if (!isBlank(tokenName) && !isBlank(contractAddress) && isAllowedRewardToken(tokenName, contractAddress)) {
                 tokenContracts.put(tokenName.toLowerCase(Locale.ROOT), contractAddress);
             }
         }
         return tokenContracts;
+    }
+
+    private boolean isAllowedRewardToken(String tokenName, String contractAddress) {
+        String configuredContractAddress = configuredRewardTokenContract(tokenName);
+        return isBlank(configuredContractAddress)
+                || contractAddressEquals(configuredContractAddress, contractAddress);
+    }
+
+    private String configuredRewardTokenContract(String tokenName) {
+        if (daeguChainProperties.getRewardTokenContracts() == null
+                || daeguChainProperties.getRewardTokenContracts().isEmpty()
+                || isBlank(tokenName)) {
+            return null;
+        }
+        for (var entry : daeguChainProperties.getRewardTokenContracts().entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(tokenName)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private boolean contractAddressEquals(String expected, String actual) {
+        return !isBlank(expected) && !isBlank(actual) && expected.equalsIgnoreCase(actual);
     }
 
     private String buildReclaimIdempotencyKey(Long userId, UserRewardTransaction rewardTransaction) {

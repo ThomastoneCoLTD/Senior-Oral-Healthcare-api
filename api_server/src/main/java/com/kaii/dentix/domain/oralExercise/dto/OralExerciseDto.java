@@ -43,6 +43,7 @@ public class OralExerciseDto {
                 String playableThumbnailUrl
         ) {
             boolean coreContent = content.getContentSort() >= 2 && content.getContentSort() <= 6;
+            boolean rewardContent = coreContent || content.getContentSort() == 1;
             int displayWeek = coreContent ? content.getContentSort() - 1 : 0;
             boolean available = TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST
                     || !coreContent
@@ -67,7 +68,7 @@ public class OralExerciseDto {
                     .available(available)
                     .currentWeekContent(currentWeekContent)
                     .rewardReceived(rewardReceived)
-                    .buttonChallenge(ButtonChallengeResponse.forContent(coreContent, rewardReceived))
+                    .buttonChallenge(ButtonChallengeResponse.forContent(rewardContent, rewardReceived))
                     .progress(ProgressResponse.from(progress))
                     .build();
         }
@@ -134,8 +135,8 @@ public class OralExerciseDto {
         private boolean rewardAvailable;
         private String promptMessage;
 
-        public static ButtonChallengeResponse forContent(boolean coreContent, boolean rewardReceived) {
-            boolean rewardAvailable = coreContent && !rewardReceived;
+        public static ButtonChallengeResponse forContent(boolean rewardContent, boolean rewardReceived) {
+            boolean rewardAvailable = rewardContent && !rewardReceived;
             return ButtonChallengeResponse.builder()
                     .buttons(List.of(1, 2, 3, 4, 5))
                     .timeoutSeconds(30)
