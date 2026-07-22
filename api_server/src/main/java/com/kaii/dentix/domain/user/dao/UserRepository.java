@@ -3,7 +3,9 @@ package com.kaii.dentix.domain.user.dao;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.domain.User;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -28,6 +30,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
         WHERE u.userId = :userId
     """)
     Optional<User> findByIdWithOrganizationAndSubscription(@Param("userId") Long userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.userId = :userId")
+    Optional<User> findByIdForUpdate(@Param("userId") Long userId);
 
     // 통계용 쿼리
     long countByOrganization_OrganizationId(Long organizationId);

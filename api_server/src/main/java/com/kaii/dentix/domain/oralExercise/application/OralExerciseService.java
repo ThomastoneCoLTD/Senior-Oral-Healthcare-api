@@ -116,6 +116,7 @@ public class OralExerciseService {
             OralExerciseDto.InteractionRequest interactionRequest
     ) {
         Long userId = getUserId(request);
+        lockUserProgressScope(userId);
 
         OralExerciseContent content = oralExerciseContentRepository
                 .findById(interactionRequest.getContentId())
@@ -166,6 +167,11 @@ public class OralExerciseService {
         UserOralExerciseProgress savedProgress = userOralExerciseProgressRepository.save(progress);
 
         return OralExerciseDto.ProgressResponse.from(savedProgress);
+    }
+
+    private void lockUserProgressScope(Long userId) {
+        userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
     }
 
     private Long getUserId(HttpServletRequest request) {

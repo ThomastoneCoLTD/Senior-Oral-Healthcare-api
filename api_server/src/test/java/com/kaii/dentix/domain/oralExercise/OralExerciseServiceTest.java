@@ -7,6 +7,7 @@ import com.kaii.dentix.domain.oralExercise.dao.OralExerciseContentRepository;
 import com.kaii.dentix.domain.oralExercise.dao.OralExerciseInteractionLogRepository;
 import com.kaii.dentix.domain.oralExercise.dao.UserOralExerciseProgressRepository;
 import com.kaii.dentix.domain.oralExercise.domain.OralExerciseContent;
+import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.oralExercise.dto.OralExerciseDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
@@ -30,6 +31,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -71,9 +75,9 @@ class OralExerciseServiceTest {
         );
 
         when(jwtTokenUtil.getAccessToken(request)).thenReturn("access-token");
-        when(jwtTokenUtil.isExpired("access-token", TokenType.AccessToken)).thenReturn(false);
+        lenient().when(jwtTokenUtil.isExpired("access-token", TokenType.AccessToken)).thenReturn(false);
         when(jwtTokenUtil.getUserId("access-token", TokenType.AccessToken)).thenReturn(7L);
-        when(progressRepository.findByUserId(7L)).thenReturn(List.of());
+        lenient().when(progressRepository.findByUserId(7L)).thenReturn(List.of());
     }
 
     @Test
@@ -272,6 +276,37 @@ class OralExerciseServiceTest {
         OralExerciseDto.ContentResponse content = response.getContents().get(0);
         assertThat(content.isRewardReceived()).isFalse();
         assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue();
+    }
+
+    @Test
+    void recordInteractionLocksUserBeforeCreatingProgress() {
+        OralExerciseContent content = content(2);
+        when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(User.builder().userId(7L).build()));
+        when(contentRepository.findById(2L)).thenReturn(Optional.of(content));
+        when(progressRepository.findByUserIdAndContent_OralExerciseContentId(7L, 2L)).thenReturn(Optional.empty());
+        when(progressRepository.save(any(UserOralExerciseProgress.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        OralExerciseDto.ProgressResponse response = service.recordInteraction(
+                request,
+                new OralExerciseDto.InteractionRequest(
+                        2L,
+                        null,
+                        10,
+                        30,
+                        100,
+                        null,
+                        false,
+                        "session-1"
+                )
+        );
+
+        assertThat(response.getTotalWatchedSeconds()).isEqualTo(10);
+        assertThat(response.getMaxWatchedSeconds()).isEqualTo(30);
+        assertThat(response.getViewCount()).isEqualTo(1);
+        var order = inOrder(userRepository, progressRepository);
+        order.verify(userRepository).findByIdForUpdate(7L);
+        order.verify(progressRepository).findByUserIdAndContent_OralExerciseContentId(7L, 2L);
     }
 
     private User userCreatedDaysAgo(int daysAgo) {
