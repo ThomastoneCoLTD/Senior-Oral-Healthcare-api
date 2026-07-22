@@ -125,7 +125,7 @@ public class UserRewardService {
                 .build();
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = BadRequestApiException.class)
     public UserRewardDto.RewardResponse rewardOralExerciseButtonClick(
             HttpServletRequest request,
             UserRewardDto.ButtonClickRequest buttonClickRequest
@@ -321,7 +321,7 @@ public class UserRewardService {
             );
         } catch (RuntimeException exception) {
             transaction.markTokenTransferFailed();
-            throwRewardFailure();
+            throwRewardFailure(exception);
         }
     }
 
@@ -385,6 +385,14 @@ public class UserRewardService {
 
     private void throwRewardFailure() {
         throw new BadRequestApiException("토큰 지급에 실패했습니다. 보상을 받을 수 없습니다.");
+    }
+
+    private void throwRewardFailure(RuntimeException exception) {
+        String message = exception == null ? null : exception.getMessage();
+        if (isBlank(message)) {
+            throwRewardFailure();
+        }
+        throw new BadRequestApiException("토큰 지급에 실패했습니다. 원인: " + message);
     }
 
     private void mintPointIfConfigured(UserRewardTransaction transaction, UserRewardWallet wallet) {

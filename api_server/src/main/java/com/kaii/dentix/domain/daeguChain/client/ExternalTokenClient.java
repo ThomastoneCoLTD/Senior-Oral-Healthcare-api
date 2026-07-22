@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.LinkedHashMap;
@@ -36,6 +37,7 @@ public class ExternalTokenClient {
     }
 
     public JsonNode transferToken(String userDid, String tokenName, String contractAddress, String receiver, long amount) {
+        validateTransferPath();
         Map<String, Object> body = baseBody();
         body.put("user_DID", userDid);
         body.put("token_name", tokenName);
@@ -48,6 +50,14 @@ public class ExternalTokenClient {
         body.put("wallet_address", receiver);
         body.put("amount", amount);
         return post(properties.getTokenTransferPath(), body);
+    }
+
+    private void validateTransferPath() {
+        String createPath = normalizePath(properties.getTokenCreatePath());
+        String transferPath = normalizePath(properties.getTokenTransferPath());
+        if (!transferPath.isBlank() && transferPath.equals(createPath)) {
+            throw new BadRequestApiException("token-transfer-path must not equal token-create-path");
+        }
     }
 
     public JsonNode getTokenList() {
@@ -73,13 +83,38 @@ public class ExternalTokenClient {
                     JsonNode.class
             );
             JsonNode responseBody = Objects.requireNonNull(response.getBody(), "Token server response body is empty");
-            if (responseBody.has("res") && !responseBody.path("res").asBoolean()) {
-                String message = responseBody.path("message").asText(responseBody.path("msg").asText("Token server request failed"));
-                throw new BadRequestApiException(message);
+            if (isFailedResponse(responseBody)) {
+                throw new BadRequestApiException(extractErrorMessage(responseBody));
             }
             return responseBody;
+        } catch (HttpStatusCodeException exception) {
+            throw new BadRequestApiException("Token server API call failed: " + extractErrorMessage(exception.getResponseBodyAsString()));
         } catch (RestClientException | NullPointerException exception) {
             throw new BadRequestApiException("Token server API call failed: " + exception.getMessage());
+        }
+    }
+
+    private boolean isFailedResponse(JsonNode responseBody) {
+        if (responseBody.has("res")) {
+            return !responseBody.path("res").asBoolean();
+        }
+        return responseBody.has("state") && "ERROR".equalsIgnoreCase(responseBody.path("state").asText());
+    }
+
+    private String extractErrorMessage(JsonNode responseBody) {
+        return responseBody.path("message").asText(
+                responseBody.path("msg").asText("Token server request failed")
+        );
+    }
+
+    private String extractErrorMessage(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "empty error response";
+        }
+        try {
+            return extractErrorMessage(new com.fasterxml.jackson.databind.ObjectMapper().readTree(responseBody));
+        } catch (Exception ignored) {
+            return responseBody;
         }
     }
 

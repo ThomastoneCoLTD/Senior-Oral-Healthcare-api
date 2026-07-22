@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.web.client.MockServerRestTemplateCustomizer;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 
@@ -17,6 +18,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 class ExternalTokenClientTest {
 
@@ -79,6 +81,28 @@ class ExternalTokenClientTest {
         client.transferToken("did:example:user", "ESSENTIAL_VIDEO_1", "0x-token", "0x-user", 1L);
 
         server.verify();
+    }
+
+    @Test
+    void transferTokenRejectsCreatePathConfiguration() {
+        properties.setTokenTransferPath("/token/create");
+
+        assertThatThrownBy(() -> client.transferToken("did:example:user", "ESSENTIAL_VIDEO_1", "0x-token", "0x-user", 1L))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("token-transfer-path must not equal token-create-path");
+    }
+
+    @Test
+    void transferTokenSurfacesTokenServerErrorMessage() {
+        server.expect(once(), requestTo("https://token.example.com/token/transfer"))
+                .andExpect(method(POST))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"state\":\"ERROR\",\"msg\":\"user_DID not found\"}"));
+
+        assertThatThrownBy(() -> client.transferToken("did:key:user", "ESSENTIAL_VIDEO_1", "0x-token", "0x-user", 1L))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("Token server API call failed: user_DID not found");
     }
 
     @Test

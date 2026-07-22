@@ -420,7 +420,11 @@ class UserRewardServiceTest {
                 new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
         ))
                 .isInstanceOf(BadRequestApiException.class)
-                .hasMessage("토큰 지급에 실패했습니다. 보상을 받을 수 없습니다.");
+                .hasMessage("토큰 지급에 실패했습니다. 원인: token transfer failed");
+        verify(transactionRepository).save(argThat(transaction ->
+                transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED
+                        && transaction.getCoinId().equals("essential_video_1")
+        ));
         verify(walletRepository, never()).save(argThat(wallet -> wallet.getPointBalance() > 0));
     }
 
@@ -475,7 +479,7 @@ class UserRewardServiceTest {
                 new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
         ))
                 .isInstanceOf(BadRequestApiException.class)
-                .hasMessage("토큰 지급에 실패했습니다. 보상을 받을 수 없습니다.");
+                .hasMessage("토큰 지급에 실패했습니다. 원인: token transfer failed");
     }
 
     @Test
