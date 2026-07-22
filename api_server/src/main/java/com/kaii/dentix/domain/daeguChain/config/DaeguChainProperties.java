@@ -26,11 +26,11 @@ public class DaeguChainProperties {
     private Integer tokenDecimals = 18;
     private Boolean tokenMintable = true;
     private Boolean tokenLockable = true;
-    private String didServerBaseUrl = "http://localhost:5000";
+    private String didServerBaseUrl = "http://43.201.125.82";
     private String didCreatePath = "/did/create";
     private String didIssueVcPath = "/did/issue-vc";
     private String didVerifyVcPath = "/did/verify-vc";
-    private String tokenServerBaseUrl = "http://localhost:5000";
+    private String tokenServerBaseUrl = "http://43.201.125.82";
     private String tokenCreatePath = "/token/create";
     private String tokenTransferPath = "/token/transfer";
     private String tokenListPath = "/token/token_list";
