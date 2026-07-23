@@ -3,11 +3,7 @@ package com.kaii.dentix.domain.daeguChain.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
-import com.kaii.dentix.domain.jwt.JwtTokenUtil;
-import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.global.common.response.DataResponse;
-import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,7 +18,6 @@ import java.util.Map;
 public class DaeguChainDidController {
 
     private final DaeguChainDidService daeguChainDidService;
-    private final JwtTokenUtil jwtTokenUtil;
 
     @PostMapping("/project-list")
     public DataResponse<DaeguChainDto.ApiResponse<JsonNode>> projectList(@RequestBody(required = false) Map<String, Object> request) {
@@ -62,16 +57,6 @@ public class DaeguChainDidController {
     @PostMapping("/issue-credential")
     public DataResponse<DaeguChainDto.ApiResponse<JsonNode>> issueCredential(@RequestBody Map<String, Object> request) {
         return new DataResponse<>(daeguChainDidService.issueCredential(request));
-    }
-
-    @PostMapping("/issue-login-user-credential")
-    public DataResponse<DaeguChainDto.ApiResponse<JsonNode>> issueLoginUserCredential(HttpServletRequest request) {
-        String accessToken = jwtTokenUtil.getAccessToken(request);
-        if (accessToken == null) {
-            throw new UnauthorizedException("인증 정보가 없습니다.");
-        }
-        Long userId = jwtTokenUtil.getUserId(accessToken, TokenType.AccessToken);
-        return new DataResponse<>(daeguChainDidService.issueLoginUserCredential(userId));
     }
 
     @PostMapping("/disclosure")

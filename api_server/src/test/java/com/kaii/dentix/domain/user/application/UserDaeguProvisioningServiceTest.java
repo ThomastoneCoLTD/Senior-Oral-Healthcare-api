@@ -8,7 +8,6 @@ import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.user.domain.UserDaeguCredentialStatus;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,16 +70,6 @@ class UserDaeguProvisioningServiceTest {
         when(daeguChainDidService.createAccount(any()))
                 .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
-        when(daeguChainDidService.issueLoginUserCredential(user))
-                .thenAnswer(invocation -> {
-                    user.updateDaeguCredential(
-                            "issued.credential.jwt",
-                            UserDaeguCredentialStatus.ISSUED,
-                            null,
-                            null
-                    );
-                    return null;
-                });
 
         String walletAddress = service.provisionForSignUp(user);
 
@@ -97,32 +86,6 @@ class UserDaeguProvisioningServiceTest {
         ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
         verify(userRewardWalletRepository).save(captor.capture());
         assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
-        verify(daeguChainDidService).issueLoginUserCredential(user);
-    }
-
-    @Test
-    void provisionForSignUpStoresCredentialJwtReturnedByDidServer() throws Exception {
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .build();
-        JsonNode didData = new ObjectMapper().readTree("""
-                {
-                  "did": "did:mitum:minic:0x123",
-                  "address": "0x123",
-                  "credentialJwt": "credential.jwt.value"
-                }
-                """);
-        when(daeguChainDidService.createAccount(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
-        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
-
-        service.provisionForSignUp(user);
-
-        assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
-        assertThat(user.getDaeguCredentialJwt()).isEqualTo("credential.jwt.value");
-        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.ISSUED);
-        verify(daeguChainDidService, never()).issueLoginUserCredential(user);
     }
 
     @Test
@@ -151,16 +114,6 @@ class UserDaeguProvisioningServiceTest {
                         "cid-account"
                 ));
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
-        when(daeguChainDidService.issueLoginUserCredential(user))
-                .thenAnswer(invocation -> {
-                    user.updateDaeguCredential(
-                            "issued.credential.jwt",
-                            UserDaeguCredentialStatus.ISSUED,
-                            null,
-                            null
-                    );
-                    return null;
-                });
 
         String walletAddress = service.provisionForSignUp(user);
 
@@ -189,9 +142,7 @@ class UserDaeguProvisioningServiceTest {
         assertThat(user.getDaeguDid()).isNull();
         assertThat(user.getDaeguDidKey()).isNull();
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.FAILED);
-        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.FAILED);
         verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
-        verify(daeguChainDidService, never()).issueLoginUserCredential(any(User.class));
     }
 
     @Test
@@ -210,70 +161,12 @@ class UserDaeguProvisioningServiceTest {
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
         when(daeguChainAccountService.createAccount(any()))
                 .thenThrow(new BadRequestApiException("token is required"));
-        when(daeguChainDidService.issueLoginUserCredential(user))
-                .thenAnswer(invocation -> {
-                    user.updateDaeguCredential(
-                            "issued.credential.jwt",
-                            UserDaeguCredentialStatus.ISSUED,
-                            null,
-                            null
-                    );
-                    return null;
-                });
 
         String walletAddress = service.provisionForSignUp(user);
 
         assertThat(walletAddress).isNull();
         assertThat(user.getDaeguDid()).isEqualTo("did:key:z6MkSelfGenerated");
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
-        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.ISSUED);
         verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
-        verify(daeguChainDidService).issueLoginUserCredential(user);
-    }
-
-    @Test
-    void provisionForSignUpMarksCredentialFailedWhenCredentialIssueFails() throws Exception {
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .build();
-        JsonNode didData = new ObjectMapper().readTree("""
-                {
-                  "did": "did:mitum:minic:0x123",
-                  "address": "0x123"
-                }
-                """);
-        when(daeguChainDidService.createAccount(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
-        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
-        when(daeguChainDidService.issueLoginUserCredential(user))
-                .thenThrow(new BadRequestApiException("credential jwt is empty"));
-
-        service.provisionForSignUp(user);
-
-        assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
-        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.FAILED);
-    }
-
-    @Test
-    void provisionForSignUpMarksCredentialFailedWhenCredentialIssueDoesNotStoreJwt() throws Exception {
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .build();
-        JsonNode didData = new ObjectMapper().readTree("""
-                {
-                  "did": "did:mitum:minic:0x123",
-                  "address": "0x123"
-                }
-                """);
-        when(daeguChainDidService.createAccount(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
-        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
-
-        service.provisionForSignUp(user);
-
-        assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
-        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.FAILED);
     }
 }

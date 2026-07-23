@@ -5,9 +5,6 @@ import com.kaii.dentix.domain.daeguChain.client.DaeguChainClient;
 import com.kaii.dentix.domain.daeguChain.client.ExternalDidClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
-import com.kaii.dentix.domain.user.dao.UserRepository;
-import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.user.domain.UserDaeguCredentialStatus;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +14,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -36,9 +32,6 @@ class DaeguChainDidServiceTest {
     @Mock
     private ExternalDidClient externalDidClient;
 
-    @Mock
-    private UserRepository userRepository;
-
     private DaeguChainProperties properties;
     private ObjectMapper objectMapper;
     private DaeguChainDidService service;
@@ -49,7 +42,7 @@ class DaeguChainDidServiceTest {
         objectMapper = new ObjectMapper();
         properties.setChain("dchain");
         properties.setToken("configured-token");
-        service = new DaeguChainDidService(daeguChainClient, externalDidClient, userRepository, properties, objectMapper);
+        service = new DaeguChainDidService(daeguChainClient, externalDidClient, properties, objectMapper);
     }
 
     @Test
@@ -74,149 +67,6 @@ class DaeguChainDidServiceTest {
         )))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("subject is required");
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    void issueLoginUserCredentialUsesConfiguredTemplateAndStoresJwt() throws Exception {
-        properties.setLoginUserCredentialValidFrom("2026-06-01");
-        properties.setLoginUserCredentialValidUntil("2026-12-01");
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .daeguDid("did:mitum:minic:0xabc")
-                .build();
-        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
-        when(externalDidClient.issueVc(any()))
-                .thenReturn(objectMapper.readTree("""
-                        {
-                          "vc_jwt": "credential-jwt",
-                          "exp": 1793404800
-                        }
-                        """));
-
-        service.issueLoginUserCredential(7L);
-
-        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
-        verify(externalDidClient).issueVc(captor.capture());
-
-        assertThat(captor.getValue().get("issuer")).isEqualTo("did:mitum:minic:0xabc");
-        assertThat(captor.getValue().get("subject")).isEqualTo("did:mitum:minic:0xabc");
-        assertThat(captor.getValue().get("aud")).isEqualTo("VLVSWVRSOPZJMPINTBNA");
-        assertThat(captor.getValue().get("ttl")).isEqualTo(15_811_200L);
-
-        Map<String, Object> claims = (Map<String, Object>) captor.getValue().get("claims");
-        assertThat(claims.get("id")).isEqualTo("soh-user-001");
-        assertThat(claims.get("userIdentifier")).isEqualTo("soh-user-001");
-        assertThat(user.getDaeguCredentialJwt()).isEqualTo("credential-jwt");
-        assertThat(user.getDaeguCredentialStatus()).isEqualTo(UserDaeguCredentialStatus.ISSUED);
-        assertThat(user.getDaeguCredentialValidFrom()).hasToString("2026-06-01");
-        assertThat(user.getDaeguCredentialValidUntil()).hasToString("2026-12-01");
-        verifyNoMoreInteractions(daeguChainClient);
-    }
-
-    @Test
-    void issueLoginUserCredentialRequiresUserDid() {
-        when(userRepository.findById(7L)).thenReturn(Optional.of(User.builder()
-                .userId(7L)
-                .build()));
-
-        assertThatThrownBy(() -> service.issueLoginUserCredential(7L))
-                .isInstanceOf(BadRequestApiException.class)
-                .hasMessage("user daeguDid is required");
-    }
-
-    @Test
-    void issueLoginUserCredentialRequiresUserLoginIdentifier() {
-        when(userRepository.findById(7L)).thenReturn(Optional.of(User.builder()
-                .userId(7L)
-                .daeguDid("did:mitum:minic:0xabc")
-                .build()));
-
-        assertThatThrownBy(() -> service.issueLoginUserCredential(7L))
-                .isInstanceOf(BadRequestApiException.class)
-                .hasMessage("userLoginIdentifier is required");
-    }
-
-    @Test
-    void verifyLoginUserCredentialCallsExternalVerifyVcAndAcceptsValidPayload() throws Exception {
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .daeguDid("did:key:z6MkUser")
-                .daeguCredentialJwt("credential-jwt")
-                .build();
-        when(externalDidClient.verifyVc(any()))
-                .thenReturn(objectMapper.readTree("""
-                        {
-                          "valid": true,
-                          "payload": {
-                            "iss": "did:key:z6MkUser",
-                            "sub": "did:key:z6MkUser",
-                            "vc": {
-                              "credentialSubject": {
-                                "id": "soh-user-001",
-                                "userIdentifier": "soh-user-001"
-                              }
-                            }
-                          }
-                        }
-                        """));
-
-        boolean verified = service.verifyLoginUserCredential(user);
-
-        assertThat(verified).isTrue();
-        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
-        verify(externalDidClient).verifyVc(captor.capture());
-        assertThat(captor.getValue().get("vc_jwt")).isEqualTo("credential-jwt");
-        assertThat(captor.getValue().get("aud")).isEqualTo("VLVSWVRSOPZJMPINTBNA");
-        verifyNoMoreInteractions(daeguChainClient);
-    }
-
-    @Test
-    void verifyLoginUserCredentialRejectsExternalInvalidResponse() throws Exception {
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .daeguDid("did:key:z6MkUser")
-                .daeguCredentialJwt("credential-jwt")
-                .build();
-        when(externalDidClient.verifyVc(any()))
-                .thenReturn(objectMapper.readTree("""
-                        {
-                          "valid": false,
-                          "reason": "expired"
-                        }
-                        """));
-
-        assertThat(service.verifyLoginUserCredential(user)).isFalse();
-    }
-
-    @Test
-    void verifyLoginUserCredentialRejectsCredentialForDifferentUser() throws Exception {
-        User user = User.builder()
-                .userId(7L)
-                .userLoginIdentifier("soh-user-001")
-                .daeguDid("did:key:z6MkUser")
-                .daeguCredentialJwt("credential-jwt")
-                .build();
-        when(externalDidClient.verifyVc(any()))
-                .thenReturn(objectMapper.readTree("""
-                        {
-                          "valid": true,
-                          "payload": {
-                            "iss": "did:key:z6MkUser",
-                            "sub": "did:key:z6MkUser",
-                            "vc": {
-                              "credentialSubject": {
-                                "id": "another-user"
-                              }
-                            }
-                          }
-                        }
-                        """));
-
-        assertThat(service.verifyLoginUserCredential(user)).isFalse();
     }
 
     @Test

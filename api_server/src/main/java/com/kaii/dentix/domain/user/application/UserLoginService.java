@@ -180,7 +180,6 @@ public class UserLoginService {
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || StringUtils.isBlank(user.getDaeguDid())) {
             throw new UnauthorizedException("DID is not issued.");
         }
-        verifyDaeguCredentialForLogin(user);
 
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
@@ -214,7 +213,6 @@ public class UserLoginService {
                 .organizationName(organization.getOrganizationName())
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
-                .daeguCredentialStatus(user.getDaeguCredentialStatus())
                 .walletAddress(walletAddress)
                 .build();
     }
@@ -251,25 +249,6 @@ public class UserLoginService {
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
                 .build();
-    }
-
-    private void verifyDaeguCredentialForLogin(User user) {
-        if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || StringUtils.isBlank(user.getDaeguDid())) {
-            throw new UnauthorizedException("DID credential is not issued.");
-        }
-
-        if (StringUtils.isBlank(user.getDaeguCredentialJwt())) {
-            try {
-                daeguChainDidService.issueLoginUserCredential(user);
-            } catch (RuntimeException exception) {
-                user.markDaeguCredentialFailed();
-                throw new UnauthorizedException("DID credential verification failed.");
-            }
-        }
-
-        if (!daeguChainDidService.verifyLoginUserCredential(user)) {
-            throw new UnauthorizedException("DID credential verification failed.");
-        }
     }
 
     private Long resolveDefaultFindPwdQuestionId() {

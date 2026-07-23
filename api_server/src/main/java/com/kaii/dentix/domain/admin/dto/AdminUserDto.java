@@ -10,10 +10,8 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
-import com.kaii.dentix.domain.user.domain.UserDaeguCredentialStatus;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 
-import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -218,9 +216,6 @@ public class AdminUserDto {
         private Date userLastLoginDate;
         private String daeguDid;
         private UserDaeguIdentityStatus daeguDidStatus;
-        private UserDaeguCredentialStatus daeguCredentialStatus;
-        private LocalDate daeguCredentialValidFrom;
-        private LocalDate daeguCredentialValidUntil;
         private boolean didIssued;
         private String walletDaeguDid;
         private String walletAddress;

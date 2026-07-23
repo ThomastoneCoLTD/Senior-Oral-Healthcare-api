@@ -30,8 +30,6 @@ class ExternalDidClientTest {
         DaeguChainProperties properties = new DaeguChainProperties();
         properties.setDidServerBaseUrl("https://did.example.com/");
         properties.setDidCreatePath("/did/create");
-        properties.setDidIssueVcPath("/did/issue-vc");
-        properties.setDidVerifyVcPath("/did/verify-vc");
 
         MockServerRestTemplateCustomizer customizer = new MockServerRestTemplateCustomizer();
         client = new ExternalDidClient(properties, new RestTemplateBuilder(customizer));
@@ -53,48 +51,6 @@ class ExternalDidClientTest {
         JsonNode response = client.createDid(Map.of("label", "soh-user-001"));
 
         assertThat(response.path("did").asText()).isEqualTo("did:key:z6MkUser");
-        server.verify();
-    }
-
-    @Test
-    void issueVcPostsConfiguredIssuePath() {
-        server.expect(once(), requestTo("https://did.example.com/did/issue-vc"))
-                .andExpect(method(POST))
-                .andExpect(content().string(containsString("\"issuer\":\"did:key:z6MkUser\"")))
-                .andExpect(content().string(containsString("\"subject\":\"did:key:z6MkUser\"")))
-                .andRespond(withSuccess("""
-                        {
-                          "vc_jwt": "credential-jwt",
-                          "exp": 1793404800
-                        }
-                        """, MediaType.APPLICATION_JSON));
-
-        JsonNode response = client.issueVc(Map.of(
-                "issuer", "did:key:z6MkUser",
-                "subject", "did:key:z6MkUser"
-        ));
-
-        assertThat(response.path("vc_jwt").asText()).isEqualTo("credential-jwt");
-        server.verify();
-    }
-
-    @Test
-    void verifyVcPostsConfiguredVerifyPath() {
-        server.expect(once(), requestTo("https://did.example.com/did/verify-vc"))
-                .andExpect(method(POST))
-                .andExpect(content().string(containsString("\"vc_jwt\":\"credential-jwt\"")))
-                .andRespond(withSuccess("""
-                        {
-                          "valid": true,
-                          "payload": {
-                            "iss": "did:key:z6MkUser"
-                          }
-                        }
-                        """, MediaType.APPLICATION_JSON));
-
-        JsonNode response = client.verifyVc(Map.of("vc_jwt", "credential-jwt"));
-
-        assertThat(response.path("valid").asBoolean()).isTrue();
         server.verify();
     }
 }

@@ -28,17 +28,11 @@ public class DaeguChainProperties {
     private Boolean tokenLockable = true;
     private String didServerBaseUrl = "http://43.201.125.82";
     private String didCreatePath = "/did/create";
-    private String didIssueVcPath = "/did/issue-vc";
-    private String didVerifyVcPath = "/did/verify-vc";
     private String tokenServerBaseUrl = "http://43.201.125.82";
     private String tokenCreatePath = "/token/create";
     private String tokenTransferPath = "/token/transfer";
     private String tokenListPath = "/token/token_list";
     private Map<String, String> rewardTokenContracts = new LinkedHashMap<>();
-    private String loginUserCredentialTemplateId = "VLVSWVRSOPZJMPINTBNA";
-    private String loginUserCredentialValidFrom;
-    private String loginUserCredentialValidUntil;
-    private Integer loginUserCredentialValidDays = 3650;
 
     public String resolveAppKey() {
         return hasText(appKey) ? appKey : token;

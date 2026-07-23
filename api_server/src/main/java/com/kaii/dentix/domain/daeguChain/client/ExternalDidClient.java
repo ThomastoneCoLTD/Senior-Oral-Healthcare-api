@@ -38,14 +38,6 @@ public class ExternalDidClient {
         return body;
     }
 
-    public JsonNode issueVc(Map<String, Object> request) {
-        return post(properties.getDidIssueVcPath(), request);
-    }
-
-    public JsonNode verifyVc(Map<String, Object> request) {
-        return post(properties.getDidVerifyVcPath(), request);
-    }
-
     private JsonNode post(String path, Map<String, Object> request) {
         try {
             ResponseEntity<JsonNode> response = restTemplate.exchange(

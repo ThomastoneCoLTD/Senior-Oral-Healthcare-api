@@ -64,11 +64,9 @@ class UserLoginServiceTest {
                 .isVerify(YnType.Y)
                 .daeguDid("did:mitum:minic:0x123")
                 .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
-                .daeguCredentialJwt("jwt")
                 .build();
 
         given(userRepository.findByUserLoginIdentifier("dentix123")).willReturn(Optional.of(user));
-        given(daeguChainDidService.verifyLoginUserCredential(user)).willReturn(true);
         given(jwtTokenUtil.createToken(user, TokenType.AccessToken)).willReturn("access-token");
         given(jwtTokenUtil.createToken(user, TokenType.RefreshToken)).willReturn("refresh-token");
 
