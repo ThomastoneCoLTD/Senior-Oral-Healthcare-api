@@ -56,16 +56,4 @@ public interface UserRewardTransactionRepository extends JpaRepository<UserRewar
             Pageable pageable
     );
 
-    @Query("""
-            select coalesce(sum(rewardTransaction.amount), 0)
-            from UserRewardTransaction rewardTransaction
-            where rewardTransaction.userId = :userId
-              and rewardTransaction.type = :type
-              and rewardTransaction.status not in :excludedStatuses
-            """)
-    long sumRewardedAmount(
-            @Param("userId") Long userId,
-            @Param("type") UserRewardTransactionType type,
-            @Param("excludedStatuses") Collection<UserRewardTransactionStatus> excludedStatuses
-    );
 }

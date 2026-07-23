@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.env.Environment;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -135,8 +136,21 @@ class UserRewardServiceTest {
                 UserRewardTransactionType.ORAL_EXERCISE_COIN,
                 UserRewardTransactionStatus.CANCELED
         )).thenReturn(Optional.of(transaction));
-        when(transactionRepository.sumRewardedAmount(eq(7L), eq(UserRewardTransactionType.ORAL_EXERCISE_COIN), any()))
-                .thenReturn(9L);
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of(
+                transaction,
+                rewardTransaction(
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                        UserRewardTransactionStatus.TOKEN_TRANSFERRED,
+                        3L,
+                        "essential_video_2"
+                ),
+                rewardTransaction(
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                        UserRewardTransactionStatus.POINT_MINTED,
+                        3L,
+                        "essential_video_3"
+                )
+        ));
         when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
                 .userId(7L)
                 .pointBalance(9L)
@@ -172,8 +186,21 @@ class UserRewardServiceTest {
                 UserRewardTransactionType.ORAL_EXERCISE_COIN,
                 UserRewardTransactionStatus.CANCELED
         )).thenReturn(Optional.of(rewardedTransaction));
-        when(transactionRepository.sumRewardedAmount(eq(7L), eq(UserRewardTransactionType.ORAL_EXERCISE_COIN), any()))
-                .thenReturn(5L);
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of(
+                rewardedTransaction,
+                rewardTransaction(
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                        UserRewardTransactionStatus.TOKEN_TRANSFERRED,
+                        5L,
+                        "essential_video_2"
+                ),
+                rewardTransaction(
+                        UserRewardTransactionType.ORAL_EXERCISE_RECLAIM,
+                        UserRewardTransactionStatus.TOKEN_TRANSFERRED,
+                        3L,
+                        "essential_video_1"
+                )
+        ));
         when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
                 .userId(7L)
                 .pointBalance(5L)
@@ -195,8 +222,20 @@ class UserRewardServiceTest {
 
     @Test
     void getWalletExcludesFailedRewardTransactionsFromPointBalance() {
-        when(transactionRepository.sumRewardedAmount(eq(7L), eq(UserRewardTransactionType.ORAL_EXERCISE_COIN), any()))
-                .thenReturn(2L);
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of(
+                rewardTransaction(
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                        UserRewardTransactionStatus.TOKEN_TRANSFERRED,
+                        2L,
+                        "essential_video_1"
+                ),
+                rewardTransaction(
+                        UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                        UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED,
+                        3L,
+                        "essential_video_2"
+                )
+        ));
         when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
                 .userId(7L)
                 .pointBalance(5L)
@@ -662,6 +701,24 @@ class UserRewardServiceTest {
                 .build();
         ReflectionTestUtils.setField(content, "oralExerciseContentId", 11L);
         return content;
+    }
+
+    private UserRewardTransaction rewardTransaction(
+            UserRewardTransactionType type,
+            UserRewardTransactionStatus status,
+            long amount,
+            String coinId
+    ) {
+        return UserRewardTransaction.builder()
+                .userId(7L)
+                .oralExerciseContent(type == UserRewardTransactionType.ORAL_EXERCISE_COIN ? content() : null)
+                .type(type)
+                .status(status)
+                .amount(amount)
+                .balanceAfter(0L)
+                .idempotencyKey("%s:%s:%s".formatted(type, coinId, status))
+                .coinId(coinId)
+                .build();
     }
 
     private com.fasterxml.jackson.databind.JsonNode rewardTokenList() throws Exception {
