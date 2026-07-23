@@ -47,6 +47,11 @@ public class UserRewardService {
             UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED,
             UserRewardTransactionStatus.POINT_MINT_FAILED
     );
+    private static final EnumSet<UserRewardTransactionStatus> COMPLETED_RECLAIM_STATUSES = EnumSet.of(
+            UserRewardTransactionStatus.LOCAL_RECORDED,
+            UserRewardTransactionStatus.POINT_MINTED,
+            UserRewardTransactionStatus.TOKEN_TRANSFERRED
+    );
 
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final UserRewardTransactionRepository userRewardTransactionRepository;
@@ -213,11 +218,21 @@ public class UserRewardService {
     }
 
     private long calculateRewardedPointBalance(Long userId) {
-        return userRewardTransactionRepository.sumRewardedAmount(
-                userId,
-                UserRewardTransactionType.ORAL_EXERCISE_COIN,
-                NON_REWARDED_STATUSES
-        );
+        List<UserRewardTransaction> transactions = userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId);
+        if (transactions == null || transactions.isEmpty()) {
+            return 0L;
+        }
+        long rewardedAmount = transactions.stream()
+                .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                .filter(transaction -> !NON_REWARDED_STATUSES.contains(transaction.getStatus()))
+                .mapToLong(UserRewardTransaction::getAmount)
+                .sum();
+        long reclaimedAmount = transactions.stream()
+                .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_RECLAIM)
+                .filter(transaction -> COMPLETED_RECLAIM_STATUSES.contains(transaction.getStatus()))
+                .mapToLong(UserRewardTransaction::getAmount)
+                .sum();
+        return Math.max(rewardedAmount - reclaimedAmount, 0L);
     }
 
     private void creditReward(UserRewardWallet wallet, UserRewardTransaction transaction) {

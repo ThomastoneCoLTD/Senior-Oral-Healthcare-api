@@ -36,6 +36,11 @@ import java.util.stream.IntStream;
 public class UserRewardReclaimService {
 
     private static final int ESSENTIAL_REWARD_COUNT = 5;
+    private static final Set<UserRewardTransactionStatus> COMPLETED_RECLAIM_STATUSES = Set.of(
+            UserRewardTransactionStatus.LOCAL_RECORDED,
+            UserRewardTransactionStatus.POINT_MINTED,
+            UserRewardTransactionStatus.TOKEN_TRANSFERRED
+    );
 
     private final UserRewardTransactionRepository userRewardTransactionRepository;
     private final UserRewardWalletRepository userRewardWalletRepository;
@@ -66,7 +71,7 @@ public class UserRewardReclaimService {
         }
 
         if (!userRewardProperties.isTokenTransferEnabled()) {
-            return recordLocalReclaim(userId, allTransactions);
+            return recordLocalReclaim(userId, wallet, allTransactions);
         }
 
         if (isBlank(wallet.getDaeguDid()) || isBlank(wallet.getWalletAddress())) {
@@ -148,6 +153,7 @@ public class UserRewardReclaimService {
         int reclaimedCount = (int) reclaimTransactions.stream()
                 .filter(transaction -> transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFERRED)
                 .count() - skippedCount;
+        refreshWalletPointBalance(wallet, allTransactions, reclaimTransactions);
 
         return UserRewardDto.ReclaimResponse.builder()
                 .reclaimedCount(Math.max(reclaimedCount, 0))
@@ -160,7 +166,11 @@ public class UserRewardReclaimService {
                 .build();
     }
 
-    private UserRewardDto.ReclaimResponse recordLocalReclaim(Long userId, List<UserRewardTransaction> allTransactions) {
+    private UserRewardDto.ReclaimResponse recordLocalReclaim(
+            Long userId,
+            UserRewardWallet wallet,
+            List<UserRewardTransaction> allTransactions
+    ) {
         List<UserRewardTransaction> rewardTransactions = allTransactions.stream()
                 .filter(this::isReceivedOralExerciseReward)
                 .filter(transaction -> !isBlank(transaction.getCoinId()))
@@ -200,6 +210,7 @@ public class UserRewardReclaimService {
             reclaimedCount += 1;
             reclaimedAmount += rewardTransaction.getAmount();
         }
+        refreshWalletPointBalance(wallet, allTransactions, reclaimTransactions);
 
         return UserRewardDto.ReclaimResponse.builder()
                 .reclaimedCount(reclaimedCount)
@@ -224,6 +235,34 @@ public class UserRewardReclaimService {
     private boolean isReceivedOralExerciseReward(UserRewardTransaction transaction) {
         return transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN
                 && transaction.isRewardReceived();
+    }
+
+    private boolean isCompletedReclaim(UserRewardTransaction transaction) {
+        return transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_RECLAIM
+                && COMPLETED_RECLAIM_STATUSES.contains(transaction.getStatus());
+    }
+
+    private void refreshWalletPointBalance(
+            UserRewardWallet wallet,
+            List<UserRewardTransaction> allTransactions,
+            List<UserRewardTransaction> reclaimTransactions
+    ) {
+        long rewardedAmount = allTransactions.stream()
+                .filter(this::isReceivedOralExerciseReward)
+                .mapToLong(UserRewardTransaction::getAmount)
+                .sum();
+        Map<String, UserRewardTransaction> completedReclaimsByKey = new LinkedHashMap<>();
+        allTransactions.stream()
+                .filter(this::isCompletedReclaim)
+                .forEach(transaction -> completedReclaimsByKey.put(transaction.getIdempotencyKey(), transaction));
+        reclaimTransactions.stream()
+                .filter(this::isCompletedReclaim)
+                .forEach(transaction -> completedReclaimsByKey.put(transaction.getIdempotencyKey(), transaction));
+        long reclaimedAmount = completedReclaimsByKey.values().stream()
+                .mapToLong(UserRewardTransaction::getAmount)
+                .sum();
+        wallet.resetPointBalance(Math.max(rewardedAmount - reclaimedAmount, 0L));
+        userRewardWalletRepository.save(wallet);
     }
 
     private String resolveTokenContractAddress(

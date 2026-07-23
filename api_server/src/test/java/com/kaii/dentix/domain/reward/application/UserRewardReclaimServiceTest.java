@@ -99,6 +99,42 @@ class UserRewardReclaimServiceTest {
     }
 
     @Test
+    void reclaimOralExerciseTokensTransfersOptionalRewardsTogetherWhenEssentialsAreCompleted() throws Exception {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialAndOptionalRewards());
+        when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
+        when(externalTokenClient.transferToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "tx_hash": "0x-reclaim-tx",
+                          "fact_hash": "reclaim-fact"
+                        }
+                        """));
+
+        UserRewardDto.ReclaimResponse response = service.reclaimOralExerciseTokens(request);
+
+        assertThat(response.getReclaimedCount()).isEqualTo(7);
+        assertThat(response.getSkippedCount()).isZero();
+        assertThat(response.getFailedCount()).isZero();
+        assertThat(response.getTransactions())
+                .extracting(UserRewardDto.TransactionResponse::getCoinId)
+                .contains("optional_video_1", "optional_video_2");
+        verify(externalTokenClient).transferToken(
+                eq("did:mitum:minic:0x-user-wallet"),
+                eq("OPTIONAL_VIDEO_1"),
+                eq("0x-token-contract-optional-1"),
+                eq("0x-token-owner"),
+                eq(1L)
+        );
+        verify(externalTokenClient).transferToken(
+                eq("did:mitum:minic:0x-user-wallet"),
+                eq("OPTIONAL_VIDEO_2"),
+                eq("0x-token-contract-optional-2"),
+                eq("0x-token-owner"),
+                eq(1L)
+        );
+    }
+
+    @Test
     void reclaimOralExerciseTokensSkipsAlreadyTransferredReclaims() {
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
         when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.of(UserRewardTransaction.builder()
@@ -200,6 +236,26 @@ class UserRewardReclaimServiceTest {
                     return transaction;
                 })
                 .toList();
+    }
+
+    private List<UserRewardTransaction> essentialAndOptionalRewards() {
+        java.util.ArrayList<UserRewardTransaction> rewards = new java.util.ArrayList<>(essentialRewards());
+        java.util.stream.IntStream.rangeClosed(1, 2)
+                .forEach(index -> {
+                    UserRewardTransaction transaction = UserRewardTransaction.builder()
+                            .userId(7L)
+                            .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                            .status(UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                            .amount(1L)
+                            .balanceAfter(5L + index)
+                            .idempotencyKey("ORAL_EXERCISE_BUTTON:7:optional_video_" + index)
+                            .coinId("optional_video_" + index)
+                            .tokenContractAddress("0x-token-contract-optional-" + index)
+                            .build();
+                    ReflectionTestUtils.setField(transaction, "userRewardTransactionId", 100L + index);
+                    rewards.add(transaction);
+                });
+        return rewards;
     }
 
     private List<UserRewardTransaction> localRecordedEssentialRewards() {
