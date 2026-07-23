@@ -2,6 +2,7 @@ package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainApiLogContext;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
@@ -323,12 +324,16 @@ public class UserRewardService {
         try {
             RewardTokenRef rewardToken = resolveRewardTokenRef(transaction, rewardTokenName);
             transaction.updateTokenContractAddress(rewardToken.contractAddress());
-            JsonNode response = externalTokenClient.transferToken(
-                    wallet.getDaeguDid(),
-                    rewardToken.tokenName(),
-                    rewardToken.contractAddress(),
-                    wallet.getWalletAddress(),
-                    transaction.getAmount()
+            JsonNode response = DaeguChainApiLogContext.withUser(
+                    transaction.getUserId(),
+                    "구강체조 리워드 지급",
+                    () -> externalTokenClient.transferToken(
+                            wallet.getDaeguDid(),
+                            rewardToken.tokenName(),
+                            rewardToken.contractAddress(),
+                            wallet.getWalletAddress(),
+                            transaction.getAmount()
+                    )
             );
             transaction.markTokenTransferred(
                     findFirstText(response, "tx_hash", "transaction_hash", "hash", "Date"),
@@ -350,7 +355,11 @@ public class UserRewardService {
             return new RewardTokenRef(rewardTokenName, transaction.getTokenContractAddress());
         }
 
-        JsonNode tokens = findTokenArray(externalTokenClient.getTokenList());
+        JsonNode tokens = findTokenArray(DaeguChainApiLogContext.withUser(
+                transaction.getUserId(),
+                "구강체조 리워드 지급",
+                externalTokenClient::getTokenList
+        ));
         if (tokens != null && tokens.isArray()) {
             for (JsonNode token : tokens) {
                 String tokenName = findFirstText(token, "token_name", "tokenName", "name");
@@ -424,15 +433,19 @@ public class UserRewardService {
 
         try {
             DaeguChainDto.ApiResponse<com.fasterxml.jackson.databind.JsonNode> response =
-                    daeguChainPointService.mintPoint(new DaeguChainDto.TokenMintRequest(
-                            null,
-                            null,
-                            userRewardProperties.getPointContractAddress(),
-                            userRewardProperties.getPointOwnerAddress(),
-                            userRewardProperties.getPointOwnerPrivateKey(),
-                            wallet.getWalletAddress(),
-                            String.valueOf(transaction.getAmount())
-                    ));
+                    DaeguChainApiLogContext.withUser(
+                            transaction.getUserId(),
+                            "구강체조 포인트 지급",
+                            () -> daeguChainPointService.mintPoint(new DaeguChainDto.TokenMintRequest(
+                                    null,
+                                    null,
+                                    userRewardProperties.getPointContractAddress(),
+                                    userRewardProperties.getPointOwnerAddress(),
+                                    userRewardProperties.getPointOwnerPrivateKey(),
+                                    wallet.getWalletAddress(),
+                                    String.valueOf(transaction.getAmount())
+                            ))
+                    );
             transaction.markPointMinted(extractHash(response, "tx_hash", "transaction_hash", "hash"), extractHash(response, "fact_hash"));
         } catch (RuntimeException exception) {
             transaction.markPointMintFailed();
@@ -501,7 +514,11 @@ public class UserRewardService {
 
     private DidWallet createDidWallet(Long userId) {
         try {
-            DaeguChainDto.ApiResponse<JsonNode> response = daeguChainDidService.createAccount(Map.of());
+            DaeguChainDto.ApiResponse<JsonNode> response = DaeguChainApiLogContext.withUser(
+                    userId,
+                    "DID 계정 발급",
+                    () -> daeguChainDidService.createAccount(Map.of())
+            );
             JsonNode data = response == null ? null : response.getData();
             String did = findFirstText(data, "did", "DID", "account");
             String walletAddress = findFirstText(data, "address");
@@ -509,7 +526,7 @@ public class UserRewardService {
                 walletAddress = extractAddressFromDid(did);
             }
             if (isBlank(walletAddress)) {
-                walletAddress = createDaeguWalletAddress();
+                walletAddress = createDaeguWalletAddress(userId);
             }
             if (isBlank(walletAddress)) {
                 throw new BadRequestApiException("DaeguChain DID wallet address is empty");
@@ -528,9 +545,12 @@ public class UserRewardService {
         return "0x" + "%040x".formatted(hash);
     }
 
-    private String createDaeguWalletAddress() {
-        DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> response =
-                daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null));
+    private String createDaeguWalletAddress(Long userId) {
+        DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> response = DaeguChainApiLogContext.withUser(
+                userId,
+                "리워드 지갑 생성",
+                () -> daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null))
+        );
         return response == null
                 || response.getData() == null
                 || response.getData().getKeyPair() == null

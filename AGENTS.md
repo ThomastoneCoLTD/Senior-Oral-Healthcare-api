@@ -179,6 +179,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 관리자 페이지에 기관별 사용자 구강체조 영상 진도 및 필수 영상 토큰 수령 현황 조회 탭을 추가했습니다. 관리자 API는 `/admin/user/exercise-progress`를 사용합니다.
 - 관리자 페이지에 사용자 DID 계정 발급, 리워드 지갑 생성, 로그인 이력, 필수 입 체조 5개 영상 리워드 지급, 리워드 회수 내역을 한 번에 보는 DID 리워드 현황 탭을 추가했습니다. 관리자 API는 `/admin/user/daegu-reward-status`를 사용합니다.
 - 관리자 페이지에 대구체인 기능 사용 로그(사용 기능, 사용자 아이디, 사용일시) 조회 화면을 추가했습니다. 관리자 API는 `/admin/user/daegu-chain-usage-logs`를 사용하며 기존 DID 로그인, DID 발급, 구강체조 리워드 지급·회수 이력을 통합해 보여줍니다.
+- 대구체인 API 신규 호출은 `daegu_chain_api_log` 테이블에 API, 마스킹된 Request/Response, 성공 여부를 저장합니다. `token`, 앱키, private key, pkey, JWT, 비밀번호·secret 계열 필드는 실제 값이 로그에 남지 않아야 합니다. 배포 전 과거 통합 로그에는 API/Request/Response가 없을 수 있습니다.
 - 사용자 로그인 성공 시마다 `user_login_history` 테이블에 이력이 기록됩니다. 배포 이전 과거 로그인 이력은 소급 생성되지 않으며 기존 `userLastLoginDate`는 최근 로그인 일시로 함께 조회됩니다.
 - 사용자 구강체조 인트로 영상(`optional_video_1`, 1화)은 영상 내 번호 버튼 성공 시 토큰 수령 대상입니다. 단, 사용자 화면의 리워드 슬롯과 자동 리워드 회수 조건은 기존처럼 필수영상 5개(`essential_video_1~5`)만 반영합니다.
 - 구강체조 리워드 토큰 전송 실패 시에도 `TOKEN_TRANSFER_FAILED` 트랜잭션 이력을 남겨 관리자/사용자 조회 및 다음 동일 리워드 요청의 재시도 판단에 사용합니다.

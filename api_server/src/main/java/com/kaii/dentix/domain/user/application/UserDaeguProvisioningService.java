@@ -2,6 +2,7 @@ package com.kaii.dentix.domain.user.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainApiLogContext;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
@@ -34,7 +35,11 @@ public class UserDaeguProvisioningService {
 
     private String provisionDid(User user) {
         try {
-            DaeguChainDto.ApiResponse<JsonNode> response = daeguChainDidService.createAccount(buildDidCreateRequest(user));
+            DaeguChainDto.ApiResponse<JsonNode> response = DaeguChainApiLogContext.withUser(
+                    user.getUserId(),
+                    "DID 계정 발급",
+                    () -> daeguChainDidService.createAccount(buildDidCreateRequest(user))
+            );
             JsonNode data = response.getData();
             String did = findFirstText(data, "did", "DID", "account");
             String key = findFirstText(data, "publickey", "public_key", "publicKey", "key_id", "keyId");
@@ -85,13 +90,13 @@ public class UserDaeguProvisioningService {
                         userRewardWalletRepository.save(wallet);
                         return wallet.getWalletAddress();
                     }
-                    String walletAddress = resolveWalletAddress(didWalletAddress);
+                    String walletAddress = resolveWalletAddress(user.getUserId(), didWalletAddress);
                     wallet.updateDaeguWallet(daeguDid, walletAddress);
                     userRewardWalletRepository.save(wallet);
                     return walletAddress;
                 })
                 .orElseGet(() -> {
-                    String walletAddress = resolveWalletAddress(didWalletAddress);
+                    String walletAddress = resolveWalletAddress(user.getUserId(), didWalletAddress);
                     userRewardWalletRepository.save(UserRewardWallet.builder()
                             .userId(user.getUserId())
                             .pointBalance(0L)
@@ -102,16 +107,19 @@ public class UserDaeguProvisioningService {
                 });
     }
 
-    private String resolveWalletAddress(String didWalletAddress) {
+    private String resolveWalletAddress(Long userId, String didWalletAddress) {
         if (!isBlank(didWalletAddress)) {
             return didWalletAddress;
         }
-        return createDaeguWalletAddress();
+        return createDaeguWalletAddress(userId);
     }
 
-    private String createDaeguWalletAddress() {
-        DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> response =
-                daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null));
+    private String createDaeguWalletAddress(Long userId) {
+        DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> response = DaeguChainApiLogContext.withUser(
+                userId,
+                "리워드 지갑 생성",
+                () -> daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null))
+        );
         String walletAddress = response == null
                 || response.getData() == null
                 || response.getData().getKeyPair() == null

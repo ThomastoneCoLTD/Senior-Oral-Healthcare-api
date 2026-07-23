@@ -1,8 +1,10 @@
 package com.kaii.dentix.domain.daeguChain.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainApiAuditService;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -26,10 +28,21 @@ public class ExternalTokenClient {
 
     private final DaeguChainProperties properties;
     private final RestTemplate restTemplate;
+    private final DaeguChainApiAuditService auditService;
 
     public ExternalTokenClient(DaeguChainProperties properties, RestTemplateBuilder restTemplateBuilder) {
+        this(properties, restTemplateBuilder, null);
+    }
+
+    @Autowired
+    public ExternalTokenClient(
+            DaeguChainProperties properties,
+            RestTemplateBuilder restTemplateBuilder,
+            DaeguChainApiAuditService auditService
+    ) {
         this.properties = properties;
         this.restTemplate = restTemplateBuilder.build();
+        this.auditService = auditService;
     }
 
     public JsonNode createToken(String tokenName, String tokenSymbol, Long supply) {
@@ -100,22 +113,45 @@ public class ExternalTokenClient {
     }
 
     private JsonNode post(String path, Object body) {
+        String api = getTokenServerUrl(path);
         try {
             ResponseEntity<JsonNode> response = restTemplate.exchange(
-                    getTokenServerUrl(path),
+                    api,
                     HttpMethod.POST,
                     new HttpEntity<>(body),
                     JsonNode.class
             );
             JsonNode responseBody = Objects.requireNonNull(response.getBody(), "Token server response body is empty");
             if (isFailedResponse(responseBody)) {
-                throw new BadRequestApiException(extractErrorMessage(responseBody));
+                BadRequestApiException exception = new BadRequestApiException(extractErrorMessage(responseBody));
+                record(api, body, responseBody, false);
+                throw exception;
             }
+            record(api, body, responseBody, true);
             return responseBody;
         } catch (HttpStatusCodeException exception) {
-            throw new BadRequestApiException("Token server API call failed: " + extractErrorMessage(exception.getResponseBodyAsString()));
+            BadRequestApiException apiException = new BadRequestApiException(
+                    "Token server API call failed: " + extractErrorMessage(exception.getResponseBodyAsString())
+            );
+            record(api, body, exception.getResponseBodyAsString(), false);
+            throw apiException;
         } catch (RestClientException | NullPointerException exception) {
-            throw new BadRequestApiException("Token server API call failed: " + exception.getMessage());
+            BadRequestApiException apiException =
+                    new BadRequestApiException("Token server API call failed: " + exception.getMessage());
+            recordFailure(api, body, apiException);
+            throw apiException;
+        }
+    }
+
+    private void record(String api, Object request, Object response, boolean success) {
+        if (auditService != null) {
+            auditService.record(api, request, response, success);
+        }
+    }
+
+    private void recordFailure(String api, Object request, RuntimeException exception) {
+        if (auditService != null) {
+            auditService.recordFailure(api, request, exception);
         }
     }
 

@@ -9,6 +9,7 @@ import com.kaii.dentix.domain.admin.dto.AdminUserDto;
 import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
 import com.kaii.dentix.domain.agreement.dao.ServiceAgreementRepository;
 import com.kaii.dentix.domain.agreement.domain.ServiceAgreement;
+import com.kaii.dentix.domain.daeguChain.dao.DaeguChainApiLogRepository;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.findPwdQuestion.domain.FindPwdQuestion;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
@@ -70,6 +71,7 @@ class AdminUserServiceTest {
     @Mock private UserRewardTransactionRepository userRewardTransactionRepository;
     @Mock private UserRewardWalletRepository userRewardWalletRepository;
     @Mock private UserLoginHistoryRepository userLoginHistoryRepository;
+    @Mock private DaeguChainApiLogRepository daeguChainApiLogRepository;
 
     private AdminUserService adminUserService;
 
@@ -93,7 +95,8 @@ class AdminUserServiceTest {
                 oralExerciseProgressRepository,
                 userRewardTransactionRepository,
                 userRewardWalletRepository,
-                userLoginHistoryRepository
+                userLoginHistoryRepository,
+                daeguChainApiLogRepository
         );
     }
 

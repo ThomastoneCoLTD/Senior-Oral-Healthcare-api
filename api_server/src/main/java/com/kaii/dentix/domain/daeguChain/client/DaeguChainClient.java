@@ -1,10 +1,12 @@
 package com.kaii.dentix.domain.daeguChain.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainApiAuditService;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -29,10 +31,21 @@ public class DaeguChainClient {
 
     private final DaeguChainProperties properties;
     private final RestTemplate restTemplate;
+    private final DaeguChainApiAuditService auditService;
 
     public DaeguChainClient(DaeguChainProperties properties, RestTemplateBuilder restTemplateBuilder) {
+        this(properties, restTemplateBuilder, null);
+    }
+
+    @Autowired
+    public DaeguChainClient(
+            DaeguChainProperties properties,
+            RestTemplateBuilder restTemplateBuilder,
+            DaeguChainApiAuditService auditService
+    ) {
         this.properties = properties;
         this.restTemplate = restTemplateBuilder.build();
+        this.auditService = auditService;
     }
 
     public DaeguChainDto.ApiResponse<DaeguChainDto.RpcNodeData> getRpcNode(DaeguChainDto.ChainRequest request) {
@@ -334,17 +347,36 @@ public class DaeguChainClient {
             Object request,
             ParameterizedTypeReference<DaeguChainDto.ApiResponse<T>> responseType
     ) {
+        String api = getApiUrl(path);
         try {
             ResponseEntity<DaeguChainDto.ApiResponse<T>> response = restTemplate.exchange(
-                    getApiUrl(path),
+                    api,
                     HttpMethod.POST,
                     new HttpEntity<>(request),
                     responseType
             );
 
-            return Objects.requireNonNull(response.getBody(), "DaeguChain response body is empty");
+            DaeguChainDto.ApiResponse<T> responseBody =
+                    Objects.requireNonNull(response.getBody(), "DaeguChain response body is empty");
+            record(api, request, responseBody, true);
+            return responseBody;
         } catch (RestClientException | NullPointerException exception) {
-            throw new BadRequestApiException("DaeguChain API call failed: " + exception.getMessage());
+            BadRequestApiException apiException =
+                    new BadRequestApiException("DaeguChain API call failed: " + exception.getMessage());
+            recordFailure(api, request, apiException);
+            throw apiException;
+        }
+    }
+
+    private void record(String api, Object request, Object response, boolean success) {
+        if (auditService != null) {
+            auditService.record(api, request, response, success);
+        }
+    }
+
+    private void recordFailure(String api, Object request, RuntimeException exception) {
+        if (auditService != null) {
+            auditService.recordFailure(api, request, exception);
         }
     }
 

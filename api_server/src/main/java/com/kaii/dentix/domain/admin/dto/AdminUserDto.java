@@ -275,8 +275,13 @@ public class AdminUserDto {
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor
     public static class DaeguChainUsageLog {
+        private Long logId;
         private String feature;
         private String userLoginIdentifier;
+        private String api;
+        private String requestPayload;
+        private String responsePayload;
+        private Boolean success;
         private Date usedAt;
     }
 }

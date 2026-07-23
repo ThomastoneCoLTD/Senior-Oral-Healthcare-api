@@ -7,6 +7,8 @@ import com.kaii.dentix.domain.admin.dto.AdminUserDto;
 import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
 import com.kaii.dentix.domain.agreement.dao.ServiceAgreementRepository;
 import com.kaii.dentix.domain.agreement.domain.ServiceAgreement;
+import com.kaii.dentix.domain.daeguChain.dao.DaeguChainApiLogRepository;
+import com.kaii.dentix.domain.daeguChain.domain.DaeguChainApiLog;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
 import com.kaii.dentix.domain.findPwdQuestion.domain.FindPwdQuestion;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
@@ -101,6 +103,7 @@ public class AdminUserService {
     private final UserRewardTransactionRepository userRewardTransactionRepository;
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final UserLoginHistoryRepository userLoginHistoryRepository;
+    private final DaeguChainApiLogRepository daeguChainApiLogRepository;
 
     /**
      * 일반관리자 - 본인 기관의 사용자 목록 조회
@@ -408,6 +411,20 @@ public class AdminUserService {
                 .collect(Collectors.toMap(User::getUserId, Function.identity()));
 
         List<AdminUserDto.DaeguChainUsageLog> logs = new ArrayList<>();
+        List<DaeguChainApiLog> apiLogs = userIds.isEmpty()
+                ? List.of()
+                : daeguChainApiLogRepository.findByUserIdInOrderByCreatedDesc(userIds);
+        Map<Long, Date> firstApiLogByUserId = apiLogs.stream()
+                .collect(Collectors.toMap(
+                        DaeguChainApiLog::getUserId,
+                        DaeguChainApiLog::getCreated,
+                        (left, right) -> left.before(right) ? left : right
+                ));
+
+        apiLogs.stream()
+                .map(apiLog -> toDaeguChainUsageLog(apiLog, usersById.get(apiLog.getUserId())))
+                .filter(Objects::nonNull)
+                .forEach(logs::add);
 
         if (!userIds.isEmpty()) {
             userLoginHistoryRepository.findByUserIdInOrderByCreatedDesc(userIds).stream()
@@ -416,6 +433,10 @@ public class AdminUserService {
                     .forEach(logs::add);
 
             userRewardTransactionRepository.findByUserIdInOrderByCreatedDesc(userIds).stream()
+                    .filter(transaction -> isBeforeFirstApiLog(
+                            transaction.getCreated(),
+                            firstApiLogByUserId.get(transaction.getUserId())
+                    ))
                     .map(transaction -> toDaeguChainUsageLog(
                             transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_RECLAIM
                                     ? "구강체조 리워드 회수"
@@ -429,6 +450,7 @@ public class AdminUserService {
 
         users.stream()
                 .filter(user -> user.getDaeguDidStatus() == UserDaeguIdentityStatus.ISSUED)
+                .filter(user -> isBeforeFirstApiLog(user.getCreated(), firstApiLogByUserId.get(user.getUserId())))
                 .map(user -> toDaeguChainUsageLog("DID 계정 발급", user, user.getCreated()))
                 .filter(Objects::nonNull)
                 .forEach(logs::add);
@@ -436,6 +458,26 @@ public class AdminUserService {
         logs.sort((left, right) -> right.getUsedAt().compareTo(left.getUsedAt()));
         return AdminUserDto.DaeguChainUsageLogResponse.builder()
                 .logs(logs)
+                .build();
+    }
+
+    private boolean isBeforeFirstApiLog(Date usedAt, Date firstApiLogAt) {
+        return firstApiLogAt == null || usedAt == null || usedAt.before(firstApiLogAt);
+    }
+
+    private AdminUserDto.DaeguChainUsageLog toDaeguChainUsageLog(DaeguChainApiLog apiLog, User user) {
+        if (apiLog == null || user == null || apiLog.getCreated() == null) {
+            return null;
+        }
+        return AdminUserDto.DaeguChainUsageLog.builder()
+                .logId(apiLog.getDaeguChainApiLogId())
+                .feature(apiLog.getFeature())
+                .userLoginIdentifier(user.getUserLoginIdentifier())
+                .api(apiLog.getApi())
+                .requestPayload(apiLog.getRequestPayload())
+                .responsePayload(apiLog.getResponsePayload())
+                .success(apiLog.isSuccess())
+                .usedAt(apiLog.getCreated())
                 .build();
     }
 

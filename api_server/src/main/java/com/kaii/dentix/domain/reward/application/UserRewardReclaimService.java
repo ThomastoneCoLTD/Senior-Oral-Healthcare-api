@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainApiLogContext;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
@@ -87,7 +88,11 @@ public class UserRewardReclaimService {
         if (rewardTransactions.isEmpty()) {
             throw new BadRequestApiException("reclaimable oral exercise token is not found");
         }
-        Map<String, String> tokenContracts = getRewardTokenContractsIfNeeded(rewardTransactions);
+        Map<String, String> tokenContracts = DaeguChainApiLogContext.withUser(
+                userId,
+                "구강체조 리워드 회수",
+                () -> getRewardTokenContractsIfNeeded(rewardTransactions)
+        );
 
         List<UserRewardTransaction> reclaimTransactions = new ArrayList<>();
         int skippedCount = 0;
@@ -129,13 +134,18 @@ public class UserRewardReclaimService {
                 continue;
             }
 
+            String transferContractAddress = reclaimTokenContractAddress;
             try {
-                JsonNode response = externalTokenClient.transferToken(
-                        wallet.getDaeguDid(),
-                        normalizeTokenName(rewardTransaction.getCoinId()),
-                        reclaimTokenContractAddress,
-                        daeguChainProperties.getTokenOwnerAddress(),
-                        rewardTransaction.getAmount()
+                JsonNode response = DaeguChainApiLogContext.withUser(
+                        userId,
+                        "구강체조 리워드 회수",
+                        () -> externalTokenClient.transferToken(
+                                wallet.getDaeguDid(),
+                                normalizeTokenName(rewardTransaction.getCoinId()),
+                                transferContractAddress,
+                                daeguChainProperties.getTokenOwnerAddress(),
+                                rewardTransaction.getAmount()
+                        )
                 );
                 reclaimTransaction.markTokenTransferred(
                         findFirstText(response, "tx_hash", "transaction_hash", "hash", "Date"),
