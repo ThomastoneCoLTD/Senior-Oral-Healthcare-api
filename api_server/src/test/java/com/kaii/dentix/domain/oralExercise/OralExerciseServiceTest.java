@@ -91,7 +91,8 @@ class OralExerciseServiceTest {
                 content(3),
                 content(4),
                 content(5),
-                content(6)
+                content(6),
+                content(7)
         ));
 
         OralExerciseDto.ListResponse response = service.getContents(request);
@@ -104,13 +105,16 @@ class OralExerciseServiceTest {
                 .singleElement()
                 .satisfies(content -> assertThat(content.isAvailable()).isTrue());
         assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
-                .containsExactly(1);
+                .containsExactly(1, 7);
         assertThat(response.getExtraContents()).allSatisfy(content -> {
             assertThat(content.getWeek()).isEqualTo(0);
             assertThat(content.isAvailable()).isTrue();
             assertThat(content.isCurrentWeekContent()).isTrue();
         });
         assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() == 1)
+                .singleElement()
+                .satisfies(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue());
+        assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() == 7)
                 .singleElement()
                 .satisfies(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue());
     }
@@ -144,7 +148,7 @@ class OralExerciseServiceTest {
                 .singleElement()
                 .satisfies(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue());
         assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() > 6)
-                .allSatisfy(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isFalse());
+                .allSatisfy(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue());
     }
 
     @Test

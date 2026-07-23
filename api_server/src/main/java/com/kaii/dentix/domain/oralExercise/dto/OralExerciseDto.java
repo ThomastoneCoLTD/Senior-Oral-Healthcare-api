@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.oralExercise.dto;
 import com.kaii.dentix.domain.oralExercise.domain.OralExerciseContent;
 import com.kaii.dentix.domain.oralExercise.domain.OralExerciseInteractionEventType;
 import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
+import com.kaii.dentix.domain.reward.domain.OralExerciseRewardToken;
 import lombok.*;
 
 import java.util.List;
@@ -43,7 +44,7 @@ public class OralExerciseDto {
                 String playableThumbnailUrl
         ) {
             boolean coreContent = content.getContentSort() >= 2 && content.getContentSort() <= 6;
-            boolean rewardContent = coreContent || content.getContentSort() == 1;
+            boolean rewardContent = OralExerciseRewardToken.tokenNameForContentSort(content.getContentSort()) != null;
             int displayWeek = coreContent ? content.getContentSort() - 1 : 0;
             boolean available = TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST
                     || !coreContent
