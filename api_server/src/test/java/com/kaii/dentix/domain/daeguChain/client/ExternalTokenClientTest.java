@@ -72,6 +72,8 @@ class ExternalTokenClientTest {
         server.expect(once(), requestTo("https://token.example.com/token/transfer"))
                 .andExpect(method(POST))
                 .andExpect(content().string(containsString("\"token\":\"app-token\"")))
+                .andExpect(content().string(containsString("\"user_DID\":\"did:example:user\"")))
+                .andExpect(content().string(containsString("\"user_did\":\"did:example:user\"")))
                 .andExpect(content().string(containsString("\"token_name\":\"ESSENTIAL_VIDEO_1\"")))
                 .andExpect(content().string(containsString("\"contract\":\"0x-token\"")))
                 .andExpect(content().string(containsString("\"receiver\":\"0x-user\"")))
@@ -94,7 +96,7 @@ class ExternalTokenClientTest {
 
     @Test
     void transferTokenSurfacesTokenServerErrorMessage() {
-        server.expect(once(), requestTo("https://token.example.com/token/transfer"))
+        server.expect(org.springframework.test.web.client.ExpectedCount.times(3), requestTo("https://token.example.com/token/transfer"))
                 .andExpect(method(POST))
                 .andRespond(withStatus(HttpStatus.BAD_REQUEST)
                         .contentType(MediaType.APPLICATION_JSON)

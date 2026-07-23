@@ -79,11 +79,14 @@ public class UserDaeguProvisioningService {
     private String provisionWallet(User user, String didWalletAddress) {
         return userRewardWalletRepository.findByUserId(user.getUserId())
                 .map(wallet -> {
+                    String daeguDid = user.getDaeguDid();
                     if (!isBlank(wallet.getWalletAddress())) {
+                        wallet.updateDaeguWallet(daeguDid, wallet.getWalletAddress());
+                        userRewardWalletRepository.save(wallet);
                         return wallet.getWalletAddress();
                     }
                     String walletAddress = resolveWalletAddress(didWalletAddress);
-                    wallet.updateDaeguWallet(user.getDaeguDid(), walletAddress);
+                    wallet.updateDaeguWallet(daeguDid, walletAddress);
                     userRewardWalletRepository.save(wallet);
                     return walletAddress;
                 })

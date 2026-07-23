@@ -16,9 +16,13 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Locale;
 
 @Component
 public class ExternalTokenClient {
+
+    private static final int TRANSFER_MAX_ATTEMPTS = 3;
+    private static final long TRANSFER_RETRY_DELAY_MS = 700L;
 
     private final DaeguChainProperties properties;
     private final RestTemplate restTemplate;
@@ -40,6 +44,9 @@ public class ExternalTokenClient {
         validateTransferPath();
         Map<String, Object> body = baseBody();
         body.put("user_DID", userDid);
+        body.put("user_did", userDid);
+        body.put("userDid", userDid);
+        body.put("did", userDid);
         body.put("token_name", tokenName);
         if (contractAddress != null && !contractAddress.isBlank()) {
             body.put("contract", contractAddress);
@@ -49,7 +56,7 @@ public class ExternalTokenClient {
         body.put("receiver", receiver);
         body.put("wallet_address", receiver);
         body.put("amount", amount);
-        return post(properties.getTokenTransferPath(), body);
+        return postTokenTransfer(body);
     }
 
     private void validateTransferPath() {
@@ -62,6 +69,24 @@ public class ExternalTokenClient {
 
     public JsonNode getTokenList() {
         return post(properties.getTokenListPath(), baseBody());
+    }
+
+    private JsonNode postTokenTransfer(Map<String, Object> body) {
+        BadRequestApiException lastException = null;
+        for (int attempt = 1; attempt <= TRANSFER_MAX_ATTEMPTS; attempt++) {
+            try {
+                return post(properties.getTokenTransferPath(), body);
+            } catch (BadRequestApiException exception) {
+                lastException = exception;
+                if (attempt >= TRANSFER_MAX_ATTEMPTS || !isUserDidNotFound(exception)) {
+                    throw exception;
+                }
+                sleepBeforeRetry();
+            }
+        }
+        throw lastException == null
+                ? new BadRequestApiException("Token server request failed")
+                : lastException;
     }
 
     private Map<String, Object> baseBody() {
@@ -91,6 +116,21 @@ public class ExternalTokenClient {
             throw new BadRequestApiException("Token server API call failed: " + extractErrorMessage(exception.getResponseBodyAsString()));
         } catch (RestClientException | NullPointerException exception) {
             throw new BadRequestApiException("Token server API call failed: " + exception.getMessage());
+        }
+    }
+
+    private boolean isUserDidNotFound(BadRequestApiException exception) {
+        String message = exception.getMessage();
+        return message != null
+                && message.toLowerCase(Locale.ROOT).replace("_", "").contains("userdidnotfound");
+    }
+
+    private void sleepBeforeRetry() {
+        try {
+            Thread.sleep(TRANSFER_RETRY_DELAY_MS);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new BadRequestApiException("Token transfer retry interrupted");
         }
     }
 
