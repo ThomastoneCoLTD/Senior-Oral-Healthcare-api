@@ -400,6 +400,56 @@ public class AdminUserService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public AdminUserDto.DaeguChainUsageLogResponse getDaeguChainUsageLogs(HttpServletRequest request) {
+        List<User> users = getVisibleUsers(request);
+        List<Long> userIds = users.stream().map(User::getUserId).toList();
+        Map<Long, User> usersById = users.stream()
+                .collect(Collectors.toMap(User::getUserId, Function.identity()));
+
+        List<AdminUserDto.DaeguChainUsageLog> logs = new ArrayList<>();
+
+        if (!userIds.isEmpty()) {
+            userLoginHistoryRepository.findByUserIdInOrderByCreatedDesc(userIds).stream()
+                    .map(history -> toDaeguChainUsageLog("DID 로그인", usersById.get(history.getUserId()), history.getCreated()))
+                    .filter(Objects::nonNull)
+                    .forEach(logs::add);
+
+            userRewardTransactionRepository.findByUserIdInOrderByCreatedDesc(userIds).stream()
+                    .map(transaction -> toDaeguChainUsageLog(
+                            transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_RECLAIM
+                                    ? "구강체조 리워드 회수"
+                                    : "구강체조 리워드 지급",
+                            usersById.get(transaction.getUserId()),
+                            transaction.getCreated()
+                    ))
+                    .filter(Objects::nonNull)
+                    .forEach(logs::add);
+        }
+
+        users.stream()
+                .filter(user -> user.getDaeguDidStatus() == UserDaeguIdentityStatus.ISSUED)
+                .map(user -> toDaeguChainUsageLog("DID 계정 발급", user, user.getCreated()))
+                .filter(Objects::nonNull)
+                .forEach(logs::add);
+
+        logs.sort((left, right) -> right.getUsedAt().compareTo(left.getUsedAt()));
+        return AdminUserDto.DaeguChainUsageLogResponse.builder()
+                .logs(logs)
+                .build();
+    }
+
+    private AdminUserDto.DaeguChainUsageLog toDaeguChainUsageLog(String feature, User user, Date usedAt) {
+        if (user == null || usedAt == null) {
+            return null;
+        }
+        return AdminUserDto.DaeguChainUsageLog.builder()
+                .feature(feature)
+                .userLoginIdentifier(user.getUserLoginIdentifier())
+                .usedAt(usedAt)
+                .build();
+    }
+
     private AdminUserDto.EssentialReward toEssentialReward(
             OralExerciseContent content,
             UserRewardTransaction reward

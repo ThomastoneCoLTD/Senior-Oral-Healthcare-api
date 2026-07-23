@@ -265,4 +265,18 @@ public class AdminUserDto {
         private String factHash;
         private Date created;
     }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class DaeguChainUsageLogResponse {
+        private List<DaeguChainUsageLog> logs;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class DaeguChainUsageLog {
+        private String feature;
+        private String userLoginIdentifier;
+        private Date usedAt;
+    }
 }

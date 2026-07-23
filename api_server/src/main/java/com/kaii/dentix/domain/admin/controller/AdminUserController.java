@@ -112,6 +112,13 @@ public class AdminUserController {
         return new DataResponse<>(adminUserService.getDaeguRewardStatus(request));
     }
 
+    @GetMapping(value = "/daegu-chain-usage-logs", name = "대구체인 기능 사용 로그")
+    public DataResponse<AdminUserDto.DaeguChainUsageLogResponse> getDaeguChainUsageLogs(
+            HttpServletRequest request
+    ) {
+        return new DataResponse<>(adminUserService.getDaeguChainUsageLogs(request));
+    }
+
     /**
      * 일반관리자 - 기관 사용자 일괄등록 엑셀 양식 다운로드
      */
