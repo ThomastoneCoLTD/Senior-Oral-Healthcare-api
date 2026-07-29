@@ -238,7 +238,7 @@ ASG: soh-api-prod-asg
 Origin domain: api.soh.thomabio.com
 Release type: prod
 EC2 instance type: t3.medium
-RDS: soh-api-prod-mysql, MySQL 8.0, db.t3.small, single-AZ
+RDS: soh-api-prod-mysql, MySQL 8.4, db.t3.small, single-AZ
 RDS database: thomastone
 ```
 
@@ -318,6 +318,7 @@ SOH_TERRAFORM_TFVARS_PROD
 ```
 
 Each `SOH_TERRAFORM_TFVARS_*` secret should contain the filled content of that environment's `terraform.tfvars.example`. Do not put AWS access keys, DB passwords, JWT secrets, or real `.env` content in these Terraform tfvars secrets.
+`SOH_TERRAFORM_TFVARS_PROD` must keep `db_engine_version = "8.4"` unless the production RDS instance is intentionally upgraded. The current production instance is MySQL `8.4.10`; the `8.4` prefix lets AWS RDS manage patch versions while preventing Terraform from planning a MySQL 8.4 to 8.0 downgrade.
 
 The dev API deploy workflow first creates `.env` from `SOH_API_ENV_DEV`. If the dedicated repository secrets `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, or `SPRING_DATASOURCE_PASSWORD` are set, the workflow overwrites those matching keys in the generated dev `.env` before uploading it to S3. Use this for urgent dev RDS password rotation without editing the whole `SOH_API_ENV_DEV` blob.
 The dev/prod deploy workflows also accept dedicated DaeguChain overrides: `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, and `TOKEN_SERVER_BASE_URL_PROD`. At least one of `DAEGU_CHAIN_APP_KEY` or `DAEGU_CHAIN_TOKEN` must be present in the generated `.env` for token list/create/transfer APIs.

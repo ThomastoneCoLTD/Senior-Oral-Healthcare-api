@@ -127,6 +127,7 @@ SOH_TERRAFORM_TFVARS_PROD
 - Terraform apply는 Codex에서 직접 실행하지 않습니다. GitHub Actions 또는 사람이 검토 후 실행합니다.
 - 운영 API는 별도 prod VPC를 만들지 않고 개발 API VPC(`soh-api-dev-vpc`)와 dev public/private app/private DB subnet을 재사용합니다.
 - 운영 API 도메인은 `https://api.soh.thomabio.com`이며, 프론트 production `VITE_API_BASE_URL`은 `https://api.soh.thomabio.com/api`입니다.
+- 운영 RDS `soh-api-prod-mysql`은 MySQL `8.4.10`이며 Terraform 입력은 patch 자동 업그레이드를 고려해 `db_engine_version = "8.4"`로 유지합니다. `8.0`으로 두면 Terraform이 `8.4.10 -> 8.0.x` 다운그레이드를 시도해 apply가 실패합니다.
 - 기존 prod VPC가 Terraform state에 있던 경우 apply 전에 plan에서 VPC/subnet/NAT 삭제가 뜨는지 확인하고, 의도하지 않은 destroy plan은 승인하지 않습니다.
 - 수동 AWS 콘솔 구축 문서는 `readme_수동.md`를 확인합니다.
 - CI/CD, Terraform, 브랜치 정책, AWS 상수, GitHub Secrets, S3 경로, ASG 이름, CloudFront/API 라우팅, 배포 명령이 바뀌면 `README.md`와 `AGENTS.md`를 함께 갱신합니다.

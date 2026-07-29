@@ -170,7 +170,7 @@ variable "db_engine" {
 
 variable "db_engine_version" {
   type    = string
-  default = "8.0"
+  default = "8.4"
 }
 
 variable "db_instance_class" {
