@@ -47,6 +47,17 @@ jobs:
           fi
           printf '%s\n' "$TERRAFORM_TFVARS" > terraform.tfvars
 
+          detected_db_engine_version="$(
+            awk -F= '/^[[:space:]]*db_engine_version[[:space:]]*=/ {
+              value = $2
+              gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+              gsub(/^"|"$/, "", value)
+              print value
+              exit
+            }' terraform.tfvars
+          )"
+          echo "Detected SOH_TERRAFORM_TFVARS_PROD db_engine_version: ${detected_db_engine_version:-<missing>}"
+
           if grep -Eq '^[[:space:]]*db_engine_version[[:space:]]*=[[:space:]]*"8\.0"' terraform.tfvars; then
             echo "SOH_TERRAFORM_TFVARS_PROD still sets db_engine_version to 8.0."
             echo "Production RDS soh-api-prod-mysql is MySQL 8.4.10; set db_engine_version = \"8.4\" before applying."
