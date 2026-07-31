@@ -165,7 +165,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 구강체조 콘텐츠 제목, 영상 URL, 실제 영상 길이를 초기 데이터에 반영했습니다.
 - 구강체조 영상은 `s3://tms-static-hosting/oral-exercise/video/`, 썸네일은 `s3://tms-static-hosting/oral-exercise/video-thumbnails/` 아래에서 불러옵니다. 썸네일은 토큰명 기준 PNG 파일을 사용합니다. 예: `optional_video_1.png`, `essential_video_1.png`, `optional_video_7.png`.
 - `s3://tms-static-hosting/oral-exercise/...` 형태로 저장된 구강체조 자산 URL은 API 응답에서 `https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/...`로 변환합니다.
-- TTS API(`/tts/speech`)는 AWS Polly `SynthesizeSpeech` 권한이 필요하며, 로그인 사용자만 호출하도록 둡니다. 프론트의 기존 전역/콘텐츠 TTS 버튼은 제거했고, 이 API는 구강체조 영상 시작 전 안내와 영상 중 토큰 번호 안내에 사용합니다. 시작 안내가 끝나면 영상이 자동재생됩니다.
+- TTS API(`/tts/speech`)는 AWS Polly `SynthesizeSpeech` 권한이 필요하며, 로그인 사용자만 호출하도록 둡니다. 구강체조 회차별 시작·완료 안내는 프론트에서 `s3://tms-static-hosting/oral-exercise/tts/구강_운동_AI_MP3_본문_32개/`의 CSV 파일명 기준 고정 MP3를 재생하고, S3 음원 실패 시에만 이 API로 CSV 문장을 합성합니다. 영상 중 토큰 번호 안내는 항상 이 API를 사용합니다. 시작 안내는 영상을 열 때 한 번만 재생하며, 토큰 번호 안내 중에는 영상과 버튼 제한시간을 모두 멈추고, 토큰 수령 뒤에는 시작 안내 없이 영상을 이어서 재생합니다.
 - 회원가입(`/login/signUp`, `/login/signUp/did`) 시 토큰 수령용 `walletAddress`를 필수로 받아 `UserRewardWallet`에 함께 저장합니다.
 - 회원가입 사용자는 요청 기관값과 무관하게 `tokenadmin` 관리자 계정의 소속 기관 사용자로 저장합니다. `tokenadmin` 계정 또는 소속 기관이 없으면 가입이 실패합니다.
 - 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
