@@ -5,8 +5,8 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:com.mysql.cj.jdbc.Driver}
     type: com.zaxxer.hikari.HikariDataSource
     hikari: # connection-timeout :  pool에서 connect 얻을 때 최대 대기시간이며, 기본 30초임
       poolName: SpringBootJPAHikariCP

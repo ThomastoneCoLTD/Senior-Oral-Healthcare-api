@@ -73,9 +73,6 @@ jobs:
       - name: Create env file from GitHub Secret
         env:
           SOH_API_ENV: ${{ secrets.SOH_API_ENV_DEV }}
-          SPRING_DATASOURCE_URL_OVERRIDE: ${{ secrets.SPRING_DATASOURCE_URL }}
-          SPRING_DATASOURCE_USERNAME_OVERRIDE: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD_OVERRIDE: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
           DAEGU_CHAIN_APP_KEY_OVERRIDE: ${{ secrets.DAEGU_CHAIN_APP_KEY_DEV || secrets.DAEGU_CHAIN_APP_KEY }}
           DAEGU_CHAIN_TOKEN_OVERRIDE: ${{ secrets.DAEGU_CHAIN_TOKEN_DEV || secrets.DAEGU_CHAIN_TOKEN }}
           TOKEN_SERVER_BASE_URL_OVERRIDE: ${{ secrets.TOKEN_SERVER_BASE_URL_DEV || secrets.TOKEN_SERVER_BASE_URL }}
@@ -98,9 +95,6 @@ jobs:
             echo "Applied ${key} override from dedicated GitHub Secret."
           }
 
-          upsert_env "SPRING_DATASOURCE_URL" "${SPRING_DATASOURCE_URL_OVERRIDE}"
-          upsert_env "SPRING_DATASOURCE_USERNAME" "${SPRING_DATASOURCE_USERNAME_OVERRIDE}"
-          upsert_env "SPRING_DATASOURCE_PASSWORD" "${SPRING_DATASOURCE_PASSWORD_OVERRIDE}"
           upsert_env "DAEGU_CHAIN_APP_KEY" "${DAEGU_CHAIN_APP_KEY_OVERRIDE}"
           upsert_env "DAEGU_CHAIN_TOKEN" "${DAEGU_CHAIN_TOKEN_OVERRIDE}"
           upsert_env "TOKEN_SERVER_BASE_URL" "${TOKEN_SERVER_BASE_URL_OVERRIDE}"

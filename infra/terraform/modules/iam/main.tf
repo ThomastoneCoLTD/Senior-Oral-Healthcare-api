@@ -23,42 +23,52 @@ resource "aws_iam_role_policy" "artifact_read" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "ReadSohApiArtifacts"
-        Effect = "Allow"
-        Action = ["s3:GetObject"]
-        Resource = [
-          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/app.jar",
-          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/.env",
-          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/video/*",
-          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/video-thumbnails/*"
-        ]
-      },
-      {
-        Sid    = "WriteSohApiRuntimeUploads"
-        Effect = "Allow"
-        Action = ["s3:PutObject"]
-        Resource = [
-          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/*"
-        ]
-      },
-      {
-        Sid    = "DenyRuntimeOverwriteOfDeployArtifacts"
-        Effect = "Deny"
-        Action = ["s3:PutObject"]
-        Resource = [
-          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/app.jar",
-          "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/.env"
-        ]
-      },
-      {
-        Sid      = "SynthesizeTtsSpeech"
-        Effect   = "Allow"
-        Action   = ["polly:SynthesizeSpeech"]
-        Resource = "*"
-      }
-    ]
+    Statement = concat(
+      [
+        {
+          Sid    = "ReadSohApiArtifacts"
+          Effect = "Allow"
+          Action = ["s3:GetObject"]
+          Resource = [
+            "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/app.jar",
+            "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/.env",
+            "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/video/*",
+            "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/video-thumbnails/*"
+          ]
+        },
+        {
+          Sid    = "WriteSohApiRuntimeUploads"
+          Effect = "Allow"
+          Action = ["s3:PutObject"]
+          Resource = [
+            "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/*"
+          ]
+        },
+        {
+          Sid    = "DenyRuntimeOverwriteOfDeployArtifacts"
+          Effect = "Deny"
+          Action = ["s3:PutObject"]
+          Resource = [
+            "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/app.jar",
+            "arn:aws:s3:::${var.artifact_bucket}/${var.artifact_prefix}/${var.release_type}/.env"
+          ]
+        },
+        {
+          Sid      = "SynthesizeTtsSpeech"
+          Effect   = "Allow"
+          Action   = ["polly:SynthesizeSpeech"]
+          Resource = "*"
+        }
+      ],
+      var.database_secret_arn == "" ? [] : [
+        {
+          Sid      = "ReadRdsMasterUserSecret"
+          Effect   = "Allow"
+          Action   = ["secretsmanager:DescribeSecret", "secretsmanager:GetSecretValue"]
+          Resource = var.database_secret_arn
+        }
+      ]
+    )
   })
 }
 

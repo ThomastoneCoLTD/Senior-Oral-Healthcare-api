@@ -302,14 +302,6 @@ SOH_API_ENV_DEV
 SOH_API_ENV_PROD
 ```
 
-Development datasource override secrets:
-
-```text
-SPRING_DATASOURCE_URL
-SPRING_DATASOURCE_USERNAME
-SPRING_DATASOURCE_PASSWORD
-```
-
 Terraform apply tfvars secrets:
 
 ```text
@@ -318,9 +310,9 @@ SOH_TERRAFORM_TFVARS_PROD
 ```
 
 Each `SOH_TERRAFORM_TFVARS_*` secret should contain the filled content of that environment's `terraform.tfvars.example`. Do not put AWS access keys, DB passwords, JWT secrets, or real `.env` content in these Terraform tfvars secrets.
-`SOH_TERRAFORM_TFVARS_PROD` must keep `db_engine_version = "8.4"` unless the production RDS instance is intentionally upgraded. The current production instance is MySQL `8.4.10`; the `8.4` prefix lets AWS RDS manage patch versions while preventing Terraform from planning a MySQL 8.4 to 8.0 downgrade.
+`SOH_TERRAFORM_TFVARS_PROD` should keep `db_engine_version = "8.4"` unless the production RDS instance is intentionally upgraded. The production apply workflow rejects `8.0`; if this setting is missing from the secret, the workflow appends `db_engine_version = "8.4"` before planning. The current production instance is MySQL `8.4.10`; the `8.4` prefix lets AWS RDS manage patch versions while preventing Terraform from planning a MySQL 8.4 to 8.0 downgrade.
 
-The dev API deploy workflow first creates `.env` from `SOH_API_ENV_DEV`. If the dedicated repository secrets `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, or `SPRING_DATASOURCE_PASSWORD` are set, the workflow overwrites those matching keys in the generated dev `.env` before uploading it to S3. Use this for urgent dev RDS password rotation without editing the whole `SOH_API_ENV_DEV` blob.
+The deploy workflows create `.env` from `SOH_API_ENV_DEV` or `SOH_API_ENV_PROD` and upload it to S3. Do not put RDS passwords in GitHub Secrets. During EC2 boot, the launch template rewrites the datasource settings to use the RDS managed Secrets Manager secret through the AWS Secrets Manager JDBC driver.
 The dev/prod deploy workflows also accept dedicated DaeguChain overrides: `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, and `TOKEN_SERVER_BASE_URL_PROD`. At least one of `DAEGU_CHAIN_APP_KEY` or `DAEGU_CHAIN_TOKEN` must be present in the generated `.env` for token list/create/transfer APIs.
 
 `SOH_API_ENV_DEV` example:
@@ -331,9 +323,6 @@ SPRING_PROFILES_ACTIVE=dev
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh-dev.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh-dev.thomabio.com
-SPRING_DATASOURCE_URL=jdbc:mysql://<DEV_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
-SPRING_DATASOURCE_USERNAME=sohadmin
-SPRING_DATASOURCE_PASSWORD=<DEV_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<DEV_JWT_SECRET>
 DAEGU_CHAIN_APP_KEY=<DEV_DAEGU_CHAIN_APP_KEY>
 DAEGU_CHAIN_ID=mitumt
@@ -354,9 +343,6 @@ SPRING_PROFILES_ACTIVE=prod
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh.thomabio.com
-SPRING_DATASOURCE_URL=jdbc:mysql://<PROD_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
-SPRING_DATASOURCE_USERNAME=sohadmin
-SPRING_DATASOURCE_PASSWORD=<PROD_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<PROD_JWT_SECRET>
 DAEGU_CHAIN_APP_KEY=<PROD_DAEGU_CHAIN_APP_KEY>
 DAEGU_CHAIN_ID=mitumt
@@ -370,7 +356,7 @@ USER_REWARD_TOKEN_TRANSFER_ENABLED=true
 ```
 
 Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3, and EC2 downloads it through the instance profile.
-Terraform outputs `db_address`, `db_endpoint`, and `db_master_user_secret_arn`; use the Secrets Manager secret value to populate the datasource password in the GitHub environment secret.
+Terraform passes `db_address`, `db_port`, `db_name`, and `db_master_user_secret_arn` to the launch template. EC2 rewrites `SPRING_DATASOURCE_URL` to `jdbc-secretsmanager:mysql://...`, sets `SPRING_DATASOURCE_USERNAME` to the secret ARN, clears `SPRING_DATASOURCE_PASSWORD`, and starts the app with `com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`. The EC2 instance profile must keep `secretsmanager:DescribeSecret` and `secretsmanager:GetSecretValue` on that RDS managed secret. When Secrets Manager rotates the RDS password, the JDBC driver refreshes cached credentials for new DB connections, so GitHub Secrets do not need to be edited.
 DaeguChain API requests use `DAEGU_CHAIN_APP_KEY` for every outbound request body field named `token`; keep app keys and any private keys only in environment secrets.
 `DID_SERVER_BASE_URL` must point to the reachable DID service used by `/did/create`; development currently uses `http://43.201.125.82`. `TOKEN_SERVER_BASE_URL` must point to the same reachable token server for `/token/create`, `/token/transfer`, and `/token/token_list`; do not leave it at `http://localhost:5000` on deployed API servers. User signup DID provisioning sends `label` with the user's login identifier, stores the returned `did:key`, and login checks the SOH user DID value and DID issued status without VC-JWT credential verification.
 Oral-exercise reward reclaim sends collected token contracts back to `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS` through the configured token server; SOH must not read, log, or persist user DID private keys for this reclaim flow.

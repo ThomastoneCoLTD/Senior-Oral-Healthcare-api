@@ -30,6 +30,26 @@ variable "spring_profile" {
   type = string
 }
 
+variable "database_secret_arn" {
+  type    = string
+  default = ""
+}
+
+variable "database_address" {
+  type    = string
+  default = ""
+}
+
+variable "database_port" {
+  type    = number
+  default = 3306
+}
+
+variable "database_name" {
+  type    = string
+  default = ""
+}
+
 variable "aws_region" {
   type = string
 }

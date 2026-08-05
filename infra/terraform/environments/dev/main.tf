@@ -79,12 +79,13 @@ module "rds" {
 module "iam" {
   source = "../../modules/iam"
 
-  name_prefix     = local.name_prefix
-  artifact_bucket = var.artifact_bucket
-  artifact_prefix = var.artifact_prefix
-  release_type    = var.release_type
-  enable_ssm      = var.enable_ssm
-  tags            = local.common_tags
+  name_prefix         = local.name_prefix
+  artifact_bucket     = var.artifact_bucket
+  artifact_prefix     = var.artifact_prefix
+  release_type        = var.release_type
+  database_secret_arn = nonsensitive(coalesce(module.rds.master_user_secret_arn, ""))
+  enable_ssm          = var.enable_ssm
+  tags                = local.common_tags
 }
 
 module "alb" {
@@ -117,6 +118,10 @@ module "launch_template" {
   artifact_prefix       = var.artifact_prefix
   release_type          = var.release_type
   spring_profile        = var.spring_profile
+  database_secret_arn   = nonsensitive(coalesce(module.rds.master_user_secret_arn, ""))
+  database_address      = module.rds.db_address
+  database_port         = module.rds.db_port
+  database_name         = module.rds.db_name
   aws_region            = var.aws_region
   instance_type         = var.instance_type
   ami_id                = var.ami_id

@@ -31,7 +31,7 @@ Copy `terraform.tfvars.example` to `terraform.tfvars`, replace placeholders such
 For GitHub Actions apply, store the filled tfvars content in `SOH_TERRAFORM_TFVARS_DEV` and `SOH_TERRAFORM_TFVARS_PROD`.
 The current examples use EC2 `t3.medium` and RDS MySQL `db.t3.small`.
 RDS is created in private DB subnets and the master password is managed by AWS Secrets Manager.
-Production RDS is pinned to the MySQL `8.4` family; keep `SOH_TERRAFORM_TFVARS_PROD` in sync with that version unless the production instance is intentionally upgraded.
+Production RDS is pinned to the MySQL `8.4` family; keep `SOH_TERRAFORM_TFVARS_PROD` in sync with that version unless the production instance is intentionally upgraded. The production apply workflow appends `db_engine_version = "8.4"` when the setting is missing and still rejects `8.0`.
 
 The PR `terraform-plan.yml` workflow moves `backend.tf` aside in the temporary checkout before `terraform init`, so the plan uses local state and the example tfvars. This is only a validation plan; apply workflows use the S3 backend.
 

@@ -64,8 +64,11 @@ jobs:
             exit 1
           fi
 
-          if ! grep -Eq '^[[:space:]]*db_engine_version[[:space:]]*=[[:space:]]*"8\.4"' terraform.tfvars; then
-            echo "SOH_TERRAFORM_TFVARS_PROD must explicitly set db_engine_version = \"8.4\" for production."
+          if [ -z "$detected_db_engine_version" ]; then
+            echo 'db_engine_version is missing; appending db_engine_version = "8.4" for production safety.'
+            printf '\n%s\n' 'db_engine_version = "8.4"' >> terraform.tfvars
+          elif ! grep -Eq '^[[:space:]]*db_engine_version[[:space:]]*=[[:space:]]*"8\.4"' terraform.tfvars; then
+            echo "SOH_TERRAFORM_TFVARS_PROD must set db_engine_version = \"8.4\" for production."
             exit 1
           fi
 

@@ -33,6 +33,10 @@ resource "aws_launch_template" "this" {
     artifact_prefix = var.artifact_prefix
     release_type    = var.release_type
     spring_profile  = var.spring_profile
+    db_secret_arn   = var.database_secret_arn
+    db_address      = var.database_address
+    db_port         = var.database_port
+    db_name         = var.database_name
     aws_region      = var.aws_region
   }))
 

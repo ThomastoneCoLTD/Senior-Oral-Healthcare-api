@@ -15,6 +15,10 @@ AWS_REGION="${aws_region}"
 S3_REGION="${aws_region}"
 SPRING_PROFILE="${spring_profile}"
 SERVICE_USER="ec2-user"
+DB_SECRET_ARN="${db_secret_arn}"
+DB_ADDRESS="${db_address}"
+DB_PORT="${db_port}"
+DB_NAME="${db_name}"
 
 echo "===== SOH API USERDATA START ====="
 date
@@ -34,6 +38,26 @@ chmod 750 "$APP_DIR"
 
 aws s3 cp "s3://$S3_BUCKET/$S3_PATH/$RELEASE_TYPE/$JAR_NAME" "$APP_DIR/$JAR_NAME" --region "$S3_REGION"
 aws s3 cp "s3://$S3_BUCKET/$S3_PATH/$RELEASE_TYPE/$ENV_FILE" "$APP_DIR/$ENV_FILE" --region "$S3_REGION"
+
+upsert_env_file() {
+  local key="$1"
+  local value="$2"
+  local tmp_file
+
+  tmp_file="$(mktemp)"
+  grep -v "^$key=" "$APP_DIR/$ENV_FILE" > "$tmp_file" || true
+  printf '%s=%s\n' "$key" "$value" >> "$tmp_file"
+  mv "$tmp_file" "$APP_DIR/$ENV_FILE"
+}
+
+if [ -n "$DB_SECRET_ARN" ] && [ -n "$DB_ADDRESS" ] && [ -n "$DB_NAME" ]; then
+  echo "Configuring datasource to use AWS Secrets Manager JDBC driver."
+  upsert_env_file "SPRING_DATASOURCE_DRIVER_CLASS_NAME" "com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver"
+  upsert_env_file "SPRING_DATASOURCE_URL" "jdbc-secretsmanager:mysql://$DB_ADDRESS:$DB_PORT/$DB_NAME?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull"
+  upsert_env_file "SPRING_DATASOURCE_USERNAME" "$DB_SECRET_ARN"
+  upsert_env_file "SPRING_DATASOURCE_PASSWORD" ""
+  upsert_env_file "AWS_SECRET_JDBC_REGION" "$AWS_REGION"
+fi
 
 chown "$SERVICE_USER:$SERVICE_USER" "$APP_DIR/$JAR_NAME" "$APP_DIR/$ENV_FILE"
 chmod 755 "$APP_DIR/$JAR_NAME"

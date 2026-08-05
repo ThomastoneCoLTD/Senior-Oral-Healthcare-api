@@ -14,6 +14,11 @@ variable "release_type" {
   type = string
 }
 
+variable "database_secret_arn" {
+  type    = string
+  default = ""
+}
+
 variable "enable_ssm" {
   type    = bool
   default = true

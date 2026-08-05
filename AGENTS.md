@@ -111,11 +111,11 @@ SOH_TERRAFORM_TFVARS_DEV
 SOH_TERRAFORM_TFVARS_PROD
 ```
 
-- `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`가 들어가야 합니다.
-- dev 배포 workflow는 별도 Repository Secret `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`가 있으면 `SOH_API_ENV_DEV` 안의 같은 키를 배포 시 덮어씁니다. RDS 비밀번호만 급히 교체할 때는 해당 별도 Secret을 수정한 뒤 dev workflow를 재실행할 수 있습니다.
+- `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 RDS 비밀번호를 넣지 않습니다. EC2 launch template user-data가 Terraform의 `db_address`, `db_port`, `db_name`, `db_master_user_secret_arn` 값으로 datasource 설정을 덮어씁니다.
+- 배포 EC2는 AWS Secrets Manager JDBC driver(`com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`)를 사용합니다. `SPRING_DATASOURCE_URL`은 `jdbc-secretsmanager:mysql://...`, `SPRING_DATASOURCE_USERNAME`은 RDS managed secret ARN, `SPRING_DATASOURCE_PASSWORD`는 빈 값으로 설정됩니다.
 - DaeguChain 토큰 API는 `DAEGU_CHAIN_APP_KEY` 또는 `DAEGU_CHAIN_TOKEN`이 없으면 실패합니다. dev/prod 배포 workflow는 `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, `TOKEN_SERVER_BASE_URL_PROD` 별도 Secret이 있으면 `.env`의 같은 키를 덮어씁니다.
 - prod 배포 workflow는 운영 토큰 발행/전송 owner 변경을 위해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS_PROD`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY_PROD` 별도 Secret이 있으면 `.env`의 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`를 덮어씁니다.
-- datasource 비밀번호는 RDS Secrets Manager 값에서 가져오고, 저장소 파일에 실제 값을 쓰지 않습니다.
+- datasource 비밀번호는 앱이 EC2 instance profile 권한으로 RDS Secrets Manager에서 직접 가져옵니다. EC2 IAM role에는 해당 secret에 대한 `secretsmanager:DescribeSecret`, `secretsmanager:GetSecretValue` 권한이 필요합니다.
 - DaeguChain/DID 기능에는 `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, `USER_REWARD_TOKEN_TRANSFER_ENABLED` 등을 환경별로 확인합니다.
 - 개발 DID/token 서버는 현재 `DID_SERVER_BASE_URL=http://43.201.125.82`, `TOKEN_SERVER_BASE_URL=http://43.201.125.82`를 사용합니다. 배포 API에서 `TOKEN_SERVER_BASE_URL`이 `http://localhost:5000`이면 EC2 자기 자신을 호출해 token list/create/transfer가 connection refused로 실패합니다.
 - DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. 로그인은 SOH DB에 저장된 사용자 자체 DID 발급 상태와 DID 문자열만 확인하며, VC-JWT credential 발급/검증은 사용하지 않습니다.
@@ -127,7 +127,7 @@ SOH_TERRAFORM_TFVARS_PROD
 - Terraform apply는 Codex에서 직접 실행하지 않습니다. GitHub Actions 또는 사람이 검토 후 실행합니다.
 - 운영 API는 별도 prod VPC를 만들지 않고 개발 API VPC(`soh-api-dev-vpc`)와 dev public/private app/private DB subnet을 재사용합니다.
 - 운영 API 도메인은 `https://api.soh.thomabio.com`이며, 프론트 production `VITE_API_BASE_URL`은 `https://api.soh.thomabio.com/api`입니다.
-- 운영 RDS `soh-api-prod-mysql`은 MySQL `8.4.10`이며 Terraform 입력은 patch 자동 업그레이드를 고려해 `db_engine_version = "8.4"`로 유지합니다. `8.0`으로 두면 Terraform이 `8.4.10 -> 8.0.x` 다운그레이드를 시도해 apply가 실패합니다.
+- 운영 RDS `soh-api-prod-mysql`은 MySQL `8.4.10`이며 Terraform 입력은 patch 자동 업그레이드를 고려해 `db_engine_version = "8.4"`로 유지합니다. `8.0`으로 두면 Terraform이 `8.4.10 -> 8.0.x` 다운그레이드를 시도해 apply가 실패합니다. prod apply workflow는 `SOH_TERRAFORM_TFVARS_PROD`에 이 값이 빠져 있으면 `db_engine_version = "8.4"`를 자동 보강하고, `8.0`은 계속 차단합니다.
 - 기존 prod VPC가 Terraform state에 있던 경우 apply 전에 plan에서 VPC/subnet/NAT 삭제가 뜨는지 확인하고, 의도하지 않은 destroy plan은 승인하지 않습니다.
 - 수동 AWS 콘솔 구축 문서는 `readme_수동.md`를 확인합니다.
 - CI/CD, Terraform, 브랜치 정책, AWS 상수, GitHub Secrets, S3 경로, ASG 이름, CloudFront/API 라우팅, 배포 명령이 바뀌면 `README.md`와 `AGENTS.md`를 함께 갱신합니다.
@@ -156,12 +156,11 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 ## 지금까지 진행한 주요 작업
 
-- 개발 API datasource 설정을 `SPRING_DATASOURCE_*` 환경변수 기반으로 정리했습니다.
+- 개발/운영 API datasource 설정을 AWS Secrets Manager JDBC driver 기반으로 정리해 RDS 비밀번호 변경 시 GitHub Secret 수동 갱신이 필요 없도록 했습니다.
 - 사용자 로그인은 비밀번호 검증이 아니라 DID 흐름으로 처리되도록 변경했습니다.
 - 사용자 로그인 실패 메시지에서 “비밀번호 확인” 문구가 나오지 않고 DID 관련 오류로 나오도록 조정했습니다.
 - API health check 경로 `/api/actuator/health`를 허용했습니다.
 - dev 배포 workflow에서 단일 인스턴스 교체가 가능하도록 ASG instance refresh 설정을 보완했습니다.
-- dev 배포 workflow에서 별도 datasource GitHub Secret 값이 있으면 `SOH_API_ENV_DEV`의 datasource 값을 덮어쓰도록 보완했습니다.
 - 구강체조 콘텐츠 제목, 영상 URL, 실제 영상 길이를 초기 데이터에 반영했습니다.
 - 구강체조 영상은 `s3://tms-static-hosting/oral-exercise/video/`, 썸네일은 `s3://tms-static-hosting/oral-exercise/video-thumbnails/` 아래에서 불러옵니다. 썸네일은 토큰명 기준 PNG 파일을 사용합니다. 예: `optional_video_1.png`, `essential_video_1.png`, `optional_video_7.png`.
 - `s3://tms-static-hosting/oral-exercise/...` 형태로 저장된 구강체조 자산 URL은 API 응답에서 `https://tms-static-hosting.s3.ap-northeast-2.amazonaws.com/oral-exercise/...`로 변환합니다.
