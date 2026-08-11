@@ -39,7 +39,7 @@ jobs:
 
       - name: Write Terraform variables
         env:
-          TERRAFORM_TFVARS: ${{ secrets.SOH_TERRAFORM_TFVARS_PROD }}
+          TERRAFORM_TFVARS: ${{ secrets.SOH_TERRAFORM_TFVARS_PROD_HCL }}
         run: |
           if [ -z "$TERRAFORM_TFVARS" ]; then
             echo "SOH_TERRAFORM_TFVARS_PROD is empty"
