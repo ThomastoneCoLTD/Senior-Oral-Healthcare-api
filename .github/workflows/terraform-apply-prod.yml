@@ -45,7 +45,37 @@ jobs:
             echo "SOH_TERRAFORM_TFVARS_PROD is empty"
             exit 1
           fi
+
+          # GitHub masks a multiline secret as a whole, but Terraform can echo a
+          # single invalid line. Mask each line before parsing or writing it.
+          while IFS= read -r tfvars_line; do
+            if [ -n "$tfvars_line" ]; then
+              printf '::add-mask::%s\n' "$tfvars_line"
+            fi
+          done <<< "$TERRAFORM_TFVARS"
+
+          umask 077
           printf '%s\n' "$TERRAFORM_TFVARS" > terraform.tfvars
+
+          if grep -Eiq '^[[:space:]]*(SPRING_|SERVER_|JWT_|DAEGU_|DID_|TOKEN_|CORS_|FRONTEND_)[A-Z0-9_]*[[:space:]]*=' terraform.tfvars; then
+            echo "SOH_TERRAFORM_TFVARS_PROD contains application .env keys."
+            echo "Replace it with Terraform HCL based on infra/terraform/environments/prod/terraform.tfvars.example."
+            echo "Do not put datasource passwords, JWT secrets, tokens, or private keys in Terraform tfvars."
+            exit 1
+          fi
+
+          if grep -Eiq '^[[:space:]]*[A-Za-z0-9_]*(password|secret|token|private_key|access_key)[A-Za-z0-9_]*[[:space:]]*=' terraform.tfvars; then
+            echo "SOH_TERRAFORM_TFVARS_PROD contains a forbidden sensitive variable."
+            echo "RDS credentials are managed by AWS Secrets Manager and must not be stored in Terraform tfvars."
+            exit 1
+          fi
+
+          for required_tfvar in project_name environment account_id artifact_bucket release_type asg_name db_identifier db_name db_username certificate_arn; do
+            if ! grep -Eq "^[[:space:]]*${required_tfvar}[[:space:]]*=" terraform.tfvars; then
+              echo "SOH_TERRAFORM_TFVARS_PROD is missing required Terraform variable: ${required_tfvar}"
+              exit 1
+            fi
+          done
 
           detected_db_engine_version="$(
             awk -F= '/^[[:space:]]*db_engine_version[[:space:]]*=/ {

@@ -310,6 +310,7 @@ SOH_TERRAFORM_TFVARS_PROD
 ```
 
 Each `SOH_TERRAFORM_TFVARS_*` secret should contain the filled content of that environment's `terraform.tfvars.example`. Do not put AWS access keys, DB passwords, JWT secrets, or real `.env` content in these Terraform tfvars secrets.
+The Terraform apply workflows mask each tfvars line before Terraform can report a parse error and reject application `.env` keys or sensitive variable names before `terraform init`. Keep `SOH_API_ENV_*` and `SOH_TERRAFORM_TFVARS_*` as separate GitHub Secrets; they are not interchangeable.
 `SOH_TERRAFORM_TFVARS_PROD` should keep `db_engine_version = "8.4"` unless the production RDS instance is intentionally upgraded. The production apply workflow rejects `8.0`; if this setting is missing from the secret, the workflow appends `db_engine_version = "8.4"` before planning. The current production instance is MySQL `8.4.10`; the `8.4` prefix lets AWS RDS manage patch versions while preventing Terraform from planning a MySQL 8.4 to 8.0 downgrade.
 
 The deploy workflows create `.env` from `SOH_API_ENV_DEV` or `SOH_API_ENV_PROD` and upload it to S3. Do not put RDS passwords in GitHub Secrets. During EC2 boot, the launch template rewrites the datasource settings to use the RDS managed Secrets Manager secret through the AWS Secrets Manager JDBC driver.
