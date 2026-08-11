@@ -116,6 +116,36 @@ jobs:
           aws s3 cp "${JAR_NAME}" "s3://${S3_BUCKET}/${S3_PREFIX}/${RELEASE_TYPE}/${JAR_NAME}" --only-show-errors
           aws s3 cp "${ENV_FILE}" "s3://${S3_BUCKET}/${S3_PREFIX}/${RELEASE_TYPE}/${ENV_FILE}" --only-show-errors
 
+      - name: Wait for existing ASG instance refresh
+        run: |
+          for attempt in {1..60}; do
+            refresh_status="$(
+              aws autoscaling describe-instance-refreshes \
+                --auto-scaling-group-name "${ASG_NAME}" \
+                --max-records 1 \
+                --query 'InstanceRefreshes[0].Status' \
+                --output text
+            )"
+
+            case "${refresh_status}" in
+              Pending|InProgress|Cancelling|RollbackInProgress|Baking)
+                echo "Existing instance refresh is ${refresh_status}; waiting before starting a new one."
+                sleep 30
+                ;;
+              None|Successful|Failed|Cancelled|RollbackFailed|RollbackSuccessful|"")
+                echo "No blocking instance refresh found. Latest status: ${refresh_status:-None}"
+                exit 0
+                ;;
+              *)
+                echo "Unexpected instance refresh status: ${refresh_status}"
+                exit 1
+                ;;
+            esac
+          done
+
+          echo "Timed out waiting for existing ${ASG_NAME} instance refresh to finish."
+          exit 1
+
       - name: Start ASG instance refresh
         run: |
           aws autoscaling start-instance-refresh \
