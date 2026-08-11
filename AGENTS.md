@@ -108,10 +108,10 @@ AWS_SECRET_ACCESS_KEY
 SOH_API_ENV_DEV
 SOH_API_ENV_PROD
 SOH_TERRAFORM_TFVARS_DEV
-SOH_TERRAFORM_TFVARS_PROD
+SOH_TERRAFORM_TFVARS_PROD_HCL
 ```
 
-- `SOH_TERRAFORM_TFVARS_DEV`, `SOH_TERRAFORM_TFVARS_PROD`에는 각 환경의 `terraform.tfvars.example` 형식인 Terraform HCL만 넣습니다. `SOH_API_ENV_*`의 `.env` 내용이나 DB 비밀번호/JWT secret/token/private key를 넣지 않습니다. Terraform apply workflow는 tfvars 각 줄을 사전 마스킹하고 앱 환경변수 또는 민감 변수명이 섞이면 `terraform init` 전에 차단합니다.
+- `SOH_TERRAFORM_TFVARS_DEV`, `SOH_TERRAFORM_TFVARS_PROD_HCL`에는 각 환경의 `terraform.tfvars.example` 형식인 Terraform HCL만 넣습니다. 운영 workflow는 기존 앱 `.env` Secret과의 이름 충돌을 피하기 위해 `SOH_TERRAFORM_TFVARS_PROD_HCL`을 사용합니다. `SOH_API_ENV_*`의 `.env` 내용이나 DB 비밀번호/JWT secret/token/private key를 넣지 않습니다. Terraform apply workflow는 tfvars 각 줄을 사전 마스킹하고 앱 환경변수 또는 민감 변수명이 섞이면 `terraform init` 전에 차단합니다.
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 RDS 비밀번호를 넣지 않습니다. EC2 launch template user-data가 Terraform의 `db_address`, `db_port`, `db_name`, `db_master_user_secret_arn` 값으로 datasource 설정을 덮어씁니다.
 - 배포 EC2는 AWS Secrets Manager JDBC driver(`com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`)를 사용합니다. `SPRING_DATASOURCE_URL`은 `jdbc-secretsmanager:mysql://...`, `SPRING_DATASOURCE_USERNAME`은 RDS managed secret ARN, `SPRING_DATASOURCE_PASSWORD`는 빈 값으로 설정됩니다.
 - DaeguChain 토큰 API는 `DAEGU_CHAIN_APP_KEY` 또는 `DAEGU_CHAIN_TOKEN`이 없으면 실패합니다. dev/prod 배포 workflow는 `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, `TOKEN_SERVER_BASE_URL_PROD` 별도 Secret이 있으면 `.env`의 같은 키를 덮어씁니다.
@@ -128,7 +128,7 @@ SOH_TERRAFORM_TFVARS_PROD
 - Terraform apply는 Codex에서 직접 실행하지 않습니다. GitHub Actions 또는 사람이 검토 후 실행합니다.
 - 운영 API는 별도 prod VPC를 만들지 않고 개발 API VPC(`soh-api-dev-vpc`)와 dev public/private app/private DB subnet을 재사용합니다.
 - 운영 API 도메인은 `https://api.soh.thomabio.com`이며, 프론트 production `VITE_API_BASE_URL`은 `https://api.soh.thomabio.com/api`입니다.
-- 운영 RDS `soh-api-prod-mysql`은 MySQL `8.4.10`이며 Terraform 입력은 patch 자동 업그레이드를 고려해 `db_engine_version = "8.4"`로 유지합니다. `8.0`으로 두면 Terraform이 `8.4.10 -> 8.0.x` 다운그레이드를 시도해 apply가 실패합니다. prod apply workflow는 `SOH_TERRAFORM_TFVARS_PROD`에 이 값이 빠져 있으면 `db_engine_version = "8.4"`를 자동 보강하고, `8.0`은 계속 차단합니다.
+- 운영 RDS `soh-api-prod-mysql`은 MySQL `8.4.10`이며 Terraform 입력은 patch 자동 업그레이드를 고려해 `db_engine_version = "8.4"`로 유지합니다. `8.0`으로 두면 Terraform이 `8.4.10 -> 8.0.x` 다운그레이드를 시도해 apply가 실패합니다. prod apply workflow는 `SOH_TERRAFORM_TFVARS_PROD_HCL`에 이 값이 빠져 있으면 `db_engine_version = "8.4"`를 자동 보강하고, `8.0`은 계속 차단합니다.
 - 기존 prod VPC가 Terraform state에 있던 경우 apply 전에 plan에서 VPC/subnet/NAT 삭제가 뜨는지 확인하고, 의도하지 않은 destroy plan은 승인하지 않습니다.
 - 수동 AWS 콘솔 구축 문서는 `readme_수동.md`를 확인합니다.
 - CI/CD, Terraform, 브랜치 정책, AWS 상수, GitHub Secrets, S3 경로, ASG 이름, CloudFront/API 라우팅, 배포 명령이 바뀌면 `README.md`와 `AGENTS.md`를 함께 갱신합니다.

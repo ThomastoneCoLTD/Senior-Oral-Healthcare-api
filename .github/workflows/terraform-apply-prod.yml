@@ -42,7 +42,7 @@ jobs:
           TERRAFORM_TFVARS: ${{ secrets.SOH_TERRAFORM_TFVARS_PROD_HCL }}
         run: |
           if [ -z "$TERRAFORM_TFVARS" ]; then
-            echo "SOH_TERRAFORM_TFVARS_PROD is empty"
+            echo "SOH_TERRAFORM_TFVARS_PROD_HCL is empty"
             exit 1
           fi
 
@@ -58,21 +58,21 @@ jobs:
           printf '%s\n' "$TERRAFORM_TFVARS" > terraform.tfvars
 
           if grep -Eiq '^[[:space:]]*(SPRING_|SERVER_|JWT_|DAEGU_|DID_|TOKEN_|CORS_|FRONTEND_)[A-Z0-9_]*[[:space:]]*=' terraform.tfvars; then
-            echo "SOH_TERRAFORM_TFVARS_PROD contains application .env keys."
+            echo "SOH_TERRAFORM_TFVARS_PROD_HCL contains application .env keys."
             echo "Replace it with Terraform HCL based on infra/terraform/environments/prod/terraform.tfvars.example."
             echo "Do not put datasource passwords, JWT secrets, tokens, or private keys in Terraform tfvars."
             exit 1
           fi
 
           if grep -Eiq '^[[:space:]]*[A-Za-z0-9_]*(password|secret|token|private_key|access_key)[A-Za-z0-9_]*[[:space:]]*=' terraform.tfvars; then
-            echo "SOH_TERRAFORM_TFVARS_PROD contains a forbidden sensitive variable."
+            echo "SOH_TERRAFORM_TFVARS_PROD_HCL contains a forbidden sensitive variable."
             echo "RDS credentials are managed by AWS Secrets Manager and must not be stored in Terraform tfvars."
             exit 1
           fi
 
           for required_tfvar in project_name environment account_id artifact_bucket release_type asg_name db_identifier db_name db_username certificate_arn; do
             if ! grep -Eq "^[[:space:]]*${required_tfvar}[[:space:]]*=" terraform.tfvars; then
-              echo "SOH_TERRAFORM_TFVARS_PROD is missing required Terraform variable: ${required_tfvar}"
+              echo "SOH_TERRAFORM_TFVARS_PROD_HCL is missing required Terraform variable: ${required_tfvar}"
               exit 1
             fi
           done
@@ -86,10 +86,10 @@ jobs:
               exit
             }' terraform.tfvars
           )"
-          echo "Detected SOH_TERRAFORM_TFVARS_PROD db_engine_version: ${detected_db_engine_version:-<missing>}"
+          echo "Detected SOH_TERRAFORM_TFVARS_PROD_HCL db_engine_version: ${detected_db_engine_version:-<missing>}"
 
           if grep -Eq '^[[:space:]]*db_engine_version[[:space:]]*=[[:space:]]*"8\.0"' terraform.tfvars; then
-            echo "SOH_TERRAFORM_TFVARS_PROD still sets db_engine_version to 8.0."
+            echo "SOH_TERRAFORM_TFVARS_PROD_HCL still sets db_engine_version to 8.0."
             echo "Production RDS soh-api-prod-mysql is MySQL 8.4.10; set db_engine_version = \"8.4\" before applying."
             exit 1
           fi
@@ -98,7 +98,7 @@ jobs:
             echo 'db_engine_version is missing; appending db_engine_version = "8.4" for production safety.'
             printf '\n%s\n' 'db_engine_version = "8.4"' >> terraform.tfvars
           elif ! grep -Eq '^[[:space:]]*db_engine_version[[:space:]]*=[[:space:]]*"8\.4"' terraform.tfvars; then
-            echo "SOH_TERRAFORM_TFVARS_PROD must set db_engine_version = \"8.4\" for production."
+            echo "SOH_TERRAFORM_TFVARS_PROD_HCL must set db_engine_version = \"8.4\" for production."
             exit 1
           fi
 
