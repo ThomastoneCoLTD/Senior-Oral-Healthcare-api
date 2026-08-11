@@ -188,6 +188,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 사용자 로그인 성공 시마다 `user_login_history` 테이블에 이력이 기록됩니다. 배포 이전 과거 로그인 이력은 소급 생성되지 않으며 기존 `userLastLoginDate`는 최근 로그인 일시로 함께 조회됩니다.
 - 사용자 구강체조 인트로 영상(`optional_video_1`, 1화)은 영상 내 번호 버튼 성공 시 토큰 수령 대상입니다. 단, 사용자 화면의 리워드 슬롯과 자동 리워드 회수 조건은 기존처럼 필수영상 5개(`essential_video_1~5`)만 반영합니다.
 - 구강체조 리워드 토큰 전송 실패 시에도 `TOKEN_TRANSFER_FAILED` 트랜잭션 이력을 남겨 관리자/사용자 조회 및 다음 동일 리워드 요청의 재시도 판단에 사용합니다.
+- Windows/CI에서 한글 REST Docs 테스트 결과가 달라지지 않도록 Gradle 테스트 JVM과 Java 컴파일 인코딩을 UTF-8로 고정했습니다. `DentixApplicationTest`는 운영 DB 비밀값 없이 H2 인메모리 DB로 실행하며, 구강검진 결과·타임라인의 분석 유형 및 치은염 응답 필드를 REST Docs에 반영했습니다.
 
 ## 남은 확인 및 할 일
 

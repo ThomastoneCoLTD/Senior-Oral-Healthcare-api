@@ -25,6 +25,7 @@ ext {
 
 test {
     useJUnitPlatform()
+    jvmArgs '-Dfile.encoding=UTF-8'
     outputs.dir snippetsDir
 }
 
@@ -49,6 +50,7 @@ sourceSets {
     }
 }
 tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
     options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
 }
 clean.doLast { file(querydslDir).deleteDir() }
@@ -121,6 +123,7 @@ dependencies {
     // --- Test & REST Docs ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'com.h2database:h2'
     asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
     testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
 }

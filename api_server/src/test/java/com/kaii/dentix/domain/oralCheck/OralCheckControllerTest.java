@@ -160,6 +160,7 @@ public class OralCheckControllerTest {
                 .userId(1L)
                 .organizationId(100L)
                 .success(true)
+                .oralCheckAnalysisType("PLAQUE")
                 .oralCheckResultTotalType(OralCheckResultType.HEALTHY)
                 .created(new Date())
                 .oralCheckTotalRange(55.0f)
@@ -213,7 +214,12 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.oralCheckDownRightRange").type(JsonFieldType.NUMBER).optional().description("우하 비율"),
                                 fieldWithPath("response.oralCheckDownRightScoreType").type(JsonFieldType.STRING).optional().description("우하 점수 타입"),
                                 fieldWithPath("response.oralCheckCommentList").type(JsonFieldType.ARRAY).description("코멘트 목록"),
-                                fieldWithPath("response.remainingResponses").type(JsonFieldType.NUMBER).optional().description("남은 횟수")
+                                fieldWithPath("response.remainingResponses").type(JsonFieldType.NUMBER).optional().description("남은 횟수"),
+                                fieldWithPath("response.oralCheckAnalysisType").type(JsonFieldType.STRING).optional().description("분석 유형(PLAQUE/GINGIVITIS)"),
+                                fieldWithPath("response.gingivitisUpCheck").type(JsonFieldType.NUMBER).optional().description("상악 치은염 검출 결과"),
+                                fieldWithPath("response.gingivitisDownCheck").type(JsonFieldType.NUMBER).optional().description("하악 치은염 검출 결과"),
+                                fieldWithPath("response.gingivitisAllTeethCheck").type(JsonFieldType.NUMBER).optional().description("전체 치아 치은염 검출값"),
+                                fieldWithPath("response.gingivitisImageName").type(JsonFieldType.STRING).optional().description("치은염 분석 이미지 파일명")
                         )
                 ));
     }
@@ -242,6 +248,7 @@ public class OralCheckControllerTest {
                                                 .identifier(1L)
                                                 .oralCheckId(1L)
                                                 .oralCheckResultTotalType(OralCheckResultType.GOOD)
+                                                .oralCheckAnalysisType("PLAQUE")
                                                 .build()
                                 ))
                                 .build()
@@ -286,6 +293,7 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.dailyList[].detailList[].questionnaireId").type(JsonFieldType.NUMBER).optional().description("문진표 ID"),
                                 fieldWithPath("response.dailyList[].detailList[].toothBrushingId").type(JsonFieldType.NUMBER).optional().description("양치 기록 ID"),
                                 fieldWithPath("response.dailyList[].detailList[].oralCheckResultTotalType").type(JsonFieldType.STRING).optional().description("구강 검진 종합 결과"),
+                                fieldWithPath("response.dailyList[].detailList[].oralCheckAnalysisType").type(JsonFieldType.STRING).optional().description("분석 유형(PLAQUE/GINGIVITIS)"),
                                 fieldWithPath("response.dailyList[].detailList[].toothBrushingCount").type(JsonFieldType.NUMBER).optional().description("양치 횟수"),
                                 fieldWithPath("response.dailyList[].detailList[].oralStatusList").type(JsonFieldType.ARRAY).description("구강 상태 목록")
                         )
