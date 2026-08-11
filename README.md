@@ -274,6 +274,8 @@ Production API deployment:
 9. systemd starts `soh-api-prod`.
 10. Check `https://api.soh.thomabio.com/api/actuator/health`.
 
+Production deploy workflow runs are not auto-cancelled by newer prod deploy runs; they queue behind the active run to avoid interrupting an artifact upload or ASG refresh.
+
 ## GitHub Actions Workflows
 
 ```text

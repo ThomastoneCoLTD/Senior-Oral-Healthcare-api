@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: soh-api-prod-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   AWS_REGION: ap-northeast-2

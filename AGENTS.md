@@ -132,6 +132,7 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 - 운영 RDS `soh-api-prod-mysql`은 MySQL `8.4.10`이며 Terraform 입력은 `db_engine_version = "8.4.10"`으로 유지합니다. `8.4`처럼 patch를 생략하면 AWS가 더 낮은 patch 버전으로 해석해 `8.4.10 -> 8.4.9` 다운그레이드를 시도할 수 있습니다. prod apply workflow는 다른 버전을 차단합니다.
 - 운영 Terraform tfvars는 `create_route53_record = true`로 유지합니다. `false`로 두면 `api.soh.thomabio.com` Route 53 alias record가 삭제됩니다.
 - 배포 workflow는 기존 ASG Instance Refresh가 진행 중이면 완료될 때까지 기다린 뒤 새 refresh를 시작합니다. dev는 단일 인스턴스 복구를 위해 `MinHealthyPercentage=0`, prod는 `MinHealthyPercentage=100`을 사용합니다.
+- 운영 배포 workflow는 이미 진행 중인 운영 배포를 취소하지 않고 순차 실행되도록 `cancel-in-progress=false`를 유지합니다.
 - 기존 prod VPC가 Terraform state에 있던 경우 apply 전에 plan에서 VPC/subnet/NAT 삭제가 뜨는지 확인하고, 의도하지 않은 destroy plan은 승인하지 않습니다.
 - 수동 AWS 콘솔 구축 문서는 `readme_수동.md`를 확인합니다.
 - CI/CD, Terraform, 브랜치 정책, AWS 상수, GitHub Secrets, S3 경로, ASG 이름, CloudFront/API 라우팅, 배포 명령이 바뀌면 `README.md`와 `AGENTS.md`를 함께 갱신합니다.
