@@ -48,7 +48,7 @@ jobs:
           # GitHub masks a multiline secret as a whole, but Terraform can echo a
           # single invalid line. Mask each line before parsing or writing it.
           while IFS= read -r tfvars_line; do
-            if [ -n "$tfvars_line" ]; then
+            if [[ "$tfvars_line" =~ [^[:space:]] ]]; then
               printf '::add-mask::%s\n' "$tfvars_line"
             fi
           done <<< "$TERRAFORM_TFVARS"

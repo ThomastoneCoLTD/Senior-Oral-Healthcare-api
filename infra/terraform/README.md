@@ -30,6 +30,7 @@ infra/terraform/environments/prod
 Copy `terraform.tfvars.example` to `terraform.tfvars`, replace placeholders such as `certificate_arn`, then run plan/apply.
 For GitHub Actions apply, store the filled tfvars content in `SOH_TERRAFORM_TFVARS_DEV` and `SOH_TERRAFORM_TFVARS_PROD_HCL`.
 The current examples use EC2 `t3.medium` and RDS MySQL `db.t3.small`.
+Production uses MySQL 8.4; keep `db_engine_version = "8.4"` in production tfvars.
 RDS is created in private DB subnets and the master password is managed by AWS Secrets Manager.
 Production RDS is pinned to the MySQL `8.4` family; keep `SOH_TERRAFORM_TFVARS_PROD_HCL` in sync with that version unless the production instance is intentionally upgraded. The production apply workflow appends `db_engine_version = "8.4"` when the setting is missing and still rejects `8.0`.
 

@@ -93,7 +93,7 @@ Region: ap-northeast-2
 Artifact bucket: denti-backends
 Hosted zone: thomabio.com
 ACM certificate: soh-api-dev.thomabio.com / api.soh.thomabio.com에 사용할 인증서
-RDS engine: MySQL 8.0
+RDS engine: dev MySQL 8.0 / prod MySQL 8.4
 RDS instance class: db.t3.small
 EC2 instance type: t3.medium
 ```
@@ -613,7 +613,7 @@ prod subnets:
 
 ```text
 Engine type: MySQL
-Engine version: MySQL 8.0
+Engine version: dev MySQL 8.0 / prod MySQL 8.4
 Templates:
   dev -> Free tier 또는 Dev/Test
   prod -> Production 또는 Dev/Test에서 운영 정책에 맞게 조정
@@ -1012,6 +1012,8 @@ api_server/build/libs/*.jar
 JAR 파일 이름을 `app.jar`로 바꿔 업로드 준비한다.
 
 개발 `.env` 예시:
+
+GitHub Secret 또는 S3 `.env`에 넣을 때는 반드시 여러 줄 텍스트로 저장한다. 각 `KEY=VALUE`는 한 줄에 하나씩 들어가야 하며, 한 줄로 이어 붙이면 `SERVER_PORT` 같은 값이 잘못 파싱되어 서버가 시작되지 않는다.
 
 ```text
 SERVER_PORT=8080

@@ -318,6 +318,8 @@ The dev/prod deploy workflows also accept dedicated DaeguChain overrides: `DAEGU
 
 `SOH_API_ENV_DEV` example:
 
+Store the secret as multiline text. Each `KEY=VALUE` pair must be on its own line; do not paste it as one concatenated line.
+
 ```text
 SERVER_PORT=8080
 SPRING_PROFILES_ACTIVE=dev
@@ -337,6 +339,8 @@ USER_REWARD_TOKEN_TRANSFER_ENABLED=false
 ```
 
 `SOH_API_ENV_PROD` example:
+
+Store the secret as multiline text. Each `KEY=VALUE` pair must be on its own line; do not paste it as one concatenated line.
 
 ```text
 SERVER_PORT=8080
