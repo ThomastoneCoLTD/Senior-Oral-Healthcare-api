@@ -111,7 +111,7 @@ SOH_TERRAFORM_TFVARS_DEV
 SOH_TERRAFORM_TFVARS_PROD_HCL
 ```
 
-- `SOH_TERRAFORM_TFVARS_DEV`, `SOH_TERRAFORM_TFVARS_PROD_HCL`에는 각 환경의 `terraform.tfvars.example` 형식인 Terraform HCL만 넣습니다. 운영 workflow는 기존 앱 `.env` Secret과의 이름 충돌을 피하기 위해 `SOH_TERRAFORM_TFVARS_PROD_HCL`을 사용합니다. `SOH_API_ENV_*`의 `.env` 내용이나 DB 비밀번호/JWT secret/token/private key를 넣지 않습니다. Terraform apply workflow는 tfvars 각 줄을 사전 마스킹하고 앱 환경변수 또는 민감 변수명이 섞이면 `terraform init` 전에 차단합니다.
+- `SOH_TERRAFORM_TFVARS_DEV`, `SOH_TERRAFORM_TFVARS_PROD_HCL`에는 각 환경의 `terraform.tfvars.example` 형식인 Terraform HCL만 넣습니다. 운영 workflow는 기존 앱 `.env` Secret과의 이름 충돌을 피하기 위해 `SOH_TERRAFORM_TFVARS_PROD_HCL`을 사용합니다. `SOH_API_ENV_*`의 `.env` 내용이나 DB 비밀번호/JWT secret/token/private key를 넣지 않습니다. Terraform apply workflow는 tfvars 각 줄을 사전 마스킹하고 대문자 앱 환경변수 또는 민감 변수명이 섞이면 `terraform init` 전에 차단합니다. 앱 환경변수 검사는 정상 Terraform 변수 `spring_profile`을 오인하지 않도록 대소문자를 구분해야 합니다.
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 RDS 비밀번호를 넣지 않습니다. EC2 launch template user-data가 Terraform의 `db_address`, `db_port`, `db_name`, `db_master_user_secret_arn` 값으로 datasource 설정을 덮어씁니다.
 - 배포 EC2는 AWS Secrets Manager JDBC driver(`com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`)를 사용합니다. `SPRING_DATASOURCE_URL`은 `jdbc-secretsmanager:mysql://...`, `SPRING_DATASOURCE_USERNAME`은 RDS managed secret ARN, `SPRING_DATASOURCE_PASSWORD`는 빈 값으로 설정됩니다.
 - DaeguChain 토큰 API는 `DAEGU_CHAIN_APP_KEY` 또는 `DAEGU_CHAIN_TOKEN`이 없으면 실패합니다. dev/prod 배포 workflow는 `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, `TOKEN_SERVER_BASE_URL_PROD` 별도 Secret이 있으면 `.env`의 같은 키를 덮어씁니다.
