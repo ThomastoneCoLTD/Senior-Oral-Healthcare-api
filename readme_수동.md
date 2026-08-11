@@ -93,7 +93,7 @@ Region: ap-northeast-2
 Artifact bucket: denti-backends
 Hosted zone: thomabio.com
 ACM certificate: soh-api-dev.thomabio.com / api.soh.thomabio.com에 사용할 인증서
-RDS engine: dev MySQL 8.0 / prod MySQL 8.4
+RDS engine: dev MySQL 8.0 / prod MySQL 8.4.10
 RDS instance class: db.t3.small
 EC2 instance type: t3.medium
 ```
@@ -613,7 +613,7 @@ prod subnets:
 
 ```text
 Engine type: MySQL
-Engine version: dev MySQL 8.0 / prod MySQL 8.4
+Engine version: dev MySQL 8.0 / prod MySQL 8.4.10
 Templates:
   dev -> Free tier 또는 Dev/Test
   prod -> Production 또는 Dev/Test에서 운영 정책에 맞게 조정

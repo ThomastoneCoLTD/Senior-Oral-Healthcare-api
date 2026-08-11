@@ -146,7 +146,7 @@ variable "origin_domain_name" {
 
 variable "create_route53_record" {
   type    = bool
-  default = false
+  default = true
 }
 
 variable "enable_http_redirect" {
@@ -170,7 +170,7 @@ variable "db_engine" {
 
 variable "db_engine_version" {
   type    = string
-  default = "8.4"
+  default = "8.4.10"
 }
 
 variable "db_instance_class" {

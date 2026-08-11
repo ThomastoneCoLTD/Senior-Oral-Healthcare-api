@@ -88,17 +88,31 @@ jobs:
           )"
           echo "Detected SOH_TERRAFORM_TFVARS_PROD_HCL db_engine_version: ${detected_db_engine_version:-<missing>}"
 
-          if grep -Eq '^[[:space:]]*db_engine_version[[:space:]]*=[[:space:]]*"8\.0"' terraform.tfvars; then
-            echo "SOH_TERRAFORM_TFVARS_PROD_HCL still sets db_engine_version to 8.0."
-            echo "Production RDS soh-api-prod-mysql is MySQL 8.4.10; set db_engine_version = \"8.4\" before applying."
+          if [ -z "$detected_db_engine_version" ]; then
+            echo 'db_engine_version is missing; appending db_engine_version = "8.4.10" for production safety.'
+            printf '\n%s\n' 'db_engine_version = "8.4.10"' >> terraform.tfvars
+          elif [ "$detected_db_engine_version" != "8.4.10" ]; then
+            echo "SOH_TERRAFORM_TFVARS_PROD_HCL must set db_engine_version = \"8.4.10\" for production."
+            echo "Production RDS soh-api-prod-mysql is already MySQL 8.4.10; shorter values such as \"8.4\" can resolve to an older patch such as 8.4.9."
             exit 1
           fi
 
-          if [ -z "$detected_db_engine_version" ]; then
-            echo 'db_engine_version is missing; appending db_engine_version = "8.4" for production safety.'
-            printf '\n%s\n' 'db_engine_version = "8.4"' >> terraform.tfvars
-          elif ! grep -Eq '^[[:space:]]*db_engine_version[[:space:]]*=[[:space:]]*"8\.4"' terraform.tfvars; then
-            echo "SOH_TERRAFORM_TFVARS_PROD_HCL must set db_engine_version = \"8.4\" for production."
+          detected_create_route53_record="$(
+            awk -F= '/^[[:space:]]*create_route53_record[[:space:]]*=/ {
+              value = $2
+              gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+              print value
+              exit
+            }' terraform.tfvars
+          )"
+          echo "Detected SOH_TERRAFORM_TFVARS_PROD_HCL create_route53_record: ${detected_create_route53_record:-<missing>}"
+
+          if [ -z "$detected_create_route53_record" ]; then
+            echo 'create_route53_record is missing; appending create_route53_record = true for production DNS safety.'
+            printf '\n%s\n' 'create_route53_record = true' >> terraform.tfvars
+          elif [ "$detected_create_route53_record" != "true" ]; then
+            echo "SOH_TERRAFORM_TFVARS_PROD_HCL must set create_route53_record = true for production."
+            echo "Setting it to false destroys the api.soh.thomabio.com Route 53 alias record."
             exit 1
           fi
 
