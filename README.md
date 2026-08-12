@@ -266,13 +266,14 @@ Production API deployment:
 1. Push `prod` branch.
 2. GitHub Actions runs `deploy-api-prod.yml`.
 3. Gradle/Maven auto-detect builds a Spring Boot `app.jar`. Gradle deploy builds skip `test` and `asciidoctor` because this project wires REST Docs generation into `bootJar`; run full tests separately before release approval.
-4. `SOH_API_ENV_PROD` creates `.env`.
-5. Uploads `s3://denti-backends/soh/prod/app.jar`.
-6. Uploads `s3://denti-backends/soh/prod/.env`.
-7. Waits for any existing `soh-api-prod-asg` Instance Refresh to finish, then starts a new refresh.
-8. New EC2 instances run User Data and download `app.jar` and `.env` from S3.
-9. systemd starts `soh-api-prod`.
-10. Check `https://api.soh.thomabio.com/api/actuator/health`.
+4. `SOH_API_ENV_PROD` creates `.env`; the workflow rejects datasource URL, username, password, or driver keys so RDS credentials cannot be copied to GitHub or S3.
+5. Waits until Terraform has promoted the ASG launch template to the default version and verifies that its User Data contains the Secrets Manager JDBC configuration.
+6. Uploads `s3://denti-backends/soh/prod/app.jar`.
+7. Uploads the credential-free `s3://denti-backends/soh/prod/.env`.
+8. Waits for any existing `soh-api-prod-asg` Instance Refresh to finish, then starts a new refresh.
+9. New EC2 instances run User Data, download `app.jar` and `.env`, and inject the RDS managed secret ARN at boot.
+10. systemd starts `soh-api-prod`.
+11. Check `https://api.soh.thomabio.com/api/actuator/health`.
 
 Production deploy workflow runs are not auto-cancelled by newer prod deploy runs; they queue behind the active run to avoid interrupting an artifact upload or ASG refresh.
 
@@ -315,7 +316,7 @@ Each `SOH_TERRAFORM_TFVARS_*` secret should contain the filled content of that e
 The Terraform apply workflows mask each tfvars line before Terraform can report a parse error and reject application `.env` keys or sensitive variable names before `terraform init`. Keep `SOH_API_ENV_*` and `SOH_TERRAFORM_TFVARS_*` as separate GitHub Secrets; they are not interchangeable.
 `SOH_TERRAFORM_TFVARS_PROD_HCL` should keep `db_engine_version = "8.4.10"` unless the production RDS instance is intentionally upgraded. The production apply workflow rejects other values because short version values such as `8.4` can resolve to an older patch version and make Terraform try an invalid downgrade. Keep `create_route53_record = true` so Terraform preserves the `api.soh.thomabio.com` Route 53 alias record.
 
-The deploy workflows create `.env` from `SOH_API_ENV_DEV` or `SOH_API_ENV_PROD` and upload it to S3. Do not put RDS passwords in GitHub Secrets. During EC2 boot, the launch template rewrites the datasource settings to use the RDS managed Secrets Manager secret through the AWS Secrets Manager JDBC driver.
+The deploy workflows create `.env` from `SOH_API_ENV_DEV` or `SOH_API_ENV_PROD` and upload it to S3. Do not put RDS passwords in GitHub Secrets. Production additionally rejects `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, and `SPRING_DATASOURCE_DRIVER_CLASS_NAME` before upload. During EC2 boot, the launch template writes those datasource settings from Terraform's RDS endpoint and managed secret ARN through the AWS Secrets Manager JDBC driver.
 The dev/prod deploy workflows also accept dedicated DaeguChain overrides: `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, and `TOKEN_SERVER_BASE_URL_PROD`. At least one of `DAEGU_CHAIN_APP_KEY` or `DAEGU_CHAIN_TOKEN` must be present in the generated `.env` for token list/create/transfer APIs.
 
 `SOH_API_ENV_DEV` example:
@@ -363,7 +364,7 @@ USER_REWARD_TOKEN_TRANSFER_ENABLED=true
 ```
 
 Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3, and EC2 downloads it through the instance profile.
-Terraform passes `db_address`, `db_port`, `db_name`, and `db_master_user_secret_arn` to the launch template. EC2 rewrites `SPRING_DATASOURCE_URL` to `jdbc-secretsmanager:mysql://...`, sets `SPRING_DATASOURCE_USERNAME` to the secret ARN, clears `SPRING_DATASOURCE_PASSWORD`, and starts the app with `com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`. The EC2 instance profile must keep `secretsmanager:DescribeSecret` and `secretsmanager:GetSecretValue` on that RDS managed secret. When Secrets Manager rotates the RDS password, the JDBC driver refreshes cached credentials for new DB connections, so GitHub Secrets do not need to be edited.
+Terraform passes `db_address`, `db_port`, `db_name`, and `db_master_user_secret_arn` to the launch template. EC2 rewrites `SPRING_DATASOURCE_URL` to `jdbc-secretsmanager:mysql://...`, sets `SPRING_DATASOURCE_USERNAME` to the secret ARN, clears `SPRING_DATASOURCE_PASSWORD`, and starts the app with `com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`. The launch template resource promotes its managed latest version to the default version, and the production deploy workflow requires the ASG's explicit version to match that default before refreshing instances. The EC2 instance profile must keep `secretsmanager:DescribeSecret` and `secretsmanager:GetSecretValue` on that RDS managed secret. When Secrets Manager rotates the RDS password, the JDBC driver refreshes cached credentials for new DB connections, so GitHub Secrets do not need to be edited.
 DaeguChain API requests use `DAEGU_CHAIN_APP_KEY` for every outbound request body field named `token`; keep app keys and any private keys only in environment secrets.
 `DID_SERVER_BASE_URL` must point to the reachable DID service used by `/did/create`; development currently uses `http://43.201.125.82`. `TOKEN_SERVER_BASE_URL` must point to the same reachable token server for `/token/create`, `/token/transfer`, and `/token/token_list`; do not leave it at `http://localhost:5000` on deployed API servers. User signup DID provisioning sends `label` with the user's login identifier, stores the returned `did:key`, and login checks the SOH user DID value and DID issued status without VC-JWT credential verification.
 Oral-exercise reward reclaim sends collected token contracts back to `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS` through the configured token server; SOH must not read, log, or persist user DID private keys for this reclaim flow.

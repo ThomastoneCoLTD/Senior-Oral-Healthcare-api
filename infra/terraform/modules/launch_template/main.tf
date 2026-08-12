@@ -16,9 +16,10 @@ data "aws_ami" "amazon_linux_2023" {
 }
 
 resource "aws_launch_template" "this" {
-  name_prefix   = "${var.launch_template_name}-"
-  image_id      = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux_2023[0].id
-  instance_type = var.instance_type
+  name_prefix            = "${var.launch_template_name}-"
+  update_default_version = true
+  image_id               = var.ami_id != "" ? var.ami_id : data.aws_ami.amazon_linux_2023[0].id
+  instance_type          = var.instance_type
 
   iam_instance_profile {
     name = var.instance_profile_name

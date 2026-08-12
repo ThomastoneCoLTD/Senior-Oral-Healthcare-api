@@ -32,6 +32,7 @@ For GitHub Actions apply, store the filled tfvars content in `SOH_TERRAFORM_TFVA
 The current examples use EC2 `t3.medium` and RDS MySQL `db.t3.small`.
 Production uses MySQL 8.4.10; keep `db_engine_version = "8.4.10"` in production tfvars.
 RDS is created in private DB subnets and the master password is managed by AWS Secrets Manager.
+The launch template resource uses `update_default_version = true`. Production deployment must use the explicit ASG launch template version that matches this Terraform-managed default and must verify that the version contains the Secrets Manager JDBC User Data before refreshing instances.
 Production RDS is pinned to MySQL `8.4.10`; keep `SOH_TERRAFORM_TFVARS_PROD_HCL` in sync with that exact patch unless the production instance is intentionally upgraded. Short values such as `8.4` can resolve to an older patch and trigger an invalid downgrade. Keep `create_route53_record = true` so Terraform preserves `api.soh.thomabio.com`.
 
 The PR `terraform-plan.yml` workflow moves `backend.tf` aside in the temporary checkout before `terraform init`, so the plan uses local state and the example tfvars. This is only a validation plan; apply workflows use the S3 backend.

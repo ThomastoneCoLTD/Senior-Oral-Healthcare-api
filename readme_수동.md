@@ -662,9 +662,10 @@ Final snapshot: 삭제 시 반드시 생성
 생성 후 확인:
 
 ```text
-RDS endpoint를 기록한다.
-Secrets Manager에서 master credential secret ARN과 password를 확인한다.
-GitHub Secret SOH_API_ENV_DEV / SOH_API_ENV_PROD의 SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD에 반영한다.
+RDS endpoint와 DB 이름을 기록한다.
+Secrets Manager에서 master credential secret ARN만 기록한다. password 값은 확인하거나 복사하지 않는다.
+GitHub Secret SOH_API_ENV_DEV / SOH_API_ENV_PROD에는 SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD, SPRING_DATASOURCE_DRIVER_CLASS_NAME을 넣지 않는다.
+Launch Template User Data가 endpoint, DB 이름, Secret ARN으로 Secrets Manager JDBC 설정을 생성하도록 한다.
 Reward reclaim을 사용할 경우 SOH_API_ENV_DEV / SOH_API_ENV_PROD에 DID_DB_URL, DID_DB_USERNAME, DID_DB_PASSWORD, DID_DB_TABLE=DID를 추가하고, API EC2에서 DID DB TCP 3306 접속이 가능한지 확인한다.
 ```
 
@@ -846,7 +847,7 @@ Release type: prod
 Spring profile: prod
 ```
 
-User Data는 환경에 맞게 `APP_NAME`, `RELEASE_TYPE`, `SPRING_PROFILE`만 바꾼다.
+User Data는 환경에 맞게 `APP_NAME`, `RELEASE_TYPE`, `SPRING_PROFILE`, `DB_SECRET_ARN`, `DB_ADDRESS`, `DB_PORT`, `DB_NAME`을 바꾼다. `DB_SECRET_ARN`에는 ARN만 넣고 실제 password를 넣지 않는다.
 
 개발 User Data:
 
@@ -868,6 +869,10 @@ AWS_REGION="ap-northeast-2"
 S3_REGION="ap-northeast-2"
 SPRING_PROFILE="dev"
 SERVICE_USER="ec2-user"
+DB_SECRET_ARN="<RDS_MANAGED_SECRET_ARN>"
+DB_ADDRESS="<RDS_ENDPOINT>"
+DB_PORT="3306"
+DB_NAME="<RDS_DB_NAME>"
 
 echo "===== SOH API USERDATA START ====="
 date
@@ -887,6 +892,23 @@ chmod 750 "$APP_DIR"
 
 aws s3 cp "s3://$S3_BUCKET/$S3_PATH/$RELEASE_TYPE/$JAR_NAME" "$APP_DIR/$JAR_NAME" --region "$S3_REGION"
 aws s3 cp "s3://$S3_BUCKET/$S3_PATH/$RELEASE_TYPE/$ENV_FILE" "$APP_DIR/$ENV_FILE" --region "$S3_REGION"
+
+upsert_env_file() {
+  local key="$1"
+  local value="$2"
+  local tmp_file
+
+  tmp_file="$(mktemp)"
+  grep -v "^$key=" "$APP_DIR/$ENV_FILE" > "$tmp_file" || true
+  printf '%s=%s\n' "$key" "$value" >> "$tmp_file"
+  mv "$tmp_file" "$APP_DIR/$ENV_FILE"
+}
+
+upsert_env_file "SPRING_DATASOURCE_DRIVER_CLASS_NAME" "com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver"
+upsert_env_file "SPRING_DATASOURCE_URL" "jdbc-secretsmanager:mysql://$DB_ADDRESS:$DB_PORT/$DB_NAME?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull"
+upsert_env_file "SPRING_DATASOURCE_USERNAME" "$DB_SECRET_ARN"
+upsert_env_file "SPRING_DATASOURCE_PASSWORD" ""
+upsert_env_file "AWS_SECRET_JDBC_REGION" "$AWS_REGION"
 
 chown "$SERVICE_USER:$SERVICE_USER" "$APP_DIR/$JAR_NAME" "$APP_DIR/$ENV_FILE"
 chmod 755 "$APP_DIR/$JAR_NAME"
@@ -1021,9 +1043,6 @@ SPRING_PROFILES_ACTIVE=dev
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh-dev.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh-dev.thomabio.com
-SPRING_DATASOURCE_URL=jdbc:mysql://<DEV_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
-SPRING_DATASOURCE_USERNAME=sohadmin
-SPRING_DATASOURCE_PASSWORD=<DEV_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<DEV_JWT_SECRET>
 ```
 
@@ -1035,9 +1054,6 @@ SPRING_PROFILES_ACTIVE=prod
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh.thomabio.com
-SPRING_DATASOURCE_URL=jdbc:mysql://<PROD_RDS_ENDPOINT>:3306/thomastone?serverTimezone=Asia/Seoul&zeroDateTimeBehavior=convertToNull
-SPRING_DATASOURCE_USERNAME=sohadmin
-SPRING_DATASOURCE_PASSWORD=<PROD_RDS_PASSWORD_FROM_SECRETS_MANAGER>
 JWT_SECRET=<PROD_JWT_SECRET>
 ```
 
@@ -1056,6 +1072,7 @@ Upload .env
 절대 주의:
 
 - `.env`를 git에 커밋하지 않는다.
+- `.env`에는 datasource URL, username, password, driver를 넣지 않는다. Launch Template User Data가 RDS endpoint와 managed Secret ARN으로 생성한다.
 - `.env`에 AWS key를 넣지 않는다.
 - dev 파일을 `soh/prod/`에 올리지 않는다.
 - prod 파일을 `soh/dev/`에 올리지 않는다.
@@ -1233,9 +1250,10 @@ EC2가 RDS에 연결 실패:
 
 1. RDS가 private DB subnet group에 생성됐는지 확인한다.
 2. RDS SG가 EC2 SG로부터 TCP 3306을 허용하는지 확인한다.
-3. `.env`의 `SPRING_DATASOURCE_URL` endpoint와 database name이 맞는지 확인한다.
-4. Secrets Manager의 password를 `SPRING_DATASOURCE_PASSWORD`에 정확히 반영했는지 확인한다.
-5. RDS status가 `Available`이고 backup/maintenance 작업 중이 아닌지 확인한다.
+3. Launch Template User Data의 `DB_ADDRESS`, `DB_NAME`, `DB_SECRET_ARN`이 대상 RDS와 managed Secret을 가리키는지 확인한다.
+4. EC2 instance role에 해당 Secret의 `secretsmanager:DescribeSecret`, `secretsmanager:GetSecretValue` 권한이 있는지 확인한다.
+5. EC2의 최종 환경이 `AWSSecretsManagerMySQLDriver`, `jdbc-secretsmanager:mysql://`, Secret ARN, 빈 password로 구성됐는지 값 노출 없이 확인한다.
+6. RDS status가 `Available`이고 backup/maintenance 작업 중이 아닌지 확인한다.
 
 CloudFront에서 API가 index.html로 반환됨:
 

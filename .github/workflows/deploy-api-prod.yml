@@ -82,6 +82,17 @@ jobs:
           test -n "${SOH_API_ENV}" || (echo "SOH_API_ENV_PROD secret is empty" && exit 1)
           printf '%s\n' "${SOH_API_ENV}" > "${ENV_FILE}"
 
+          for forbidden_key in \
+            SPRING_DATASOURCE_URL \
+            SPRING_DATASOURCE_USERNAME \
+            SPRING_DATASOURCE_PASSWORD \
+            SPRING_DATASOURCE_DRIVER_CLASS_NAME; do
+            if grep -Eq "^${forbidden_key}=" "${ENV_FILE}"; then
+              echo "::error::${forbidden_key} must not be stored in SOH_API_ENV_PROD. RDS credentials are provided by the launch template and Secrets Manager JDBC."
+              exit 1
+            fi
+          done
+
           upsert_env() {
             key="$1"
             value="$2"
@@ -118,6 +129,56 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify ASG uses the default Secrets Manager launch template
+        run: |
+          for attempt in {1..40}; do
+            launch_template_id="$(
+              aws autoscaling describe-auto-scaling-groups \
+                --auto-scaling-group-names "${ASG_NAME}" \
+                --query 'AutoScalingGroups[0].LaunchTemplate.LaunchTemplateId' \
+                --output text
+            )"
+            asg_version="$(
+              aws autoscaling describe-auto-scaling-groups \
+                --auto-scaling-group-names "${ASG_NAME}" \
+                --query 'AutoScalingGroups[0].LaunchTemplate.Version' \
+                --output text
+            )"
+            default_version="$(
+              aws ec2 describe-launch-templates \
+                --launch-template-ids "${launch_template_id}" \
+                --query 'LaunchTemplates[0].DefaultVersionNumber' \
+                --output text
+            )"
+
+            if [ "${asg_version}" != "${default_version}" ]; then
+              echo "ASG launch template v${asg_version} is not default v${default_version}; waiting for Terraform apply."
+              sleep 30
+              continue
+            fi
+
+            user_data="$(
+              aws ec2 describe-launch-template-versions \
+                --launch-template-id "${launch_template_id}" \
+                --versions "${asg_version}" \
+                --query 'LaunchTemplateVersions[0].LaunchTemplateData.UserData' \
+                --output text \
+                | base64 --decode
+            )"
+
+            if ! grep -q 'AWSSecretsManagerMySQLDriver' <<< "${user_data}" \
+              || ! grep -q 'jdbc-secretsmanager:mysql://' <<< "${user_data}"; then
+              echo "::error::ASG launch template v${asg_version} does not configure Secrets Manager JDBC."
+              exit 1
+            fi
+
+            echo "ASG uses default launch template v${asg_version} with Secrets Manager JDBC."
+            exit 0
+          done
+
+          echo "::error::Timed out waiting for Terraform to promote the ASG launch template to the default version."
+          exit 1
 
       - name: Upload artifacts to S3
         run: |

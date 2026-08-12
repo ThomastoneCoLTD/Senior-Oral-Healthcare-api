@@ -112,7 +112,7 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 ```
 
 - `SOH_TERRAFORM_TFVARS_DEV`, `SOH_TERRAFORM_TFVARS_PROD_HCL`에는 각 환경의 `terraform.tfvars.example` 형식인 Terraform HCL만 넣습니다. 운영 workflow는 기존 앱 `.env` Secret과의 이름 충돌을 피하기 위해 `SOH_TERRAFORM_TFVARS_PROD_HCL`을 사용합니다. `SOH_API_ENV_*`의 `.env` 내용이나 DB 비밀번호/JWT secret/token/private key를 넣지 않습니다. Terraform apply workflow는 tfvars 각 줄을 사전 마스킹하고 대문자 앱 환경변수 또는 민감 변수명이 섞이면 `terraform init` 전에 차단합니다. 앱 환경변수 검사는 정상 Terraform 변수 `spring_profile`을 오인하지 않도록 대소문자를 구분해야 합니다.
-- `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 RDS 비밀번호를 넣지 않습니다. EC2 launch template user-data가 Terraform의 `db_address`, `db_port`, `db_name`, `db_master_user_secret_arn` 값으로 datasource 설정을 덮어씁니다.
+- `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 RDS 비밀번호를 넣지 않습니다. 특히 prod workflow는 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_DATASOURCE_DRIVER_CLASS_NAME`이 `SOH_API_ENV_PROD`에 있으면 배포를 차단합니다. EC2 launch template user-data만 Terraform의 `db_address`, `db_port`, `db_name`, `db_master_user_secret_arn` 값으로 datasource 설정을 생성합니다.
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`는 여러 줄 `KEY=VALUE` 텍스트로 저장합니다. 각 항목은 한 줄에 하나씩 들어가야 하며, 한 줄로 이어 붙이면 Spring이 `SERVER_PORT` 같은 값을 잘못 읽어 시작에 실패할 수 있습니다.
 - 배포 EC2는 AWS Secrets Manager JDBC driver(`com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`)를 사용합니다. `SPRING_DATASOURCE_URL`은 `jdbc-secretsmanager:mysql://...`, `SPRING_DATASOURCE_USERNAME`은 RDS managed secret ARN, `SPRING_DATASOURCE_PASSWORD`는 빈 값으로 설정됩니다.
 - DaeguChain 토큰 API는 `DAEGU_CHAIN_APP_KEY` 또는 `DAEGU_CHAIN_TOKEN`이 없으면 실패합니다. dev/prod 배포 workflow는 `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, `TOKEN_SERVER_BASE_URL_PROD` 별도 Secret이 있으면 `.env`의 같은 키를 덮어씁니다.
@@ -133,6 +133,7 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 - 운영 Terraform tfvars는 `create_route53_record = true`로 유지합니다. `false`로 두면 `api.soh.thomabio.com` Route 53 alias record가 삭제됩니다.
 - 배포 workflow는 기존 ASG Instance Refresh가 진행 중이면 완료될 때까지 기다린 뒤 새 refresh를 시작합니다. dev는 단일 인스턴스 복구를 위해 `MinHealthyPercentage=0`, prod는 `MinHealthyPercentage=100`을 사용합니다.
 - 운영 배포 workflow는 이미 진행 중인 운영 배포를 취소하지 않고 순차 실행되도록 `cancel-in-progress=false`를 유지합니다.
+- 운영 launch template은 Terraform이 관리하는 최신 버전을 기본 버전으로 승격합니다. prod 배포 workflow는 ASG가 그 기본 버전을 명시적으로 사용하고 User Data에 Secrets Manager JDBC 설정이 있는지 확인한 뒤에만 S3 업로드와 Instance Refresh를 진행합니다.
 - 기존 prod VPC가 Terraform state에 있던 경우 apply 전에 plan에서 VPC/subnet/NAT 삭제가 뜨는지 확인하고, 의도하지 않은 destroy plan은 승인하지 않습니다.
 - 수동 AWS 콘솔 구축 문서는 `readme_수동.md`를 확인합니다.
 - CI/CD, Terraform, 브랜치 정책, AWS 상수, GitHub Secrets, S3 경로, ASG 이름, CloudFront/API 라우팅, 배포 명령이 바뀌면 `README.md`와 `AGENTS.md`를 함께 갱신합니다.
@@ -162,6 +163,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 ## 지금까지 진행한 주요 작업
 
 - 개발/운영 API datasource 설정을 AWS Secrets Manager JDBC driver 기반으로 정리해 RDS 비밀번호 변경 시 GitHub Secret 수동 갱신이 필요 없도록 했습니다.
+- 2026-08-12 운영 RDS의 7일 자동 비밀번호 회전으로 정적 S3 `.env`와 실제 Secret이 불일치해 ASG 교체가 반복된 원인을 확인했습니다. `SOH_API_ENV_PROD`의 datasource 키를 금지하고, launch template 기본 버전과 Secrets Manager JDBC 설정을 배포 전에 검증하도록 보강했습니다.
 - 사용자 로그인은 비밀번호 검증이 아니라 DID 흐름으로 처리되도록 변경했습니다.
 - 사용자 로그인 실패 메시지에서 “비밀번호 확인” 문구가 나오지 않고 DID 관련 오류로 나오도록 조정했습니다.
 - API health check 경로 `/api/actuator/health`를 허용했습니다.
@@ -198,12 +200,12 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 연결된 영상 URL이 있는 콘텐츠는 `tms-static-hosting` 정적 S3 HTTPS URL이 정상 로드되는지 확인합니다.
 - 치은염 검출이 실제 이미지 업로드/분석 결과까지 정상 동작하는지 end-to-end로 확인합니다.
 - 비밀번호 변경 버튼은 프론트 사용자 화면에서 제거되어야 하며, 관리자 비밀번호 기능은 관리자 계정용으로 유지합니다.
-- 기존에 채팅이나 과거 커밋에 노출된 DB 비밀번호가 있다면 RDS/Secrets Manager에서 회전하는 것을 권장합니다.
+- 과거 정적 DB 비밀번호가 남은 S3 객체 version과 GitHub Actions 로그가 보존 정책에 따라 언제 삭제되는지 확인합니다. 현재 Secret은 RDS 관리형 회전 대상이며 실제 값은 문서나 저장소에 기록하지 않습니다.
 - 기존 `LOCAL_RECORDED` 상태의 구강체조 리워드 데이터를 실제 토큰 회수 대상으로 볼지 운영 정책을 결정합니다.
 
 ## 최근 동기화 상태
 
-2026-07-10 기준으로 `git pull origin dev`를 수행했습니다.
+2026-08-12 기준 운영 DB 자격증명을 Secrets Manager 단일 원본으로 고정하는 작업을 진행했습니다.
 
-- 백엔드 `Senior-Oral-Healthcare-api`: `a61b52b1`
-- 프론트엔드 `Senior-Oral-Healthcare-front`: `e2dc94c`
+- 백엔드 `Senior-Oral-Healthcare-api`: 현재 `prod`, 기준 `85562957`
+- 프론트엔드 `Senior-Oral-Healthcare-front`: 현재 `prod`, 기준 `8765068`
