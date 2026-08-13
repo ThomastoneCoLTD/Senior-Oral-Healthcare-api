@@ -120,7 +120,7 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 - datasource 비밀번호는 앱이 EC2 instance profile 권한으로 RDS Secrets Manager에서 직접 가져옵니다. EC2 IAM role에는 해당 secret에 대한 `secretsmanager:DescribeSecret`, `secretsmanager:GetSecretValue` 권한이 필요합니다.
 - DaeguChain/DID 기능에는 `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, `USER_REWARD_TOKEN_TRANSFER_ENABLED` 등을 환경별로 확인합니다.
 - 개발 DID/token 서버는 현재 `DID_SERVER_BASE_URL=http://43.201.125.82`, `TOKEN_SERVER_BASE_URL=http://43.201.125.82`를 사용합니다. 배포 API에서 `TOKEN_SERVER_BASE_URL`이 `http://localhost:5000`이면 EC2 자기 자신을 호출해 token list/create/transfer가 connection refused로 실패합니다.
-- DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. 로그인은 SOH DB에 저장된 사용자 자체 DID 발급 상태와 DID 문자열만 확인하며, VC-JWT credential 발급/검증은 사용하지 않습니다.
+- DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. DID 로그인은 SOH DB에 저장된 사용자 자체 DID 발급 상태와 DID 문자열만 확인하며, VC-JWT credential 발급/검증은 사용하지 않습니다.
 - reward reclaim은 사용자 DID private key를 SOH에서 읽거나 저장하지 않고, token server를 통해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`로 회수합니다.
 
 ## Terraform 및 수동 구축
@@ -164,8 +164,8 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 - 개발/운영 API datasource 설정을 AWS Secrets Manager JDBC driver 기반으로 정리해 RDS 비밀번호 변경 시 GitHub Secret 수동 갱신이 필요 없도록 했습니다.
 - 2026-08-12 운영 RDS의 7일 자동 비밀번호 회전으로 정적 S3 `.env`와 실제 Secret이 불일치해 ASG 교체가 반복된 원인을 확인했습니다. `SOH_API_ENV_PROD`의 datasource 키를 금지하고, launch template 기본 버전과 Secrets Manager JDBC 설정을 배포 전에 검증하도록 보강했습니다.
-- 사용자 로그인은 비밀번호 검증이 아니라 DID 흐름으로 처리되도록 변경했습니다.
-- 사용자 로그인 실패 메시지에서 “비밀번호 확인” 문구가 나오지 않고 DID 관련 오류로 나오도록 조정했습니다.
+- 로그인 화면은 일반 사용자, DID, 관리자 3개 흐름으로 분리합니다. 일반 사용자 `POST /login`은 아이디와 BCrypt 비밀번호를 검증하며 DID 발급 상태를 요구하지 않고, `POST /login/did`만 아이디에 연결된 DID 발급 상태와 DID 문자열을 확인합니다. 관리자 로그인 흐름은 기존대로 유지합니다.
+- 일반 사용자 회원가입 `POST /login/signUp`은 비밀번호, 생년월일, 기존 비밀번호 찾기 질문/답변을 저장하면서 기존 DID·지갑 프로비저닝도 함께 수행합니다. 프론트에서는 비밀번호 확인 일치와 아이디 중복 확인을 완료해야 제출합니다.
 - API health check 경로 `/api/actuator/health`를 허용했습니다.
 - dev 배포 workflow에서 단일 인스턴스 교체가 가능하도록 ASG instance refresh 설정을 보완했습니다.
 - 구강체조 콘텐츠 제목, 영상 URL, 실제 영상 길이를 초기 데이터에 반영했습니다.
@@ -175,7 +175,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 회원가입(`/login/signUp`, `/login/signUp/did`) 시 토큰 수령용 `walletAddress`를 필수로 받아 `UserRewardWallet`에 함께 저장합니다.
 - 회원가입 사용자는 요청 기관값과 무관하게 `tokenadmin` 관리자 계정의 소속 기관 사용자로 저장합니다. `tokenadmin` 계정 또는 소속 기관이 없으면 가입이 실패합니다.
 - 회원가입(`/login/signUp`, `/login/signUp/did`)은 사용자가 `대구1`, `대구2`, `대구3` 중 하나를 `realOrganization`으로 필수 선택합니다. 선택값은 기존 `organizationId` 소속 관계와 분리된 `user.real_organization` 컬럼에 저장하며, 사용자 `/user/info`와 관리자 `/admin/user` 목록에서 조회합니다. 기존 사용자 및 관리자 일괄등록 호환을 위해 DB 컬럼 자체는 nullable입니다.
-- DID 회원가입은 기존 `user.find_pwd_question_id`, `user.find_pwd_answer` 컬럼에 사용자가 선택한 아이디 찾기 질문과 답변을 저장합니다. `POST /login/find-id`는 이름, 정규화된 휴대폰 번호, 질문 ID, 답변이 모두 일치할 때만 사용자 아이디를 반환합니다. 질문 목록은 사용자용 `/login/find-id/questions`와 기존 호환 경로 `/password/questions`에서 조회합니다.
+- 기존 `user.find_pwd_question_id`, `user.find_pwd_answer` 컬럼은 비밀번호 찾기 질문과 답변 용도로 유지합니다. `POST /login/find-id`는 질문/답변을 받지 않고 이름, 정규화된 휴대폰 번호, 생년월일이 모두 일치할 때만 사용자 아이디를 반환합니다. 질문 목록은 `/password/questions`에서 조회합니다.
 - 운영/개발 앱 시작 시 과거 계정 확인 질문 9개를 ID와 정렬값 `1~9`로 upsert합니다. 신규 DB에서 `find_pwd_question`이 비어 있어 회원가입 질문을 선택할 수 없는 상태를 방지하고 기존 `user.find_pwd_question_id` 참조 의미를 유지합니다.
 - 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.

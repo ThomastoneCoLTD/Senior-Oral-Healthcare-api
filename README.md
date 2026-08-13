@@ -616,7 +616,9 @@ If tests or REST Docs require external services, document the reason and use a d
 
 User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`) require `realOrganization` with one of `대구1`, `대구2`, or `대구3`. The selected value is stored in nullable `user.real_organization` so pre-existing users and administrator bulk-upload records remain compatible.
 
-User DID registration also requires the existing `findPwdQuestionId` and `findPwdAnswer` fields as ID-recovery verification data. `POST /login/find-id` returns the login identifier only when the submitted name, normalized phone number, question ID, and answer all match. The existing database columns and `/password/questions` compatibility endpoint remain unchanged; the user-facing question alias is `GET /login/find-id/questions`.
+The user login flows are separate: `POST /login` with `userType=user` verifies the login ID and BCrypt password without requiring an issued DID, while `POST /login/did` verifies the issued DID state using only the login ID. Administrator login behavior is unchanged.
+
+Standard user registration requires `userPassword`, `userBirthDate`, `findPwdQuestionId`, and `findPwdAnswer`. The existing question and answer columns remain password-recovery data, and the question list is available from `GET /password/questions`. `POST /login/find-id` no longer accepts a question or answer; it returns the login identifier only when name, normalized phone number, and birth date all match.
 
 The `dev` and `prod` profiles upsert the nine legacy recovery questions with stable IDs `1` through `9` during application startup. This keeps existing `user.find_pwd_question_id` references usable and safely restores missing question rows in a newly provisioned database.
 

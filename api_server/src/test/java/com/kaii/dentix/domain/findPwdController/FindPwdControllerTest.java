@@ -102,17 +102,4 @@ public class FindPwdControllerTest {
 
     }
 
-    @Test
-    void userFindIdQuestionsAlias() throws Exception {
-        given(findPwdService.userFindPwdQuestions()).willReturn(new FindPwdQuestionDto.Response(List.of()));
-
-        mockMvc.perform(RestDocumentationRequestBuilders.get("/login/find-id/questions")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andExpect(jsonPath("response.questions").isArray());
-
-        verify(findPwdService).userFindPwdQuestions();
-    }
-
 }

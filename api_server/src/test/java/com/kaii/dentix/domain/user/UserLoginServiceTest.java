@@ -35,9 +35,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -82,6 +80,7 @@ class UserLoginServiceTest {
                 .userName("김덴티")
                 .userGender(GenderType.W)
                 .userPhoneNumber("01012345678")
+                .userBirthDate("1950-01-01")
                 .realOrganization("대구2")
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("답변")
@@ -91,27 +90,27 @@ class UserLoginServiceTest {
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
         assertThat(userCaptor.getValue().getRealOrganization()).isEqualTo("대구2");
+        assertThat(userCaptor.getValue().getUserBirthDate()).isEqualTo("1950-01-01");
         assertThat(response.getRealOrganization()).isEqualTo("대구2");
     }
 
     @Test
-    void findUserLoginIdentifierReturnsIdWhenAllRecoveryAnswersMatch() {
+    void findUserLoginIdentifierReturnsIdWhenIdentityFieldsMatch() {
         User user = User.builder()
                 .userLoginIdentifier("dentix123")
                 .userName("김덴티")
                 .userPhoneNumber("01012345678")
-                .findPwdQuestionId(2L)
-                .findPwdAnswer("대구초등학교")
+                .userBirthDate("1950-01-01")
                 .build();
-        given(userRepository.findByUserPhoneNumberAndUserName("01012345678", "김덴티"))
+        given(userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
+                "01012345678", "김덴티", "1950-01-01"))
                 .willReturn(Optional.of(user));
 
         UserDto.FindIdResponse response = userLoginService.findUserLoginIdentifier(
                 UserDto.FindIdRequest.builder()
                         .userName(" 김덴티 ")
                         .userPhoneNumber("010-1234-5678")
-                        .findPwdQuestionId(2L)
-                        .findPwdAnswer(" 대구초등학교 ")
+                        .userBirthDate("1950-01-01")
                         .build()
         );
 
@@ -119,23 +118,16 @@ class UserLoginServiceTest {
     }
 
     @Test
-    void findUserLoginIdentifierRejectsMismatchedAnswer() {
-        User user = User.builder()
-                .userLoginIdentifier("dentix123")
-                .userName("김덴티")
-                .userPhoneNumber("01012345678")
-                .findPwdQuestionId(2L)
-                .findPwdAnswer("대구초등학교")
-                .build();
-        given(userRepository.findByUserPhoneNumberAndUserName("01012345678", "김덴티"))
-                .willReturn(Optional.of(user));
+    void findUserLoginIdentifierRejectsMismatchedBirthDate() {
+        given(userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
+                "01012345678", "김덴티", "1951-01-01"))
+                .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> userLoginService.findUserLoginIdentifier(
                 UserDto.FindIdRequest.builder()
                         .userName("김덴티")
                         .userPhoneNumber("01012345678")
-                        .findPwdQuestionId(2L)
-                        .findPwdAnswer("다른 답변")
+                        .userBirthDate("1951-01-01")
                         .build()
         ))
                 .isInstanceOf(UnauthorizedException.class)
@@ -179,37 +171,36 @@ class UserLoginServiceTest {
     }
 
     @Test
-    void userLoginUsesDidFlowWhenPasswordIsBlank() {
+    void userLoginAuthenticatesWithPasswordWithoutRequiringDid() {
         User user = User.builder()
                 .userId(1L)
                 .userLoginIdentifier("dentix123")
                 .userName("김덴티")
-                .userPassword("DID_ONLY:dentix123")
+                .userPassword("encoded-password")
                 .userPhoneNumber("01012345678")
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("answer")
                 .isVerify(YnType.Y)
-                .daeguDid("did:mitum:minic:0x123")
-                .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
                 .build();
 
         given(userRepository.findByUserLoginIdentifier("dentix123")).willReturn(Optional.of(user));
+        given(passwordEncoder.matches("password!", "encoded-password")).willReturn(true);
         given(jwtTokenUtil.createToken(user, TokenType.AccessToken)).willReturn("access-token");
         given(jwtTokenUtil.createToken(user, TokenType.RefreshToken)).willReturn("refresh-token");
 
         UserDto.LoginResponse response = userLoginService.userLogin(UserDto.LoginRequest.builder()
                 .userLoginIdentifier("dentix123")
-                .userPassword(null)
+                .userPassword("password!")
                 .build());
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
         assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
         assertThat(user.getUserRefreshToken()).isEqualTo("refresh-token");
-        verify(passwordEncoder, never()).matches(anyString(), anyString());
+        verify(passwordEncoder).matches("password!", "encoded-password");
     }
 
     @Test
-    void userLoginUsesDidFlowEvenWhenPasswordIsPresent() {
+    void userLoginRejectsWrongPassword() {
         User user = User.builder()
                 .userId(1L)
                 .userLoginIdentifier("dentix123")
@@ -222,14 +213,15 @@ class UserLoginServiceTest {
                 .build();
 
         given(userRepository.findByUserLoginIdentifier("dentix123")).willReturn(Optional.of(user));
+        given(passwordEncoder.matches("wrong-password", "encoded-password")).willReturn(false);
 
         assertThatThrownBy(() -> userLoginService.userLogin(UserDto.LoginRequest.builder()
                 .userLoginIdentifier("dentix123")
                 .userPassword("wrong-password")
                 .build()))
                 .isInstanceOf(UnauthorizedException.class)
-                .hasMessage("DID is not issued.");
+                .hasMessage("Invalid login identifier or password.");
 
-        verify(passwordEncoder, never()).matches(anyString(), anyString());
+        verify(passwordEncoder).matches("wrong-password", "encoded-password");
     }
 }

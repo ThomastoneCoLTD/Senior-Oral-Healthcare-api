@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping({"/password", "/login/find-id"})
+@RequestMapping("/password")
 public class FindPwdController {
 
     private final FindPwdService findPwdService;

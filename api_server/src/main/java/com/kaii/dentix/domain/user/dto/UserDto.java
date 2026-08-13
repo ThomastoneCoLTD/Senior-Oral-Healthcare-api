@@ -40,6 +40,7 @@ public class UserDto {
         @NotBlank(message = "아이디는 필수입니다.")
         private String userLoginIdentifier;
 
+        @NotBlank(message = "비밀번호는 필수입니다.")
         @JsonSerialize(using = PasswordSerializer.class)
         private String userPassword;
     }
@@ -106,11 +107,9 @@ public class UserDto {
         @Pattern(regexp = "^[0-9\\-\\s()]+$", message = "Phone number can contain only numbers, hyphens, spaces, and parentheses.")
         private String userPhoneNumber;
 
-        @NotNull(message = "아이디 찾기 질문 선택은 필수입니다.")
-        private Long findPwdQuestionId;
-
-        @NotBlank(message = "아이디 찾기 답변은 필수입니다.")
-        private String findPwdAnswer;
+        @NotBlank(message = "생년월일은 필수입니다.")
+        @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "생년월일은 YYYY-MM-DD 형식으로 입력해 주세요.")
+        private String userBirthDate;
     }
 
     @Getter @Builder
@@ -164,13 +163,17 @@ public class UserDto {
         private GenderType userGender;
         private String userPhoneNumber;
 
+        @NotBlank(message = "생년월일은 필수입니다.")
+        @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "생년월일은 YYYY-MM-DD 형식으로 입력해 주세요.")
+        private String userBirthDate;
+
         @NotBlank(message = "기관 선택은 필수입니다.")
         @Pattern(regexp = "^(대구1|대구2|대구3)$", message = "기관은 대구1, 대구2, 대구3 중에서 선택해 주세요.")
         private String realOrganization;
 
-        @NotNull(message = "아이디 찾기 질문 선택은 필수입니다.")
+        @NotNull(message = "비밀번호 찾기 질문 선택은 필수입니다.")
         private Long findPwdQuestionId;
-        @NotBlank(message = "아이디 찾기 답변은 필수입니다.")
+        @NotBlank(message = "비밀번호 찾기 답변은 필수입니다.")
         private String findPwdAnswer;
         private Long organizationId;
 

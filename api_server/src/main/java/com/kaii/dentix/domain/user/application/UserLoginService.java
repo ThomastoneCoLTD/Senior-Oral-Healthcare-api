@@ -108,6 +108,7 @@ public class UserLoginService {
                 .findPwdQuestionId(request.getFindPwdQuestionId())
                 .findPwdAnswer(request.getFindPwdAnswer().trim())
                 .userPhoneNumber(userPhoneNumber)
+                .userBirthDate(request.getUserBirthDate())
                 .realOrganization(request.getRealOrganization())
                 .organization(organization)
                 .isVerify(YnType.Y)
@@ -173,9 +174,11 @@ public class UserLoginService {
         String phoneNumber = normalizePhoneNumber(request.getUserPhoneNumber());
         String userName = request.getUserName().trim();
 
-        User user = userRepository.findByUserPhoneNumberAndUserName(phoneNumber, userName)
-                .filter(found -> found.getFindPwdQuestionId().equals(request.getFindPwdQuestionId()))
-                .filter(found -> answersMatch(found.getFindPwdAnswer(), request.getFindPwdAnswer()))
+        User user = userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
+                        phoneNumber,
+                        userName,
+                        request.getUserBirthDate()
+                )
                 .orElseThrow(() -> new UnauthorizedException("입력한 정보가 일치하지 않습니다."));
 
         return UserDto.FindIdResponse.builder()
@@ -185,9 +188,22 @@ public class UserLoginService {
 
     @Transactional
     public UserDto.LoginResponse userLogin(UserDto.LoginRequest request) {
-        return userDidLogin(UserDto.DidLoginRequest.builder()
-                .userLoginIdentifier(request.getUserLoginIdentifier())
-                .build());
+        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
+                .orElseThrow(() -> new UnauthorizedException("Invalid login identifier or password."));
+
+        if (!passwordEncoder.matches(request.getUserPassword(), user.getUserPassword())) {
+            throw new UnauthorizedException("Invalid login identifier or password.");
+        }
+        if (user.getIsVerify() != YnType.Y) {
+            throw new UnauthorizedException("User is not verified.");
+        }
+
+        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
+        String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
+        user.updateLogin(refreshToken);
+        recordLoginHistory(user);
+
+        return buildLoginResponse(user, accessToken, refreshToken);
     }
 
     @Transactional
@@ -271,12 +287,6 @@ public class UserLoginService {
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
                 .build();
-    }
-
-    private boolean answersMatch(String storedAnswer, String requestedAnswer) {
-        return storedAnswer != null
-                && requestedAnswer != null
-                && storedAnswer.trim().equals(requestedAnswer.trim());
     }
 
     @Transactional(readOnly = true)

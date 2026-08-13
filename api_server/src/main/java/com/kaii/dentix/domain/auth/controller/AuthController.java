@@ -50,6 +50,10 @@ public class AuthController {
                 );
 
             case "user":
+                if (loginRequest.getPassword() == null || loginRequest.getPassword().isBlank()) {
+                    throw new BadRequestApiException("사용자 비밀번호를 입력해주세요.");
+                }
+
                 // 1. 통합 DTO(UserDto.LoginRequest)로 변환
                 // 주의: UserDto.LoginRequest의 필드명(userLoginIdentifier, userPassword)에 맞춰서 매핑합니다.
                 UserDto.LoginRequest userReq = UserDto.LoginRequest.builder()

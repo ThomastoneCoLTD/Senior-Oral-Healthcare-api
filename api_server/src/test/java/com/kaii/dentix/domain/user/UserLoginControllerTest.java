@@ -36,6 +36,7 @@ import static com.kaii.dentix.common.DocumentOptionalGenerator.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.documentationConfiguration;
@@ -180,6 +181,7 @@ public class UserLoginControllerTest {
                 .userPassword(password)
                 .userGender(GenderType.W)
                 .userPhoneNumber("01012345678")
+                .userBirthDate("1950-01-01")
                 .realOrganization("대구1")
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("초록색")
@@ -208,9 +210,10 @@ public class UserLoginControllerTest {
                                 fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호"),
                                 fieldWithPath("userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("사용자 휴대폰 번호"),
+                                fieldWithPath("userBirthDate").type(JsonFieldType.STRING).description("사용자 생년월일(YYYY-MM-DD)"),
                                 fieldWithPath("realOrganization").type(JsonFieldType.STRING).description("사용자가 선택한 실제 기관(대구1, 대구2, 대구3)"),
-                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("아이디 찾기 질문 ID"),
-                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("아이디 찾기 답변"),
+                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
+                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변"),
                                 fieldWithPath("organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
                                 fieldWithPath("userServiceAgreementRequest").type(JsonFieldType.ARRAY).description("동의한 약관 ID 목록")
                         ),
@@ -291,8 +294,7 @@ public class UserLoginControllerTest {
         UserDto.FindIdRequest request = UserDto.FindIdRequest.builder()
                 .userName("김덴티")
                 .userPhoneNumber("010-1234-5678")
-                .findPwdQuestionId(1L)
-                .findPwdAnswer("초록색")
+                .userBirthDate("1950-01-01")
                 .build();
 
         mockMvc.perform(RestDocumentationRequestBuilders.post("/login/find-id")
@@ -307,8 +309,7 @@ public class UserLoginControllerTest {
                         requestFields(
                                 fieldWithPath("userName").type(JsonFieldType.STRING).description("사용자 이름"),
                                 fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).description("사용자 휴대폰 번호"),
-                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("아이디 찾기 질문 ID"),
-                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("아이디 찾기 답변")
+                                fieldWithPath("userBirthDate").type(JsonFieldType.STRING).description("사용자 생년월일(YYYY-MM-DD)")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
@@ -384,7 +385,7 @@ public class UserLoginControllerTest {
                         requestFields(
                                 fieldWithPath("userType").type(JsonFieldType.STRING).description("로그인 사용자 타입"),
                                 fieldWithPath("loginId").type(JsonFieldType.STRING).description("사용자 아이디"),
-                                fieldWithPath("password").type(JsonFieldType.STRING).optional().description("관리자 비밀번호. 사용자 로그인은 비밀번호 없이 요청 가능")
+                                fieldWithPath("password").type(JsonFieldType.STRING).description("사용자 또는 관리자 비밀번호")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
@@ -410,9 +411,7 @@ public class UserLoginControllerTest {
     }
 
     @Test
-    public void userLoginAllowsPasswordlessUserRequest() throws Exception {
-        given(userLoginService.userLogin(any(UserDto.LoginRequest.class))).willReturn(userLoginDto());
-
+    public void userLoginRejectsPasswordlessUserRequest() throws Exception {
         String request = """
                 {
                   "userType": "user",
@@ -428,13 +427,14 @@ public class UserLoginControllerTest {
         );
 
         resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200));
+                .andExpect(jsonPath("rt").value(400))
+                .andExpect(jsonPath("rtMsg").value("사용자 비밀번호를 입력해주세요."));
 
-        verify(userLoginService).userLogin(any(UserDto.LoginRequest.class));
+        verify(userLoginService, never()).userLogin(any(UserDto.LoginRequest.class));
     }
 
     @Test
-    public void userLoginDoesNotExposePasswordCheckMessage() throws Exception {
+    public void userLoginReturnsPasswordCheckMessage() throws Exception {
         given(userLoginService.userLogin(any(UserDto.LoginRequest.class)))
                 .willThrow(new UnauthorizedException("Invalid login identifier or password."));
 
@@ -454,7 +454,7 @@ public class UserLoginControllerTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(401))
-                .andExpect(jsonPath("rtMsg").value("Invalid login ID or DID."));
+                .andExpect(jsonPath("rtMsg").value("Invalid login ID or password."));
     }
 
     @Test

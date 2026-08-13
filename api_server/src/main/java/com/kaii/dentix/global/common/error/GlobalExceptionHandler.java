@@ -27,8 +27,6 @@ import java.util.Objects;
 public class GlobalExceptionHandler {
 
     private static final List<String> DID_LOGIN_UNAUTHORIZED_MESSAGES = List.of(
-            "아이디 혹은 비밀번호가 올바르지 않습니다.",
-            "Invalid login identifier or password.",
             "Invalid login identifier or DID.",
             "DID is not issued.",
             "DID credential is not issued.",
@@ -247,6 +245,13 @@ public class GlobalExceptionHandler {
 
     private String translateUnauthorizedMessage(HttpServletRequest request, String message) {
         boolean english = isEnglishRequest(request);
+
+        if ("Invalid login identifier or password.".equals(message)
+                || "아이디 혹은 비밀번호가 올바르지 않습니다.".equals(message)) {
+            return english
+                    ? "Invalid login ID or password."
+                    : "아이디 혹은 비밀번호가 올바르지 않습니다.";
+        }
 
         if (DID_LOGIN_UNAUTHORIZED_MESSAGES.contains(message)) {
             return english

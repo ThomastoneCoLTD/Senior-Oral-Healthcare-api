@@ -50,7 +50,7 @@ public class UserLoginController {
         return new DataResponse<>(userLoginService.userDidLogin(request));
     }
 
-    /** 이름, 휴대폰 번호, 확인 질문과 답변으로 사용자 아이디 찾기 */
+    /** 이름, 휴대폰 번호, 생년월일로 사용자 아이디 찾기 */
     @PostMapping("/find-id")
     public DataResponse<UserDto.FindIdResponse> findUserLoginIdentifier(
             @Valid @RequestBody UserDto.FindIdRequest request
