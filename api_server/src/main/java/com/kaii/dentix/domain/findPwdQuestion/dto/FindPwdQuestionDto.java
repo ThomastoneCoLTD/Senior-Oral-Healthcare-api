@@ -9,7 +9,7 @@ import java.util.List;
 public class FindPwdQuestionDto {
 
     // =================================================================
-    // 1. 비밀번호 찾기 질문 목록 응답 (Response)
+    // 1. 계정 확인 질문 목록 응답 (Response)
     // =================================================================
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor

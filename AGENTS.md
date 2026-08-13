@@ -175,6 +175,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 회원가입(`/login/signUp`, `/login/signUp/did`) 시 토큰 수령용 `walletAddress`를 필수로 받아 `UserRewardWallet`에 함께 저장합니다.
 - 회원가입 사용자는 요청 기관값과 무관하게 `tokenadmin` 관리자 계정의 소속 기관 사용자로 저장합니다. `tokenadmin` 계정 또는 소속 기관이 없으면 가입이 실패합니다.
 - 회원가입(`/login/signUp`, `/login/signUp/did`)은 사용자가 `대구1`, `대구2`, `대구3` 중 하나를 `realOrganization`으로 필수 선택합니다. 선택값은 기존 `organizationId` 소속 관계와 분리된 `user.real_organization` 컬럼에 저장하며, 사용자 `/user/info`와 관리자 `/admin/user` 목록에서 조회합니다. 기존 사용자 및 관리자 일괄등록 호환을 위해 DB 컬럼 자체는 nullable입니다.
+- DID 회원가입은 기존 `user.find_pwd_question_id`, `user.find_pwd_answer` 컬럼에 사용자가 선택한 아이디 찾기 질문과 답변을 저장합니다. `POST /login/find-id`는 이름, 정규화된 휴대폰 번호, 질문 ID, 답변이 모두 일치할 때만 사용자 아이디를 반환합니다. 질문 목록은 사용자용 `/login/find-id/questions`와 기존 호환 경로 `/password/questions`에서 조회합니다.
 - 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
 - 2~6화 필수영상은 가입 주차에 따라 한 주에 하나씩 열리고, 1화 및 7~12화 상시영상은 계속 열려 있어야 합니다.

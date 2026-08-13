@@ -95,6 +95,90 @@ class UserLoginServiceTest {
     }
 
     @Test
+    void findUserLoginIdentifierReturnsIdWhenAllRecoveryAnswersMatch() {
+        User user = User.builder()
+                .userLoginIdentifier("dentix123")
+                .userName("김덴티")
+                .userPhoneNumber("01012345678")
+                .findPwdQuestionId(2L)
+                .findPwdAnswer("대구초등학교")
+                .build();
+        given(userRepository.findByUserPhoneNumberAndUserName("01012345678", "김덴티"))
+                .willReturn(Optional.of(user));
+
+        UserDto.FindIdResponse response = userLoginService.findUserLoginIdentifier(
+                UserDto.FindIdRequest.builder()
+                        .userName(" 김덴티 ")
+                        .userPhoneNumber("010-1234-5678")
+                        .findPwdQuestionId(2L)
+                        .findPwdAnswer(" 대구초등학교 ")
+                        .build()
+        );
+
+        assertThat(response.getUserLoginIdentifier()).isEqualTo("dentix123");
+    }
+
+    @Test
+    void findUserLoginIdentifierRejectsMismatchedAnswer() {
+        User user = User.builder()
+                .userLoginIdentifier("dentix123")
+                .userName("김덴티")
+                .userPhoneNumber("01012345678")
+                .findPwdQuestionId(2L)
+                .findPwdAnswer("대구초등학교")
+                .build();
+        given(userRepository.findByUserPhoneNumberAndUserName("01012345678", "김덴티"))
+                .willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userLoginService.findUserLoginIdentifier(
+                UserDto.FindIdRequest.builder()
+                        .userName("김덴티")
+                        .userPhoneNumber("01012345678")
+                        .findPwdQuestionId(2L)
+                        .findPwdAnswer("다른 답변")
+                        .build()
+        ))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage("입력한 정보가 일치하지 않습니다.");
+    }
+
+    @Test
+    void userDidSignUpStoresSelectedIdRecoveryQuestionAndAnswer() {
+        Organization organization = Organization.builder()
+                .organizationId(10L)
+                .organizationName("Token Admin Organization")
+                .build();
+        given(userRepository.findByUserLoginIdentifier("dentix123")).willReturn(Optional.empty());
+        given(userRepository.findByUserPhoneNumber("01012345678")).willReturn(Optional.empty());
+        given(findPwdQuestionRepository.findById(2L)).willReturn(Optional.of(FindPwdQuestion.builder()
+                .findPwdQuestionId(2L)
+                .findPwdQuestionSort(2L)
+                .findPwdQuestionTitle("졸업한 초등학교는?")
+                .build()));
+        given(daeguDefaultOrganizationService.getTokenAdminOrganization()).willReturn(organization);
+        given(passwordEncoder.encode("DID_ONLY:dentix123")).willReturn("encoded-placeholder");
+        given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(userDaeguProvisioningService.provisionForSignUp(any(User.class))).willReturn("0x123");
+        given(jwtTokenUtil.createToken(any(User.class), any(TokenType.class))).willReturn("token");
+
+        userLoginService.userDidSignUp(UserDto.DidSignUpRequest.builder()
+                .userLoginIdentifier("dentix123")
+                .userName("김덴티")
+                .userPhoneNumber("010-1234-5678")
+                .userBirthDate("1950-01-01")
+                .realOrganization("대구1")
+                .findPwdQuestionId(2L)
+                .findPwdAnswer(" 대구초등학교 ")
+                .userServiceAgreementRequest(List.of(1L, 2L))
+                .build());
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        assertThat(userCaptor.getValue().getFindPwdQuestionId()).isEqualTo(2L);
+        assertThat(userCaptor.getValue().getFindPwdAnswer()).isEqualTo("대구초등학교");
+    }
+
+    @Test
     void userLoginUsesDidFlowWhenPasswordIsBlank() {
         User user = User.builder()
                 .userId(1L)

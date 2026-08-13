@@ -10,15 +10,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/password")
+@RequestMapping({"/password", "/login/find-id"})
 public class FindPwdController {
 
     private final FindPwdService findPwdService;
 
     /**
-     *  사용자 비밀번호 찾기 질문 리스트
+     *  사용자 계정 확인 질문 리스트. 기존 관리자 비밀번호 찾기 경로와 호환한다.
      */
-    @GetMapping(value = "/questions", name = "사용자 비밀번호 찾기 질문 리스트")
+    @GetMapping(value = "/questions", name = "사용자 계정 확인 질문 리스트")
     public DataResponse<FindPwdQuestionDto.Response> userFindPwdQuestions() {
         return new DataResponse<>(findPwdService.userFindPwdQuestions());
     }

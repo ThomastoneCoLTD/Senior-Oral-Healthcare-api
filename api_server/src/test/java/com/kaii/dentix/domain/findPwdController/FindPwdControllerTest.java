@@ -91,15 +91,28 @@ public class FindPwdControllerTest {
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
-                                fieldWithPath("response.questions").type(JsonFieldType.ARRAY).description("비밀번호 찾기 질문 목록"),
-                                fieldWithPath("response.questions[].id").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 고유 번호"),
-                                fieldWithPath("response.questions[].sort").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 정렬 순서"),
-                                fieldWithPath("response.questions[].title").type(JsonFieldType.STRING).description("비밀번호 찾기 질문")
+                                fieldWithPath("response.questions").type(JsonFieldType.ARRAY).description("계정 확인 질문 목록"),
+                                fieldWithPath("response.questions[].id").type(JsonFieldType.NUMBER).description("계정 확인 질문 고유 번호"),
+                                fieldWithPath("response.questions[].sort").type(JsonFieldType.NUMBER).description("계정 확인 질문 정렬 순서"),
+                                fieldWithPath("response.questions[].title").type(JsonFieldType.STRING).description("계정 확인 질문")
                         )
                 ));
 
         verify(findPwdService).userFindPwdQuestions();
 
+    }
+
+    @Test
+    void userFindIdQuestionsAlias() throws Exception {
+        given(findPwdService.userFindPwdQuestions()).willReturn(new FindPwdQuestionDto.Response(List.of()));
+
+        mockMvc.perform(RestDocumentationRequestBuilders.get("/login/find-id/questions")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(jsonPath("response.questions").isArray());
+
+        verify(findPwdService).userFindPwdQuestions();
     }
 
 }

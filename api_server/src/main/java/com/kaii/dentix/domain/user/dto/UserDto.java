@@ -97,6 +97,30 @@ public class UserDto {
 
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor
+    public static class FindIdRequest {
+        @NotBlank(message = "이름은 필수입니다.")
+        private String userName;
+
+        @NotBlank(message = "휴대폰 번호는 필수입니다.")
+        @Size(max = 20, message = "Phone number must be 20 characters or less.")
+        @Pattern(regexp = "^[0-9\\-\\s()]+$", message = "Phone number can contain only numbers, hyphens, spaces, and parentheses.")
+        private String userPhoneNumber;
+
+        @NotNull(message = "아이디 찾기 질문 선택은 필수입니다.")
+        private Long findPwdQuestionId;
+
+        @NotBlank(message = "아이디 찾기 답변은 필수입니다.")
+        private String findPwdAnswer;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class FindIdResponse {
+        private String userLoginIdentifier;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
     public static class ServiceInfo {
         private Long serviceId;
         private String name;
@@ -144,9 +168,9 @@ public class UserDto {
         @Pattern(regexp = "^(대구1|대구2|대구3)$", message = "기관은 대구1, 대구2, 대구3 중에서 선택해 주세요.")
         private String realOrganization;
 
-        @NotNull(message = "질문 선택 필수입니다.")
+        @NotNull(message = "아이디 찾기 질문 선택은 필수입니다.")
         private Long findPwdQuestionId;
-        @NotBlank(message = "답변은 필수입니다.")
+        @NotBlank(message = "아이디 찾기 답변은 필수입니다.")
         private String findPwdAnswer;
         private Long organizationId;
 
@@ -195,6 +219,12 @@ public class UserDto {
         @NotBlank(message = "기관 선택은 필수입니다.")
         @Pattern(regexp = "^(대구1|대구2|대구3)$", message = "기관은 대구1, 대구2, 대구3 중에서 선택해 주세요.")
         private String realOrganization;
+
+        @NotNull(message = "아이디 찾기 질문 선택은 필수입니다.")
+        private Long findPwdQuestionId;
+
+        @NotBlank(message = "아이디 찾기 답변은 필수입니다.")
+        private String findPwdAnswer;
 
         @NotNull(message = "서비스 이용 동의는 필수입니다.")
         private List<Long> userServiceAgreementRequest;

@@ -209,8 +209,8 @@ public class UserLoginControllerTest {
                                 fieldWithPath("userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("사용자 휴대폰 번호"),
                                 fieldWithPath("realOrganization").type(JsonFieldType.STRING).description("사용자가 선택한 실제 기관(대구1, 대구2, 대구3)"),
-                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
-                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변"),
+                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("아이디 찾기 질문 ID"),
+                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("아이디 찾기 답변"),
                                 fieldWithPath("organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
                                 fieldWithPath("userServiceAgreementRequest").type(JsonFieldType.ARRAY).description("동의한 약관 ID 목록")
                         ),
@@ -246,6 +246,8 @@ public class UserLoginControllerTest {
                 .userPhoneNumber("01012345678")
                 .userBirthDate("1950-01-01")
                 .realOrganization("대구1")
+                .findPwdQuestionId(1L)
+                .findPwdAnswer("초록색")
                 .userServiceAgreementRequest(List.of(1L, 2L))
                 .build();
 
@@ -266,6 +268,8 @@ public class UserLoginControllerTest {
                 .userPhoneNumber("01012345678")
                 .userBirthDate("1950-01-01")
                 .realOrganization("대구4")
+                .findPwdQuestionId(1L)
+                .findPwdAnswer("초록색")
                 .userServiceAgreementRequest(List.of(1L, 2L))
                 .build();
 
@@ -275,6 +279,46 @@ public class UserLoginControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(417))
                 .andExpect(jsonPath("rtMsg").value("기관은 대구1, 대구2, 대구3 중에서 선택해 주세요."));
+    }
+
+    @Test
+    void findUserLoginIdentifier() throws Exception {
+        given(userLoginService.findUserLoginIdentifier(any(UserDto.FindIdRequest.class)))
+                .willReturn(UserDto.FindIdResponse.builder()
+                        .userLoginIdentifier("dentix123")
+                        .build());
+
+        UserDto.FindIdRequest request = UserDto.FindIdRequest.builder()
+                .userName("김덴티")
+                .userPhoneNumber("010-1234-5678")
+                .findPwdQuestionId(1L)
+                .findPwdAnswer("초록색")
+                .build();
+
+        mockMvc.perform(RestDocumentationRequestBuilders.post("/login/find-id")
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(jsonPath("response.userLoginIdentifier").value("dentix123"))
+                .andDo(document("login/find-id",
+                        getDocumentRequest(),
+                        getDocumentResponse(),
+                        requestFields(
+                                fieldWithPath("userName").type(JsonFieldType.STRING).description("사용자 이름"),
+                                fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).description("사용자 휴대폰 번호"),
+                                fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("아이디 찾기 질문 ID"),
+                                fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("아이디 찾기 답변")
+                        ),
+                        responseFields(
+                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
+                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메시지"),
+                                fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
+                                fieldWithPath("response.userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디")
+                        )
+                ));
+
+        verify(userLoginService).findUserLoginIdentifier(any(UserDto.FindIdRequest.class));
     }
 
     /**

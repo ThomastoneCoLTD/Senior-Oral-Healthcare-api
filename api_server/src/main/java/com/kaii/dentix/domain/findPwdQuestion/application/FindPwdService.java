@@ -16,7 +16,7 @@ public class FindPwdService {
     private final FindPwdQuestionRepository findPwdQuestionRepository;
 
     /**
-     *  사용자 바밀번호 찾기 질문 리스트
+     *  사용자 계정 확인 질문 리스트
      */
     @Transactional(readOnly = true)
     public FindPwdQuestionDto.Response userFindPwdQuestions() {

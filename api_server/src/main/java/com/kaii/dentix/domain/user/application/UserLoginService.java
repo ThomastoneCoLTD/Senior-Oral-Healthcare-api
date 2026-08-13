@@ -106,7 +106,7 @@ public class UserLoginService {
                 .userGender(request.getUserGender())
                 .userPassword(passwordEncoder.encode(request.getUserPassword()))
                 .findPwdQuestionId(request.getFindPwdQuestionId())
-                .findPwdAnswer(request.getFindPwdAnswer())
+                .findPwdAnswer(request.getFindPwdAnswer().trim())
                 .userPhoneNumber(userPhoneNumber)
                 .realOrganization(request.getRealOrganization())
                 .organization(organization)
@@ -136,13 +136,17 @@ public class UserLoginService {
         Organization organization = daeguDefaultOrganizationService.getTokenAdminOrganization();
         String loginIdentifier = request.getUserLoginIdentifier().trim();
 
+        if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
+            throw new NotFoundDataException("아이디 찾기 질문이 존재하지 않습니다.");
+        }
+
         User user = userRepository.save(User.builder()
                 .userLoginIdentifier(loginIdentifier)
                 .userName(request.getUserName())
                 .userGender(GenderType.M)
                 .userPassword(passwordEncoder.encode("DID_ONLY:" + loginIdentifier))
-                .findPwdQuestionId(resolveDefaultFindPwdQuestionId())
-                .findPwdAnswer(loginIdentifier)
+                .findPwdQuestionId(request.getFindPwdQuestionId())
+                .findPwdAnswer(request.getFindPwdAnswer().trim())
                 .userPhoneNumber(userPhoneNumber)
                 .userBirthDate(request.getUserBirthDate())
                 .realOrganization(request.getRealOrganization())
@@ -162,6 +166,21 @@ public class UserLoginService {
         user.updateLogin(refreshToken);
 
         return buildSignUpResponse(user, organization, accessToken, refreshToken, walletAddress);
+    }
+
+    @Transactional(readOnly = true)
+    public UserDto.FindIdResponse findUserLoginIdentifier(UserDto.FindIdRequest request) {
+        String phoneNumber = normalizePhoneNumber(request.getUserPhoneNumber());
+        String userName = request.getUserName().trim();
+
+        User user = userRepository.findByUserPhoneNumberAndUserName(phoneNumber, userName)
+                .filter(found -> found.getFindPwdQuestionId().equals(request.getFindPwdQuestionId()))
+                .filter(found -> answersMatch(found.getFindPwdAnswer(), request.getFindPwdAnswer()))
+                .orElseThrow(() -> new UnauthorizedException("입력한 정보가 일치하지 않습니다."));
+
+        return UserDto.FindIdResponse.builder()
+                .userLoginIdentifier(user.getUserLoginIdentifier())
+                .build();
     }
 
     @Transactional
@@ -254,11 +273,10 @@ public class UserLoginService {
                 .build();
     }
 
-    private Long resolveDefaultFindPwdQuestionId() {
-        return findPwdQuestionRepository.findAll().stream()
-                .findFirst()
-                .map(question -> question.getFindPwdQuestionId())
-                .orElse(1L);
+    private boolean answersMatch(String storedAnswer, String requestedAnswer) {
+        return storedAnswer != null
+                && requestedAnswer != null
+                && storedAnswer.trim().equals(requestedAnswer.trim());
     }
 
     @Transactional(readOnly = true)
