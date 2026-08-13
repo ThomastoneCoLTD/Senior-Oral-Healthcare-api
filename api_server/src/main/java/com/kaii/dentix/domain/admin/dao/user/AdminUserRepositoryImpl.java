@@ -20,6 +20,7 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
@@ -64,12 +65,20 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
             builder.and(user.organization.organizationId.eq(request.getOrganizationId()));
         }
 
+        OrderSpecifier<?>[] orderSpecifiers = request.getOrganizationId() == null
+                ? new OrderSpecifier<?>[]{
+                        user.realOrganization.asc().nullsLast(),
+                        user.userName.asc().nullsLast(),
+                        user.created.desc()
+                }
+                : new OrderSpecifier<?>[]{user.created.desc()};
+
         // 1) ?ъ슜??紐⑸줉 議고쉶
         List<User> users = queryFactory
                 .selectFrom(user)
                 .leftJoin(user.organization, organization).fetchJoin()
                 .where(builder)
-                .orderBy(user.created.desc())
+                .orderBy(orderSpecifiers)
                 .offset(paging.getOffset())
                 .limit(paging.getPageSize())
                 .fetch();

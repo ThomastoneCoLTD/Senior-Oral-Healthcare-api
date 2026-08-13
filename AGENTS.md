@@ -175,6 +175,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 회원가입(`/login/signUp`, `/login/signUp/did`) 시 토큰 수령용 `walletAddress`를 필수로 받아 `UserRewardWallet`에 함께 저장합니다.
 - 회원가입 사용자는 요청 기관값과 무관하게 `tokenadmin` 관리자 계정의 소속 기관 사용자로 저장합니다. `tokenadmin` 계정 또는 소속 기관이 없으면 가입이 실패합니다.
 - 회원가입(`/login/signUp`, `/login/signUp/did`)은 사용자가 `대구1`, `대구2`, `대구3` 중 하나를 `realOrganization`으로 필수 선택합니다. 선택값은 기존 `organizationId` 소속 관계와 분리된 `user.real_organization` 컬럼에 저장하며, 사용자 `/user/info`와 관리자 `/admin/user` 목록에서 조회합니다. 기존 사용자 및 관리자 일괄등록 호환을 위해 DB 컬럼 자체는 nullable입니다.
+- 일반 관리자 메뉴는 `[사용자 관리]`, `[사용자 통계]`, `[사용자 진도 현황]`, `[DID 리워드 현황]`만 표시하고 슈퍼 관리자 메뉴는 기존 구성을 유지합니다. 슈퍼 관리자의 사용자 관리·통계·진도·DID 리워드 화면은 `organizationId`가 아니라 회원가입 시 선택한 `realOrganization` 기준으로 묶으며, 값이 없는 기존 사용자는 `기관 미지정`으로 표시합니다. 진도 및 DID 리워드 응답에도 `realOrganization`을 포함합니다.
 - 기존 `user.find_pwd_question_id`, `user.find_pwd_answer` 컬럼은 비밀번호 찾기 질문과 답변 용도로 유지합니다. `POST /login/find-id`는 질문/답변을 받지 않고 이름, 정규화된 휴대폰 번호, 생년월일이 모두 일치할 때만 사용자 아이디를 반환합니다. 질문 목록은 `/password/questions`에서 조회합니다.
 - 운영/개발 앱 시작 시 과거 계정 확인 질문 9개를 ID와 정렬값 `1~9`로 upsert합니다. 신규 DB에서 `find_pwd_question`이 비어 있어 회원가입 질문을 선택할 수 없는 상태를 방지하고 기존 `user.find_pwd_question_id` 참조 의미를 유지합니다.
 - 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
@@ -208,7 +209,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 ## 최근 동기화 상태
 
-2026-08-12 기준 운영 DB 자격증명을 Secrets Manager 단일 원본으로 고정하는 작업을 진행했습니다.
+2026-08-14 기준 `git pull origin prod` 후 관리자 권한별 메뉴와 실가입기관별 현황 표시 작업을 진행했습니다.
 
-- 백엔드 `Senior-Oral-Healthcare-api`: 현재 `prod`, 기준 `85562957`
-- 프론트엔드 `Senior-Oral-Healthcare-front`: 현재 `prod`, 기준 `8765068`
+- 백엔드 `Senior-Oral-Healthcare-api`: 현재 `prod`, 기준 `845b91da`
+- 프론트엔드 `Senior-Oral-Healthcare-front`: 현재 `prod`, 기준 `37d337d`

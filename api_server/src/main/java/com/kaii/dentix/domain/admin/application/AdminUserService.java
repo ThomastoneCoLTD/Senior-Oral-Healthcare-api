@@ -291,6 +291,7 @@ public class AdminUserService {
                     .userId(user.getUserId())
                     .userLoginIdentifier(user.getUserLoginIdentifier())
                     .userName(user.getUserName())
+                    .realOrganization(user.getRealOrganization())
                     .completedCount(completedCount)
                     .overallCompletionRate(overallRate)
                     .rewardReceivedCount(rewardCount)
@@ -370,6 +371,7 @@ public class AdminUserService {
                     .userLoginIdentifier(user.getUserLoginIdentifier())
                     .userName(user.getUserName())
                     .organizationName(user.getOrganization() == null ? null : user.getOrganization().getOrganizationName())
+                    .realOrganization(user.getRealOrganization())
                     .created(user.getCreated())
                     .userLastLoginDate(user.getUserLastLoginDate())
                     .daeguDid(user.getDaeguDid())
@@ -533,7 +535,10 @@ public class AdminUserService {
         Admin admin = adminService.getTokenAdmin(request);
         List<User> users;
         if (admin.isSuperAdmin()) {
-            users = userRepository.findAll(Sort.by(Sort.Direction.ASC, "userName"));
+            users = userRepository.findAll(Sort.by(
+                    Sort.Order.asc("realOrganization").nullsLast(),
+                    Sort.Order.asc("userName").ignoreCase()
+            ));
         } else {
             if (admin.getOrganization() == null) {
                 throw new BadRequestApiException("소속 기관 정보가 없습니다.");

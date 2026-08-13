@@ -17,22 +17,30 @@ import com.kaii.dentix.domain.superAdmin.dto.SuperAdminStatisticDto;
 import com.kaii.dentix.domain.type.BillingType;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SuperAdminOrganizationService {
+
+    private static final String UNASSIGNED_REAL_ORGANIZATION = "기관 미지정";
 
     private final OrganizationRepository organizationRepository;
     private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
@@ -117,33 +125,48 @@ public class SuperAdminOrganizationService {
     public SuperAdminStatisticDto.TotalUserStats getSuperAdminTotalUserStatistics(Admin admin) {
 
         // --- 1. 전체 통계 (Global Stats) ---
-        long totalUsers = userRepository.count();
-        long maleUsers = userRepository.countByUserGender(GenderType.M);
-        long femaleUsers = userRepository.countByUserGender(GenderType.W);
+        List<User> users = userRepository.findAll();
+        long totalUsers = users.size();
+        long maleUsers = users.stream().filter(user -> user.getUserGender() == GenderType.M).count();
+        long femaleUsers = users.stream().filter(user -> user.getUserGender() == GenderType.W).count();
 
         // Date 변환 (LocalDateTime -> Date)
         LocalDateTime sevenDaysAgoLdt = LocalDateTime.now().minusDays(7);
         Date sevenDaysAgo = Date.from(sevenDaysAgoLdt.atZone(ZoneId.systemDefault()).toInstant());
 
-        long newUsers7Days = userRepository.countByCreatedAfter(sevenDaysAgo);
+        long newUsers7Days = users.stream()
+                .filter(user -> user.getCreated() != null && user.getCreated().after(sevenDaysAgo))
+                .count();
 
-        // --- 2. 기관별 통계 (Organization Stats) ---
-        List<Organization> organizations = organizationRepository.findAll();
+        // --- 2. 회원가입 시 선택한 실제 기관별 통계 (realOrganization) ---
+        Map<String, List<User>> usersByRealOrganization = users.stream()
+                .collect(Collectors.groupingBy(user -> realOrganizationName(user.getRealOrganization())));
+        List<String> realOrganizationNames = new ArrayList<>(usersByRealOrganization.keySet());
+        realOrganizationNames.sort(
+                Comparator.comparing((String name) -> UNASSIGNED_REAL_ORGANIZATION.equals(name))
+                        .thenComparing(Comparator.naturalOrder())
+        );
 
         LocalDateTime oneMonthAgoLdt = LocalDateTime.now().minusMonths(1);
         Date oneMonthAgo = Date.from(oneMonthAgoLdt.atZone(ZoneId.systemDefault()).toInstant());
 
-        List<SuperAdminStatisticDto.OrgUserStats> orgStatsList = organizations.stream()
-                .map(org -> {
-                    // 유저 리포지토리 메서드가 필요함 (기존 코드 유지 가정)
-                    long orgTotal = userRepository.countByOrganization(org);
-                    long orgMale = userRepository.countByOrganizationAndUserGender(org, GenderType.M);
-                    long orgFemale = userRepository.countByOrganizationAndUserGender(org, GenderType.W);
-                    long orgNewUsers = userRepository.countByOrganizationAndCreatedAfter(org, oneMonthAgo);
+        List<SuperAdminStatisticDto.OrgUserStats> orgStatsList = realOrganizationNames.stream()
+                .map(realOrganizationName -> {
+                    List<User> organizationUsers = usersByRealOrganization.get(realOrganizationName);
+                    long orgTotal = organizationUsers.size();
+                    long orgMale = organizationUsers.stream()
+                            .filter(user -> user.getUserGender() == GenderType.M)
+                            .count();
+                    long orgFemale = organizationUsers.stream()
+                            .filter(user -> user.getUserGender() == GenderType.W)
+                            .count();
+                    long orgNewUsers = organizationUsers.stream()
+                            .filter(user -> user.getCreated() != null && user.getCreated().after(oneMonthAgo))
+                            .count();
 
                     return SuperAdminStatisticDto.OrgUserStats.builder()
-                            .organizationId(org.getOrganizationId())
-                            .organizationName(org.getOrganizationName())
+                            .organizationId(null)
+                            .organizationName(realOrganizationName)
                             .totalUsers(orgTotal)
                             .maleUsers(orgMale)
                             .femaleUsers(orgFemale)
@@ -160,6 +183,12 @@ public class SuperAdminOrganizationService {
                 .newUsers7Days(newUsers7Days)
                 .organizationStats(orgStatsList)
                 .build();
+    }
+
+    private String realOrganizationName(String realOrganization) {
+        return StringUtils.hasText(realOrganization)
+                ? realOrganization.trim()
+                : UNASSIGNED_REAL_ORGANIZATION;
     }
 
     /** 6. 기관 현재 구독 정보 (단건) */

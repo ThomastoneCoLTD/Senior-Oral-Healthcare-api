@@ -33,6 +33,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -144,6 +146,29 @@ class AdminUserServiceTest {
 
         verify(userRepository).save(any(User.class));
         verify(serviceAgreementConsentService).saveUserServiceAgreements(any(Long.class), ArgumentMatchers.anyList());
+    }
+
+    @Test
+    void getExerciseProgress_includesRealOrganizationForSuperAdmin() {
+        Admin superAdmin = Admin.builder().adminIsSuper(YnType.Y).build();
+        User user = User.builder()
+                .userId(10L)
+                .userLoginIdentifier("user01")
+                .userName("홍길동")
+                .realOrganization("대구2")
+                .build();
+
+        when(adminService.getTokenAdmin(any())).thenReturn(superAdmin);
+        when(userRepository.findAll(any(Sort.class))).thenReturn(List.of(user));
+        when(oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of());
+        when(oralExerciseProgressRepository.findByUserIdIn(List.of(10L))).thenReturn(List.of());
+        when(userRewardTransactionRepository.findByUserIdInAndType(any(), any())).thenReturn(List.of());
+
+        AdminUserDto.ExerciseProgressResponse response =
+                adminUserService.getExerciseProgress(new MockHttpServletRequest());
+
+        assertThat(response.getUsers()).hasSize(1);
+        assertThat(response.getUsers().get(0).getRealOrganization()).isEqualTo("대구2");
     }
 
     private byte[] createWorkbookBytes() throws Exception {

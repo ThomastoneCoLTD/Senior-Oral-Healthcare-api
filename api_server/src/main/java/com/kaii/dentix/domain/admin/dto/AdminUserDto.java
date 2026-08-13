@@ -178,6 +178,7 @@ public class AdminUserDto {
         private Long userId;
         private String userLoginIdentifier;
         private String userName;
+        private String realOrganization;
         private int completedCount;
         private int overallCompletionRate;
         private int rewardReceivedCount;
@@ -214,6 +215,7 @@ public class AdminUserDto {
         private String userLoginIdentifier;
         private String userName;
         private String organizationName;
+        private String realOrganization;
         private Date created;
         private Date userLastLoginDate;
         private String daeguDid;
