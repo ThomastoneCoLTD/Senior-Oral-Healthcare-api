@@ -4,9 +4,12 @@ import com.kaii.dentix.domain.admin.dao.AdminRepository;
 import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.findPwdQuestion.dao.FindPwdQuestionRepository;
+import com.kaii.dentix.domain.findPwdQuestion.domain.FindPwdQuestion;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.application.DaeguDefaultOrganizationService;
+import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserDaeguProvisioningService;
@@ -22,15 +25,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -50,6 +56,43 @@ class UserLoginServiceTest {
 
     @InjectMocks
     private UserLoginService userLoginService;
+
+    @Test
+    void userSignUpStoresSelectedRealOrganization() {
+        Organization organization = Organization.builder()
+                .organizationId(10L)
+                .organizationName("Token Admin Organization")
+                .build();
+        given(userRepository.findByUserLoginIdentifier("dentix123")).willReturn(Optional.empty());
+        given(userRepository.findByUserPhoneNumber("01012345678")).willReturn(Optional.empty());
+        given(findPwdQuestionRepository.findById(1L)).willReturn(Optional.of(FindPwdQuestion.builder()
+                .findPwdQuestionId(1L)
+                .findPwdQuestionSort(1L)
+                .findPwdQuestionTitle("질문")
+                .build()));
+        given(daeguDefaultOrganizationService.getTokenAdminOrganization()).willReturn(organization);
+        given(passwordEncoder.encode("password!")).willReturn("encoded-password");
+        given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(userDaeguProvisioningService.provisionForSignUp(any(User.class))).willReturn("0x123");
+        given(jwtTokenUtil.createToken(any(User.class), any(TokenType.class))).willReturn("token");
+
+        UserDto.SignUpResponse response = userLoginService.userSignUp(UserDto.SignUpRequest.builder()
+                .userLoginIdentifier("dentix123")
+                .userPassword("password!")
+                .userName("김덴티")
+                .userGender(GenderType.W)
+                .userPhoneNumber("01012345678")
+                .realOrganization("대구2")
+                .findPwdQuestionId(1L)
+                .findPwdAnswer("답변")
+                .userServiceAgreementRequest(List.of(1L, 2L))
+                .build());
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        assertThat(userCaptor.getValue().getRealOrganization()).isEqualTo("대구2");
+        assertThat(response.getRealOrganization()).isEqualTo("대구2");
+    }
 
     @Test
     void userLoginUsesDidFlowWhenPasswordIsBlank() {

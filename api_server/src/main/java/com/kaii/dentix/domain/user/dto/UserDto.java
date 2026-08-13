@@ -140,6 +140,10 @@ public class UserDto {
         private GenderType userGender;
         private String userPhoneNumber;
 
+        @NotBlank(message = "기관 선택은 필수입니다.")
+        @Pattern(regexp = "^(대구1|대구2|대구3)$", message = "기관은 대구1, 대구2, 대구3 중에서 선택해 주세요.")
+        private String realOrganization;
+
         @NotNull(message = "질문 선택 필수입니다.")
         private Long findPwdQuestionId;
         @NotBlank(message = "답변은 필수입니다.")
@@ -162,6 +166,7 @@ public class UserDto {
         private GenderType userGender;
         private Long organizationId;
         private String organizationName;
+        private String realOrganization;
         private String daeguDid;
         private UserDaeguIdentityStatus daeguDidStatus;
         private String walletAddress;
@@ -187,6 +192,10 @@ public class UserDto {
         @Pattern(regexp = "^\\d{4}-\\d{2}-\\d{2}$", message = "생년월일은 YYYY-MM-DD 형식으로 입력해 주세요.")
         private String userBirthDate;
 
+        @NotBlank(message = "기관 선택은 필수입니다.")
+        @Pattern(regexp = "^(대구1|대구2|대구3)$", message = "기관은 대구1, 대구2, 대구3 중에서 선택해 주세요.")
+        private String realOrganization;
+
         @NotNull(message = "서비스 이용 동의는 필수입니다.")
         private List<Long> userServiceAgreementRequest;
 
@@ -201,6 +210,7 @@ public class UserDto {
         private String userName;
         private String userLoginIdentifier;
         private GenderType userGender;
+        private String realOrganization;
         private List<ServiceInfo> services;
         private String daeguDid;
         private UserDaeguIdentityStatus daeguDidStatus;

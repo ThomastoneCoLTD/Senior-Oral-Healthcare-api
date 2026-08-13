@@ -91,6 +91,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                         u.getUserLoginIdentifier(),
                         u.getUserName(),
                         u.getUserGender(),
+                        u.getRealOrganization(),
 
                         // oralCheckResultTotalType
                         latestOralChecks.containsKey(u.getUserId())

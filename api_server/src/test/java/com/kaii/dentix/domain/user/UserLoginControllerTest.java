@@ -90,6 +90,7 @@ public class UserLoginControllerTest {
                 .userGender(GenderType.W)
                 .organizationId(1L)
                 .organizationName("테스트 치과")
+                .realOrganization("대구1")
                 .daeguDid("did:mitum:minic:0x123")
                 .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
                 .walletAddress("0x123")
@@ -179,6 +180,7 @@ public class UserLoginControllerTest {
                 .userPassword(password)
                 .userGender(GenderType.W)
                 .userPhoneNumber("01012345678")
+                .realOrganization("대구1")
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("초록색")
                 .organizationId(1L)
@@ -206,6 +208,7 @@ public class UserLoginControllerTest {
                                 fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호"),
                                 fieldWithPath("userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("사용자 휴대폰 번호"),
+                                fieldWithPath("realOrganization").type(JsonFieldType.STRING).description("사용자가 선택한 실제 기관(대구1, 대구2, 대구3)"),
                                 fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
                                 fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변"),
                                 fieldWithPath("organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
@@ -223,6 +226,7 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("response.organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
                                 fieldWithPath("response.organizationName").type(JsonFieldType.STRING).description("소속 기관 이름"),
+                                fieldWithPath("response.realOrganization").type(JsonFieldType.STRING).optional().description("사용자가 선택한 실제 기관"),
                                 fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("대구 DID"),
                                 fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("대구 DID 발급 상태"),
                                 fieldWithPath("response.walletAddress").type(JsonFieldType.STRING).optional().description("대구 DID 지갑 주소")
@@ -230,6 +234,47 @@ public class UserLoginControllerTest {
                 ));
 
         verify(userLoginService).userSignUp(any(UserDto.SignUpRequest.class));
+    }
+
+    @Test
+    void userDidSignUpStoresSelectedRealOrganization() throws Exception {
+        given(userLoginService.userDidSignUp(any(UserDto.DidSignUpRequest.class))).willReturn(userSignUpDto());
+
+        UserDto.DidSignUpRequest request = UserDto.DidSignUpRequest.builder()
+                .userLoginIdentifier("dentix123")
+                .userName("김덴티")
+                .userPhoneNumber("01012345678")
+                .userBirthDate("1950-01-01")
+                .realOrganization("대구1")
+                .userServiceAgreementRequest(List.of(1L, 2L))
+                .build();
+
+        mockMvc.perform(RestDocumentationRequestBuilders.post("/login/signUp/did")
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("response.realOrganization").value("대구1"));
+
+        verify(userLoginService).userDidSignUp(any(UserDto.DidSignUpRequest.class));
+    }
+
+    @Test
+    void userDidSignUpRejectsUnknownRealOrganization() throws Exception {
+        UserDto.DidSignUpRequest request = UserDto.DidSignUpRequest.builder()
+                .userLoginIdentifier("dentix123")
+                .userName("김덴티")
+                .userPhoneNumber("01012345678")
+                .userBirthDate("1950-01-01")
+                .realOrganization("대구4")
+                .userServiceAgreementRequest(List.of(1L, 2L))
+                .build();
+
+        mockMvc.perform(RestDocumentationRequestBuilders.post("/login/signUp/did")
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(417))
+                .andExpect(jsonPath("rtMsg").value("기관은 대구1, 대구2, 대구3 중에서 선택해 주세요."));
     }
 
     /**

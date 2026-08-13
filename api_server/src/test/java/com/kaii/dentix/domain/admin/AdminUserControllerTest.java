@@ -254,6 +254,7 @@ public class AdminUserControllerTest {
         user1.setLoginId("dentix123");
         user1.setName("김덴티");
         user1.setGender(GenderType.M);
+        user1.setRealOrganization("대구1");
         user1.setOralCheckResultTotalType(OralCheckResultType.HEALTHY);
         user1.setOralCheckDate(date);
         user1.setIsVerify(YnType.Y);
@@ -264,6 +265,7 @@ public class AdminUserControllerTest {
         user2.setLoginId("test1234");
         user2.setName("홍길동");
         user2.setGender(GenderType.W);
+        user2.setRealOrganization("대구2");
         user2.setOralCheckResultTotalType(OralCheckResultType.HEALTHY);
         user2.setOralCheckDate(date);
         user2.setIsVerify(YnType.Y);
@@ -325,6 +327,7 @@ public class AdminUserControllerTest {
                                 fieldWithPath("response.userList[].loginId").type(JsonFieldType.STRING).description("사용자 아이디"),
                                 fieldWithPath("response.userList[].name").type(JsonFieldType.STRING).description("사용자 이름"),
                                 fieldWithPath("response.userList[].gender").optional().attributes(genderFormat()).description("사용자 성별"),
+                                fieldWithPath("response.userList[].realOrganization").type(JsonFieldType.STRING).optional().description("사용자가 선택한 실제 기관"),
                                 fieldWithPath("response.userList[].oralCheckResultTotalType").type(JsonFieldType.STRING).optional().attributes(oralCheckResultTypeFormat()).description("구강검진 결과"),
                                 fieldWithPath("response.userList[].oralCheckDate").type(JsonFieldType.STRING).optional().attributes(dateFormat()).description("구강검진 검사일"),
                                 fieldWithPath("response.userList[].isVerify").type(JsonFieldType.STRING).description("사용자 인증 여부"),

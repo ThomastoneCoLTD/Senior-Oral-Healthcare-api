@@ -108,6 +108,7 @@ public class UserLoginService {
                 .findPwdQuestionId(request.getFindPwdQuestionId())
                 .findPwdAnswer(request.getFindPwdAnswer())
                 .userPhoneNumber(userPhoneNumber)
+                .realOrganization(request.getRealOrganization())
                 .organization(organization)
                 .isVerify(YnType.Y)
                 .build());
@@ -144,6 +145,7 @@ public class UserLoginService {
                 .findPwdAnswer(loginIdentifier)
                 .userPhoneNumber(userPhoneNumber)
                 .userBirthDate(request.getUserBirthDate())
+                .realOrganization(request.getRealOrganization())
                 .organization(organization)
                 .isVerify(YnType.Y)
                 .build());
@@ -211,6 +213,7 @@ public class UserLoginService {
                 .userGender(user.getUserGender())
                 .organizationId(organization.getOrganizationId())
                 .organizationName(organization.getOrganizationName())
+                .realOrganization(user.getRealOrganization())
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
                 .walletAddress(walletAddress)

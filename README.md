@@ -611,3 +611,12 @@ cd api_server
 ```
 
 If tests or REST Docs require external services, document the reason and use a deployment build variant such as `./gradlew clean bootJar -x test -x asciidoctor` only after confirming the project task name.
+
+## Member Real Organization
+
+User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`) require `realOrganization` with one of `대구1`, `대구2`, or `대구3`. The selected value is stored in nullable `user.real_organization` so pre-existing users and administrator bulk-upload records remain compatible.
+
+- The existing `user.organizationId` relationship is unchanged: newly registered users still belong to the organization managed by `tokenadmin`.
+- `GET /user/info` returns `realOrganization` for the user profile page.
+- `GET /admin/user` returns `realOrganization` in each user-list item for administrator and super-administrator views.
+- Production and development profiles use Hibernate `ddl-auto: update`, so application startup adds the nullable column. Verify the generated schema change and the member-registration flow after deployment.

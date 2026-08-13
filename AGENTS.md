@@ -174,6 +174,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - TTS API(`/tts/speech`)는 AWS Polly `SynthesizeSpeech` 권한이 필요하며, 로그인 사용자만 호출하도록 둡니다. 구강체조 회차별 시작·완료 안내는 프론트에서 `s3://tms-static-hosting/oral-exercise/tts/구강_운동_AI_MP3_본문_32개/`의 CSV 파일명 기준 고정 MP3를 재생하고, S3 음원 실패 시에만 이 API로 CSV 문장을 합성합니다. 영상 중 토큰 번호 안내는 항상 이 API를 사용합니다. 시작 안내는 영상을 열 때 한 번만 재생하며, 토큰 번호 안내 중에는 영상과 버튼 제한시간을 모두 멈추고, 토큰 수령 뒤에는 시작 안내 없이 영상을 이어서 재생합니다.
 - 회원가입(`/login/signUp`, `/login/signUp/did`) 시 토큰 수령용 `walletAddress`를 필수로 받아 `UserRewardWallet`에 함께 저장합니다.
 - 회원가입 사용자는 요청 기관값과 무관하게 `tokenadmin` 관리자 계정의 소속 기관 사용자로 저장합니다. `tokenadmin` 계정 또는 소속 기관이 없으면 가입이 실패합니다.
+- 회원가입(`/login/signUp`, `/login/signUp/did`)은 사용자가 `대구1`, `대구2`, `대구3` 중 하나를 `realOrganization`으로 필수 선택합니다. 선택값은 기존 `organizationId` 소속 관계와 분리된 `user.real_organization` 컬럼에 저장하며, 사용자 `/user/info`와 관리자 `/admin/user` 목록에서 조회합니다. 기존 사용자 및 관리자 일괄등록 호환을 위해 DB 컬럼 자체는 nullable입니다.
 - 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
 - 2~6화 필수영상은 가입 주차에 따라 한 주에 하나씩 열리고, 1화 및 7~12화 상시영상은 계속 열려 있어야 합니다.

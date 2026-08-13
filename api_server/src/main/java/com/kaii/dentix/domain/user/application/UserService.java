@@ -136,6 +136,7 @@ public class UserService {
         return UserDto.InfoResponse.builder()
                 .userName(user.getUserName())
                 .userGender(user.getUserGender())
+                .realOrganization(user.getRealOrganization())
                 .build();
     }
 
@@ -147,6 +148,7 @@ public class UserService {
                 .userName(user.getUserName())
                 .userLoginIdentifier(user.getUserLoginIdentifier())
                 .userGender(user.getUserGender())
+                .realOrganization(user.getRealOrganization())
                 .services(UserDto.defaultServiceInfo())
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())

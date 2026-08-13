@@ -37,6 +37,9 @@ public class User extends TimeEntity {
     @Column(length = 10)
     private String userBirthDate;
 
+    @Column(name = "real_organization", length = 20)
+    private String realOrganization;
+
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "enum")
     private GenderType userGender;

@@ -59,6 +59,7 @@ public class AdminUserDto {
         private String loginId;     // userLoginIdentifier
         private String name;        // userName
         private GenderType gender;  // userGender
+        private String realOrganization;
         private OralCheckResultType oralCheckResultTotalType;
         private Date oralCheckDate;
         private YnType isVerify;
@@ -66,7 +67,7 @@ public class AdminUserDto {
 
         //QueryDSL Projections.constructor 용 생성자
         public Info(
-                Long userId, String loginId, String name, GenderType gender,
+                Long userId, String loginId, String name, GenderType gender, String realOrganization,
                 OralCheckResultType oralCheckResultTotalType, Date oralCheckDate,
                 YnType isVerify, String serviceNamesStr
         ) {
@@ -74,6 +75,7 @@ public class AdminUserDto {
             this.loginId = loginId;
             this.name = name;
             this.gender = gender;
+            this.realOrganization = realOrganization;
             this.oralCheckResultTotalType = oralCheckResultTotalType;
             this.oralCheckDate = oralCheckDate;
             this.isVerify = isVerify;
