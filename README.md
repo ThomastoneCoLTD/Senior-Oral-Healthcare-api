@@ -618,6 +618,8 @@ User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`) require 
 
 User DID registration also requires the existing `findPwdQuestionId` and `findPwdAnswer` fields as ID-recovery verification data. `POST /login/find-id` returns the login identifier only when the submitted name, normalized phone number, question ID, and answer all match. The existing database columns and `/password/questions` compatibility endpoint remain unchanged; the user-facing question alias is `GET /login/find-id/questions`.
 
+The `dev` and `prod` profiles upsert the nine legacy recovery questions with stable IDs `1` through `9` during application startup. This keeps existing `user.find_pwd_question_id` references usable and safely restores missing question rows in a newly provisioned database.
+
 - The existing `user.organizationId` relationship is unchanged: newly registered users still belong to the organization managed by `tokenadmin`.
 - `GET /user/info` returns `realOrganization` for the user profile page.
 - `GET /admin/user` returns `realOrganization` in each user-list item for administrator and super-administrator views.
