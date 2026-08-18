@@ -24,7 +24,6 @@ import com.kaii.dentix.global.common.util.AiModelService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,9 +44,7 @@ public class QuestionnaireService {
     private final OralStatusAssignmentRepository oralStatusAssignmentRepository;
     private final QuestionnaireRepository questionnaireRepository;
     private final ContentsCustomRepository contentsCustomRepository;
-
-    @Value("${spring.profiles.active}")
-    private String active;
+    private final QuestionnaireFallbackAnalyzer fallbackAnalyzer;
 
     /**
      * 문진표 양식 조회
@@ -118,27 +115,17 @@ public class QuestionnaireService {
         QuestionnaireDto.AnalysisResponse analysisData;
         try {
             var aiResult = aiModelService.getQuestionnaireAiModel(questionnaireForm).join();
+            if (aiResult == null || aiResult.getStatusCode() != 200
+                    || aiResult.getContentsType() == null || aiResult.getContentsType().isEmpty()) {
+                throw new IllegalStateException("문진표 AI 분석 결과가 올바르지 않습니다.");
+            }
             analysisData = QuestionnaireDto.AnalysisResponse.builder()
                     .contentsType(aiResult.getContentsType())
                     .build();
 
         } catch (Exception e) {
-            if ("dev".equals(active)) {
-                log.warn("AI 모델 연동 실패로 테스트 데이터 연동됨");
-                Random random = new Random();
-                int typeCount = random.nextInt(2) + 1;
-                String[] chars = new String[]{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"};
-                List<String> typeList = new ArrayList<>();
-                for (int i = 0; i < typeCount; i++) {
-                    int randomIndex = random.nextInt(chars.length);
-                    if (!typeList.contains(chars[randomIndex])) {
-                        typeList.add(chars[randomIndex]);
-                    }
-                }
-                analysisData = QuestionnaireDto.AnalysisResponse.builder().contentsType(typeList).build();
-            } else {
-                throw new BadRequestApiException("AI 모델 연동에 실패했어요.\n관리자에게 문의해 주세요.");
-            }
+            log.warn("Questionnaire AI analysis failed; using rules fallback: {}", e.getMessage());
+            analysisData = fallbackAnalyzer.analyze(questionnaireForm);
         }
 
         List<OralStatus> oralStatusList = oralStatusRepository.findAllByOralStatusTypeInOrderByOralStatusPriority(analysisData.getContentsType());

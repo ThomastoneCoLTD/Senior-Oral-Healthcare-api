@@ -296,7 +296,10 @@ public class QuestionnaireControllerTest {
                                 fieldWithPath("response.contents[].typeColor").type(JsonFieldType.STRING).description("콘텐츠 제목 색상"),
                                 fieldWithPath("response.contents[].thumbnail").type(JsonFieldType.STRING).description("콘텐츠 썸네일"),
                                 fieldWithPath("response.contents[].videoURL").type(JsonFieldType.NULL).optional().description("콘텐츠 동영상 경로"),
-                                fieldWithPath("response.contents[].categoryIds").type(JsonFieldType.ARRAY).description("콘텐츠 카테고리 ID 목록")
+                                fieldWithPath("response.contents[].categoryIds").type(JsonFieldType.ARRAY).description("콘텐츠 카테고리 ID 목록"),
+                                fieldWithPath("response.contents[].personalized").type(JsonFieldType.BOOLEAN).description("맞춤 콘텐츠 여부"),
+                                fieldWithPath("response.contents[].personalizationSource").type(JsonFieldType.VARIES).optional().description("맞춤 콘텐츠 분석 출처"),
+                                fieldWithPath("response.contents[].rank").type(JsonFieldType.VARIES).optional().description("맞춤 콘텐츠 노출 순위")
                         )
                 ));
 

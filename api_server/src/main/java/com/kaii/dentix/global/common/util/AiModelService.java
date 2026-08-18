@@ -1,5 +1,6 @@
 package com.kaii.dentix.global.common.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.OralCheckAnalysisResponse;
 import com.kaii.dentix.domain.oralCheck.dto.resoponse.GingivitisAnalysisResponse;
 import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireAnalysisResponse;
@@ -33,9 +34,11 @@ public class AiModelService {
     private String questionnaireAiModelApiUrl;
 
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper;
 
-    public AiModelService(RestTemplateBuilder restTemplateBuilder) {
+    public AiModelService(RestTemplateBuilder restTemplateBuilder, ObjectMapper objectMapper) {
         this.restTemplate = restTemplateBuilder.build();
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -115,12 +118,12 @@ public class AiModelService {
     getQuestionnaireAiModel(Map<String, Map<String, Object>> survey) {
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        MultiValueMap<String, Object> params = new LinkedMultiValueMap<>();
-        params.add("survey", survey);
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("survey", objectMapper.writeValueAsString(survey));
 
-        HttpEntity<MultiValueMap<String, Object>> entity =
+        HttpEntity<MultiValueMap<String, String>> entity =
                 new HttpEntity<>(params, headers);
 
         QuestionnaireAnalysisResponse response =
