@@ -633,3 +633,19 @@ The `dev` and `prod` profiles upsert the nine legacy recovery questions with sta
 - `GET /user/info` returns `realOrganization` for the user profile page.
 - `GET /admin/user` returns `realOrganization` in each user-list item for administrator and super-administrator views.
 - Production and development profiles use Hibernate `ddl-auto: update`, so application startup adds the nullable column. Verify the generated schema change and the member-registration flow after deployment.
+
+## Oral Analysis and Personalized Content
+
+All authenticated SOH users can use plaque analysis, gingivitis analysis, questionnaires, and personalized content regardless of subscription plan. The frontend uses the same user routes for every plan, and the backend does not apply the former `GROWTH`/`MIDSIZE` personalized-content gate.
+
+Gingivitis analysis also exposes the Denti-K-compatible contract while preserving the legacy `/oralCheck/gingivitis` endpoint:
+
+```text
+POST /gingivitis-analyses
+GET  /gingivitis-analyses/{analysisId}
+GET  /gingivitis-condition
+```
+
+The new endpoints require a valid logged-in user token and validate that result lookups belong to the requesting user. Plaque AI `contents_type` and `plaque_contents` values are retained in the SOH response and used to resolve recommendations. If the AI returns direct content IDs, those take precedence; otherwise SOH resolves content through the existing oral-status mapping.
+
+SOH now includes the Denti-K-compatible `content_curation_rule` entity and table contract. `analysis_type` accepts `QUESTIONNAIRE`, `GINGIVITIS`, or `PLAQUE`; `result_key` uses questionnaire A-K, gingivitis S/G/A/D, or plaque result grades. Active rules are ordered by `curation_rank` and `contents_id`, and duplicate `(analysis_type, result_key, contents_id)` rows are prohibited. Rule rows must reference SOH's own `contents.contents_id`; Denti-K IDs must not be copied without an explicit content-ID mapping. An analysis can legitimately show the completed/no-match state when the table exists but has no matching active rows. This change adds the DB schema contract but does not change Secrets, AWS resources, or deployment workflows.

@@ -195,6 +195,8 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 사용자 구강체조 인트로 영상(`optional_video_1`, 1화)은 영상 내 번호 버튼 성공 시 토큰 수령 대상입니다. 단, 사용자 화면의 리워드 슬롯과 자동 리워드 회수 조건은 기존처럼 필수영상 5개(`essential_video_1~5`)만 반영합니다.
 - 구강체조 리워드 토큰 전송 실패 시에도 `TOKEN_TRANSFER_FAILED` 트랜잭션 이력을 남겨 관리자/사용자 조회 및 다음 동일 리워드 요청의 재시도 판단에 사용합니다.
 - Windows/CI에서 한글 REST Docs 테스트 결과가 달라지지 않도록 Gradle 테스트 JVM과 Java 컴파일 인코딩을 UTF-8로 고정했습니다. `DentixApplicationTest`는 운영 DB 비밀값 없이 H2 인메모리 DB로 실행하며, 구강검진 결과·타임라인의 분석 유형 및 치은염 응답 필드를 REST Docs에 반영했습니다.
+- 2026-08-18 Denti-K `MIDSIZE` 사용자 구강분석 흐름을 SOH 구조에 맞춰 이식했습니다. 로그인한 SOH 사용자는 구독 플랜과 무관하게 치태·치은염 분석, 설문 기반 및 구강분석 기반 맞춤 콘텐츠를 이용합니다. Denti-K 호환 API는 `POST /gingivitis-analyses`, `GET /gingivitis-analyses/{analysisId}`, `GET /gingivitis-condition`이며 기존 `/oralCheck/gingivitis`도 유지합니다.
+- 치태 AI 응답의 `contents_type`, `plaque_contents`를 보존하고 직접 콘텐츠 ID, `content_curation_rule`, 기존 `user_oral_status`·`oral_status_to_contents` 순서로 추천을 계산합니다. 2026-08-18 `content_curation_rule` 테이블 추가 완료 안내를 받았고 동일 엔티티·Repository·Service를 SOH에 이식했습니다. 규칙의 `contents_id`는 SOH 콘텐츠 ID여야 하며, 일치하는 활성 행이 없으면 분석 완료 상태에서도 맞춤 콘텐츠 목록이 비어 있을 수 있습니다. DB schema 외 Secret, AWS, 배포 workflow는 변경하지 않습니다.
 
 ## 남은 확인 및 할 일
 
@@ -203,11 +205,18 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 7~12화의 backend 기본 길이는 실제 S3 MP4 메타데이터 기준으로 7화 176초, 8화 171초, 9화 163초, 10화 133초, 11화 172초, 12화 167초입니다.
 - 연결된 영상 URL이 있는 콘텐츠는 `tms-static-hosting` 정적 S3 HTTPS URL이 정상 로드되는지 확인합니다.
 - 치은염 검출이 실제 이미지 업로드/분석 결과까지 정상 동작하는지 end-to-end로 확인합니다.
+- 운영 배포 전 `content_curation_rule`의 S/G/A/D·A~K·치태 등급별 활성 행과 SOH `contents_id` 참조를 확인하고, 실제 사용자 계정으로 치태·치은염 업로드, 결과 소유권 차단, 결과별 맞춤 콘텐츠 순서를 확인합니다.
 - 비밀번호 변경 버튼은 프론트 사용자 화면에서 제거되어야 하며, 관리자 비밀번호 기능은 관리자 계정용으로 유지합니다.
 - 과거 정적 DB 비밀번호가 남은 S3 객체 version과 GitHub Actions 로그가 보존 정책에 따라 언제 삭제되는지 확인합니다. 현재 Secret은 RDS 관리형 회전 대상이며 실제 값은 문서나 저장소에 기록하지 않습니다.
 - 기존 `LOCAL_RECORDED` 상태의 구강체조 리워드 데이터를 실제 토큰 회수 대상으로 볼지 운영 정책을 결정합니다.
 
 ## 최근 동기화 상태
+
+2026-08-18 기준 Denti-K MIDSIZE 구강분석 화면·API·맞춤 콘텐츠 노출을 SOH의 모든 로그인 사용자 대상으로 이식했습니다.
+
+- 백엔드 `Senior-Oral-Healthcare-api`: 현재 `prod`, 기준 `93903c9d`, 구강검진·콘텐츠 관련 단위/컨트롤러 테스트 및 Java compile 통과
+- 프론트엔드 `Senior-Oral-Healthcare-front`: 현재 `prod`, 기준 `c0d579b`, production build·Vitest·ESLint 오류 0 통과
+- 실제 외부 AI 호출과 prod 배포 smoke는 수행하지 않았으며, Denti-K 전용 curation 데이터 부재는 운영 확인 항목으로 남깁니다.
 
 2026-08-18 기준 필수 입체조 영상의 주차·선행 완료 잠금을 API 응답과 시청 이력 저장 양쪽에 적용했습니다.
 

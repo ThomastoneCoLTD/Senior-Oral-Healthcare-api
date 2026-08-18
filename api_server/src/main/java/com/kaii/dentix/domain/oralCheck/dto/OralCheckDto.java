@@ -3,6 +3,7 @@ package com.kaii.dentix.domain.oralCheck.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
+import com.kaii.dentix.domain.contents.dto.ContentsDto;
 import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingDto;
 import com.kaii.dentix.domain.type.OralDateStatusType;
 import com.kaii.dentix.domain.type.OralSectionType;
@@ -57,6 +58,12 @@ public class OralCheckDto {
         private Integer gingivitisDownCheck;
         private Float gingivitisAllTeethCheck;
         private String gingivitisImageName;
+        @Builder.Default
+        private List<String> contentsType = new ArrayList<>();
+        @Builder.Default
+        private List<Long> plaqueContents = new ArrayList<>();
+        @Builder.Default
+        private List<ContentsDto.Summary> contents = new ArrayList<>();
     }
 
     // =================================================================
@@ -158,6 +165,10 @@ public class OralCheckDto {
         @Builder.Default @JsonProperty("status_code") private int statusCode = 200;
         @JsonProperty("status_msg") private String statusMsg;
         @JsonProperty("plaque_stats") private AnalysisDivision plaqueStats;
+        @Builder.Default
+        @JsonProperty("contents_type") private List<String> contentsType = new ArrayList<>();
+        @Builder.Default
+        @JsonProperty("plaque_contents") private List<Long> plaqueContents = new ArrayList<>();
     }
 
     @Getter @Builder

@@ -219,7 +219,10 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.gingivitisUpCheck").type(JsonFieldType.NUMBER).optional().description("상악 치은염 검출 결과"),
                                 fieldWithPath("response.gingivitisDownCheck").type(JsonFieldType.NUMBER).optional().description("하악 치은염 검출 결과"),
                                 fieldWithPath("response.gingivitisAllTeethCheck").type(JsonFieldType.NUMBER).optional().description("전체 치아 치은염 검출값"),
-                                fieldWithPath("response.gingivitisImageName").type(JsonFieldType.STRING).optional().description("치은염 분석 이미지 파일명")
+                                fieldWithPath("response.gingivitisImageName").type(JsonFieldType.STRING).optional().description("치은염 분석 이미지 파일명"),
+                                fieldWithPath("response.contentsType").type(JsonFieldType.ARRAY).description("AI 추천 구강관리 유형"),
+                                fieldWithPath("response.plaqueContents").type(JsonFieldType.ARRAY).description("AI 추천 콘텐츠 ID"),
+                                fieldWithPath("response.contents").type(JsonFieldType.ARRAY).description("분석 결과 추천 콘텐츠")
                         )
                 ));
     }

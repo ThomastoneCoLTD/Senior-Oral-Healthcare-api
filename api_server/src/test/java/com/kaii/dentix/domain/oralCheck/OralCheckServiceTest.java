@@ -2,6 +2,7 @@ package com.kaii.dentix.domain.oralCheck;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.billing.application.BillingService;
+import com.kaii.dentix.domain.curation.application.ContentCurationService;
 import com.kaii.dentix.domain.oralCheck.application.OralCheckService;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
@@ -61,6 +62,7 @@ class OralCheckServiceTest {
     @Mock private ToothBrushingCustomRepository toothBrushingCustomRepository;
     @Mock private QuestionnaireCustomRepository questionnaireCustomRepository;
     @Mock private OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
+    @Mock private ContentCurationService contentCurationService;
 
     @InjectMocks
     private OralCheckService oralCheckService;

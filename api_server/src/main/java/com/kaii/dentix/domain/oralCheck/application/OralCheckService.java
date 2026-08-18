@@ -4,6 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kaii.dentix.domain.admin.dto.statistic.OralCheckResultTypeCount;
+import com.kaii.dentix.domain.contents.dao.ContentsCustomRepository;
+import com.kaii.dentix.domain.contents.dao.ContentsRepository;
+import com.kaii.dentix.domain.contents.domain.Contents;
+import com.kaii.dentix.domain.contents.dto.ContentsDto;
+import com.kaii.dentix.domain.curation.application.ContentCurationService;
+import com.kaii.dentix.domain.gingivitis.domain.GingivitisResultType;
+import com.kaii.dentix.domain.gingivitis.dto.GingivitisDto;
 import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
@@ -30,6 +37,7 @@ import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.oralStatusAssignment.dao.OralStatusAssignmentRepository;
+import com.kaii.dentix.domain.oralStatusAssignment.domain.OralStatusAssignment;
 import com.kaii.dentix.global.common.aws.AWSS3Service;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
@@ -74,6 +82,9 @@ public class OralCheckService {
     private final OralStatusAssignmentRepository oralStatusAssignmentRepository;
     private final ToothBrushingCustomRepository toothBrushingCustomRepository;
     private final QuestionnaireCustomRepository questionnaireCustomRepository;
+    private final ContentsCustomRepository contentsCustomRepository;
+    private final ContentsRepository contentsRepository;
+    private final ContentCurationService contentCurationService;
 
 
     @Value("${spring.profiles.active}")
@@ -155,6 +166,8 @@ public class OralCheckService {
             analysisData = OralCheckDto.AnalysisResponse.builder()
                     .statusCode(oldResponse.getStatusCode())
                     .statusMsg(oldResponse.getStatusMsg())
+                    .contentsType(oldResponse.getContentsType() == null ? List.of() : oldResponse.getContentsType())
+                    .plaqueContents(oldResponse.getPlaqueContents() == null ? List.of() : oldResponse.getPlaqueContents())
                     .plaqueStats(OralCheckDto.AnalysisDivision.builder()
                             .topRight(oldResponse.getPlaqueStats().getTopRight())
                             .topLeft(oldResponse.getPlaqueStats().getTopLeft())
@@ -338,6 +351,8 @@ public class OralCheckService {
             return new DataResponse<>(analysisData.getResultCode(), "치은염 분석에 실패했습니다.", analysisData);
         }
 
+        validateGingivitisAnalysis(analysisData);
+
         OralCheck oralCheck = registGingivitisSuccessData(
                 user.getUserId(),
                 uploadedUrl,
@@ -481,7 +496,38 @@ public class OralCheckService {
                 .oralCheckDownLeftScoreType(downLeftScoreType)
                 .build();
 
-        return oralCheckRepository.save(insertData);
+        OralCheck saved = oralCheckRepository.save(insertData);
+        savePlaqueOralStatusAssignments(saved, resource.getContentsType());
+        return saved;
+    }
+
+    private void savePlaqueOralStatusAssignments(OralCheck oralCheck, List<String> contentsTypes) {
+        List<String> normalizedTypes = normalizeContentsTypes(contentsTypes);
+        if (normalizedTypes.isEmpty()) {
+            return;
+        }
+
+        List<OralStatusAssignment> assignments = oralStatusRepository
+                .findAllByOralStatusTypeInOrderByOralStatusPriority(normalizedTypes)
+                .stream()
+                .map(status -> OralStatusAssignment.builder()
+                        .oralCheck(oralCheck)
+                        .oralStatus(status)
+                        .build())
+                .toList();
+        oralStatusAssignmentRepository.saveAll(assignments);
+    }
+
+    private List<String> normalizeContentsTypes(List<String> contentsTypes) {
+        if (contentsTypes == null) {
+            return List.of();
+        }
+        return contentsTypes.stream()
+                .filter(Objects::nonNull)
+                .map(value -> value.trim().toUpperCase(Locale.ROOT))
+                .filter(value -> value.matches("[A-K]"))
+                .distinct()
+                .toList();
     }
 
     @Transactional
@@ -582,6 +628,7 @@ public class OralCheckService {
         GingivitisAnalysisResponse gingivitisAnalysis = getGingivitisAnalysis(oralCheck);
         if (gingivitisAnalysis != null) {
             GingivitisAnalysisResponse.GingivitisCheck gingivitisCheck = gingivitisAnalysis.getGingCheck();
+            List<ContentsDto.Summary> contents = personalizedContentsForOralCheck(oralCheck, "GINGIVITIS");
             return OralCheckDto.ResultResponse.builder()
                     .userId(user.getUserId())
                     .organizationId(user.getOrganization().getOrganizationId())
@@ -603,10 +650,12 @@ public class OralCheckService {
                     .gingivitisDownCheck(gingivitisCheck != null ? gingivitisCheck.getDownCheck() : null)
                     .gingivitisAllTeethCheck(gingivitisCheck != null ? gingivitisCheck.getAllTeethCheck() : null)
                     .gingivitisImageName(gingivitisAnalysis.getImageName())
+                    .contents(contents)
                     .build();
         }
 
         List<String> oralCheckCommentList = this.calcDivisionCommentType(oralCheck);
+        PlaqueRecommendation recommendation = plaqueRecommendation(oralCheck);
 
         // [수정] 통합 DTO의 내부 클래스(ResultResponse) 빌더 사용
         return OralCheckDto.ResultResponse.builder()
@@ -626,8 +675,211 @@ public class OralCheckService {
                 .oralCheckDownRightScoreType(oralCheck.getOralCheckDownRightScoreType())
                 .oralCheckCommentList(oralCheckCommentList)
                 .oralCheckAnalysisType("PLAQUE")
+                .contentsType(recommendation.contentsTypes())
+                .plaqueContents(recommendation.contentIds())
+                .contents(recommendation.contents())
                 // 필요하다면 remainingResponses 값도 설정 (구독 정보 등에서 조회 필요 시)
                 .build();
+    }
+
+    public GingivitisDto.CreateResponse createGingivitisAnalysis(
+            HttpServletRequest request,
+            MultipartFile picture
+    ) throws IOException, ExecutionException, InterruptedException {
+        DataResponse<GingivitisAnalysisResponse> response = gingivitisCheck(request, picture);
+        GingivitisAnalysisResponse analysis = response.response;
+        if (analysis == null || analysis.getOralCheckId() == null) {
+            throw new BadRequestApiException("치은염 의심도 분석에 실패했습니다. 잠시 후 다시 촬영해 주세요.");
+        }
+        return GingivitisDto.CreateResponse.builder()
+                .analysisId(analysis.getOralCheckId())
+                .state("SUCCESS")
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public GingivitisDto.DetailResponse gingivitisAnalysisDetail(
+            HttpServletRequest request,
+            Long analysisId
+    ) {
+        User user = userService.getTokenUser(request);
+        OralCheck oralCheck = ownedOralCheck(user, analysisId);
+        GingivitisAnalysisResponse analysis = getGingivitisAnalysis(oralCheck);
+        if (analysis == null || oralCheck.getOralCheckAnalysisState() != OralCheckAnalysisState.SUCCESS) {
+            throw new NotFoundDataException("치은염 의심도 분석 결과가 존재하지 않습니다.");
+        }
+        return toGingivitisDetail(oralCheck, analysis);
+    }
+
+    @Transactional(readOnly = true)
+    public GingivitisDto.ConditionResponse gingivitisCondition(HttpServletRequest request) {
+        User user = userService.getTokenUser(request);
+        List<OralCheck> history = oralCheckRepository
+                .findAllByUser_UserIdOrderByCreatedDesc(user.getUserId())
+                .stream()
+                .filter(item -> item.getOralCheckAnalysisState() == OralCheckAnalysisState.SUCCESS)
+                .filter(item -> getGingivitisAnalysis(item) != null)
+                .limit(10)
+                .toList();
+        OralCheck latest = history.isEmpty() ? null : history.get(0);
+        GingivitisResultType latestType = latest == null ? GingivitisResultType.S : gingivitisResultType(latest);
+
+        return GingivitisDto.ConditionResponse.builder()
+                .latestAnalysisId(latest == null ? null : latest.getOralCheckId())
+                .latestDate(latest == null ? null : latest.getCreated())
+                .latestResultType(latestType)
+                .latestPercent(latest == null ? null : latest.getOralCheckTotalRange())
+                .contents(contentCurationService.gingivitisContents(latestType.name()))
+                .history(history.stream()
+                        .map(item -> GingivitisDto.History.builder()
+                                .analysisId(item.getOralCheckId())
+                                .createdAt(item.getCreated())
+                                .resultType(gingivitisResultType(item))
+                                .totalPercent(item.getOralCheckTotalRange())
+                                .build())
+                        .toList())
+                .build();
+    }
+
+    private OralCheck ownedOralCheck(User user, Long analysisId) {
+        return oralCheckRepository.findByOralCheckIdAndUser_UserId(analysisId, user.getUserId())
+                .orElseThrow(() -> new NotFoundDataException("치은염 의심도 분석 결과가 존재하지 않습니다."));
+    }
+
+    private void validateGingivitisAnalysis(GingivitisAnalysisResponse analysis) {
+        GingivitisAnalysisResponse.GingivitisCheck check = analysis.getGingCheck();
+        if (check == null || check.getUpCheck() == null || check.getDownCheck() == null || check.getAllTeethCheck() == null) {
+            throw new BadRequestApiException("치은염 AI 분석 결과가 누락되었습니다.");
+        }
+        if (!isPercent(check.getUpCheck()) || !isPercent(check.getDownCheck()) || !isPercent(check.getAllTeethCheck())) {
+            throw new BadRequestApiException("치은염 AI 분석 비율이 허용 범위를 벗어났습니다.");
+        }
+    }
+
+    private boolean isPercent(double value) {
+        return value >= 0 && value <= 100;
+    }
+
+    private GingivitisDto.DetailResponse toGingivitisDetail(
+            OralCheck oralCheck,
+            GingivitisAnalysisResponse analysis
+    ) {
+        GingivitisAnalysisResponse.GingivitisCheck check = analysis.getGingCheck();
+        GingivitisResultType type = gingivitisResultType(oralCheck);
+        return GingivitisDto.DetailResponse.builder()
+                .analysisId(oralCheck.getOralCheckId())
+                .createdAt(oralCheck.getCreated())
+                .resultType(type)
+                .resultLabel(type.getLabel())
+                .totalPercent(check == null ? oralCheck.getOralCheckTotalRange() : check.getAllTeethCheck())
+                .upperPercent(check == null ? null : check.getUpCheck())
+                .lowerPercent(check == null ? null : check.getDownCheck())
+                .comment(type.getComment())
+                .contents(personalizedContentsForOralCheck(oralCheck, "GINGIVITIS"))
+                .build();
+    }
+
+    private GingivitisResultType gingivitisResultType(OralCheck oralCheck) {
+        Float percent = oralCheck.getOralCheckTotalRange();
+        return GingivitisResultType.fromPercent(percent == null ? 0 : percent);
+    }
+
+    private PlaqueRecommendation plaqueRecommendation(OralCheck oralCheck) {
+        List<String> contentsTypes = List.of();
+        List<Long> contentIds = List.of();
+        try {
+            JsonNode root = objectMapper.readTree(oralCheck.getOralCheckResultJsonData());
+            contentsTypes = jsonStrings(root.has("contents_type") ? root.get("contents_type") : root.get("contentsType"));
+            contentIds = jsonLongs(root.has("plaque_contents") ? root.get("plaque_contents") : root.get("plaqueContents"));
+        } catch (Exception exception) {
+            log.warn("플라그 추천 정보 파싱 실패 - oralCheckId={}", oralCheck.getOralCheckId(), exception);
+        }
+
+        List<ContentsDto.Summary> contents;
+        if (!contentIds.isEmpty()) {
+            Map<Long, Contents> byId = contentsRepository.findAllById(contentIds).stream()
+                    .collect(Collectors.toMap(Contents::getContentsId, value -> value));
+            contents = contentIds.stream()
+                    .distinct()
+                    .map(byId::get)
+                    .filter(Objects::nonNull)
+                    .map(content -> toPersonalizedSummary(content, "PLAQUE"))
+                    .toList();
+        } else {
+            contents = personalizedContentsForOralCheck(oralCheck, "PLAQUE");
+        }
+        return new PlaqueRecommendation(contentsTypes, contentIds, contents);
+    }
+
+    private List<String> jsonStrings(JsonNode node) {
+        if (node == null || node.isNull()) return List.of();
+        List<String> values = new ArrayList<>();
+        if (node.isArray()) node.forEach(value -> values.add(value.asText()));
+        else values.add(node.asText());
+        return normalizeContentsTypes(values);
+    }
+
+    private List<Long> jsonLongs(JsonNode node) {
+        if (node == null || node.isNull()) return List.of();
+        List<Long> values = new ArrayList<>();
+        if (node.isArray()) node.forEach(value -> {
+            if (value.canConvertToLong() && value.asLong() > 0) values.add(value.asLong());
+        });
+        else if (node.canConvertToLong() && node.asLong() > 0) values.add(node.asLong());
+        return values.stream().distinct().toList();
+    }
+
+    private List<ContentsDto.Summary> personalizedContentsForOralCheck(OralCheck oralCheck, String source) {
+        if ("GINGIVITIS".equals(source)) {
+            return contentCurationService.gingivitisContents(gingivitisResultType(oralCheck).name());
+        }
+
+        List<ContentsDto.Summary> mapped = contentsCustomRepository
+                .getCustomizedContents(OralSectionType.ORAL_CHECK, oralCheck.getOralCheckId())
+                .stream()
+                .peek(content -> {
+                    content.setPersonalized(true);
+                    content.setPersonalizationSource(source);
+                })
+                .toList();
+        if (!mapped.isEmpty()) {
+            return mapped;
+        }
+
+        List<String> resultKeys = oralStatusAssignmentRepository
+                .findOralStatusTypesByOralCheckId(oralCheck.getOralCheckId());
+        List<ContentsDto.Summary> byStatus = contentCurationService.questionnaireContents(resultKeys);
+        if (!byStatus.isEmpty()) {
+            byStatus.forEach(content -> content.setPersonalizationSource(source));
+            return byStatus;
+        }
+        return oralCheck.getOralCheckResultTotalType() == null
+                ? List.of()
+                : contentCurationService.plaqueContents(oralCheck.getOralCheckResultTotalType().name());
+    }
+
+    private ContentsDto.Summary toPersonalizedSummary(Contents content, String source) {
+        return ContentsDto.Summary.builder()
+                .id(content.getContentsId())
+                .title(content.getContentsTitle())
+                .sort(content.getContentsSort())
+                .type(content.getContentsType())
+                .typeColor(content.getContentsTypeColor())
+                .thumbnail(content.getContentsThumbnail())
+                .videoURL(content.getContentsPath())
+                .categoryIds(content.getContentsToCategories() == null ? List.of() : content.getContentsToCategories().stream()
+                        .map(item -> item.getContentsCategoryId())
+                        .toList())
+                .personalized(true)
+                .personalizationSource(source)
+                .build();
+    }
+
+    private record PlaqueRecommendation(
+            List<String> contentsTypes,
+            List<Long> contentIds,
+            List<ContentsDto.Summary> contents
+    ) {
     }
 
     private GingivitisAnalysisResponse getGingivitisAnalysis(OralCheck oralCheck) {

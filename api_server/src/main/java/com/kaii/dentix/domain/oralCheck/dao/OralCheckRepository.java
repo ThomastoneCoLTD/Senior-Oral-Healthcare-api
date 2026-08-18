@@ -24,6 +24,8 @@ public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
 
     Optional<OralCheck> findTopByUser_UserIdOrderByCreatedDesc(Long userId);
 
+    Optional<OralCheck> findByOralCheckIdAndUser_UserId(Long oralCheckId, Long userId);
+
     // =================================================================
     // 1. 네이티브 쿼리 (Native Query)
     // =================================================================
