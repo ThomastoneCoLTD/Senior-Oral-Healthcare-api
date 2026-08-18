@@ -10,8 +10,6 @@ import java.util.List;
 
 public class OralExerciseDto {
 
-    private static final boolean TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST = true;
-
     @Getter
     @Builder
     @NoArgsConstructor
@@ -39,6 +37,7 @@ public class OralExerciseDto {
                 OralExerciseContent content,
                 UserOralExerciseProgress progress,
                 int currentWeek,
+                boolean available,
                 boolean rewardReceived,
                 String playableVideoUrl,
                 String playableThumbnailUrl
@@ -46,10 +45,6 @@ public class OralExerciseDto {
             boolean coreContent = content.getContentSort() >= 2 && content.getContentSort() <= 6;
             boolean rewardContent = OralExerciseRewardToken.tokenNameForContentSort(content.getContentSort()) != null;
             int displayWeek = coreContent ? content.getContentSort() - 1 : 0;
-            boolean available = TEMPORARILY_UNLOCK_CORE_CONTENTS_FOR_TEST
-                    || !coreContent
-                    || currentWeek <= 0
-                    || displayWeek <= currentWeek;
             boolean currentWeekContent = coreContent
                     ? currentWeek == displayWeek
                     : available;
@@ -75,7 +70,7 @@ public class OralExerciseDto {
         }
 
         public static ContentResponse from(OralExerciseContent content, UserOralExerciseProgress progress) {
-            return from(content, progress, 0, false, content.getVideoUrl(), content.getThumbnailUrl());
+            return from(content, progress, 0, true, false, content.getVideoUrl(), content.getThumbnailUrl());
         }
     }
 

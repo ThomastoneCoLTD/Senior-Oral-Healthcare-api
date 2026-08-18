@@ -178,9 +178,9 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 일반 관리자 메뉴는 `[사용자 관리]`, `[사용자 통계]`, `[사용자 진도 현황]`, `[DID 리워드 현황]`만 표시하고 슈퍼 관리자 메뉴는 기존 구성을 유지합니다. 슈퍼 관리자의 사용자 관리·통계·진도·DID 리워드 화면은 `organizationId`가 아니라 회원가입 시 선택한 `realOrganization` 기준으로 묶으며, 값이 없는 기존 사용자는 `기관 미지정`으로 표시합니다. 진도 및 DID 리워드 응답에도 `realOrganization`을 포함합니다.
 - 기존 `user.find_pwd_question_id`, `user.find_pwd_answer` 컬럼은 비밀번호 찾기 질문과 답변 용도로 유지합니다. `POST /login/find-id`는 질문/답변을 받지 않고 이름, 정규화된 휴대폰 번호, 생년월일이 모두 일치할 때만 사용자 아이디를 반환합니다. 질문 목록은 `/password/questions`에서 조회합니다.
 - 운영/개발 앱 시작 시 과거 계정 확인 질문 9개를 ID와 정렬값 `1~9`로 upsert합니다. 신규 DB에서 `find_pwd_question`이 비어 있어 회원가입 질문을 선택할 수 없는 상태를 방지하고 기존 `user.find_pwd_question_id` 참조 의미를 유지합니다.
-- 구강체조 선택/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
+- 구강체조 인트로/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
-- 2~6화 필수영상은 가입 주차에 따라 한 주에 하나씩 열리고, 1화 및 7~12화 상시영상은 계속 열려 있어야 합니다.
+- 2~6화 필수영상은 가입 주차에 따라 한 주에 하나씩 열리며, 2주차 이후 필수영상은 바로 이전 필수영상까지 시청 완료해야 열립니다. 잠긴 필수영상은 `/oral-exercise` 응답에서 `available=false`, `videoUrl=null`이며 `/oral-exercise/interactions` 직접 호출도 같은 주차·선행 완료 조건으로 차단합니다. 1화 인트로 및 7~12화 상시영상은 계속 열려 있어야 합니다.
 - 사용자 비밀번호 찾기/재설정 API(`/login/find-password`, `/login/password`)와 관련 DTO/서비스/문서 테스트를 제거했습니다.
 - 구강체조 리워드 지급/회수 흐름을 token server 기반으로 정리했습니다.
 - 필수 구강체조 토큰 발급은 영상 완료가 아니라 `/oral-exercise/rewards/button-click` 번호 버튼 성공으로만 처리합니다.
@@ -208,6 +208,11 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 기존 `LOCAL_RECORDED` 상태의 구강체조 리워드 데이터를 실제 토큰 회수 대상으로 볼지 운영 정책을 결정합니다.
 
 ## 최근 동기화 상태
+
+2026-08-18 기준 필수 입체조 영상의 주차·선행 완료 잠금을 API 응답과 시청 이력 저장 양쪽에 적용했습니다.
+
+- 백엔드 `Senior-Oral-Healthcare-api`: 현재 `prod`, 구강체조 서비스 단위 테스트 통과
+- 프론트엔드 `Senior-Oral-Healthcare-front`: 현재 `prod`, 공통 로고·입체조 UI·구강상태 기본 날짜 변경 작업 연동
 
 2026-08-14 기준 `git pull origin prod` 후 관리자 권한별 메뉴와 실가입기관별 현황 표시 작업을 진행했습니다.
 

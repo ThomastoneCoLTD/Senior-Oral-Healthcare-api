@@ -16,4 +16,9 @@ public interface UserOralExerciseProgressRepository extends JpaRepository<UserOr
             Long userId,
             Long oralExerciseContentId
     );
+
+    Optional<UserOralExerciseProgress> findByUserIdAndContent_ContentSort(
+            Long userId,
+            int contentSort
+    );
 }

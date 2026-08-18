@@ -14,6 +14,13 @@ Artifact prefix: soh
 
 `main` is not a deployment branch. It is only for final reviewed code.
 
+## Oral Exercise Access Policy
+
+- Core oral-exercise videos (`essential_video_1` through `essential_video_5`) open by the user's signup week.
+- From the second core video onward, the immediately preceding core video must also be completed. Locked core-video responses keep the thumbnail metadata but omit `videoUrl`.
+- `POST /oral-exercise/interactions` enforces the same calendar-week and previous-completion rules, so a client cannot bypass the sequence by calling the interaction API directly.
+- The intro and always-open videos remain available independently of the five-week core sequence.
+
 ## Infrastructure Overview
 
 Terraform creates the AWS infrastructure instead of manual console setup:

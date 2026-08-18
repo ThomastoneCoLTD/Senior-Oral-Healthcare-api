@@ -30,11 +30,15 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -81,7 +85,7 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void getContentsTemporarilyUnlocksAllCoreContentsForTestingAndKeepsIntroOpen() {
+    void getContentsLocksLaterCoreContentsUntilPreviousWeekIsCompleted() {
         User user = userCreatedDaysAgo(21);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
@@ -98,12 +102,17 @@ class OralExerciseServiceTest {
         OralExerciseDto.ListResponse response = service.getContents(request);
 
         assertThat(response.getCurrentWeek()).isEqualTo(4);
-        assertThat(response.getCurrentContent().getSort()).isEqualTo(5);
+        assertThat(response.getCurrentContent().getSort()).isEqualTo(2);
         assertThat(response.getPreviousContents()).extracting(OralExerciseDto.ContentResponse::getSort)
                 .containsExactly(2, 3, 4);
-        assertThat(response.getContents()).filteredOn(content -> content.getSort() == 6)
+        assertThat(response.getContents()).filteredOn(content -> content.getSort() == 2)
                 .singleElement()
                 .satisfies(content -> assertThat(content.isAvailable()).isTrue());
+        assertThat(response.getContents()).filteredOn(content -> content.getSort() >= 3 && content.getSort() <= 6)
+                .allSatisfy(content -> {
+                    assertThat(content.isAvailable()).isFalse();
+                    assertThat(content.getVideoUrl()).isNull();
+                });
         assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
                 .containsExactly(1, 7);
         assertThat(response.getExtraContents()).allSatisfy(content -> {
@@ -283,6 +292,31 @@ class OralExerciseServiceTest {
     }
 
     @Test
+    void getContentsUnlocksOnlyTheNextCoreContentAfterPreviousWeekCompletion() {
+        User user = userCreatedDaysAgo(21);
+        OralExerciseContent firstContent = content(2);
+        UserOralExerciseProgress firstProgress = completedProgress(firstContent);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(progressRepository.findByUserId(7L)).thenReturn(List.of(firstProgress));
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(
+                firstContent,
+                content(3),
+                content(4)
+        ));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        assertThat(response.getCurrentContent().getSort()).isEqualTo(3);
+        assertThat(response.getContents()).filteredOn(content -> content.getSort() == 3)
+                .singleElement()
+                .satisfies(content -> assertThat(content.isAvailable()).isTrue());
+        assertThat(response.getContents()).filteredOn(content -> content.getSort() == 4)
+                .singleElement()
+                .satisfies(content -> assertThat(content.isAvailable()).isFalse());
+    }
+
+    @Test
     void recordInteractionLocksUserBeforeCreatingProgress() {
         OralExerciseContent content = content(2);
         when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(User.builder().userId(7L).build()));
@@ -311,6 +345,59 @@ class OralExerciseServiceTest {
         var order = inOrder(userRepository, progressRepository);
         order.verify(userRepository).findByIdForUpdate(7L);
         order.verify(progressRepository).findByUserIdAndContent_OralExerciseContentId(7L, 2L);
+    }
+
+    @Test
+    void recordInteractionRejectsCoreContentWhenPreviousWeekIsIncomplete() {
+        OralExerciseContent secondContent = content(3);
+        when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(userCreatedDaysAgo(14)));
+        when(contentRepository.findById(3L)).thenReturn(Optional.of(secondContent));
+        when(progressRepository.findByUserIdAndContent_ContentSort(7L, 2)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.recordInteraction(
+                request,
+                new OralExerciseDto.InteractionRequest(
+                        3L,
+                        null,
+                        10,
+                        30,
+                        100,
+                        null,
+                        false,
+                        "session-2"
+                )
+        ))
+                .isInstanceOf(com.kaii.dentix.global.common.error.exception.BadRequestApiException.class)
+                .hasMessageContaining("이전 주차");
+
+        verify(interactionLogRepository, never()).save(any());
+        verify(progressRepository, never()).save(any());
+    }
+
+    @Test
+    void recordInteractionRejectsCoreContentBeforeItsCalendarWeek() {
+        OralExerciseContent secondContent = content(3);
+        when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(userCreatedDaysAgo(0)));
+        when(contentRepository.findById(3L)).thenReturn(Optional.of(secondContent));
+
+        assertThatThrownBy(() -> service.recordInteraction(
+                request,
+                new OralExerciseDto.InteractionRequest(
+                        3L,
+                        null,
+                        10,
+                        30,
+                        100,
+                        null,
+                        false,
+                        "session-3"
+                )
+        ))
+                .isInstanceOf(com.kaii.dentix.global.common.error.exception.BadRequestApiException.class)
+                .hasMessageContaining("아직 공개되지 않은");
+
+        verify(progressRepository, never()).findByUserIdAndContent_ContentSort(any(), anyInt());
+        verify(interactionLogRepository, never()).save(any());
     }
 
     private User userCreatedDaysAgo(int daysAgo) {
@@ -349,5 +436,18 @@ class OralExerciseServiceTest {
                 .build();
         ReflectionTestUtils.setField(content, "oralExerciseContentId", (long) sort);
         return content;
+    }
+
+    private UserOralExerciseProgress completedProgress(OralExerciseContent content) {
+        return UserOralExerciseProgress.builder()
+                .userId(7L)
+                .content(content)
+                .totalWatchedSeconds(300)
+                .maxWatchedSeconds(300)
+                .lastPositionSeconds(300)
+                .completionRate(100)
+                .completed(true)
+                .viewCount(1)
+                .build();
     }
 }

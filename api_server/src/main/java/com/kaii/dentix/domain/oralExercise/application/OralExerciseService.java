@@ -17,6 +17,7 @@ import com.kaii.dentix.domain.reward.application.UserRewardService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.aws.AWSS3Service;
+import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -82,21 +83,26 @@ public class OralExerciseService {
         int currentWeek = calculateCurrentWeek(userId);
         List<OralExerciseDto.ContentResponse> contents = oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc()
                 .stream()
-                .map(content -> OralExerciseDto.ContentResponse.from(
-                        content,
-                        progressMap.get(content.getOralExerciseContentId()),
-                        currentWeek,
-                        rewardedTokenNames.contains(resolveRewardTokenName(content)),
-                        resolvePlayableAssetUrl(content.getVideoUrl()),
-                        resolvePlayableAssetUrl(content.getThumbnailUrl())
-                ))
+                .map(content -> {
+                    boolean available = isContentAvailable(content, currentWeek, progressMap);
+                    return OralExerciseDto.ContentResponse.from(
+                            content,
+                            progressMap.get(content.getOralExerciseContentId()),
+                            currentWeek,
+                            available,
+                            rewardedTokenNames.contains(resolveRewardTokenName(content)),
+                            available ? resolvePlayableAssetUrl(content.getVideoUrl()) : null,
+                            resolvePlayableAssetUrl(content.getThumbnailUrl())
+                    );
+                })
                 .toList();
 
         return OralExerciseDto.ListResponse.builder()
                 .currentWeek(Math.max(currentWeek, 1))
                 .currentContent(contents.stream()
                         .filter(OralExerciseDto.ContentResponse::isCoreContent)
-                        .filter(OralExerciseDto.ContentResponse::isCurrentWeekContent)
+                        .filter(OralExerciseDto.ContentResponse::isAvailable)
+                        .filter(content -> !content.getProgress().isCompleted())
                         .findFirst()
                         .orElse(null))
                 .previousContents(contents.stream()
@@ -116,11 +122,12 @@ public class OralExerciseService {
             OralExerciseDto.InteractionRequest interactionRequest
     ) {
         Long userId = getUserId(request);
-        lockUserProgressScope(userId);
+        User user = lockUserProgressScope(userId);
 
         OralExerciseContent content = oralExerciseContentRepository
                 .findById(interactionRequest.getContentId())
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강체조 콘텐츠입니다."));
+        validateContentAccess(userId, user, content);
 
         int durationSeconds = valueOrDefault(interactionRequest.getDurationSeconds(), content.getDurationSeconds());
         int watchedSeconds = valueOrDefault(interactionRequest.getWatchedSeconds(), 0);
@@ -169,9 +176,32 @@ public class OralExerciseService {
         return OralExerciseDto.ProgressResponse.from(savedProgress);
     }
 
-    private void lockUserProgressScope(Long userId) {
-        userRepository.findByIdForUpdate(userId)
+    private User lockUserProgressScope(Long userId) {
+        return userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+    }
+
+    private void validateContentAccess(Long userId, User user, OralExerciseContent content) {
+        if (!isCoreContent(content)) {
+            return;
+        }
+
+        int displayWeek = content.getContentSort() - 1;
+        if (displayWeek > calculateCurrentWeek(user)) {
+            throw new BadRequestApiException("아직 공개되지 않은 필수 구강체조 영상입니다.");
+        }
+
+        if (content.getContentSort() == 2) {
+            return;
+        }
+
+        boolean previousCompleted = userOralExerciseProgressRepository
+                .findByUserIdAndContent_ContentSort(userId, content.getContentSort() - 1)
+                .map(UserOralExerciseProgress::isCompleted)
+                .orElse(false);
+        if (!previousCompleted) {
+            throw new BadRequestApiException("이전 주차 필수 구강체조 영상을 먼저 시청 완료해 주세요.");
+        }
     }
 
     private Long getUserId(HttpServletRequest request) {
@@ -199,15 +229,43 @@ public class OralExerciseService {
             return 0;
         }
         return userRepository.findById(userId)
-                .map(User::getCreated)
-                .map(created -> {
-                    LocalDate startDate = created.toInstant()
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate();
-                    long days = ChronoUnit.DAYS.between(startDate, LocalDate.now(ZoneId.systemDefault()));
-                    return (int) (Math.max(days, 0) / 7) + 1;
-                })
+                .map(this::calculateCurrentWeek)
                 .orElse(1);
+    }
+
+    private int calculateCurrentWeek(User user) {
+        if (user == null || user.getCreated() == null) {
+            return 1;
+        }
+        LocalDate startDate = user.getCreated().toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        long days = ChronoUnit.DAYS.between(startDate, LocalDate.now(ZoneId.systemDefault()));
+        return (int) (Math.max(days, 0) / 7) + 1;
+    }
+
+    private boolean isContentAvailable(
+            OralExerciseContent content,
+            int currentWeek,
+            Map<Long, UserOralExerciseProgress> progressMap
+    ) {
+        if (!isCoreContent(content)) {
+            return true;
+        }
+
+        int displayWeek = content.getContentSort() - 1;
+        if (currentWeek <= 0 || displayWeek > currentWeek) {
+            return false;
+        }
+
+        if (content.getContentSort() == 2) {
+            return true;
+        }
+
+        int previousSort = content.getContentSort() - 1;
+        return progressMap.values().stream()
+                .filter(progress -> progress.getContent().getContentSort() == previousSort)
+                .anyMatch(UserOralExerciseProgress::isCompleted);
     }
 
     private String resolveRewardTokenName(OralExerciseContent content) {
