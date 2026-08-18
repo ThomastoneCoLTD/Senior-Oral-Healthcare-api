@@ -180,7 +180,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 운영/개발 앱 시작 시 과거 계정 확인 질문 9개를 ID와 정렬값 `1~9`로 upsert합니다. 신규 DB에서 `find_pwd_question`이 비어 있어 회원가입 질문을 선택할 수 없는 상태를 방지하고 기존 `user.find_pwd_question_id` 참조 의미를 유지합니다.
 - 구강체조 인트로/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
-- 2~6화 필수영상은 가입 주차에 따라 한 주에 하나씩 열리며, 2주차 이후 필수영상은 바로 이전 필수영상까지 시청 완료해야 열립니다. 잠긴 필수영상은 `/oral-exercise` 응답에서 `available=false`, `videoUrl=null`이며 `/oral-exercise/interactions` 직접 호출도 같은 주차·선행 완료 조건으로 차단합니다. 1화 인트로 및 7~12화 상시영상은 계속 열려 있어야 합니다.
+- 2~6화 필수영상은 1회차를 즉시 이용할 수 있고, 이후 회차는 바로 이전 필수영상을 시청 완료하면 가입 주차를 기다리지 않고 즉시 열립니다. 잠긴 필수영상은 `/oral-exercise` 응답에서 `available=false`, `videoUrl=null`이며 `/oral-exercise/interactions` 직접 호출도 같은 선행 완료 조건으로 차단합니다. 1화 인트로 및 7~12화 상시영상은 계속 열려 있어야 합니다.
 - 사용자 비밀번호 찾기/재설정 API(`/login/find-password`, `/login/password`)와 관련 DTO/서비스/문서 테스트를 제거했습니다.
 - 구강체조 리워드 지급/회수 흐름을 token server 기반으로 정리했습니다.
 - 필수 구강체조 토큰 발급은 영상 완료가 아니라 `/oral-exercise/rewards/button-click` 번호 버튼 성공으로만 처리합니다.
@@ -197,11 +197,12 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - Windows/CI에서 한글 REST Docs 테스트 결과가 달라지지 않도록 Gradle 테스트 JVM과 Java 컴파일 인코딩을 UTF-8로 고정했습니다. `DentixApplicationTest`는 운영 DB 비밀값 없이 H2 인메모리 DB로 실행하며, 구강검진 결과·타임라인의 분석 유형 및 치은염 응답 필드를 REST Docs에 반영했습니다.
 - 2026-08-18 Denti-K `MIDSIZE` 사용자 구강분석 흐름을 SOH 구조에 맞춰 이식했습니다. 로그인한 SOH 사용자는 구독 플랜과 무관하게 치태·치은염 분석, 설문 기반 및 구강분석 기반 맞춤 콘텐츠를 이용합니다. Denti-K 호환 API는 `POST /gingivitis-analyses`, `GET /gingivitis-analyses/{analysisId}`, `GET /gingivitis-condition`이며 기존 `/oralCheck/gingivitis`도 유지합니다.
 - 치태 AI 응답의 `contents_type`, `plaque_contents`를 보존하고 직접 콘텐츠 ID, `content_curation_rule`, 기존 `user_oral_status`·`oral_status_to_contents` 순서로 추천을 계산합니다. 2026-08-18 `content_curation_rule` 테이블 추가 완료 안내를 받았고 동일 엔티티·Repository·Service를 SOH에 이식했습니다. 규칙의 `contents_id`는 SOH 콘텐츠 ID여야 하며, 일치하는 활성 행이 없으면 분석 완료 상태에서도 맞춤 콘텐츠 목록이 비어 있을 수 있습니다. DB schema 외 Secret, AWS, 배포 workflow는 변경하지 않습니다.
+- 사용자 콘텐츠 메뉴는 구독 플랜과 무관하게 맞춤 콘텐츠 화면으로 진입하고 화면 내부에서 `맞춤 콘텐츠 / 모든 콘텐츠`를 전환합니다. 구강상태 기록은 플라그 분석을 초록색 치아 아이콘, 치은염 분석을 붉은색 심박 아이콘으로 구분하고 각각의 검출 결과 문구를 표시합니다.
 
 ## 남은 확인 및 할 일
 
 - dev 배포 후 `https://soh-dev.thomabio.com/api/actuator/health`가 `UP`인지 확인합니다.
-- 프론트 dev 배포 후 1화 인트로와 7~12화 상시영상 전체가 잠금 없이 열리고, 2~6화 필수영상은 주차별로 열리는지 실제 화면에서 확인합니다.
+- 프론트 dev 배포 후 1화 인트로와 7~12화 상시영상 전체가 잠금 없이 열리고, 2~6화 필수영상은 이전 필수영상 완료 직후 다음 회차가 즉시 열리는지 실제 화면에서 확인합니다.
 - 7~12화의 backend 기본 길이는 실제 S3 MP4 메타데이터 기준으로 7화 176초, 8화 171초, 9화 163초, 10화 133초, 11화 172초, 12화 167초입니다.
 - 연결된 영상 URL이 있는 콘텐츠는 `tms-static-hosting` 정적 S3 HTTPS URL이 정상 로드되는지 확인합니다.
 - 치은염 검출이 실제 이미지 업로드/분석 결과까지 정상 동작하는지 end-to-end로 확인합니다.

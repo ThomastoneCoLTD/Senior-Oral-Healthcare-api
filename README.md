@@ -16,9 +16,9 @@ Artifact prefix: soh
 
 ## Oral Exercise Access Policy
 
-- Core oral-exercise videos (`essential_video_1` through `essential_video_5`) open by the user's signup week.
-- From the second core video onward, the immediately preceding core video must also be completed. Locked core-video responses keep the thumbnail metadata but omit `videoUrl`.
-- `POST /oral-exercise/interactions` enforces the same calendar-week and previous-completion rules, so a client cannot bypass the sequence by calling the interaction API directly.
+- The first core oral-exercise video is available immediately. Each later core video opens as soon as the immediately preceding core video is completed, without waiting for another signup week.
+- Locked core-video responses keep the thumbnail metadata but omit `videoUrl`.
+- `POST /oral-exercise/interactions` enforces the same previous-completion rule, so a client cannot bypass the sequence by calling the interaction API directly.
 - The intro and always-open videos remain available independently of the five-week core sequence.
 
 ## Infrastructure Overview
@@ -637,6 +637,8 @@ The `dev` and `prod` profiles upsert the nine legacy recovery questions with sta
 ## Oral Analysis and Personalized Content
 
 All authenticated SOH users can use plaque analysis, gingivitis analysis, questionnaires, and personalized content regardless of subscription plan. The frontend uses the same user routes for every plan, and the backend does not apply the former `GROWTH`/`MIDSIZE` personalized-content gate.
+
+The user content menu always opens the personalized view and exposes a visible `Personalized Contents / All Contents` switch. The oral-status timeline distinguishes plaque and gingivitis records with the same green tooth and red heartbeat visual language as the analysis chooser, and labels each record as a plaque or gingivitis detection result.
 
 Gingivitis analysis also exposes the Denti-K-compatible contract while preserving the legacy `/oralCheck/gingivitis` endpoint:
 

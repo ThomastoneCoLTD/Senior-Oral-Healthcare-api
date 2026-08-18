@@ -33,7 +33,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -292,8 +291,8 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void getContentsUnlocksOnlyTheNextCoreContentAfterPreviousWeekCompletion() {
-        User user = userCreatedDaysAgo(21);
+    void getContentsUnlocksOnlyTheNextCoreContentImmediatelyAfterPreviousCompletion() {
+        User user = userCreatedDaysAgo(0);
         OralExerciseContent firstContent = content(2);
         UserOralExerciseProgress firstProgress = completedProgress(firstContent);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
@@ -375,12 +374,19 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void recordInteractionRejectsCoreContentBeforeItsCalendarWeek() {
+    void recordInteractionAllowsNextCoreContentBeforeItsCalendarWeekWhenPreviousIsCompleted() {
+        OralExerciseContent firstContent = content(2);
         OralExerciseContent secondContent = content(3);
         when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(userCreatedDaysAgo(0)));
         when(contentRepository.findById(3L)).thenReturn(Optional.of(secondContent));
+        when(progressRepository.findByUserIdAndContent_ContentSort(7L, 2))
+                .thenReturn(Optional.of(completedProgress(firstContent)));
+        when(progressRepository.findByUserIdAndContent_OralExerciseContentId(7L, 3L))
+                .thenReturn(Optional.empty());
+        when(progressRepository.save(any(UserOralExerciseProgress.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(() -> service.recordInteraction(
+        OralExerciseDto.ProgressResponse response = service.recordInteraction(
                 request,
                 new OralExerciseDto.InteractionRequest(
                         3L,
@@ -392,12 +398,11 @@ class OralExerciseServiceTest {
                         false,
                         "session-3"
                 )
-        ))
-                .isInstanceOf(com.kaii.dentix.global.common.error.exception.BadRequestApiException.class)
-                .hasMessageContaining("아직 공개되지 않은");
+        );
 
-        verify(progressRepository, never()).findByUserIdAndContent_ContentSort(any(), anyInt());
-        verify(interactionLogRepository, never()).save(any());
+        assertThat(response.getTotalWatchedSeconds()).isEqualTo(10);
+        verify(interactionLogRepository).save(any());
+        verify(progressRepository).save(any(UserOralExerciseProgress.class));
     }
 
     private User userCreatedDaysAgo(int daysAgo) {

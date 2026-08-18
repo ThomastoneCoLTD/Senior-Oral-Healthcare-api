@@ -84,7 +84,7 @@ public class OralExerciseService {
         List<OralExerciseDto.ContentResponse> contents = oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc()
                 .stream()
                 .map(content -> {
-                    boolean available = isContentAvailable(content, currentWeek, progressMap);
+                    boolean available = isContentAvailable(content, progressMap);
                     return OralExerciseDto.ContentResponse.from(
                             content,
                             progressMap.get(content.getOralExerciseContentId()),
@@ -122,12 +122,12 @@ public class OralExerciseService {
             OralExerciseDto.InteractionRequest interactionRequest
     ) {
         Long userId = getUserId(request);
-        User user = lockUserProgressScope(userId);
+        lockUserProgressScope(userId);
 
         OralExerciseContent content = oralExerciseContentRepository
                 .findById(interactionRequest.getContentId())
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강체조 콘텐츠입니다."));
-        validateContentAccess(userId, user, content);
+        validateContentAccess(userId, content);
 
         int durationSeconds = valueOrDefault(interactionRequest.getDurationSeconds(), content.getDurationSeconds());
         int watchedSeconds = valueOrDefault(interactionRequest.getWatchedSeconds(), 0);
@@ -181,14 +181,9 @@ public class OralExerciseService {
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
     }
 
-    private void validateContentAccess(Long userId, User user, OralExerciseContent content) {
+    private void validateContentAccess(Long userId, OralExerciseContent content) {
         if (!isCoreContent(content)) {
             return;
-        }
-
-        int displayWeek = content.getContentSort() - 1;
-        if (displayWeek > calculateCurrentWeek(user)) {
-            throw new BadRequestApiException("아직 공개되지 않은 필수 구강체조 영상입니다.");
         }
 
         if (content.getContentSort() == 2) {
@@ -246,16 +241,10 @@ public class OralExerciseService {
 
     private boolean isContentAvailable(
             OralExerciseContent content,
-            int currentWeek,
             Map<Long, UserOralExerciseProgress> progressMap
     ) {
         if (!isCoreContent(content)) {
             return true;
-        }
-
-        int displayWeek = content.getContentSort() - 1;
-        if (currentWeek <= 0 || displayWeek > currentWeek) {
-            return false;
         }
 
         if (content.getContentSort() == 2) {
