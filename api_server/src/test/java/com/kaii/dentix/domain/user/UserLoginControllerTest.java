@@ -228,7 +228,7 @@ public class UserLoginControllerTest {
                                 fieldWithPath("userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
                                 fieldWithPath("userName").type(JsonFieldType.STRING).description("사용자 닉네임"),
                                 fieldWithPath("userPassword").type(JsonFieldType.STRING).description("사용자 비밀번호"),
-                                fieldWithPath("userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
+                                fieldWithPath("userGender").type(JsonFieldType.STRING).attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("사용자 휴대폰 번호"),
                                 fieldWithPath("userBirthDate").type(JsonFieldType.STRING).description("사용자 생년월일(YYYY-MM-DD)"),
                                 fieldWithPath("realOrganization").type(JsonFieldType.STRING).description("사용자가 선택한 실제 기관(대구1, 대구2, 대구3)"),
@@ -260,17 +260,42 @@ public class UserLoginControllerTest {
     }
 
     @Test
-    void userDidSignUpStoresSelectedRealOrganization() throws Exception {
-        given(userLoginService.userDidSignUp(any(UserDto.DidSignUpRequest.class))).willReturn(userSignUpDto());
-
-        UserDto.DidSignUpRequest request = UserDto.DidSignUpRequest.builder()
+    void userSignUpRejectsMissingGender() throws Exception {
+        UserDto.SignUpRequest request = UserDto.SignUpRequest.builder()
                 .userLoginIdentifier("dentix123")
+                .userPassword("password!")
                 .userName("김덴티")
                 .userPhoneNumber("01012345678")
                 .userBirthDate("1950-01-01")
                 .realOrganization("대구1")
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("초록색")
+                .userServiceAgreementRequest(List.of(1L, 2L))
+                .build();
+
+        given(passwordEncoder.encode(any(String.class))).willReturn("encoded-password!");
+
+        mockMvc.perform(RestDocumentationRequestBuilders.post("/login/signUp")
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(417))
+                .andExpect(jsonPath("rtMsg").value("성별 선택은 필수입니다."));
+
+        verify(userLoginService, never()).userSignUp(any(UserDto.SignUpRequest.class));
+    }
+
+    @Test
+    void userDidSignUpStoresSelectedRealOrganization() throws Exception {
+        given(userLoginService.userDidSignUp(any(UserDto.DidSignUpRequest.class))).willReturn(userSignUpDto());
+
+        UserDto.DidSignUpRequest request = UserDto.DidSignUpRequest.builder()
+                .userLoginIdentifier("dentix123")
+                .userName("김덴티")
+                .userGender(GenderType.W)
+                .userPhoneNumber("01012345678")
+                .userBirthDate("1950-01-01")
+                .realOrganization("대구1")
                 .userServiceAgreementRequest(List.of(1L, 2L))
                 .build();
 
@@ -284,15 +309,35 @@ public class UserLoginControllerTest {
     }
 
     @Test
-    void userDidSignUpRejectsUnknownRealOrganization() throws Exception {
+    void userDidSignUpRejectsMissingGender() throws Exception {
         UserDto.DidSignUpRequest request = UserDto.DidSignUpRequest.builder()
                 .userLoginIdentifier("dentix123")
                 .userName("김덴티")
                 .userPhoneNumber("01012345678")
                 .userBirthDate("1950-01-01")
+                .realOrganization("대구1")
+                .userServiceAgreementRequest(List.of(1L, 2L))
+                .build();
+
+        mockMvc.perform(RestDocumentationRequestBuilders.post("/login/signUp/did")
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(417))
+                .andExpect(jsonPath("rtMsg").value("성별 선택은 필수입니다."));
+
+        verify(userLoginService, never()).userDidSignUp(any(UserDto.DidSignUpRequest.class));
+    }
+
+    @Test
+    void userDidSignUpRejectsUnknownRealOrganization() throws Exception {
+        UserDto.DidSignUpRequest request = UserDto.DidSignUpRequest.builder()
+                .userLoginIdentifier("dentix123")
+                .userName("김덴티")
+                .userGender(GenderType.W)
+                .userPhoneNumber("01012345678")
+                .userBirthDate("1950-01-01")
                 .realOrganization("대구4")
-                .findPwdQuestionId(1L)
-                .findPwdAnswer("초록색")
                 .userServiceAgreementRequest(List.of(1L, 2L))
                 .build();
 

@@ -227,20 +227,20 @@ class UserLoginServiceTest {
     }
 
     @Test
-    void userDidSignUpStoresSelectedIdRecoveryQuestionAndAnswer() {
+    void userDidSignUpStoresSelectedGenderWithoutExposingPasswordRecovery() {
         Organization organization = Organization.builder()
                 .organizationId(10L)
                 .organizationName("Token Admin Organization")
                 .build();
         given(userRepository.findByUserLoginIdentifier("dentix123")).willReturn(Optional.empty());
         given(userRepository.findByUserPhoneNumber("01012345678")).willReturn(Optional.empty());
-        given(findPwdQuestionRepository.findById(2L)).willReturn(Optional.of(FindPwdQuestion.builder()
-                .findPwdQuestionId(2L)
-                .findPwdQuestionSort(2L)
-                .findPwdQuestionTitle("졸업한 초등학교는?")
+        given(findPwdQuestionRepository.findById(1L)).willReturn(Optional.of(FindPwdQuestion.builder()
+                .findPwdQuestionId(1L)
+                .findPwdQuestionSort(1L)
+                .findPwdQuestionTitle("기억에 남는 장소는?")
                 .build()));
         given(daeguDefaultOrganizationService.getTokenAdminOrganization()).willReturn(organization);
-        given(passwordEncoder.encode("DID_ONLY:dentix123")).willReturn("encoded-placeholder");
+        given(passwordEncoder.encode(any(String.class))).willReturn("encoded-placeholder");
         given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
         given(userDaeguProvisioningService.provisionForSignUp(any(User.class))).willReturn("0x123");
         given(jwtTokenUtil.createToken(any(User.class), any(TokenType.class))).willReturn("token");
@@ -248,18 +248,19 @@ class UserLoginServiceTest {
         userLoginService.userDidSignUp(UserDto.DidSignUpRequest.builder()
                 .userLoginIdentifier("dentix123")
                 .userName("김덴티")
+                .userGender(GenderType.W)
                 .userPhoneNumber("010-1234-5678")
                 .userBirthDate("1950-01-01")
                 .realOrganization("대구1")
-                .findPwdQuestionId(2L)
-                .findPwdAnswer(" 대구초등학교 ")
                 .userServiceAgreementRequest(List.of(1L, 2L))
                 .build());
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
-        assertThat(userCaptor.getValue().getFindPwdQuestionId()).isEqualTo(2L);
-        assertThat(userCaptor.getValue().getFindPwdAnswer()).isEqualTo("대구초등학교");
+        assertThat(userCaptor.getValue().getUserGender()).isEqualTo(GenderType.W);
+        assertThat(userCaptor.getValue().getFindPwdQuestionId()).isEqualTo(1L);
+        assertThat(userCaptor.getValue().getFindPwdAnswer()).isNotBlank();
+        assertThat(userCaptor.getValue().getFindPwdAnswer()).doesNotContain("dentix123");
     }
 
     @Test

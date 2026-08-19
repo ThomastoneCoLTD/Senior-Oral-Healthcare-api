@@ -12,7 +12,6 @@ import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.passwordReset.application.PasswordResetService;
 import com.kaii.dentix.domain.passwordReset.domain.PasswordResetAccountType;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
-import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
@@ -36,11 +35,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserLoginService {
+
+    private static final Long DID_INTERNAL_RECOVERY_QUESTION_ID = 1L;
 
     private final UserRepository userRepository;
     private final JwtTokenUtil jwtTokenUtil;
@@ -146,17 +148,21 @@ public class UserLoginService {
         Organization organization = daeguDefaultOrganizationService.getTokenAdminOrganization();
         String loginIdentifier = request.getUserLoginIdentifier().trim();
 
-        if (findPwdQuestionRepository.findById(request.getFindPwdQuestionId()).isEmpty()) {
-            throw new NotFoundDataException("아이디 찾기 질문이 존재하지 않습니다.");
+        if (findPwdQuestionRepository.findById(DID_INTERNAL_RECOVERY_QUESTION_ID).isEmpty()) {
+            throw new NotFoundDataException("DID 회원가입용 내부 질문이 존재하지 않습니다.");
         }
+
+        String inaccessiblePassword = UUID.randomUUID().toString();
+        String inaccessibleRecoveryAnswer = UUID.randomUUID().toString();
 
         User user = userRepository.save(User.builder()
                 .userLoginIdentifier(loginIdentifier)
                 .userName(request.getUserName())
-                .userGender(GenderType.M)
-                .userPassword(passwordEncoder.encode("DID_ONLY:" + loginIdentifier))
-                .findPwdQuestionId(request.getFindPwdQuestionId())
-                .findPwdAnswer(request.getFindPwdAnswer().trim())
+                .userGender(request.getUserGender())
+                .userPassword(passwordEncoder.encode(inaccessiblePassword))
+                // 기존 NOT NULL 컬럼을 유지하되 DID 사용자에게는 복구 정보를 노출하지 않는다.
+                .findPwdQuestionId(DID_INTERNAL_RECOVERY_QUESTION_ID)
+                .findPwdAnswer(inaccessibleRecoveryAnswer)
                 .userPhoneNumber(userPhoneNumber)
                 .userBirthDate(request.getUserBirthDate())
                 .realOrganization(request.getRealOrganization())

@@ -625,7 +625,7 @@ User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`) require 
 
 The user login flows are separate: `POST /login` with `userType=user` verifies the login ID and BCrypt password without requiring an issued DID, while `POST /login/did` verifies the issued DID state using only the login ID. Administrator login behavior is unchanged.
 
-Standard user registration requires `userPassword`, `userBirthDate`, `findPwdQuestionId`, and `findPwdAnswer`. The existing question and answer columns remain password-recovery data, and the question list is available from `GET /password/questions`. `POST /login/find-id` no longer accepts a question or answer; it returns the login identifier only when name, normalized phone number, and birth date all match.
+Both user registration APIs require `userGender` (`M` or `W`) and `userBirthDate`. Standard user registration additionally requires `userPassword`, `findPwdQuestionId`, and `findPwdAnswer`; the question list is available from `GET /password/questions`. DID registration does not accept password-recovery question/answer input and stores inaccessible random credentials in the legacy non-null password/recovery columns, so the DID account remains DID-login-only. `POST /login/find-id` returns the login identifier only when name, normalized phone number, and birth date all match.
 
 The `dev` and `prod` profiles upsert the nine legacy recovery questions with stable IDs `1` through `9` during application startup. This keeps existing `user.find_pwd_question_id` references usable and safely restores missing question rows in a newly provisioned database.
 

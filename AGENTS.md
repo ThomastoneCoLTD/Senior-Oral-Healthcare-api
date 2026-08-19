@@ -166,6 +166,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 2026-08-12 운영 RDS의 7일 자동 비밀번호 회전으로 정적 S3 `.env`와 실제 Secret이 불일치해 ASG 교체가 반복된 원인을 확인했습니다. `SOH_API_ENV_PROD`의 datasource 키를 금지하고, launch template 기본 버전과 Secrets Manager JDBC 설정을 배포 전에 검증하도록 보강했습니다.
 - 로그인 화면은 일반 사용자, DID, 관리자 3개 흐름으로 분리합니다. 일반 사용자 `POST /login`은 아이디와 BCrypt 비밀번호를 검증하며 DID 발급 상태를 요구하지 않고, `POST /login/did`만 아이디에 연결된 DID 발급 상태와 DID 문자열을 확인합니다. 관리자 로그인 흐름은 기존대로 유지합니다.
 - 일반 사용자 회원가입 `POST /login/signUp`은 비밀번호, 생년월일, 기존 비밀번호 찾기 질문/답변을 저장하면서 기존 DID·지갑 프로비저닝도 함께 수행합니다. 프론트에서는 비밀번호 확인 일치와 아이디 중복 확인을 완료해야 제출합니다.
+- 일반/DID 회원가입은 성별(`M`/`W`)을 필수로 저장합니다. DID 회원가입 `POST /login/signUp/did`은 비밀번호 및 비밀번호 찾기 질문/답변을 입력받지 않으며, 기존 NOT NULL 컬럼 호환을 위해 외부에 노출되지 않는 임의 비밀번호와 복구 답변을 저장해 DID 로그인 전용 계정으로 유지합니다.
 - API health check 경로 `/api/actuator/health`를 허용했습니다.
 - dev 배포 workflow에서 단일 인스턴스 교체가 가능하도록 ASG instance refresh 설정을 보완했습니다.
 - 구강체조 콘텐츠 제목, 영상 URL, 실제 영상 길이를 초기 데이터에 반영했습니다.
