@@ -7,14 +7,10 @@ import com.kaii.dentix.domain.contents.dto.ContentsDto;
 import com.kaii.dentix.domain.oralStatus.domain.OralStatus;
 import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
 import com.kaii.dentix.domain.oralStatus.jpa.OralStatusRepository;
-import com.kaii.dentix.domain.organization.domain.Organization;
-import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.oralStatusAssignment.dao.OralStatusAssignmentRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
 import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireDto;
-import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
-import com.kaii.dentix.domain.type.PlanName;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
@@ -51,24 +47,6 @@ public class QuestionnaireService {
      */
     @Transactional(readOnly = true)
     public QuestionnaireDto.TemplateJson getQuestionnaireTemplate(HttpServletRequest request) throws IOException {
-        User user = userService.getTokenUser(request);
-        Organization organization = user.getOrganization();
-
-        if (organization == null || organization.getOrganizationSubscription() == null) {
-            throw new BadRequestApiException("기관 정보 또는 구독 정보가 없습니다.");
-        }
-
-        OrganizationSubscription subscription = organization.getOrganizationSubscription();
-        SubscriptionPlan plan = subscription.getSubscriptionPlan();
-
-        if (plan == null || plan.getPlanName() == null) {
-            throw new BadRequestApiException("기관의 구독 플랜 정보가 없습니다.");
-        }
-
-        if (plan.getPlanName() == PlanName.SMALL) {
-            throw new BadRequestApiException("현재 구독 상품(Small)에서는 문진표 서비스를 이용할 수 없습니다.");
-        }
-
         ClassPathResource resource = new ClassPathResource("template/questionnaire.json");
         if (!resource.exists()) {
             throw new BadRequestApiException("문진표 템플릿 파일이 존재하지 않습니다.");
