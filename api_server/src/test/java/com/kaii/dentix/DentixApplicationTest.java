@@ -1,6 +1,7 @@
 package com.kaii.dentix;
 
 import com.kaii.dentix.domain.agreement.application.ServiceAgreementInitializer;
+import com.kaii.dentix.domain.findPwdQuestion.application.FindIdQuestionInitializer;
 import com.kaii.dentix.domain.oralCheck.application.OralCheckSchemaUpdater;
 import com.kaii.dentix.domain.oralExercise.application.OralExerciseContentInitializer;
 import com.kaii.dentix.domain.organization.application.DaeguDefaultOrganizationInitializer;
@@ -30,6 +31,9 @@ class DentixApplicationTest {
 
     @MockBean
     private DaeguDefaultOrganizationInitializer daeguDefaultOrganizationInitializer;
+
+    @MockBean
+    private FindIdQuestionInitializer findIdQuestionInitializer;
 
     @Test
     void contextLoads() {

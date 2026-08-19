@@ -11,8 +11,6 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/login")
@@ -28,8 +26,10 @@ public class UserLoginController {
 
     /** Check whether a phone number is already registered before sign-up. */
     @PostMapping("/phone-check")
-    public DataResponse<UserDto.VerifyResponse> userPhoneCheck(@RequestBody Map<String, String> request) {
-        return new DataResponse<>(userLoginService.userPhoneCheck(request.get("userPhoneNumber")));
+    public DataResponse<UserDto.VerifyResponse> userPhoneCheck(
+            @Valid @RequestBody UserDto.VerifyRequest request
+    ) {
+        return new DataResponse<>(userLoginService.userPhoneCheck(request));
     }
 
     /** 회원가입 */
@@ -56,6 +56,23 @@ public class UserLoginController {
             @Valid @RequestBody UserDto.FindIdRequest request
     ) {
         return new DataResponse<>(userLoginService.findUserLoginIdentifier(request));
+    }
+
+    /** 아이디, 질문, 답변 확인 후 비밀번호 재설정 토큰 발급 */
+    @PostMapping("/find-password")
+    public DataResponse<UserDto.FindPasswordResponse> userFindPassword(
+            @Valid @RequestBody UserDto.FindPasswordRequest request
+    ) {
+        return new DataResponse<>(userLoginService.userFindPassword(request));
+    }
+
+    /** 일회용 토큰으로 사용자 비밀번호 재설정 */
+    @PutMapping("/password")
+    public SuccessResponse userModifyPassword(
+            @Valid @RequestBody UserDto.ModifyPasswordRequest request
+    ) {
+        userLoginService.userModifyPassword(request);
+        return new SuccessResponse();
     }
 
     /** 아이디 중복 확인 */

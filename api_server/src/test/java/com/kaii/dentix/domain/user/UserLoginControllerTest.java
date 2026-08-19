@@ -165,6 +165,26 @@ public class UserLoginControllerTest {
         verify(userLoginService).userVerify(any(UserDto.VerifyRequest.class));
     }
 
+    @Test
+    void phoneCheckUsesNameAndPhoneNumber() throws Exception {
+        given(userLoginService.userPhoneCheck(any(UserDto.VerifyRequest.class)))
+                .willReturn(UserDto.VerifyResponse.builder().userId(1L).build());
+
+        mockMvc.perform(RestDocumentationRequestBuilders.post("/login/phone-check")
+                        .content("""
+                                {
+                                  "userName": "김덴티",
+                                  "userPhoneNumber": "01012345678"
+                                }
+                                """)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(jsonPath("response.userId").value(1));
+
+        verify(userLoginService).userPhoneCheck(any(UserDto.VerifyRequest.class));
+    }
+
     /**
      * 사용자 회원가입
      */
@@ -320,6 +340,48 @@ public class UserLoginControllerTest {
                 ));
 
         verify(userLoginService).findUserLoginIdentifier(any(UserDto.FindIdRequest.class));
+    }
+
+    @Test
+    void findUserPassword() throws Exception {
+        given(userLoginService.userFindPassword(any(UserDto.FindPasswordRequest.class)))
+                .willReturn(UserDto.FindPasswordResponse.builder()
+                        .resetToken("one-time-reset-token")
+                        .expiresInSeconds(600)
+                        .userLoginIdentifier("dentix123")
+                        .build());
+
+        UserDto.FindPasswordRequest request = UserDto.FindPasswordRequest.builder()
+                .userLoginIdentifier("dentix123")
+                .findPwdQuestionId(1L)
+                .findPwdAnswer("초록색")
+                .build();
+
+        mockMvc.perform(RestDocumentationRequestBuilders.post("/login/find-password")
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(jsonPath("response.resetToken").value("one-time-reset-token"))
+                .andExpect(jsonPath("response.expiresInSeconds").value(600));
+
+        verify(userLoginService).userFindPassword(any(UserDto.FindPasswordRequest.class));
+    }
+
+    @Test
+    void resetUserPassword() throws Exception {
+        mockMvc.perform(RestDocumentationRequestBuilders.put("/login/password")
+                        .content("""
+                                {
+                                  "resetToken": "one-time-reset-token",
+                                  "userPassword": "newPassword!"
+                                }
+                                """)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200));
+
+        verify(userLoginService).userModifyPassword(any(UserDto.ModifyPasswordRequest.class));
     }
 
     /**

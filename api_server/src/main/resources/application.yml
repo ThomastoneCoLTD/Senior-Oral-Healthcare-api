@@ -2,6 +2,10 @@ spring:
   profiles:
     active: dev
 
+security:
+  password-reset:
+    ttl-seconds: ${PASSWORD_RESET_TTL_SECONDS:600}
+
 #spring:
 #  application:
 #    name: dentix-api

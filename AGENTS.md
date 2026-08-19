@@ -181,7 +181,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 구강체조 인트로/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
 - 2~6화 필수영상은 1회차를 즉시 이용할 수 있고, 이후 회차는 바로 이전 필수영상을 시청 완료하면 가입 주차를 기다리지 않고 즉시 열립니다. 잠긴 필수영상은 `/oral-exercise` 응답에서 `available=false`, `videoUrl=null`이며 `/oral-exercise/interactions` 직접 호출도 같은 선행 완료 조건으로 차단합니다. 1화 인트로 및 7~12화 상시영상은 계속 열려 있어야 합니다.
-- 사용자 비밀번호 찾기/재설정 API(`/login/find-password`, `/login/password`)와 관련 DTO/서비스/문서 테스트를 제거했습니다.
+- 사용자 로그인 화면은 아이디 찾기와 비밀번호 찾기를 모두 제공합니다. 아이디 찾기는 이름·정규화된 휴대폰 번호·생년월일을 확인하고, 비밀번호 찾기는 아이디·가입 시 질문·답변 확인 후 10분 유효한 일회용 토큰을 발급해 새 비밀번호를 설정합니다. 토큰 원문은 저장하지 않고 SHA-256 해시만 `password_reset_token`에 저장하며 사용·만료 토큰은 재사용할 수 없습니다.
 - 구강체조 리워드 지급/회수 흐름을 token server 기반으로 정리했습니다.
 - 필수 구강체조 토큰 발급은 영상 완료가 아니라 `/oral-exercise/rewards/button-click` 번호 버튼 성공으로만 처리합니다.
 - 필수 구강체조 5개 토큰을 수령하고 리워드 회수/지급 처리까지 끝난 뒤에도 기존 `ORAL_EXERCISE_COIN` 이력을 유지해, 같은 영상을 다시 봐도 `essential_video_1~5` 토큰이 재발급되지 않도록 테스트로 고정했습니다.

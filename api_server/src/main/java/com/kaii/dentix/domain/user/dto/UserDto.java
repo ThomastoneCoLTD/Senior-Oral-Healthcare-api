@@ -120,6 +120,40 @@ public class UserDto {
 
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor
+    public static class FindPasswordRequest {
+        @NotBlank(message = "아이디는 필수입니다.")
+        private String userLoginIdentifier;
+
+        @NotNull(message = "비밀번호 찾기 질문 선택은 필수입니다.")
+        private Long findPwdQuestionId;
+
+        @NotBlank(message = "비밀번호 찾기 답변은 필수입니다.")
+        private String findPwdAnswer;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class FindPasswordResponse {
+        private String resetToken;
+        private long expiresInSeconds;
+        private String userLoginIdentifier;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class ModifyPasswordRequest {
+        @NotBlank(message = "비밀번호 재설정 토큰은 필수입니다.")
+        private String resetToken;
+
+        @NotBlank(message = "비밀번호는 필수입니다.")
+        @Size(min = 8, max = 20, message = "비밀번호는 최소 8자부터 최대 20자입니다.")
+        @Pattern(regexp = "^(?=.*[a-zA-Z])(?=.*[!@#$%^&*])[a-zA-Z!@#$%^&*0-9]+$", message = "비밀번호는 영문과 특수문자가 필수입니다.")
+        @JsonSerialize(using = PasswordSerializer.class)
+        private String userPassword;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
     public static class ServiceInfo {
         private Long serviceId;
         private String name;

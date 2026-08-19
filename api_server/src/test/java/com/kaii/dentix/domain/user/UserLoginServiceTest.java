@@ -9,6 +9,9 @@ import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.application.DaeguDefaultOrganizationService;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.passwordReset.application.PasswordResetService;
+import com.kaii.dentix.domain.passwordReset.domain.PasswordResetAccountType;
+import com.kaii.dentix.domain.passwordReset.dto.PasswordResetDto;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
@@ -51,9 +54,48 @@ class UserLoginServiceTest {
     @Mock private UserDaeguProvisioningService userDaeguProvisioningService;
     @Mock private DaeguChainDidService daeguChainDidService;
     @Mock private UserLoginHistoryRepository userLoginHistoryRepository;
+    @Mock private PasswordResetService passwordResetService;
 
     @InjectMocks
     private UserLoginService userLoginService;
+
+    @Test
+    void phoneCheckReturnsExistingUserOnlyWhenNameAndPhoneMatch() {
+        User user = User.builder()
+                .userId(1L)
+                .userName("김덴티")
+                .userPhoneNumber("01012345678")
+                .build();
+        given(userRepository.findByUserPhoneNumber("01012345678")).willReturn(Optional.of(user));
+
+        UserDto.VerifyResponse response = userLoginService.userPhoneCheck(
+                UserDto.VerifyRequest.builder()
+                        .userName(" 김덴티 ")
+                        .userPhoneNumber("010-1234-5678")
+                        .build()
+        );
+
+        assertThat(response.getUserId()).isEqualTo(1L);
+    }
+
+    @Test
+    void phoneCheckRejectsDifferentNameForRegisteredPhone() {
+        User user = User.builder()
+                .userId(1L)
+                .userName("김덴티")
+                .userPhoneNumber("01012345678")
+                .build();
+        given(userRepository.findByUserPhoneNumber("01012345678")).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userLoginService.userPhoneCheck(
+                UserDto.VerifyRequest.builder()
+                        .userName("이덴티")
+                        .userPhoneNumber("01012345678")
+                        .build()
+        ))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessage("이름과 전화번호가 일치하지 않습니다.");
+    }
 
     @Test
     void userSignUpStoresSelectedRealOrganization() {
@@ -132,6 +174,56 @@ class UserLoginServiceTest {
         ))
                 .isInstanceOf(UnauthorizedException.class)
                 .hasMessage("입력한 정보가 일치하지 않습니다.");
+    }
+
+    @Test
+    void findPasswordIssuesOneTimeTokenWhenQuestionAndAnswerMatch() {
+        User user = User.builder()
+                .userId(1L)
+                .userLoginIdentifier("dentix123")
+                .findPwdQuestionId(2L)
+                .findPwdAnswer("대구초등학교")
+                .build();
+        given(userRepository.findByUserLoginIdentifier("dentix123")).willReturn(Optional.of(user));
+        given(passwordResetService.issue(PasswordResetAccountType.USER, 1L, "dentix123"))
+                .willReturn(PasswordResetDto.IssueResponse.builder()
+                        .resetToken("one-time-reset-token")
+                        .expiresInSeconds(600)
+                        .loginIdentifier("dentix123")
+                        .build());
+
+        UserDto.FindPasswordResponse response = userLoginService.userFindPassword(
+                UserDto.FindPasswordRequest.builder()
+                        .userLoginIdentifier(" dentix123 ")
+                        .findPwdQuestionId(2L)
+                        .findPwdAnswer(" 대구초등학교 ")
+                        .build()
+        );
+
+        assertThat(response.getResetToken()).isEqualTo("one-time-reset-token");
+        assertThat(response.getExpiresInSeconds()).isEqualTo(600);
+    }
+
+    @Test
+    void resetPasswordConsumesTokenAndInvalidatesLoginSession() {
+        User user = User.builder()
+                .userId(1L)
+                .userPassword("old-password")
+                .userRefreshToken("old-refresh-token")
+                .build();
+        given(passwordResetService.consume(PasswordResetAccountType.USER, "one-time-reset-token"))
+                .willReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(passwordEncoder.encode("newPassword!")) .willReturn("encoded-new-password");
+
+        userLoginService.userModifyPassword(UserDto.ModifyPasswordRequest.builder()
+                .resetToken("one-time-reset-token")
+                .userPassword("newPassword!")
+                .build());
+
+        assertThat(user.getUserPassword()).isEqualTo("encoded-new-password");
+        assertThat(user.getUserRefreshToken()).isNull();
+        verify(userRepository).saveAndFlush(user);
     }
 
     @Test

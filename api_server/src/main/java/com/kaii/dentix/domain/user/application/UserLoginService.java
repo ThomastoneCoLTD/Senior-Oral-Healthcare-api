@@ -9,6 +9,8 @@ import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
 import com.kaii.dentix.domain.organization.application.DaeguDefaultOrganizationService;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.passwordReset.application.PasswordResetService;
+import com.kaii.dentix.domain.passwordReset.domain.PasswordResetAccountType;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.UserRole;
@@ -33,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -49,17 +52,23 @@ public class UserLoginService {
     private final UserDaeguProvisioningService userDaeguProvisioningService;
     private final DaeguChainDidService daeguChainDidService;
     private final UserLoginHistoryRepository userLoginHistoryRepository;
+    private final PasswordResetService passwordResetService;
 
     @Transactional(readOnly = true)
-    public UserDto.VerifyResponse userPhoneCheck(String userPhoneNumber) {
-        String normalizedPhoneNumber = normalizePhoneNumber(userPhoneNumber);
-        return userRepository.findByUserPhoneNumber(normalizedPhoneNumber)
-                .map(user -> UserDto.VerifyResponse.builder()
-                        .userId(user.getUserId())
-                        .build())
-                .orElseGet(() -> UserDto.VerifyResponse.builder()
-                        .userId(null)
-                        .build());
+    public UserDto.VerifyResponse userPhoneCheck(UserDto.VerifyRequest request) {
+        String normalizedPhoneNumber = normalizePhoneNumber(request.getUserPhoneNumber());
+        String userName = request.getUserName().trim();
+        User phoneOwner = userRepository.findByUserPhoneNumber(normalizedPhoneNumber).orElse(null);
+
+        if (phoneOwner == null) {
+            return UserDto.VerifyResponse.builder().userId(null).build();
+        }
+
+        if (!phoneOwner.getUserName().equals(userName)) {
+            throw new UnauthorizedException("이름과 전화번호가 일치하지 않습니다.");
+        }
+
+        return UserDto.VerifyResponse.builder().userId(phoneOwner.getUserId()).build();
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -184,6 +193,45 @@ public class UserLoginService {
         return UserDto.FindIdResponse.builder()
                 .userLoginIdentifier(user.getUserLoginIdentifier())
                 .build();
+    }
+
+    @Transactional
+    public UserDto.FindPasswordResponse userFindPassword(UserDto.FindPasswordRequest request) {
+        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier().trim())
+                .orElseThrow(() -> new UnauthorizedException("아이디, 질문 또는 답변이 일치하지 않습니다."));
+
+        String storedAnswer = user.getFindPwdAnswer() == null ? "" : user.getFindPwdAnswer().trim();
+        String requestedAnswer = request.getFindPwdAnswer().trim();
+        if (!Objects.equals(user.getFindPwdQuestionId(), request.getFindPwdQuestionId())
+                || !storedAnswer.equalsIgnoreCase(requestedAnswer)) {
+            throw new UnauthorizedException("아이디, 질문 또는 답변이 일치하지 않습니다.");
+        }
+
+        var reset = passwordResetService.issue(
+                PasswordResetAccountType.USER,
+                user.getUserId(),
+                user.getUserLoginIdentifier()
+        );
+
+        return UserDto.FindPasswordResponse.builder()
+                .resetToken(reset.getResetToken())
+                .expiresInSeconds(reset.getExpiresInSeconds())
+                .userLoginIdentifier(reset.getLoginIdentifier())
+                .build();
+    }
+
+    @Transactional
+    public void userModifyPassword(UserDto.ModifyPasswordRequest request) {
+        Long userId = passwordResetService.consume(
+                PasswordResetAccountType.USER,
+                request.getResetToken()
+        );
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+
+        user.modifyUserPassword(passwordEncoder, request.getUserPassword());
+        user.logout();
+        userRepository.saveAndFlush(user);
     }
 
     @Transactional
