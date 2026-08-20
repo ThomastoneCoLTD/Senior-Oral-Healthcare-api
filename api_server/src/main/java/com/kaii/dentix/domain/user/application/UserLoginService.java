@@ -280,6 +280,15 @@ public class UserLoginService {
         return buildLoginResponse(user, accessToken, refreshToken);
     }
 
+    @Transactional
+    public UserDto.LoginResponse completeAuthenticatedLogin(User user) {
+        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
+        String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
+        user.updateLogin(refreshToken);
+        recordLoginHistory(user);
+        return buildLoginResponse(user, accessToken, refreshToken);
+    }
+
     private void recordLoginHistory(User user) {
         userLoginHistoryRepository.save(UserLoginHistory.builder()
                 .userId(user.getUserId())

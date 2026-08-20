@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -128,7 +129,7 @@ class UserDaeguProvisioningServiceTest {
     }
 
     @Test
-    void provisionForSignUpMarksDidFailedWhenExternalApiFails() {
+    void provisionForSignUpFailsWhenDidProvisioningFails() {
         User user = User.builder()
                 .userId(7L)
                 .build();
@@ -136,9 +137,9 @@ class UserDaeguProvisioningServiceTest {
                 .thenThrow(new BadRequestApiException("token is required"));
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
 
-        String walletAddress = service.provisionForSignUp(user);
-
-        assertThat(walletAddress).isNull();
+        assertThatThrownBy(() -> service.provisionForSignUp(user))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("Daegu DID provisioning failed");
         assertThat(user.getDaeguDid()).isNull();
         assertThat(user.getDaeguDidKey()).isNull();
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.FAILED);
@@ -146,7 +147,7 @@ class UserDaeguProvisioningServiceTest {
     }
 
     @Test
-    void provisionForSignUpDoesNotFailWhenWalletProvisioningFails() throws Exception {
+    void provisionForSignUpFailsWhenWalletProvisioningFails() throws Exception {
         User user = User.builder()
                 .userId(7L)
                 .userLoginIdentifier("soh-user-001")
@@ -162,9 +163,9 @@ class UserDaeguProvisioningServiceTest {
         when(daeguChainAccountService.createAccount(any()))
                 .thenThrow(new BadRequestApiException("token is required"));
 
-        String walletAddress = service.provisionForSignUp(user);
-
-        assertThat(walletAddress).isNull();
+        assertThatThrownBy(() -> service.provisionForSignUp(user))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("token is required");
         assertThat(user.getDaeguDid()).isEqualTo("did:key:z6MkSelfGenerated");
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
         verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));

@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.user.controller;
 
 import com.kaii.dentix.domain.user.application.UserLoginService;
+import com.kaii.dentix.domain.user.application.DadaeguLoginService;
 import com.kaii.dentix.domain.user.dto.*;
 import com.kaii.dentix.domain.user.dto.request.*;
 import com.kaii.dentix.global.common.response.DataResponse;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserLoginController {
 
     private final UserLoginService userLoginService;
+    private final DadaeguLoginService dadaeguLoginService;
 
     /** 회원 인증 (가입 여부 확인) */
     @PostMapping("/verify")
@@ -48,6 +50,20 @@ public class UserLoginController {
     @PostMapping("/did")
     public DataResponse<UserDto.LoginResponse> userDidLogin(@Valid @RequestBody UserDto.DidLoginRequest request) {
         return new DataResponse<>(userLoginService.userDidLogin(request));
+    }
+
+    /** 모바일·태블릿 다대구 로그인용 공개 설정 */
+    @GetMapping("/dadaegu/config")
+    public DataResponse<UserDto.DadaeguLoginConfigResponse> dadaeguLoginConfig() {
+        return new DataResponse<>(dadaeguLoginService.getConfig());
+    }
+
+    /** 다대구 앱 인증 결과 복호화 후 로그인 */
+    @PostMapping("/dadaegu")
+    public DataResponse<UserDto.LoginResponse> dadaeguLogin(
+            @Valid @RequestBody UserDto.DadaeguLoginRequest request
+    ) {
+        return new DataResponse<>(dadaeguLoginService.login(request));
     }
 
     /** 이름, 휴대폰 번호, 생년월일로 사용자 아이디 찾기 */

@@ -6,6 +6,7 @@ import com.kaii.dentix.domain.auth.controller.AuthController;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
+import com.kaii.dentix.domain.user.application.DadaeguLoginService;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.domain.user.controller.UserLoginController;
 import com.kaii.dentix.domain.user.dto.UserDto;
@@ -67,6 +68,9 @@ public class UserLoginControllerTest {
 
     @MockBean
     private UserLoginService userLoginService;
+
+    @MockBean
+    private DadaeguLoginService dadaeguLoginService;
 
     @MockBean
     private AdminLoginService adminLoginService;

@@ -250,12 +250,37 @@ public class UserRewardService {
             return;
         }
         userRepository.findById(userId)
-                .filter(user -> user.getDaeguDidStatus() == UserDaeguIdentityStatus.ISSUED)
                 .ifPresent(user -> {
-                    String daeguDid = isBlank(wallet.getDaeguDid()) ? user.getDaeguDid() : wallet.getDaeguDid();
-                    String walletAddress = isBlank(wallet.getWalletAddress())
-                            ? extractWalletAddress(user)
-                            : wallet.getWalletAddress();
+                    String daeguDid = isBlank(wallet.getDaeguDid())
+                            ? user.getDaeguDid()
+                            : wallet.getDaeguDid();
+                    String walletAddress = wallet.getWalletAddress();
+
+                    if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || isBlank(daeguDid)) {
+                        DidWallet provisioned = createDidWallet(userId, user.getUserLoginIdentifier());
+                        if (isBlank(provisioned.did())) {
+                            throw new BadRequestApiException("DaeguChain DID is empty");
+                        }
+                        daeguDid = provisioned.did();
+                        if (isBlank(walletAddress)) {
+                            walletAddress = provisioned.walletAddress();
+                        }
+                        user.updateDaeguDid(
+                                provisioned.did(),
+                                provisioned.publicKey(),
+                                UserDaeguIdentityStatus.ISSUED
+                        );
+                    }
+
+                    if (isBlank(walletAddress)) {
+                        walletAddress = extractWalletAddress(user);
+                    }
+                    if (isBlank(walletAddress)) {
+                        walletAddress = createDaeguWalletAddress(userId);
+                    }
+                    if (isBlank(walletAddress)) {
+                        throw new BadRequestApiException("DaeguChain wallet address is empty");
+                    }
                     wallet.updateDaeguWallet(daeguDid, walletAddress);
                 });
     }
@@ -513,15 +538,37 @@ public class UserRewardService {
     }
 
     private DidWallet createDidWallet(Long userId) {
+        String loginIdentifier = userRepository.findById(userId)
+                .map(User::getUserLoginIdentifier)
+                .orElse(null);
+        return createDidWallet(userId, loginIdentifier);
+    }
+
+    private DidWallet createDidWallet(Long userId, String loginIdentifier) {
         try {
             DaeguChainDto.ApiResponse<JsonNode> response = DaeguChainApiLogContext.withUser(
                     userId,
                     "DID 계정 발급",
-                    () -> daeguChainDidService.createAccount(Map.of())
+                    () -> daeguChainDidService.createAccount(buildDidCreateRequest(loginIdentifier))
             );
             JsonNode data = response == null ? null : response.getData();
             String did = findFirstText(data, "did", "DID", "account");
-            String walletAddress = findFirstText(data, "address");
+            String publicKey = findFirstText(
+                    data,
+                    "publickey",
+                    "public_key",
+                    "publicKey",
+                    "key_id",
+                    "keyId"
+            );
+            String walletAddress = findFirstText(
+                    data,
+                    "walletAddress",
+                    "wallet_address",
+                    "accountAddress",
+                    "account_address",
+                    "address"
+            );
             if (isBlank(walletAddress)) {
                 walletAddress = extractAddressFromDid(did);
             }
@@ -531,13 +578,19 @@ public class UserRewardService {
             if (isBlank(walletAddress)) {
                 throw new BadRequestApiException("DaeguChain DID wallet address is empty");
             }
-            return new DidWallet(did, walletAddress);
+            return new DidWallet(did, publicKey, walletAddress);
         } catch (BadRequestApiException exception) {
             if (isDevProfile() && exception.getMessage() != null && exception.getMessage().contains("token is required")) {
-                return new DidWallet(null, buildLocalTestWalletAddress(userId));
+                return new DidWallet(null, null, buildLocalTestWalletAddress(userId));
             }
             throw exception;
         }
+    }
+
+    private Map<String, Object> buildDidCreateRequest(String loginIdentifier) {
+        return isBlank(loginIdentifier)
+                ? Map.of()
+                : Map.of("label", loginIdentifier);
     }
 
     private String buildLocalTestWalletAddress(Long userId) {
@@ -576,7 +629,7 @@ public class UserRewardService {
         return candidate != null && candidate.startsWith("0x") ? candidate : null;
     }
 
-    private record DidWallet(String did, String walletAddress) {
+    private record DidWallet(String did, String publicKey, String walletAddress) {
     }
 
     private record RewardTokenRef(String tokenName, String contractAddress) {

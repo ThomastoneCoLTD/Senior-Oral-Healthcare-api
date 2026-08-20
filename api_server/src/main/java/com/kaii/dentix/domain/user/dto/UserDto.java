@@ -1,10 +1,12 @@
 package com.kaii.dentix.domain.user.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.ServiceType;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.config.PasswordSerializer;
+import com.kaii.dentix.global.config.SensitiveJsonNodeSerializer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -50,6 +52,22 @@ public class UserDto {
     public static class DidLoginRequest {
         @NotBlank(message = "아이디는 필수입니다.")
         private String userLoginIdentifier;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class DadaeguLoginRequest {
+        @NotNull(message = "다대구 인증 결과는 필수입니다.")
+        @JsonSerialize(using = SensitiveJsonNodeSerializer.class)
+        private JsonNode encryptedData;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class DadaeguLoginConfigResponse {
+        private boolean enabled;
+        private String siteId;
+        private String requiredVc;
     }
 
     @Getter @Builder

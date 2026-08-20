@@ -20,6 +20,8 @@ import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.domain.reward.dto.UserRewardDto;
 import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -342,6 +344,87 @@ class UserRewardServiceTest {
         verify(transactionRepository).save(argThat(transaction ->
                 transaction.getCoinId().equals("essential_video_1")
                         && transaction.getTokenContractAddress().equals("0x-token-contract")
+        ));
+    }
+
+    @Test
+    void rewardOralExerciseButtonClickRepairsMissingDidAndWalletBeforeTransfer() throws Exception {
+        UserRewardProperties properties = new UserRewardProperties();
+        properties.setOralExerciseCoinAmount(1L);
+        properties.setTokenTransferEnabled(true);
+        daeguChainProperties.getRewardTokenContracts().put("ESSENTIAL_VIDEO_1", "0x-token-contract");
+        service = new UserRewardService(
+                walletRepository,
+                transactionRepository,
+                contentRepository,
+                daeguChainAccountService,
+                daeguChainDidService,
+                daeguChainPointService,
+                externalTokenClient,
+                userRepository,
+                properties,
+                daeguChainProperties,
+                jwtTokenUtil,
+                environment
+        );
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("local-user")
+                .daeguDidStatus(UserDaeguIdentityStatus.FAILED)
+                .build();
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(transactionRepository.findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
+                7L,
+                "essential_video_1",
+                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                UserRewardTransactionStatus.CANCELED
+        )).thenReturn(Optional.empty());
+        when(transactionRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.empty());
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(daeguChainDidService.createAccount(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
+                "OK",
+                null,
+                "",
+                new ObjectMapper().readTree("""
+                        {
+                          "did": "did:key:z6MkLocalUser",
+                          "publicKey": "public-key",
+                          "walletAddress": "0x-local-user-wallet"
+                        }
+                        """),
+                "cid-did"
+        ));
+        when(externalTokenClient.transferToken(
+                "did:key:z6MkLocalUser",
+                "ESSENTIAL_VIDEO_1",
+                "0x-token-contract",
+                "0x-local-user-wallet",
+                1L
+        )).thenReturn(new ObjectMapper().readTree("""
+                {
+                  "Date": "2026-08-21T01:00:00Z",
+                  "Receiver": "0x-local-user-wallet",
+                  "Amount": "1"
+                }
+                """));
+
+        UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
+                request,
+                new UserRewardDto.ButtonClickRequest(11L, "session-local", 3, 3)
+        );
+
+        assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
+        assertThat(user.getDaeguDid()).isEqualTo("did:key:z6MkLocalUser");
+        assertThat(user.getDaeguDidKey()).isEqualTo("public-key");
+        assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
+        verify(daeguChainDidService).createAccount(argThat(body ->
+                "local-user".equals(body.get("label"))
+        ));
+        verify(walletRepository, atLeastOnce()).save(argThat(wallet ->
+                "did:key:z6MkLocalUser".equals(wallet.getDaeguDid())
+                        && "0x-local-user-wallet".equals(wallet.getWalletAddress())
         ));
     }
 

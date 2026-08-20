@@ -6,6 +6,13 @@ security:
   password-reset:
     ttl-seconds: ${PASSWORD_RESET_TTL_SECONDS:600}
 
+dadaegu:
+  login:
+    enabled: ${DADAEGU_LOGIN_ENABLED:false}
+    site-id: ${DADAEGU_LOGIN_SITE_ID:}
+    rsa-private-key: ${DADAEGU_LOGIN_RSA_PRIVATE_KEY:}
+    required-vc: ${DADAEGU_LOGIN_REQUIRED_VC:DaeguMasterVC}
+
 #spring:
 #  application:
 #    name: dentix-api
