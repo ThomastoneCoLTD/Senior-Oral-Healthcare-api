@@ -12,9 +12,13 @@ import com.kaii.dentix.domain.user.domain.DadaeguUserIdentity;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
+import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import javax.crypto.Cipher;
 import java.nio.charset.StandardCharsets;
@@ -233,6 +237,33 @@ class DadaeguLoginServiceTest {
         assertThat(objectMapper.writeValueAsString(request))
                 .contains("\"onboardingToken\":\"********\"")
                 .doesNotContain("secret-onboarding-token");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "M", "m", "MALE", "MAN", "남", "남성", "남자",
+            "1", "3", "5", "7", "\"M\"", "male (M)"
+    })
+    void normalizesDadaeguMaleValues(String gender) {
+        assertThat((GenderType) ReflectionTestUtils.invokeMethod(service, "normalizeGender", gender))
+                .isEqualTo(GenderType.M);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "W", "F", "f", "FEMALE", "WOMAN", "여", "여성", "여자",
+            "2", "4", "6", "8", "\"F\"", "female (F)"
+    })
+    void normalizesDadaeguFemaleValues(String gender) {
+        assertThat((GenderType) ReflectionTestUtils.invokeMethod(service, "normalizeGender", gender))
+                .isEqualTo(GenderType.W);
+    }
+
+    @Test
+    void rejectsUnsupportedDadaeguGenderValue() {
+        assertThatThrownBy(() -> ReflectionTestUtils.invokeMethod(service, "normalizeGender", "unknown"))
+                .isInstanceOf(UnauthorizedException.class)
+                .hasMessageContaining("성별 정보를 확인");
     }
 
     private UserDto.DadaeguLoginRequest encryptedLoginRequest(

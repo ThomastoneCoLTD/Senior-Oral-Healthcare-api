@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.HexFormat;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -337,11 +338,42 @@ public class DadaeguLoginService {
     }
 
     private GenderType normalizeGender(String gender) {
-        return switch (gender.trim().toUpperCase()) {
-            case "M", "MALE", "남", "남성", "1" -> GenderType.M;
-            case "W", "F", "FEMALE", "여", "여성", "2" -> GenderType.W;
-            default -> throw new UnauthorizedException("다대구 성별 정보를 확인할 수 없습니다.");
-        };
+        String normalized = gender == null
+                ? ""
+                : gender.trim()
+                        .toUpperCase(Locale.ROOT)
+                        .replaceAll("[^A-Z0-9가-힣]", "");
+
+        if (normalized.equals("W")
+                || normalized.equals("F")
+                || normalized.equals("FEMALE")
+                || normalized.equals("WOMAN")
+                || normalized.equals("여")
+                || normalized.equals("여성")
+                || normalized.equals("여자")
+                || normalized.matches("[2468]")) {
+            return GenderType.W;
+        }
+        if (normalized.equals("M")
+                || normalized.equals("MALE")
+                || normalized.equals("MAN")
+                || normalized.equals("남")
+                || normalized.equals("남성")
+                || normalized.equals("남자")
+                || normalized.matches("[1357]")) {
+            return GenderType.M;
+        }
+        if (normalized.contains("FEMALE")
+                || normalized.contains("WOMAN")
+                || normalized.contains("여")) {
+            return GenderType.W;
+        }
+        if (normalized.contains("MALE")
+                || normalized.contains("MAN")
+                || normalized.contains("남")) {
+            return GenderType.M;
+        }
+        throw new UnauthorizedException("다대구 성별 정보를 확인할 수 없습니다.");
     }
 
     private String normalizePhoneNumber(String phoneNumber) {
