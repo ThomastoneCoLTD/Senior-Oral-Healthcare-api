@@ -35,6 +35,9 @@ public class DadaeguSignupSession {
     @Column(nullable = false, length = 255)
     private String externalDid;
 
+    @Column(length = 64)
+    private String ciHash;
+
     @Column(nullable = false, length = 100)
     private String userName;
 

@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface DadaeguUserIdentityRepository extends JpaRepository<DadaeguUserIdentity, Long> {
     Optional<DadaeguUserIdentity> findByExternalDid(String externalDid);
+    Optional<DadaeguUserIdentity> findByCiHash(String ciHash);
     Optional<DadaeguUserIdentity> findByUserId(Long userId);
 }

@@ -26,7 +26,18 @@ public class UserDaeguProvisioningService {
     private final UserRewardWalletRepository userRewardWalletRepository;
 
     public String provisionForSignUp(User user) {
-        String walletAddress = provisionDid(user);
+        return ensureProvisioned(user);
+    }
+
+    public String ensureProvisioned(User user) {
+        if (user == null || user.getUserId() == null) {
+            throw new BadRequestApiException("User is required for Daegu provisioning");
+        }
+
+        String walletAddress = null;
+        if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || isBlank(user.getDaeguDid())) {
+            walletAddress = provisionDid(user);
+        }
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED) {
             throw new BadRequestApiException("Daegu DID provisioning failed");
         }

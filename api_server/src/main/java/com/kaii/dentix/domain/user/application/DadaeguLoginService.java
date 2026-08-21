@@ -20,11 +20,14 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.crypto.Cipher;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Iterator;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,6 +43,7 @@ public class DadaeguLoginService {
     private final DadaeguUserIdentityRepository dadaeguUserIdentityRepository;
     private final DadaeguSignupSessionService signupSessionService;
     private final UserLoginService userLoginService;
+    private final UserDaeguProvisioningService userDaeguProvisioningService;
     private final ObjectMapper objectMapper;
 
     public UserDto.DadaeguLoginConfigResponse getConfig() {
@@ -72,6 +76,7 @@ public class DadaeguLoginService {
                 }
                 DadaeguSignupSessionService.IssueResult issueResult = signupSessionService.issue(
                         claims.did(),
+                        claims.ciHash(),
                         claims.name(),
                         claims.phoneNumber(),
                         claims.birthDate(),
@@ -88,7 +93,8 @@ public class DadaeguLoginService {
                 throw new UnauthorizedException("User is not verified.");
             }
 
-            bindIdentity(claims.did(), user);
+            bindIdentity(claims.did(), claims.ciHash(), user);
+            userDaeguProvisioningService.ensureProvisioned(user);
             return userLoginService.completeAuthenticatedLogin(user);
         } catch (UnauthorizedException | BadRequestApiException exception) {
             throw exception;
@@ -102,18 +108,23 @@ public class DadaeguLoginService {
         DadaeguSignupSession session = signupSessionService.consume(request.getOnboardingToken());
         DadaeguClaims claims = new DadaeguClaims(
                 session.getExternalDid(),
+                session.getCiHash(),
                 session.getUserName(),
                 session.getUserPhoneNumber(),
                 session.getUserBirthDate(),
                 session.getUserGender()
         );
+        if (claims.ciHash() == null || claims.ciHash().isBlank()) {
+            throw new BadRequestApiException("다대구 인증정보가 갱신되었습니다. 다대구 로그인을 다시 진행해 주세요.");
+        }
 
         User existingUser = findExistingUser(claims).orElse(null);
         if (existingUser != null) {
             if (existingUser.getIsVerify() != YnType.Y) {
                 throw new UnauthorizedException("User is not verified.");
             }
-            bindIdentity(claims.did(), existingUser);
+            bindIdentity(claims.did(), claims.ciHash(), existingUser);
+            userDaeguProvisioningService.ensureProvisioned(existingUser);
             return userLoginService.completeAuthenticatedLogin(existingUser);
         }
 
@@ -126,26 +137,39 @@ public class DadaeguLoginService {
                 request.getRealOrganization(),
                 request.getUserServiceAgreementRequest()
         );
-        bindIdentity(claims.did(), user);
+        bindIdentity(claims.did(), claims.ciHash(), user);
+        userDaeguProvisioningService.ensureProvisioned(user);
         return userLoginService.completeAuthenticatedLogin(user);
     }
 
     private DadaeguClaims decryptClaims(JsonNode claimPayload) throws Exception {
         PrivateKey privateKey = parsePrivateKey(properties.getRsaPrivateKey());
         String did = decryptClaim(claimPayload, "did", privateKey);
+        String ciHash = hashCi(decryptClaim(claimPayload, "ci", privateKey));
         String name = decryptClaim(claimPayload, "name", privateKey).trim();
         String birthDate = normalizeBirthDate(decryptClaim(claimPayload, "birthdate", privateKey));
         String phoneNumber = normalizePhoneNumber(decryptClaim(claimPayload, "phoneNumber", privateKey));
         String genderValue = decryptOptionalClaim(claimPayload, "gender", privateKey);
         GenderType gender = genderValue == null ? null : normalizeGender(genderValue);
-        return new DadaeguClaims(did, name, phoneNumber, birthDate, gender);
+        return new DadaeguClaims(did, ciHash, name, phoneNumber, birthDate, gender);
     }
 
     private Optional<User> findExistingUser(DadaeguClaims claims) {
-        Optional<User> mappedUser = dadaeguUserIdentityRepository.findByExternalDid(claims.did())
-                .flatMap(identity -> userRepository.findById(identity.getUserId()));
-        if (mappedUser.isPresent()) {
-            return mappedUser;
+        Optional<DadaeguUserIdentity> didIdentity =
+                dadaeguUserIdentityRepository.findByExternalDid(claims.did());
+        Optional<DadaeguUserIdentity> ciIdentity =
+                dadaeguUserIdentityRepository.findByCiHash(claims.ciHash());
+
+        if (didIdentity.isPresent() && ciIdentity.isPresent()
+                && !didIdentity.get().getUserId().equals(ciIdentity.get().getUserId())) {
+            throw new UnauthorizedException("다대구 DID와 CI가 서로 다른 SOH 계정에 연결되어 있습니다.");
+        }
+
+        Optional<DadaeguUserIdentity> mappedIdentity = didIdentity.isPresent() ? didIdentity : ciIdentity;
+        if (mappedIdentity.isPresent()) {
+            User mappedUser = userRepository.findById(mappedIdentity.get().getUserId())
+                    .orElseThrow(() -> new UnauthorizedException("연결된 SOH 계정을 찾을 수 없습니다."));
+            return Optional.of(mappedUser);
         }
         return userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
                 claims.phoneNumber(),
@@ -154,30 +178,61 @@ public class DadaeguLoginService {
         );
     }
 
-    private void bindIdentity(String externalDid, User user) {
+    private void bindIdentity(String externalDid, String ciHash, User user) {
         Optional<DadaeguUserIdentity> externalIdentity =
                 dadaeguUserIdentityRepository.findByExternalDid(externalDid);
         if (externalIdentity.isPresent()) {
-            if (!externalIdentity.get().getUserId().equals(user.getUserId())) {
+            DadaeguUserIdentity identity = externalIdentity.get();
+            if (!identity.getUserId().equals(user.getUserId())) {
                 throw new UnauthorizedException("이미 다른 SOH 계정에 연결된 다대구 인증정보입니다.");
             }
+            assertCiMatches(identity, ciHash);
+            identity.updateCiHash(ciHash);
+            dadaeguUserIdentityRepository.saveAndFlush(identity);
+            return;
+        }
+
+        Optional<DadaeguUserIdentity> ciIdentity = dadaeguUserIdentityRepository.findByCiHash(ciHash);
+        if (ciIdentity.isPresent()) {
+            DadaeguUserIdentity identity = ciIdentity.get();
+            if (!identity.getUserId().equals(user.getUserId())) {
+                throw new UnauthorizedException("이미 다른 다대구 인증정보가 SOH 계정에 연결되어 있습니다.");
+            }
+            identity.updateExternalDid(externalDid);
+            dadaeguUserIdentityRepository.saveAndFlush(identity);
             return;
         }
 
         Optional<DadaeguUserIdentity> userIdentity =
                 dadaeguUserIdentityRepository.findByUserId(user.getUserId());
         if (userIdentity.isPresent()) {
-            if (!userIdentity.get().getExternalDid().equals(externalDid)) {
-                throw new UnauthorizedException("이미 다른 다대구 계정이 연결되어 있습니다.");
+            DadaeguUserIdentity identity = userIdentity.get();
+            if (!identity.getExternalDid().equals(externalDid)) {
+                if (identity.getCiHash() != null && !identity.getCiHash().isBlank()) {
+                    throw new UnauthorizedException("이미 다른 다대구 계정이 연결되어 있습니다.");
+                }
+                identity.updateExternalDid(externalDid);
             }
+            assertCiMatches(identity, ciHash);
+            identity.updateCiHash(ciHash);
+            dadaeguUserIdentityRepository.saveAndFlush(identity);
             return;
         }
 
         dadaeguUserIdentityRepository.saveAndFlush(DadaeguUserIdentity.builder()
                 .userId(user.getUserId())
                 .externalDid(externalDid)
+                .ciHash(ciHash)
                 .createdAt(LocalDateTime.now())
                 .build());
+    }
+
+    private void assertCiMatches(DadaeguUserIdentity identity, String ciHash) {
+        if (identity.getCiHash() != null
+                && !identity.getCiHash().isBlank()
+                && !identity.getCiHash().equals(ciHash)) {
+            throw new UnauthorizedException("다대구 CI가 기존 연결정보와 일치하지 않습니다.");
+        }
     }
 
     private String generateLoginIdentifier() {
@@ -208,6 +263,7 @@ public class DadaeguLoginService {
         JsonNode normalized = normalizeNode(node);
         if (normalized.isObject()
                 && normalized.hasNonNull("did")
+                && normalized.hasNonNull("ci")
                 && normalized.hasNonNull("name")
                 && normalized.hasNonNull("birthdate")
                 && normalized.hasNonNull("phoneNumber")) {
@@ -268,6 +324,18 @@ public class DadaeguLoginService {
         return new String(decrypted, StandardCharsets.UTF_8);
     }
 
+    private String hashCi(String ci) {
+        if (ci == null || ci.isBlank()) {
+            throw new UnauthorizedException("다대구 CI가 누락되었습니다.");
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(ci.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("DaDaegu CI hashing is unavailable.", exception);
+        }
+    }
+
     private GenderType normalizeGender(String gender) {
         return switch (gender.trim().toUpperCase()) {
             case "M", "MALE", "남", "남성", "1" -> GenderType.M;
@@ -294,6 +362,7 @@ public class DadaeguLoginService {
 
     private record DadaeguClaims(
             String did,
+            String ciHash,
             String name,
             String phoneNumber,
             String birthDate,

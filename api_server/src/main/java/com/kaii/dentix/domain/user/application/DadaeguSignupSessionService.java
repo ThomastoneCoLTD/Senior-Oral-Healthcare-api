@@ -35,11 +35,15 @@ public class DadaeguSignupSessionService {
     @Transactional
     public IssueResult issue(
             String externalDid,
+            String ciHash,
             String userName,
             String userPhoneNumber,
             String userBirthDate,
             GenderType userGender
     ) {
+        if (ciHash == null || ciHash.isBlank()) {
+            throw new BadRequestApiException("다대구 CI가 필요합니다.");
+        }
         repository.deleteByExpiresAtBefore(LocalDateTime.now());
         repository.deleteByExternalDid(externalDid);
 
@@ -51,6 +55,7 @@ public class DadaeguSignupSessionService {
         repository.saveAndFlush(DadaeguSignupSession.builder()
                 .tokenHash(hash(token))
                 .externalDid(externalDid)
+                .ciHash(ciHash)
                 .userName(userName)
                 .userPhoneNumber(userPhoneNumber)
                 .userBirthDate(userBirthDate)

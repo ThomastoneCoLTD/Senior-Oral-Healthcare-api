@@ -25,7 +25,7 @@ class DadaeguSignupSessionServiceTest {
     @Test
     void issueStoresOnlyTokenHashAndDeletesExpiredSessions() {
         DadaeguSignupSessionService.IssueResult result = service.issue(
-                "did:daegu:test", "홍길동", "01012345678", "1950-01-02", GenderType.M
+                "did:daegu:test", "ci-hash", "홍길동", "01012345678", "1950-01-02", GenderType.M
         );
 
         ArgumentCaptor<DadaeguSignupSession> captor = ArgumentCaptor.forClass(DadaeguSignupSession.class);
@@ -35,6 +35,7 @@ class DadaeguSignupSessionServiceTest {
         assertThat(result.token()).isNotBlank();
         assertThat(result.expiresInSeconds()).isEqualTo(600);
         assertThat(captor.getValue().getTokenHash()).hasSize(64).isNotEqualTo(result.token());
+        assertThat(captor.getValue().getCiHash()).isEqualTo("ci-hash");
     }
 
     @Test

@@ -121,10 +121,10 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 - DaeguChain/DID 기능에는 `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, `USER_REWARD_TOKEN_TRANSFER_ENABLED` 등을 환경별로 확인합니다.
 - 모바일·태블릿 다대구 로그인은 `DADAEGU_LOGIN_ENABLED=true`, 발급받은 `DADAEGU_LOGIN_SITE_ID`, PKCS#8 Base64/PEM 형식의 `DADAEGU_LOGIN_RSA_PRIVATE_KEY`, 선택값 `DADAEGU_LOGIN_REQUIRED_VC`(기본 `DaeguMasterVC`)가 모두 필요합니다. RSA 개인키는 백엔드 `.env` Secret에만 두고 Vite 환경변수나 프론트 코드에 넣지 않습니다. 공개 `/login/dadaegu/config`는 준비 여부·site ID·required VC만 반환하며, `/login/dadaegu` 요청의 암호화 콜백 원문은 시스템 로그에서 마스킹합니다.
 - 운영 다대구 로그인 값은 공용 `SOH_API_ENV_PROD` 전체를 교체하지 않고 `DADAEGU_LOGIN_ENABLED_PROD`, `DADAEGU_LOGIN_SITE_ID_PROD`, `DADAEGU_LOGIN_RSA_PRIVATE_KEY_PROD`, 선택값 `DADAEGU_LOGIN_REQUIRED_VC_PROD` 전용 Secret으로 덮어씁니다. enabled 값이 `true`이면 site ID와 RSA private key가 모두 존재해야 배포됩니다.
-- 다대구 로그인은 외부 DID를 `dadaegu_user_identity`에 SOH 사용자와 별도로 매핑합니다. 기존 매핑 또는 이름·정규화 휴대폰 번호·생년월일이 완전히 일치하는 기존 사용자는 즉시 로그인하고, 신규 사용자는 `dadaegu_signup_session`의 10분 유효 일회용 온보딩 토큰으로 `POST /login/dadaegu/signUp`을 호출합니다. 최초 가입 화면은 `realOrganization`과 모든 필수 약관 동의만 받으며, 계정·내부 DID·리워드 지갑·동의·외부 DID 매핑이 모두 성공해야 로그인 토큰을 발급합니다. 원문 온보딩 토큰은 DB에 저장하지 않고 SHA-256 해시만 저장합니다.
+- 다대구 로그인은 외부 DID를 `dadaegu_user_identity`에 SOH 사용자와 별도로 매핑하고 `DaeguMasterVC`의 CI는 원문이 아닌 SHA-256 해시만 저장합니다. 기존 외부 DID/CI 매핑을 우선 사용하고, 최초 연결에 한해 이름·정규화 휴대폰 번호·생년월일이 완전히 일치하는 기존 사용자를 연결합니다. 신규 사용자는 `dadaegu_signup_session`의 10분 유효 일회용 온보딩 토큰으로 `POST /login/dadaegu/signUp`을 호출합니다. 최초 가입 화면은 `realOrganization`과 모든 필수 약관 동의만 받으며, 계정·내부 DID·리워드 지갑·동의·외부 DID/CI 매핑이 모두 성공해야 로그인 토큰을 발급합니다. 원문 온보딩 토큰은 DB에 저장하지 않고 SHA-256 해시만 저장합니다.
 - 개발 DID/token 서버는 현재 `DID_SERVER_BASE_URL=http://43.201.125.82`, `TOKEN_SERVER_BASE_URL=http://43.201.125.82`를 사용합니다. 배포 API에서 `TOKEN_SERVER_BASE_URL`이 `http://localhost:5000`이면 EC2 자기 자신을 호출해 token list/create/transfer가 connection refused로 실패합니다.
 - DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. DID 로그인은 SOH DB에 저장된 사용자 자체 DID 발급 상태와 DID 문자열만 확인하며, VC-JWT credential 발급/검증은 사용하지 않습니다.
-- 일반 비밀번호 회원가입과 DID 회원가입은 모두 DID·리워드 지갑 생성이 완료되어야 성공합니다. 외부 프로비저닝 실패를 `null`로 삼켜 불완전 계정을 남기지 않으며, 배포 전 생성된 DID/지갑 누락 계정은 첫 리워드 요청에서 로그인 아이디 `label`로 DID와 실제 지갑을 재프로비저닝한 뒤 토큰 전송을 재시도합니다.
+- 일반 비밀번호 회원가입과 DID/다대구 회원가입은 모두 내부 DID·리워드 지갑 생성이 완료되어야 성공합니다. 외부 프로비저닝 실패를 `null`로 삼켜 불완전 계정을 남기지 않습니다. 기존 로컬 사용자가 다대구 로그인을 연결할 때는 저장된 내부 DID와 지갑 주소를 재사용하며, 누락된 항목만 멱등성 보정하여 두 번째 지갑을 만들지 않습니다. 배포 전 생성된 DID/지갑 누락 계정은 첫 다대구 연결 또는 리워드 요청에서 로그인 아이디 `label`로 DID와 실제 지갑을 재프로비저닝한 뒤 토큰 전송을 재시도합니다.
 - reward reclaim은 사용자 DID private key를 SOH에서 읽거나 저장하지 않고, token server를 통해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`로 회수합니다.
 
 ## Terraform 및 수동 구축
@@ -220,6 +220,11 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 운영 환경에서 과거 DID·지갑 미완성 로컬 가입 계정으로 리워드 버튼을 눌러 DID·지갑 자동 복구와 실제 토큰 전송이 성공하는지 확인합니다.
 
 ## 최근 동기화 상태
+
+2026-08-21 다대구 CI 매칭과 기존 로컬 사용자 지갑 재사용을 보강했습니다.
+
+- 다대구 `DaeguMasterVC`의 CI를 복호화 직후 SHA-256으로 해시하고, 외부 DID와 CI 해시가 동일 SOH 사용자에 연결된 경우만 자동 로그인합니다. 기존 사용자 최초 연결은 이름·생년월일·정규화 휴대폰 번호 완전 일치를 fallback으로 사용합니다.
+- 기존 로컬 사용자의 다대구 연결 시 이미 발급된 내부 DID·리워드 지갑을 그대로 재사용하고, 누락된 DID 또는 지갑만 생성하도록 프로비저닝을 멱등 처리했습니다.
 
 2026-08-21 다대구 기존 사용자 자동 로그인과 신규 사용자 최소입력 자동가입 흐름을 구현했습니다.
 

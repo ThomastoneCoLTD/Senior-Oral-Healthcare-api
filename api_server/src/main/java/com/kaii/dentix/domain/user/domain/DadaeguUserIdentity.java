@@ -32,6 +32,22 @@ public class DadaeguUserIdentity {
     @Column(nullable = false, unique = true, length = 255)
     private String externalDid;
 
+    @Column(unique = true, length = 64)
+    private String ciHash;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public void updateCiHash(String ciHash) {
+        if (ciHash != null && !ciHash.isBlank()
+                && (this.ciHash == null || this.ciHash.isBlank())) {
+            this.ciHash = ciHash;
+        }
+    }
+
+    public void updateExternalDid(String externalDid) {
+        if (externalDid != null && !externalDid.isBlank()) {
+            this.externalDid = externalDid;
+        }
+    }
 }

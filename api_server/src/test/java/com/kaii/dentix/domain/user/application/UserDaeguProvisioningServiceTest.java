@@ -170,4 +170,28 @@ class UserDaeguProvisioningServiceTest {
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
         verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
     }
+
+    @Test
+    void ensureProvisionedReusesExistingDidAndWalletWithoutCreatingAnotherAccount() {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("local-user")
+                .daeguDid("did:key:existing")
+                .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
+                .build();
+        UserRewardWallet wallet = UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(0L)
+                .daeguDid("did:key:existing")
+                .walletAddress("0x-existing-wallet")
+                .build();
+        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.of(wallet));
+
+        String walletAddress = service.ensureProvisioned(user);
+
+        assertThat(walletAddress).isEqualTo("0x-existing-wallet");
+        verify(daeguChainDidService, never()).createAccount(any());
+        verify(daeguChainAccountService, never()).createAccount(any());
+        verify(userRewardWalletRepository).save(wallet);
+    }
 }

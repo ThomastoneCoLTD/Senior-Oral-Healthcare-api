@@ -8,17 +8,21 @@ import com.kaii.dentix.domain.user.config.DadaeguLoginProperties;
 import com.kaii.dentix.domain.user.dao.DadaeguUserIdentityRepository;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.DadaeguSignupSession;
+import com.kaii.dentix.domain.user.domain.DadaeguUserIdentity;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import javax.crypto.Cipher;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +44,7 @@ class DadaeguLoginServiceTest {
     private DadaeguUserIdentityRepository dadaeguUserIdentityRepository;
     private DadaeguSignupSessionService signupSessionService;
     private UserLoginService userLoginService;
+    private UserDaeguProvisioningService userDaeguProvisioningService;
     private DadaeguLoginService service;
     private KeyPair keyPair;
 
@@ -55,9 +61,10 @@ class DadaeguLoginServiceTest {
         dadaeguUserIdentityRepository = mock(DadaeguUserIdentityRepository.class);
         signupSessionService = mock(DadaeguSignupSessionService.class);
         userLoginService = mock(UserLoginService.class);
+        userDaeguProvisioningService = mock(UserDaeguProvisioningService.class);
         service = new DadaeguLoginService(
                 properties, userRepository, dadaeguUserIdentityRepository,
-                signupSessionService, userLoginService, objectMapper
+                signupSessionService, userLoginService, userDaeguProvisioningService, objectMapper
         );
     }
 
@@ -83,6 +90,8 @@ class DadaeguLoginServiceTest {
                 .userId(31L).accessToken("access-token").build();
         when(dadaeguUserIdentityRepository.findByExternalDid("did:daegu:test-user"))
                 .thenReturn(Optional.empty());
+        when(dadaeguUserIdentityRepository.findByCiHash(hash("ci:test-user")))
+                .thenReturn(Optional.empty());
         when(userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
                 "01012345678", "홍길동", "1950-01-02"
         )).thenReturn(Optional.of(user));
@@ -90,11 +99,16 @@ class DadaeguLoginServiceTest {
         when(userLoginService.completeAuthenticatedLogin(user)).thenReturn(expected);
 
         UserDto.LoginResponse response = service.login(encryptedLoginRequest(
-                "did:daegu:test-user", "홍길동", "19500102", "010-1234-5678", "M"
+                "did:daegu:test-user", "ci:test-user", "홍길동", "19500102", "010-1234-5678", "M"
         ));
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
-        verify(dadaeguUserIdentityRepository).saveAndFlush(any());
+        ArgumentCaptor<DadaeguUserIdentity> identityCaptor = ArgumentCaptor.forClass(DadaeguUserIdentity.class);
+        verify(dadaeguUserIdentityRepository).saveAndFlush(identityCaptor.capture());
+        assertThat(identityCaptor.getValue().getCiHash())
+                .isEqualTo(hash("ci:test-user"))
+                .isNotEqualTo("ci:test-user");
+        verify(userDaeguProvisioningService).ensureProvisioned(user);
         verify(userLoginService).completeAuthenticatedLogin(user);
     }
 
@@ -102,15 +116,18 @@ class DadaeguLoginServiceTest {
     void firstLoginReturnsShortLivedOnboardingToken() throws Exception {
         when(dadaeguUserIdentityRepository.findByExternalDid("did:daegu:new-user"))
                 .thenReturn(Optional.empty());
+        when(dadaeguUserIdentityRepository.findByCiHash(hash("ci:new-user")))
+                .thenReturn(Optional.empty());
         when(userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
                 "01099998888", "신규사용자", "1960-03-04"
         )).thenReturn(Optional.empty());
         when(signupSessionService.issue(
-                "did:daegu:new-user", "신규사용자", "01099998888", "1960-03-04", GenderType.W
+                "did:daegu:new-user", hash("ci:new-user"), "신규사용자",
+                "01099998888", "1960-03-04", GenderType.W
         )).thenReturn(new DadaeguSignupSessionService.IssueResult("onboarding-token", 600));
 
         UserDto.LoginResponse response = service.login(encryptedLoginRequest(
-                "did:daegu:new-user", "신규사용자", "19600304", "010-9999-8888", "F"
+                "did:daegu:new-user", "ci:new-user", "신규사용자", "19600304", "010-9999-8888", "F"
         ));
 
         assertThat(response.getDadaeguOnboardingRequired()).isTrue();
@@ -122,7 +139,7 @@ class DadaeguLoginServiceTest {
     @Test
     void completeSignUpCreatesDadaeguOnlyUserAndLogsIn() {
         DadaeguSignupSession session = DadaeguSignupSession.builder()
-                .externalDid("did:daegu:new-user").userName("신규사용자")
+                .externalDid("did:daegu:new-user").ciHash(hash("ci:new-user")).userName("신규사용자")
                 .userPhoneNumber("01099998888").userBirthDate("1960-03-04")
                 .userGender(GenderType.W).build();
         User user = User.builder()
@@ -131,6 +148,8 @@ class DadaeguLoginServiceTest {
                 .userId(41L).accessToken("access-token").build();
         when(signupSessionService.consume("onboarding-token")).thenReturn(session);
         when(dadaeguUserIdentityRepository.findByExternalDid("did:daegu:new-user"))
+                .thenReturn(Optional.empty());
+        when(dadaeguUserIdentityRepository.findByCiHash(hash("ci:new-user")))
                 .thenReturn(Optional.empty());
         when(userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
                 "01099998888", "신규사용자", "1960-03-04"
@@ -151,7 +170,40 @@ class DadaeguLoginServiceTest {
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
         verify(dadaeguUserIdentityRepository).saveAndFlush(any());
+        verify(userDaeguProvisioningService).ensureProvisioned(user);
         verify(userLoginService).completeAuthenticatedLogin(user);
+    }
+
+    @Test
+    void loginUsesCiMappingBeforePersonalInformationFallback() throws Exception {
+        User user = User.builder()
+                .userId(51L)
+                .userLoginIdentifier("ci-user")
+                .isVerify(YnType.Y)
+                .build();
+        DadaeguUserIdentity identity = DadaeguUserIdentity.builder()
+                .userId(51L)
+                .externalDid("did:daegu:old-ci-user")
+                .ciHash(hash("ci:stable-user"))
+                .build();
+        when(dadaeguUserIdentityRepository.findByExternalDid("did:daegu:ci-user"))
+                .thenReturn(Optional.empty());
+        when(dadaeguUserIdentityRepository.findByCiHash(hash("ci:stable-user")))
+                .thenReturn(Optional.of(identity));
+        when(userRepository.findById(51L)).thenReturn(Optional.of(user));
+        when(userLoginService.completeAuthenticatedLogin(user))
+                .thenReturn(UserDto.LoginResponse.builder().userId(51L).accessToken("access").build());
+
+        UserDto.LoginResponse response = service.login(encryptedLoginRequest(
+                "did:daegu:ci-user", "ci:stable-user", "변경된이름",
+                "19600304", "010-1111-2222", "F"
+        ));
+
+        assertThat(response.getAccessToken()).isEqualTo("access");
+        assertThat(identity.getExternalDid()).isEqualTo("did:daegu:ci-user");
+        verify(userRepository, never()).findByUserPhoneNumberAndUserNameAndUserBirthDate(
+                anyString(), anyString(), anyString()
+        );
     }
 
     @Test
@@ -184,10 +236,11 @@ class DadaeguLoginServiceTest {
     }
 
     private UserDto.DadaeguLoginRequest encryptedLoginRequest(
-            String did, String name, String birthdate, String phoneNumber, String gender
+            String did, String ci, String name, String birthdate, String phoneNumber, String gender
     ) throws Exception {
         ObjectNode claims = objectMapper.createObjectNode();
         claims.put("did", encrypt(did));
+        claims.put("ci", encrypt(ci));
         claims.put("name", encrypt(name));
         claims.put("birthdate", encrypt(birthdate));
         claims.put("phoneNumber", encrypt(phoneNumber));
@@ -202,5 +255,15 @@ class DadaeguLoginServiceTest {
         return Base64.getEncoder().encodeToString(
                 cipher.doFinal(value.getBytes(StandardCharsets.UTF_8))
         );
+    }
+
+    private String hash(String value) {
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))
+            );
+        } catch (Exception exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 }
