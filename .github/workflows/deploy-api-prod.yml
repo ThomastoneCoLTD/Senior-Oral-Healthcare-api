@@ -78,6 +78,10 @@ jobs:
           DAEGU_CHAIN_TOKEN_OWNER_ADDRESS_OVERRIDE: ${{ secrets.DAEGU_CHAIN_TOKEN_OWNER_ADDRESS_PROD || secrets.DAEGU_CHAIN_TOKEN_OWNER_ADDRESS }}
           DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY_OVERRIDE: ${{ secrets.DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY_PROD || secrets.DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY }}
           TOKEN_SERVER_BASE_URL_OVERRIDE: ${{ secrets.TOKEN_SERVER_BASE_URL_PROD || secrets.TOKEN_SERVER_BASE_URL }}
+          DADAEGU_LOGIN_ENABLED_OVERRIDE: ${{ secrets.DADAEGU_LOGIN_ENABLED_PROD }}
+          DADAEGU_LOGIN_SITE_ID_OVERRIDE: ${{ secrets.DADAEGU_LOGIN_SITE_ID_PROD }}
+          DADAEGU_LOGIN_RSA_PRIVATE_KEY_OVERRIDE: ${{ secrets.DADAEGU_LOGIN_RSA_PRIVATE_KEY_PROD }}
+          DADAEGU_LOGIN_REQUIRED_VC_OVERRIDE: ${{ secrets.DADAEGU_LOGIN_REQUIRED_VC_PROD }}
         run: |
           test -n "${SOH_API_ENV}" || (echo "SOH_API_ENV_PROD secret is empty" && exit 1)
           printf '%s\n' "${SOH_API_ENV}" > "${ENV_FILE}"
@@ -113,6 +117,17 @@ jobs:
           upsert_env "DAEGU_CHAIN_TOKEN_OWNER_ADDRESS" "${DAEGU_CHAIN_TOKEN_OWNER_ADDRESS_OVERRIDE}"
           upsert_env "DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY" "${DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY_OVERRIDE}"
           upsert_env "TOKEN_SERVER_BASE_URL" "${TOKEN_SERVER_BASE_URL_OVERRIDE}"
+          upsert_env "DADAEGU_LOGIN_ENABLED" "${DADAEGU_LOGIN_ENABLED_OVERRIDE}"
+          upsert_env "DADAEGU_LOGIN_SITE_ID" "${DADAEGU_LOGIN_SITE_ID_OVERRIDE}"
+          upsert_env "DADAEGU_LOGIN_RSA_PRIVATE_KEY" "${DADAEGU_LOGIN_RSA_PRIVATE_KEY_OVERRIDE}"
+          upsert_env "DADAEGU_LOGIN_REQUIRED_VC" "${DADAEGU_LOGIN_REQUIRED_VC_OVERRIDE}"
+
+          if [ "${DADAEGU_LOGIN_ENABLED_OVERRIDE}" = "true" ]; then
+            grep -Eq '^DADAEGU_LOGIN_SITE_ID=.+' "${ENV_FILE}" \
+              || (echo "DADAEGU_LOGIN_SITE_ID is required when DaDaegu login is enabled" && exit 1)
+            grep -Eq '^DADAEGU_LOGIN_RSA_PRIVATE_KEY=.+' "${ENV_FILE}" \
+              || (echo "DADAEGU_LOGIN_RSA_PRIVATE_KEY is required when DaDaegu login is enabled" && exit 1)
+          fi
 
           grep -Eq '^(DAEGU_CHAIN_APP_KEY|DAEGU_CHAIN_TOKEN)=.+' "${ENV_FILE}" \
             || (echo "DAEGU_CHAIN_APP_KEY or DAEGU_CHAIN_TOKEN is required for DaeguChain token APIs" && exit 1)
