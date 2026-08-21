@@ -12,6 +12,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
@@ -73,7 +74,9 @@ class ExternalTokenClientTest {
                 .andExpect(method(POST))
                 .andExpect(content().string(containsString("\"token\":\"app-token\"")))
                 .andExpect(content().string(containsString("\"user_DID\":\"did:example:user\"")))
-                .andExpect(content().string(containsString("\"user_did\":\"did:example:user\"")))
+                .andExpect(content().string(not(containsString("\"user_did\""))))
+                .andExpect(content().string(not(containsString("\"userDid\""))))
+                .andExpect(content().string(not(containsString("\"did\""))))
                 .andExpect(content().string(containsString("\"token_name\":\"ESSENTIAL_VIDEO_1\"")))
                 .andExpect(content().string(containsString("\"contract\":\"0x-token\"")))
                 .andExpect(content().string(containsString("\"receiver\":\"0x-user\"")))

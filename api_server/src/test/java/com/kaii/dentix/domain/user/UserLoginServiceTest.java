@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -261,6 +262,43 @@ class UserLoginServiceTest {
         assertThat(userCaptor.getValue().getFindPwdQuestionId()).isEqualTo(1L);
         assertThat(userCaptor.getValue().getFindPwdAnswer()).isNotBlank();
         assertThat(userCaptor.getValue().getFindPwdAnswer()).doesNotContain("dentix123");
+    }
+
+    @Test
+    void createDadaeguUserDoesNotProvisionSelfIssuedDid() {
+        Organization organization = Organization.builder()
+                .organizationId(10L)
+                .organizationName("Token Admin Organization")
+                .build();
+        given(userRepository.findByUserLoginIdentifier("dg-generated")).willReturn(Optional.empty());
+        given(userRepository.findByUserPhoneNumber("01099998888")).willReturn(Optional.empty());
+        given(findPwdQuestionRepository.findById(1L)).willReturn(Optional.of(FindPwdQuestion.builder()
+                .findPwdQuestionId(1L)
+                .findPwdQuestionSort(1L)
+                .findPwdQuestionTitle("내부 질문")
+                .build()));
+        given(daeguDefaultOrganizationService.getTokenAdminOrganization()).willReturn(organization);
+        given(passwordEncoder.encode(any(String.class))).willReturn("encoded-placeholder");
+        given(userRepository.save(any(User.class))).willAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setUserId(42L);
+            return saved;
+        });
+
+        User user = userLoginService.createDadaeguUser(
+                "dg-generated",
+                "신규사용자",
+                GenderType.W,
+                "01099998888",
+                "1960-03-04",
+                "대구2",
+                List.of(1L, 2L)
+        );
+
+        assertThat(user.getUserId()).isEqualTo(42L);
+        assertThat(user.getDaeguDid()).isNull();
+        verify(userDaeguProvisioningService, never()).provisionForSignUp(any(User.class));
+        verify(serviceAgreementConsentService).saveUserServiceAgreements(42L, List.of(1L, 2L));
     }
 
     @Test

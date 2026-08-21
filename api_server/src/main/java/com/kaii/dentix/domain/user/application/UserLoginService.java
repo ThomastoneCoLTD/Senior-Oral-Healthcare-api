@@ -217,7 +217,6 @@ public class UserLoginService {
                 .isVerify(YnType.Y)
                 .build());
 
-        userDaeguProvisioningService.provisionForSignUp(user);
         serviceAgreementConsentService.saveUserServiceAgreements(user.getUserId(), agreementIds);
         return user;
     }

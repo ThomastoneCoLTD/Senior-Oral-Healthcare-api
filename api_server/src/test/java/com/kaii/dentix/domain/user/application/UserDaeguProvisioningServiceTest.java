@@ -194,4 +194,63 @@ class UserDaeguProvisioningServiceTest {
         verify(daeguChainAccountService, never()).createAccount(any());
         verify(userRewardWalletRepository).save(wallet);
     }
+
+    @Test
+    void provisionForDadaeguReusesLocalUsersWalletAndKeepsSelfIssuedDid() {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("local-user")
+                .daeguDid("did:key:self-issued")
+                .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
+                .build();
+        UserRewardWallet wallet = UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(0L)
+                .daeguDid("did:key:self-issued")
+                .walletAddress("0x-existing-wallet")
+                .build();
+        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.of(wallet));
+
+        String walletAddress = service.provisionForDadaegu(user, "did:daegu:external-user");
+
+        assertThat(walletAddress).isEqualTo("0x-existing-wallet");
+        assertThat(user.getDaeguDid()).isEqualTo("did:key:self-issued");
+        assertThat(wallet.getDaeguDid()).isEqualTo("did:daegu:external-user");
+        assertThat(wallet.getWalletAddress()).isEqualTo("0x-existing-wallet");
+        verify(daeguChainDidService, never()).createAccount(any());
+        verify(daeguChainAccountService, never()).createAccount(any());
+        verify(userRewardWalletRepository).save(wallet);
+    }
+
+    @Test
+    void provisionForDadaeguOnlyUserUsesExternalDidAndCreatesWalletWithoutSelfDid() {
+        User user = User.builder()
+                .userId(8L)
+                .userLoginIdentifier("dg-user")
+                .build();
+        when(userRewardWalletRepository.findByUserId(8L)).thenReturn(Optional.empty());
+        when(daeguChainAccountService.createAccount(any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>(
+                        "OK",
+                        null,
+                        "",
+                        new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
+                                "private-key",
+                                "public-key",
+                                "0x-new-wallet"
+                        )),
+                        "cid-account"
+                ));
+
+        String walletAddress = service.provisionForDadaegu(user, "did:daegu:new-user");
+
+        assertThat(walletAddress).isEqualTo("0x-new-wallet");
+        assertThat(user.getDaeguDid()).isEqualTo("did:daegu:new-user");
+        assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
+        verify(daeguChainDidService, never()).createAccount(any());
+        ArgumentCaptor<UserRewardWallet> walletCaptor = ArgumentCaptor.forClass(UserRewardWallet.class);
+        verify(userRewardWalletRepository).save(walletCaptor.capture());
+        assertThat(walletCaptor.getValue().getDaeguDid()).isEqualTo("did:daegu:new-user");
+        assertThat(walletCaptor.getValue().getWalletAddress()).isEqualTo("0x-new-wallet");
+    }
 }

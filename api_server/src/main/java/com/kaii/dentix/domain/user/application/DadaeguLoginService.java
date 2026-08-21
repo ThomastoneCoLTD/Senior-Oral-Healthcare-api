@@ -95,7 +95,7 @@ public class DadaeguLoginService {
             }
 
             bindIdentity(claims.did(), claims.ciHash(), user);
-            userDaeguProvisioningService.ensureProvisioned(user);
+            userDaeguProvisioningService.provisionForDadaegu(user, claims.did());
             return userLoginService.completeAuthenticatedLogin(user);
         } catch (UnauthorizedException | BadRequestApiException exception) {
             throw exception;
@@ -125,7 +125,7 @@ public class DadaeguLoginService {
                 throw new UnauthorizedException("User is not verified.");
             }
             bindIdentity(claims.did(), claims.ciHash(), existingUser);
-            userDaeguProvisioningService.ensureProvisioned(existingUser);
+            userDaeguProvisioningService.provisionForDadaegu(existingUser, claims.did());
             return userLoginService.completeAuthenticatedLogin(existingUser);
         }
 
@@ -139,7 +139,7 @@ public class DadaeguLoginService {
                 request.getUserServiceAgreementRequest()
         );
         bindIdentity(claims.did(), claims.ciHash(), user);
-        userDaeguProvisioningService.ensureProvisioned(user);
+        userDaeguProvisioningService.provisionForDadaegu(user, claims.did());
         return userLoginService.completeAuthenticatedLogin(user);
     }
 

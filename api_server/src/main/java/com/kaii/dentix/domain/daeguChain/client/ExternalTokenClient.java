@@ -57,9 +57,6 @@ public class ExternalTokenClient {
         validateTransferPath();
         Map<String, Object> body = baseBody();
         body.put("user_DID", userDid);
-        body.put("user_did", userDid);
-        body.put("userDid", userDid);
-        body.put("did", userDid);
         body.put("token_name", tokenName);
         if (contractAddress != null && !contractAddress.isBlank()) {
             body.put("contract", contractAddress);

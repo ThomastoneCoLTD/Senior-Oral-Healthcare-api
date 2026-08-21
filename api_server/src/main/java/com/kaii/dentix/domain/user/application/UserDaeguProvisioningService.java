@@ -29,6 +29,44 @@ public class UserDaeguProvisioningService {
         return ensureProvisioned(user);
     }
 
+    /**
+     * 다대구 인증으로 전달받은 DID를 리워드 지갑의 활성 DID로 연결한다.
+     * 기존 로컬 사용자는 자체 DID와 지갑 주소를 유지하고, 토큰 처리에 사용할 DID만 다대구 DID로 바꾼다.
+     */
+    public String provisionForDadaegu(User user, String externalDid) {
+        if (user == null || user.getUserId() == null) {
+            throw new BadRequestApiException("User is required for Daegu provisioning");
+        }
+        if (isBlank(externalDid)) {
+            throw new BadRequestApiException("DaDaegu DID is required");
+        }
+
+        if (isBlank(user.getDaeguDid())) {
+            user.updateDaeguDid(externalDid, null, UserDaeguIdentityStatus.ISSUED);
+        }
+
+        return userRewardWalletRepository.findByUserId(user.getUserId())
+                .map(wallet -> {
+                    String walletAddress = wallet.getWalletAddress();
+                    if (isBlank(walletAddress)) {
+                        walletAddress = resolveWalletAddress(user.getUserId(), null);
+                    }
+                    wallet.updateDaeguWallet(externalDid, walletAddress);
+                    userRewardWalletRepository.save(wallet);
+                    return walletAddress;
+                })
+                .orElseGet(() -> {
+                    String walletAddress = resolveWalletAddress(user.getUserId(), null);
+                    userRewardWalletRepository.save(UserRewardWallet.builder()
+                            .userId(user.getUserId())
+                            .pointBalance(0L)
+                            .daeguDid(externalDid)
+                            .walletAddress(walletAddress)
+                            .build());
+                    return walletAddress;
+                });
+    }
+
     public String ensureProvisioned(User user) {
         if (user == null || user.getUserId() == null) {
             throw new BadRequestApiException("User is required for Daegu provisioning");

@@ -112,7 +112,7 @@ class DadaeguLoginServiceTest {
         assertThat(identityCaptor.getValue().getCiHash())
                 .isEqualTo(hash("ci:test-user"))
                 .isNotEqualTo("ci:test-user");
-        verify(userDaeguProvisioningService).ensureProvisioned(user);
+        verify(userDaeguProvisioningService).provisionForDadaegu(user, "did:daegu:test-user");
         verify(userLoginService).completeAuthenticatedLogin(user);
     }
 
@@ -174,7 +174,7 @@ class DadaeguLoginServiceTest {
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
         verify(dadaeguUserIdentityRepository).saveAndFlush(any());
-        verify(userDaeguProvisioningService).ensureProvisioned(user);
+        verify(userDaeguProvisioningService).provisionForDadaegu(user, "did:daegu:new-user");
         verify(userLoginService).completeAuthenticatedLogin(user);
     }
 
