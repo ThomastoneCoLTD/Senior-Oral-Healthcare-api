@@ -7,6 +7,7 @@ import com.kaii.dentix.domain.type.ServiceType;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.global.config.PasswordSerializer;
 import com.kaii.dentix.global.config.SensitiveJsonNodeSerializer;
+import com.kaii.dentix.global.config.SensitiveStringSerializer;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -92,6 +93,26 @@ public class UserDto {
         private Boolean organizationCustomSurveyEnabled;
         private String daeguDid;
         private UserDaeguIdentityStatus daeguDidStatus;
+
+        // 다대구 최초 로그인 시에만 사용되는 추가가입 정보
+        private Boolean dadaeguOnboardingRequired;
+        private String dadaeguOnboardingToken;
+        private Long dadaeguOnboardingExpiresInSeconds;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class DadaeguSignUpRequest {
+        @NotBlank(message = "다대구 가입 진행 토큰은 필수입니다.")
+        @JsonSerialize(using = SensitiveStringSerializer.class)
+        private String onboardingToken;
+
+        @NotBlank(message = "기관 선택은 필수입니다.")
+        @Pattern(regexp = "^(대구1|대구2|대구3)$", message = "기관은 대구1, 대구2, 대구3 중에서 선택해 주세요.")
+        private String realOrganization;
+
+        @NotNull(message = "필수 약관 동의는 필수입니다.")
+        private List<Long> userServiceAgreementRequest;
     }
 
     @Getter @Builder

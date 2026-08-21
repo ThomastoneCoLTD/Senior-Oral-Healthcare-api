@@ -66,6 +66,14 @@ public class UserLoginController {
         return new DataResponse<>(dadaeguLoginService.login(request));
     }
 
+    /** 다대구 최초 로그인 사용자 추가정보 입력 후 가입 및 자동 로그인 */
+    @PostMapping("/dadaegu/signUp")
+    public DataResponse<UserDto.LoginResponse> dadaeguSignUp(
+            @Valid @RequestBody UserDto.DadaeguSignUpRequest request
+    ) {
+        return new DataResponse<>(dadaeguLoginService.completeSignUp(request));
+    }
+
     /** 이름, 휴대폰 번호, 생년월일로 사용자 아이디 찾기 */
     @PostMapping("/find-id")
     public DataResponse<UserDto.FindIdResponse> findUserLoginIdentifier(

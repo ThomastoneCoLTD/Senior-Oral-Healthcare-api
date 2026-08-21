@@ -12,6 +12,7 @@ import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.passwordReset.application.PasswordResetService;
 import com.kaii.dentix.domain.passwordReset.domain.PasswordResetAccountType;
 import com.kaii.dentix.domain.subscription.domain.SubscriptionPlan;
+import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
@@ -182,6 +183,43 @@ public class UserLoginService {
         user.updateLogin(refreshToken);
 
         return buildSignUpResponse(user, organization, accessToken, refreshToken, walletAddress);
+    }
+
+    @Transactional
+    public User createDadaeguUser(
+            String loginIdentifier,
+            String userName,
+            GenderType userGender,
+            String userPhoneNumber,
+            String userBirthDate,
+            String realOrganization,
+            List<Long> agreementIds
+    ) {
+        loginIdCheck(loginIdentifier);
+        assertPhoneNumberAvailable(userPhoneNumber);
+
+        if (findPwdQuestionRepository.findById(DID_INTERNAL_RECOVERY_QUESTION_ID).isEmpty()) {
+            throw new NotFoundDataException("다대구 회원가입용 내부 질문이 존재하지 않습니다.");
+        }
+
+        Organization organization = daeguDefaultOrganizationService.getTokenAdminOrganization();
+        User user = userRepository.save(User.builder()
+                .userLoginIdentifier(loginIdentifier)
+                .userName(userName)
+                .userGender(userGender)
+                .userPassword(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .findPwdQuestionId(DID_INTERNAL_RECOVERY_QUESTION_ID)
+                .findPwdAnswer(UUID.randomUUID().toString())
+                .userPhoneNumber(userPhoneNumber)
+                .userBirthDate(userBirthDate)
+                .realOrganization(realOrganization)
+                .organization(organization)
+                .isVerify(YnType.Y)
+                .build());
+
+        userDaeguProvisioningService.provisionForSignUp(user);
+        serviceAgreementConsentService.saveUserServiceAgreements(user.getUserId(), agreementIds);
+        return user;
     }
 
     @Transactional(readOnly = true)

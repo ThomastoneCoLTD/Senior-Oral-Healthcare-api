@@ -2,9 +2,13 @@ package com.kaii.dentix.domain.user.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.config.DadaeguLoginProperties;
+import com.kaii.dentix.domain.user.dao.DadaeguUserIdentityRepository;
 import com.kaii.dentix.domain.user.dao.UserRepository;
+import com.kaii.dentix.domain.user.domain.DadaeguSignupSession;
+import com.kaii.dentix.domain.user.domain.DadaeguUserIdentity;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
@@ -18,9 +22,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +37,8 @@ public class DadaeguLoginService {
 
     private final DadaeguLoginProperties properties;
     private final UserRepository userRepository;
+    private final DadaeguUserIdentityRepository dadaeguUserIdentityRepository;
+    private final DadaeguSignupSessionService signupSessionService;
     private final UserLoginService userLoginService;
     private final ObjectMapper objectMapper;
 
@@ -54,32 +63,131 @@ public class DadaeguLoginService {
                 throw new UnauthorizedException("유효한 다대구 인증 결과가 아닙니다.");
             }
 
-            PrivateKey privateKey = parsePrivateKey(properties.getRsaPrivateKey());
-            String did = decryptClaim(claimPayload, "did", privateKey);
-            String name = decryptClaim(claimPayload, "name", privateKey).trim();
-            String birthDate = normalizeBirthDate(decryptClaim(claimPayload, "birthdate", privateKey));
-            String phoneNumber = normalizePhoneNumber(decryptClaim(claimPayload, "phoneNumber", privateKey));
+            DadaeguClaims claims = decryptClaims(claimPayload);
+            User user = findExistingUser(claims).orElse(null);
 
-            User user = userRepository.findByDaeguDid(did)
-                    .or(() -> userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
-                            phoneNumber,
-                            name,
-                            birthDate
-                    ))
-                    .orElseThrow(() -> new UnauthorizedException(
-                            "다대구 인증정보와 일치하는 가입 계정이 없습니다. 먼저 사용자 회원가입을 진행해 주세요."
-                    ));
+            if (user == null) {
+                if (claims.gender() == null) {
+                    throw new UnauthorizedException("다대구 인증정보에 성별이 없어 최초 가입을 진행할 수 없습니다.");
+                }
+                DadaeguSignupSessionService.IssueResult issueResult = signupSessionService.issue(
+                        claims.did(),
+                        claims.name(),
+                        claims.phoneNumber(),
+                        claims.birthDate(),
+                        claims.gender()
+                );
+                return UserDto.LoginResponse.builder()
+                        .dadaeguOnboardingRequired(true)
+                        .dadaeguOnboardingToken(issueResult.token())
+                        .dadaeguOnboardingExpiresInSeconds(issueResult.expiresInSeconds())
+                        .build();
+            }
 
             if (user.getIsVerify() != YnType.Y) {
                 throw new UnauthorizedException("User is not verified.");
             }
 
+            bindIdentity(claims.did(), user);
             return userLoginService.completeAuthenticatedLogin(user);
         } catch (UnauthorizedException | BadRequestApiException exception) {
             throw exception;
         } catch (Exception exception) {
             throw new UnauthorizedException("다대구 인증 결과를 확인할 수 없습니다.");
         }
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public UserDto.LoginResponse completeSignUp(UserDto.DadaeguSignUpRequest request) {
+        DadaeguSignupSession session = signupSessionService.consume(request.getOnboardingToken());
+        DadaeguClaims claims = new DadaeguClaims(
+                session.getExternalDid(),
+                session.getUserName(),
+                session.getUserPhoneNumber(),
+                session.getUserBirthDate(),
+                session.getUserGender()
+        );
+
+        User existingUser = findExistingUser(claims).orElse(null);
+        if (existingUser != null) {
+            if (existingUser.getIsVerify() != YnType.Y) {
+                throw new UnauthorizedException("User is not verified.");
+            }
+            bindIdentity(claims.did(), existingUser);
+            return userLoginService.completeAuthenticatedLogin(existingUser);
+        }
+
+        User user = userLoginService.createDadaeguUser(
+                generateLoginIdentifier(),
+                claims.name(),
+                claims.gender(),
+                claims.phoneNumber(),
+                claims.birthDate(),
+                request.getRealOrganization(),
+                request.getUserServiceAgreementRequest()
+        );
+        bindIdentity(claims.did(), user);
+        return userLoginService.completeAuthenticatedLogin(user);
+    }
+
+    private DadaeguClaims decryptClaims(JsonNode claimPayload) throws Exception {
+        PrivateKey privateKey = parsePrivateKey(properties.getRsaPrivateKey());
+        String did = decryptClaim(claimPayload, "did", privateKey);
+        String name = decryptClaim(claimPayload, "name", privateKey).trim();
+        String birthDate = normalizeBirthDate(decryptClaim(claimPayload, "birthdate", privateKey));
+        String phoneNumber = normalizePhoneNumber(decryptClaim(claimPayload, "phoneNumber", privateKey));
+        String genderValue = decryptOptionalClaim(claimPayload, "gender", privateKey);
+        GenderType gender = genderValue == null ? null : normalizeGender(genderValue);
+        return new DadaeguClaims(did, name, phoneNumber, birthDate, gender);
+    }
+
+    private Optional<User> findExistingUser(DadaeguClaims claims) {
+        Optional<User> mappedUser = dadaeguUserIdentityRepository.findByExternalDid(claims.did())
+                .flatMap(identity -> userRepository.findById(identity.getUserId()));
+        if (mappedUser.isPresent()) {
+            return mappedUser;
+        }
+        return userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
+                claims.phoneNumber(),
+                claims.name(),
+                claims.birthDate()
+        );
+    }
+
+    private void bindIdentity(String externalDid, User user) {
+        Optional<DadaeguUserIdentity> externalIdentity =
+                dadaeguUserIdentityRepository.findByExternalDid(externalDid);
+        if (externalIdentity.isPresent()) {
+            if (!externalIdentity.get().getUserId().equals(user.getUserId())) {
+                throw new UnauthorizedException("이미 다른 SOH 계정에 연결된 다대구 인증정보입니다.");
+            }
+            return;
+        }
+
+        Optional<DadaeguUserIdentity> userIdentity =
+                dadaeguUserIdentityRepository.findByUserId(user.getUserId());
+        if (userIdentity.isPresent()) {
+            if (!userIdentity.get().getExternalDid().equals(externalDid)) {
+                throw new UnauthorizedException("이미 다른 다대구 계정이 연결되어 있습니다.");
+            }
+            return;
+        }
+
+        dadaeguUserIdentityRepository.saveAndFlush(DadaeguUserIdentity.builder()
+                .userId(user.getUserId())
+                .externalDid(externalDid)
+                .createdAt(LocalDateTime.now())
+                .build());
+    }
+
+    private String generateLoginIdentifier() {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String candidate = "dg" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+            if (userRepository.findByUserLoginIdentifier(candidate).isEmpty()) {
+                return candidate;
+            }
+        }
+        throw new BadRequestApiException("다대구 사용자 계정을 생성할 수 없습니다. 다시 시도해 주세요.");
     }
 
     private JsonNode normalizeNode(JsonNode node) throws Exception {
@@ -149,6 +257,25 @@ public class DadaeguLoginService {
         return new String(decrypted, StandardCharsets.UTF_8);
     }
 
+    private String decryptOptionalClaim(JsonNode payload, String fieldName, PrivateKey privateKey) throws Exception {
+        String encryptedValue = payload.path(fieldName).asText("").trim();
+        if (encryptedValue.isEmpty()) {
+            return null;
+        }
+        Cipher cipher = Cipher.getInstance(RSA_TRANSFORMATION);
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+        byte[] decrypted = cipher.doFinal(Base64.getDecoder().decode(encryptedValue));
+        return new String(decrypted, StandardCharsets.UTF_8);
+    }
+
+    private GenderType normalizeGender(String gender) {
+        return switch (gender.trim().toUpperCase()) {
+            case "M", "MALE", "남", "남성", "1" -> GenderType.M;
+            case "W", "F", "FEMALE", "여", "여성", "2" -> GenderType.W;
+            default -> throw new UnauthorizedException("다대구 성별 정보를 확인할 수 없습니다.");
+        };
+    }
+
     private String normalizePhoneNumber(String phoneNumber) {
         String normalized = phoneNumber.replaceAll("[^0-9]", "");
         if (!normalized.matches("^[0-9]{10,11}$")) {
@@ -163,5 +290,14 @@ public class DadaeguLoginService {
             throw new UnauthorizedException("다대구 생년월일 형식이 올바르지 않습니다.");
         }
         return digits.substring(0, 4) + "-" + digits.substring(4, 6) + "-" + digits.substring(6, 8);
+    }
+
+    private record DadaeguClaims(
+            String did,
+            String name,
+            String phoneNumber,
+            String birthDate,
+            GenderType gender
+    ) {
     }
 }

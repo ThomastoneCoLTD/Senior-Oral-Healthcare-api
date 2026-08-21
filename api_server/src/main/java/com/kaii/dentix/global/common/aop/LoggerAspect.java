@@ -1,7 +1,10 @@
 package com.kaii.dentix.global.common.aop;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.kaii.dentix.domain.errorLog.dao.ErrorLogRepository;
 import com.kaii.dentix.domain.errorLog.domain.ErrorLog;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
@@ -28,6 +31,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import java.lang.annotation.Annotation;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 @Slf4j
@@ -58,7 +62,7 @@ public class LoggerAspect {
 			.requestUrl(loggerDTO.getRequestUrl())
 			.header(loggerDTO.getHeader())
 			.requestBody(loggerDTO.getRequestBody())
-			.responseBody(objectMapper.writeValueAsString(returnObj))
+			.responseBody(serializeForLog(returnObj))
 			.build());
 
 		log.info("::: AOP writeSuccessLog End :::");
@@ -156,8 +160,41 @@ public class LoggerAspect {
 			.tokenUserRole(tokenUserRole)
 			.requestName(requestName)
 			.requestUrl(request.getRequestURL().toString())
-			.header(objectMapper.writeValueAsString(headers))
-			.requestBody(objectMapper.writeValueAsString(requestBody))
+			.header(serializeForLog(headers))
+			.requestBody(serializeForLog(requestBody))
 			.build();
+	}
+
+	private String serializeForLog(Object value) throws JsonProcessingException {
+		JsonNode node = objectMapper.valueToTree(value);
+		maskSensitiveFields(node);
+		return objectMapper.writeValueAsString(node);
+	}
+
+	private void maskSensitiveFields(JsonNode node) {
+		if (node instanceof ObjectNode objectNode) {
+			Iterator<Map.Entry<String, JsonNode>> fields = objectNode.fields();
+			while (fields.hasNext()) {
+				Map.Entry<String, JsonNode> field = fields.next();
+				if (isSensitiveKey(field.getKey())) {
+					objectNode.put(field.getKey(), "********");
+				} else {
+					maskSensitiveFields(field.getValue());
+				}
+			}
+		} else if (node instanceof ArrayNode arrayNode) {
+			arrayNode.forEach(this::maskSensitiveFields);
+		}
+	}
+
+	private boolean isSensitiveKey(String key) {
+		String normalized = key == null ? "" : key.replace("_", "").toLowerCase();
+		return normalized.equals("authorization")
+			|| normalized.equals("credential")
+			|| normalized.equals("encrypteddata")
+			|| normalized.contains("password")
+			|| normalized.endsWith("privatekey")
+			|| normalized.endsWith("secret")
+			|| normalized.endsWith("token");
 	}
 }

@@ -514,7 +514,10 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.organizationPlanName").type(JsonFieldType.STRING).optional().description("기관 구독 플랜 이름"),
                                 fieldWithPath("response.organizationCustomSurveyEnabled").type(JsonFieldType.BOOLEAN).optional().description("커스텀 설문 기능 사용 가능 여부"),
                                 fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("DaeguChain DID"),
-                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("DaeguChain DID status")
+                                fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("DaeguChain DID status"),
+                                fieldWithPath("response.dadaeguOnboardingRequired").type(JsonFieldType.BOOLEAN).optional().description("다대구 최초 로그인 추가가입 필요 여부"),
+                                fieldWithPath("response.dadaeguOnboardingToken").type(JsonFieldType.STRING).optional().description("다대구 최초 가입용 일회성 토큰"),
+                                fieldWithPath("response.dadaeguOnboardingExpiresInSeconds").type(JsonFieldType.NUMBER).optional().description("다대구 최초 가입 토큰 유효 시간(초)")
                         )
                 ));
 
@@ -613,6 +616,27 @@ public class UserLoginControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(401))
                 .andExpect(jsonPath("rtMsg").value("Administrator approval is required before you can log in."));
+    }
+
+    @Test
+    void dadaeguSignUpCompletesOnboardingAndReturnsLoginTokens() throws Exception {
+        given(dadaeguLoginService.completeSignUp(any(UserDto.DadaeguSignUpRequest.class)))
+                .willReturn(userLoginDto());
+
+        mockMvc.perform(RestDocumentationRequestBuilders.post("/login/dadaegu/signUp")
+                        .content("""
+                                {
+                                  "onboardingToken": "one-time-token",
+                                  "realOrganization": "대구2",
+                                  "userServiceAgreementRequest": [1, 2]
+                                }
+                                """)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("rt").value(200))
+                .andExpect(jsonPath("response.accessToken").value("Access Token"));
+
+        verify(dadaeguLoginService).completeSignUp(any(UserDto.DadaeguSignUpRequest.class));
     }
 
     /**
