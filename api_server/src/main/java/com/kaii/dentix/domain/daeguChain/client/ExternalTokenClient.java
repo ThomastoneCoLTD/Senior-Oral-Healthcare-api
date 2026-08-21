@@ -16,9 +16,9 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Locale;
 
 @Component
 public class ExternalTokenClient {
@@ -55,18 +55,30 @@ public class ExternalTokenClient {
 
     public JsonNode transferToken(String userDid, String tokenName, String contractAddress, String receiver, long amount) {
         validateTransferPath();
-        Map<String, Object> body = baseBody();
+        Map<String, Object> body = transferBody(tokenName, contractAddress, receiver, amount);
         body.put("user_DID", userDid);
+        return postTokenTransfer(body);
+    }
+
+    public JsonNode transferTokenToWallet(String tokenName, String contractAddress, String receiver, long amount) {
+        validateTransferPath();
+        return post(properties.getTokenTransferPath(), transferBody(tokenName, contractAddress, receiver, amount));
+    }
+
+    private Map<String, Object> transferBody(String tokenName, String contractAddress, String receiver, long amount) {
+        Map<String, Object> body = baseBody();
         body.put("token_name", tokenName);
         if (contractAddress != null && !contractAddress.isBlank()) {
             body.put("contract", contractAddress);
             body.put("contract_address", contractAddress);
+            body.put("contractAddress", contractAddress);
             body.put("cont_addr", contractAddress);
         }
         body.put("receiver", receiver);
+        body.put("receiverAddress", receiver);
         body.put("wallet_address", receiver);
         body.put("amount", amount);
-        return postTokenTransfer(body);
+        return body;
     }
 
     private void validateTransferPath() {

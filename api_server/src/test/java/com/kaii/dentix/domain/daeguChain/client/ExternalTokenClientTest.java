@@ -89,6 +89,25 @@ class ExternalTokenClientTest {
     }
 
     @Test
+    void transferTokenToWalletUsesRecipientAddressWithoutDidLookup() {
+        server.expect(once(), requestTo("https://token.example.com/token/transfer"))
+                .andExpect(method(POST))
+                .andExpect(content().string(containsString("\"token\":\"app-token\"")))
+                .andExpect(content().string(not(containsString("\"user_DID\""))))
+                .andExpect(content().string(containsString("\"token_name\":\"ESSENTIAL_VIDEO_1\"")))
+                .andExpect(content().string(containsString("\"cont_addr\":\"0x-token\"")))
+                .andExpect(content().string(containsString("\"contractAddress\":\"0x-token\"")))
+                .andExpect(content().string(containsString("\"receiver\":\"0x-user\"")))
+                .andExpect(content().string(containsString("\"receiverAddress\":\"0x-user\"")))
+                .andExpect(content().string(containsString("\"amount\":1")))
+                .andRespond(withSuccess("{\"state\":\"OK\"}", MediaType.APPLICATION_JSON));
+
+        client.transferTokenToWallet("ESSENTIAL_VIDEO_1", "0x-token", "0x-user", 1L);
+
+        server.verify();
+    }
+
+    @Test
     void transferTokenRejectsCreatePathConfiguration() {
         properties.setTokenTransferPath("/token/create");
 

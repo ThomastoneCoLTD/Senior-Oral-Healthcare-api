@@ -382,6 +382,7 @@ Production deploys may override those values without replacing the shared `SOH_A
 Normal password-based signup and DID signup both complete only after a Daegu DID and reward wallet address are stored. If an older user reaches a reward request with a failed or missing DID/wallet, the reward service retries DID and wallet provisioning before token transfer; provisioning failures remain explicit instead of leaving a newly registered user in a partially configured state.
 Oral-exercise reward reclaim sends collected token contracts back to `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS` through the configured token server; SOH must not read, log, or persist user DID private keys for this reclaim flow.
 When `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, oral-exercise video rewards are transferred through DaeguChain token contracts by reward token name. Development keeps this disabled by default so token transfer outages do not block exercise completion.
+Reward issuance addresses the stored reward wallet directly. The external `/token/transfer` request intentionally omits `user_DID`, because that field makes the token server resolve only DIDs issued in its own local DID database and rejects DaDaegu-issued DIDs before sending the chain transaction.
 
 ## GitHub Actions IAM User Policy
 

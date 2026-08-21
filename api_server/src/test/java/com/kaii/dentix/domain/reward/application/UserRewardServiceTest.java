@@ -313,8 +313,7 @@ class UserRewardServiceTest {
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(externalTokenClient.getTokenList()).thenReturn(rewardTokenList());
-        when(externalTokenClient.transferToken(
-                "did:mitum:minic:0x-user-wallet",
+        when(externalTokenClient.transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-token-contract",
                 "0x-user-wallet",
@@ -334,8 +333,7 @@ class UserRewardServiceTest {
         );
 
         assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
-        verify(externalTokenClient).transferToken(
-                "did:mitum:minic:0x-user-wallet",
+        verify(externalTokenClient).transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-token-contract",
                 "0x-user-wallet",
@@ -396,8 +394,7 @@ class UserRewardServiceTest {
                         """),
                 "cid-did"
         ));
-        when(externalTokenClient.transferToken(
-                "did:key:z6MkLocalUser",
+        when(externalTokenClient.transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-token-contract",
                 "0x-local-user-wallet",
@@ -463,8 +460,7 @@ class UserRewardServiceTest {
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(externalTokenClient.transferToken(
-                "did:mitum:minic:0x-user-wallet",
+        when(externalTokenClient.transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-allowed-contract",
                 "0x-user-wallet",
@@ -481,8 +477,7 @@ class UserRewardServiceTest {
         );
 
         verify(externalTokenClient, never()).getTokenList();
-        verify(externalTokenClient).transferToken(
-                "did:mitum:minic:0x-user-wallet",
+        verify(externalTokenClient).transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-allowed-contract",
                 "0x-user-wallet",
@@ -529,8 +524,7 @@ class UserRewardServiceTest {
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(externalTokenClient.getTokenList()).thenReturn(rewardTokenList());
-        when(externalTokenClient.transferToken(
-                "did:mitum:minic:0x-user-wallet",
+        when(externalTokenClient.transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-token-contract",
                 "0x-user-wallet",
@@ -593,7 +587,7 @@ class UserRewardServiceTest {
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(externalTokenClient.getTokenList()).thenReturn(rewardTokenList());
-        when(externalTokenClient.transferToken(any(), any(), any(), any(), anyLong()))
+        when(externalTokenClient.transferTokenToWallet(any(), any(), any(), anyLong()))
                 .thenThrow(new BadRequestApiException("token transfer failed"));
 
         assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
@@ -647,8 +641,7 @@ class UserRewardServiceTest {
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(externalTokenClient.getTokenList()).thenReturn(rewardTokenList());
-        when(externalTokenClient.transferToken(
-                "did:mitum:minic:0x-user-wallet",
+        when(externalTokenClient.transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-token-contract",
                 "0x-user-wallet",
@@ -667,8 +660,7 @@ class UserRewardServiceTest {
 
         assertThat(response.isDuplicated()).isTrue();
         assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
-        verify(externalTokenClient).transferToken(
-                "did:mitum:minic:0x-user-wallet",
+        verify(externalTokenClient).transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-token-contract",
                 "0x-user-wallet",

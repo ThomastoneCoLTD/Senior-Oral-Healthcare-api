@@ -352,8 +352,7 @@ public class UserRewardService {
             JsonNode response = DaeguChainApiLogContext.withUser(
                     transaction.getUserId(),
                     "구강체조 리워드 지급",
-                    () -> externalTokenClient.transferToken(
-                            wallet.getDaeguDid(),
+                    () -> externalTokenClient.transferTokenToWallet(
                             rewardToken.tokenName(),
                             rewardToken.contractAddress(),
                             wallet.getWalletAddress(),

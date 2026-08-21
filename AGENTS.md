@@ -171,7 +171,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 2026-08-12 운영 RDS의 7일 자동 비밀번호 회전으로 정적 S3 `.env`와 실제 Secret이 불일치해 ASG 교체가 반복된 원인을 확인했습니다. `SOH_API_ENV_PROD`의 datasource 키를 금지하고, launch template 기본 버전과 Secrets Manager JDBC 설정을 배포 전에 검증하도록 보강했습니다.
 - 로그인 화면은 일반 사용자, DID, 관리자 3개 흐름으로 분리합니다. 일반 사용자 `POST /login`은 아이디와 BCrypt 비밀번호를 검증하며 DID 발급 상태를 요구하지 않고, `POST /login/did`만 아이디에 연결된 DID 발급 상태와 DID 문자열을 확인합니다. 관리자 로그인 흐름은 기존대로 유지합니다.
 - 일반 사용자 회원가입 `POST /login/signUp`은 비밀번호, 생년월일, 기존 비밀번호 찾기 질문/답변을 저장하면서 기존 DID·지갑 프로비저닝도 함께 수행합니다. 프론트에서는 비밀번호 확인 일치와 아이디 중복 확인을 완료해야 제출합니다.
-- 가입 경로별 DID를 분리합니다. 로컬 회원가입(`/login/signUp`, 기존 `/login/signUp/did`)은 SOH DID 서버에서 자체 DID와 리워드 지갑을 생성합니다. 다대구 최초 가입(`/login/dadaegu/signUp`)은 자체 DID를 추가 생성하지 않고 다대구 인증 결과의 DID를 리워드 지갑 활성 DID로 저장하면서 지갑 주소만 생성합니다. 기존 로컬 사용자가 다대구 로그인하면 자체 DID와 기존 지갑 주소는 보존하고 리워드 지갑의 활성 DID만 다대구 DID로 전환합니다. 토큰 서버 `/token/transfer`에는 활성 DID를 `user_DID` 단일 필드로 전송합니다.
+- 가입 경로별 DID를 분리합니다. 로컬 회원가입(`/login/signUp`, 기존 `/login/signUp/did`)은 SOH DID 서버에서 자체 DID와 리워드 지갑을 생성합니다. 다대구 최초 가입(`/login/dadaegu/signUp`)은 자체 DID를 추가 생성하지 않고 다대구 인증 결과의 DID를 리워드 지갑 활성 DID로 저장하면서 지갑 주소만 생성합니다. 기존 로컬 사용자가 다대구 로그인하면 자체 DID와 기존 지갑 주소는 보존하고 리워드 지갑의 활성 DID만 다대구 DID로 전환합니다. 토큰 지급은 DID의 발급처와 무관하게 저장된 지갑 주소를 `/token/transfer`의 `receiver`로 직접 전송합니다. 다대구 DID를 `user_DID`로 보내면 토큰 서버의 로컬 DID DB 조회에서 `user_DID not found`로 체인 전송 전에 실패하므로 지급 요청에는 넣지 않습니다.
 - 일반/DID 회원가입은 성별(`M`/`W`)을 필수로 저장합니다. DID 회원가입 `POST /login/signUp/did`은 비밀번호 및 비밀번호 찾기 질문/답변을 입력받지 않으며, 기존 NOT NULL 컬럼 호환을 위해 외부에 노출되지 않는 임의 비밀번호와 복구 답변을 저장해 DID 로그인 전용 계정으로 유지합니다.
 - API health check 경로 `/api/actuator/health`를 허용했습니다.
 - dev 배포 workflow에서 단일 인스턴스 교체가 가능하도록 ASG instance refresh 설정을 보완했습니다.
@@ -222,6 +222,11 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 운영 환경에서 과거 DID·지갑 미완성 로컬 가입 계정으로 리워드 버튼을 눌러 DID·지갑 자동 복구와 실제 토큰 전송이 성공하는지 확인합니다.
 
 ## 최근 동기화 상태
+
+2026-08-21 다대구 DID 사용자의 리워드 지급을 토큰 서버 로컬 DID 조회와 분리했습니다.
+
+- 다대구 DID는 로그인·가입 식별 정보로 유지하고, `/token/transfer` 지급 요청은 가입 경로와 무관하게 저장된 지갑 주소를 `receiver`로 직접 사용합니다.
+- `ExternalTokenClientTest`, `UserRewardServiceTest`, `UserRewardReclaimServiceTest` 및 배포용 `bootJar` 빌드를 통과했습니다.
 
 2026-08-21 다대구 CI 매칭과 기존 로컬 사용자 지갑 재사용을 보강했습니다.
 
