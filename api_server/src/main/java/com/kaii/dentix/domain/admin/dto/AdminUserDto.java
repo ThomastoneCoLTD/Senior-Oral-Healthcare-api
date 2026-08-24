@@ -274,21 +274,21 @@ public class AdminUserDto {
 
     @Getter @Setter
     @NoArgsConstructor @AllArgsConstructor
-    public static class RewardWalletResetRequest {
+    public static class UserTestDataResetRequest {
         @NotNull
         private Long userId;
         @NotBlank
-        private String currentWalletAddress;
-        @NotBlank
-        private String confirmation;
+        private String confirmationLoginId;
     }
 
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor
-    public static class RewardWalletResetResponse {
+    public static class UserTestDataResetResponse {
         private Long userId;
-        private String resetWalletAddress;
+        private String userLoginIdentifier;
+        private long deletedProgressCount;
         private long deletedTransactionCount;
+        private long deletedWalletCount;
     }
 
     @Getter @Builder

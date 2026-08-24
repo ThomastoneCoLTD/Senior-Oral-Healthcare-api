@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserOralExerciseProgressRepository extends JpaRepository<UserOralExerciseProgress, Long> {
+    long deleteByUserId(Long userId);
 
     List<UserOralExerciseProgress> findByUserId(Long userId);
 

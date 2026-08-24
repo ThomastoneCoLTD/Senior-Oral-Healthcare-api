@@ -23,7 +23,6 @@ import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
-import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.domain.type.GenderType;
@@ -42,6 +41,7 @@ import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.modelmapper.ModelMapper;
@@ -75,6 +75,7 @@ import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AdminUserService {
 
     private static final String[] TEMPLATE_HEADERS = {
@@ -86,9 +87,6 @@ public class AdminUserService {
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-zA-Z])(?=.*[!@#$%^&*])[a-zA-Z!@#$%^&*0-9]+$");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^[0-9]{10,11}$");
     private static final Pattern NAME_PATTERN = Pattern.compile("^[ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z\\s]+$");
-    private static final String REWARD_WALLET_RESET_CONFIRMATION = "RESET_REWARD_WALLET";
-    private static final String AUTHORIZED_TEST_WALLET_ADDRESS =
-            "0x64770d4a82ec450AA58875f86a3Ad977141C57A1fca";
 
     private final ModelMapper modelMapper;
     private final AdminService adminService;
@@ -111,52 +109,38 @@ public class AdminUserService {
     private final DaeguChainApiLogRepository daeguChainApiLogRepository;
 
     @Transactional
-    public AdminUserDto.RewardWalletResetResponse resetFailedRewardWallet(
+    public AdminUserDto.UserTestDataResetResponse resetUserTestData(
             HttpServletRequest request,
-            AdminUserDto.RewardWalletResetRequest resetRequest
+            AdminUserDto.UserTestDataResetRequest resetRequest
     ) {
         Admin admin = adminService.getTokenAdmin(request);
         if (!admin.isSuperAdmin()) {
             throw new UnauthorizedException("슈퍼 관리자 권한이 필요합니다.");
         }
-        if (!REWARD_WALLET_RESET_CONFIRMATION.equals(resetRequest.getConfirmation())) {
-            throw new BadRequestApiException("리워드 지갑 초기화 확인 문구가 올바르지 않습니다.");
-        }
 
         Long userId = resetRequest.getUserId();
-        userRepository.findById(userId)
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new NotFoundDataException("사용자를 찾을 수 없습니다."));
-        UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
-                .orElseThrow(() -> new NotFoundDataException("리워드 지갑을 찾을 수 없습니다."));
-        String requestedWalletAddress = resetRequest.getCurrentWalletAddress().trim();
-        if (!AUTHORIZED_TEST_WALLET_ADDRESS.equalsIgnoreCase(requestedWalletAddress)) {
-            throw new BadRequestApiException("승인된 테스트 지갑만 초기화할 수 있습니다.");
-        }
-        if (!StringUtils.hasText(wallet.getWalletAddress())
-                || !wallet.getWalletAddress().equalsIgnoreCase(requestedWalletAddress)) {
-            throw new BadRequestApiException("현재 리워드 지갑 주소가 일치하지 않습니다.");
+        String confirmationLoginId = resetRequest.getConfirmationLoginId().trim();
+        if (!user.getUserLoginIdentifier().equals(confirmationLoginId)) {
+            throw new BadRequestApiException("확인용 사용자 로그인 ID가 일치하지 않습니다.");
         }
 
-        List<UserRewardTransaction> transactions =
-                userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId);
-        boolean hasFailedReclaim = transactions.stream().anyMatch(transaction ->
-                transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_RECLAIM
-                        && transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED
-        );
-        if (!hasFailedReclaim) {
-            throw new BadRequestApiException("실패한 토큰 회수 이력이 있는 테스트 계정만 초기화할 수 있습니다.");
-        }
-
+        userRewardWalletRepository.findByUserIdForUpdate(userId);
         long deletedTransactionCount = userRewardTransactionRepository.deleteByUserId(userId);
+        long deletedProgressCount = oralExerciseProgressRepository.deleteByUserId(userId);
         long deletedWalletCount = userRewardWalletRepository.deleteByUserId(userId);
-        if (deletedWalletCount != 1L) {
-            throw new BadRequestApiException("리워드 지갑 초기화에 실패했습니다.");
-        }
+        log.warn(
+                "Super admin reset user test data. adminId={}, userId={}, progress={}, transactions={}, wallets={}",
+                admin.getAdminId(), userId, deletedProgressCount, deletedTransactionCount, deletedWalletCount
+        );
 
-        return AdminUserDto.RewardWalletResetResponse.builder()
+        return AdminUserDto.UserTestDataResetResponse.builder()
                 .userId(userId)
-                .resetWalletAddress(wallet.getWalletAddress())
+                .userLoginIdentifier(user.getUserLoginIdentifier())
+                .deletedProgressCount(deletedProgressCount)
                 .deletedTransactionCount(deletedTransactionCount)
+                .deletedWalletCount(deletedWalletCount)
                 .build();
     }
 

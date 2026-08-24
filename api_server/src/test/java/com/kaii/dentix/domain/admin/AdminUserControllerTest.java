@@ -239,6 +239,41 @@ public class AdminUserControllerTest {
         verify(adminUserService).userDelete(any(Long.class));
     }
 
+    @Test
+    public void resetUserTestData() throws Exception {
+        AdminUserDto.UserTestDataResetRequest request =
+                new AdminUserDto.UserTestDataResetRequest(10L, "test-user");
+        AdminUserDto.UserTestDataResetResponse response =
+                AdminUserDto.UserTestDataResetResponse.builder()
+                        .userId(10L)
+                        .userLoginIdentifier("test-user")
+                        .deletedProgressCount(12L)
+                        .deletedTransactionCount(7L)
+                        .deletedWalletCount(1L)
+                        .build();
+        given(adminUserService.resetUserTestData(
+                any(HttpServletRequest.class),
+                any(AdminUserDto.UserTestDataResetRequest.class)
+        )).willReturn(response);
+
+        mockMvc.perform(RestDocumentationRequestBuilders.post("/admin/user/test-data/reset")
+                        .content(objectMapper.writeValueAsString(request))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.AUTHORIZATION, "admin-user-reset.AccessToken")
+                        .with(user("user").roles("SUPER_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("response.userLoginIdentifier").value("test-user"))
+                .andExpect(jsonPath("response.deletedProgressCount").value(12))
+                .andExpect(jsonPath("response.deletedTransactionCount").value(7))
+                .andExpect(jsonPath("response.deletedWalletCount").value(1));
+
+        verify(adminUserService).resetUserTestData(
+                any(HttpServletRequest.class),
+                any(AdminUserDto.UserTestDataResetRequest.class)
+        );
+    }
+
     /**
      * 사용자 목록 조회
      */

@@ -112,12 +112,12 @@ public class AdminUserController {
         return new DataResponse<>(adminUserService.getDaeguRewardStatus(request));
     }
 
-    @PostMapping(value = "/reward-wallet/reset", name = "실패한 테스트 리워드 지갑 초기화")
-    public DataResponse<AdminUserDto.RewardWalletResetResponse> resetFailedRewardWallet(
+    @PostMapping(value = "/test-data/reset", name = "사용자 테스트 데이터 초기화")
+    public DataResponse<AdminUserDto.UserTestDataResetResponse> resetUserTestData(
             HttpServletRequest request,
-            @Valid @RequestBody AdminUserDto.RewardWalletResetRequest resetRequest
+            @Valid @RequestBody AdminUserDto.UserTestDataResetRequest resetRequest
     ) {
-        return new DataResponse<>(adminUserService.resetFailedRewardWallet(request, resetRequest));
+        return new DataResponse<>(adminUserService.resetUserTestData(request, resetRequest));
     }
 
     @GetMapping(value = "/daegu-chain-usage-logs", name = "대구체인 기능 사용 로그")
