@@ -112,6 +112,7 @@ daegu-chain:
   token-server-base-url: ${TOKEN_SERVER_BASE_URL:http://43.201.125.82}
   token-create-path: ${TOKEN_CREATE_PATH:/token/create}
   token-transfer-path: ${TOKEN_TRANSFER_PATH:/token/transfer}
+  token-reclaim-path: ${TOKEN_RECLAIM_PATH:/token/retrieve}
   token-list-path: ${TOKEN_LIST_PATH:/token/token_list}
   reward-token-contracts:
     ESSENTIAL_VIDEO_1: "0x726936dB5BEb099C4D1E8687B4B929FBE3Bd6069fca"

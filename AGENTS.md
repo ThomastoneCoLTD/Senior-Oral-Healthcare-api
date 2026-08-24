@@ -126,7 +126,7 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 - 개발 DID/token 서버는 현재 `DID_SERVER_BASE_URL=http://43.201.125.82`, `TOKEN_SERVER_BASE_URL=http://43.201.125.82`를 사용합니다. 배포 API에서 `TOKEN_SERVER_BASE_URL`이 `http://localhost:5000`이면 EC2 자기 자신을 호출해 token list/create/transfer가 connection refused로 실패합니다.
 - DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. DID 로그인은 SOH DB에 저장된 사용자 자체 DID 발급 상태와 DID 문자열만 확인하며, VC-JWT credential 발급/검증은 사용하지 않습니다.
 - 일반 비밀번호 회원가입과 DID/다대구 회원가입은 모두 내부 DID·리워드 지갑 생성이 완료되어야 성공합니다. 외부 프로비저닝 실패를 `null`로 삼켜 불완전 계정을 남기지 않습니다. 기존 로컬 사용자가 다대구 로그인을 연결할 때는 저장된 내부 DID와 지갑 주소를 재사용하며, 누락된 항목만 멱등성 보정하여 두 번째 지갑을 만들지 않습니다. 배포 전 생성된 DID/지갑 누락 계정은 첫 다대구 연결 또는 리워드 요청에서 로그인 아이디 `label`로 DID와 실제 지갑을 재프로비저닝한 뒤 토큰 전송을 재시도합니다.
-- reward reclaim은 사용자 DID private key를 SOH에서 읽거나 저장하지 않고, token server를 통해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`로 회수합니다.
+- reward reclaim은 사용자 DID private key를 SOH에서 읽거나 저장하지 않고, token server의 `TOKEN_RECLAIM_PATH`(기본 `/token/retrieve`)로 요청합니다. 저장된 리워드 지갑 주소를 `holder`, 운영 owner 주소를 `sender`·`receiver`로 사용하고 운영 owner private key만 백엔드 Secret에서 읽습니다. 다대구 외부 DID는 회수 요청의 `user_DID`로 보내지 않으며 owner private key는 API 감사 로그에서 마스킹합니다.
 
 ## Terraform 및 수동 구축
 
@@ -223,6 +223,12 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 운영 환경에서 과거 DID·지갑 미완성 로컬 가입 계정으로 리워드 버튼을 눌러 DID·지갑 자동 복구와 실제 토큰 전송이 성공하는지 확인합니다.
 
 ## 최근 동기화 상태
+
+2026-08-24 다대구 로그인 계정의 리워드 토큰 회수를 외부 DID 조회와 분리했습니다.
+
+- 회수는 `/token/transfer`에 `user_DID`를 보내지 않고 회수 전용 `/token/retrieve`(`transfer_from`)를 사용합니다. 가입 경로와 무관하게 저장된 지갑 주소를 `holder`로 보내므로 토큰 서버 로컬 DID DB에 없는 다대구 `did:key`도 회수 흐름에 영향을 주지 않습니다.
+- 운영 owner 주소·private key를 각각 `sender`·`sender_pkey`로 사용하고 owner 주소로 회수하며, private key는 기존 감사 로그 민감 필드 마스킹 대상입니다. 토큰 서버의 HTTP 200 `state=OOPS` 응답도 실패로 처리합니다.
+- `ExternalTokenClientTest`, `UserRewardReclaimServiceTest`를 통과했습니다.
 
 2026-08-24 토큰 현황 Chapter 표시와 인트로 선행 차단을 확정했습니다.
 

@@ -47,6 +47,7 @@ class UserRewardReclaimServiceTest {
 
         daeguChainProperties = new DaeguChainProperties();
         daeguChainProperties.setTokenOwnerAddress("0x-token-owner");
+        daeguChainProperties.setTokenOwnerPrivateKey("owner-private-key");
         UserRewardProperties userRewardProperties = new UserRewardProperties();
         userRewardProperties.setTokenTransferEnabled(true);
 
@@ -64,7 +65,7 @@ class UserRewardReclaimServiceTest {
         when(walletRepository.findByUserId(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
                 .userId(7L)
                 .pointBalance(5L)
-                .daeguDid("did:mitum:minic:0x-user-wallet")
+                .daeguDid("did:key:z6Mk-dadaegu-external")
                 .walletAddress("0x-user-wallet")
                 .build()));
         when(transactionRepository.save(any(UserRewardTransaction.class)))
@@ -72,10 +73,10 @@ class UserRewardReclaimServiceTest {
     }
 
     @Test
-    void reclaimOralExerciseTokensTransfersRewardsBackToTokenOwner() throws Exception {
+    void reclaimOralExerciseTokensTransfersDadaeguWalletRewardsBackToTokenOwner() throws Exception {
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
         when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(externalTokenClient.transferToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+        when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
                 .thenReturn(objectMapper.readTree("""
                         {
                           "tx_hash": "0x-reclaim-tx",
@@ -89,10 +90,10 @@ class UserRewardReclaimServiceTest {
         assertThat(response.getSkippedCount()).isZero();
         assertThat(response.getFailedCount()).isZero();
         assertThat(response.getReclaimedAmount()).isEqualTo(5L);
-        verify(externalTokenClient, times(5)).transferToken(
-                eq("did:mitum:minic:0x-user-wallet"),
+        verify(externalTokenClient, times(5)).reclaimToken(
                 startsWith("ESSENTIAL_VIDEO_"),
                 startsWith("0x-token-contract-"),
+                eq("0x-user-wallet"),
                 eq("0x-token-owner"),
                 eq(1L)
         );
@@ -102,7 +103,7 @@ class UserRewardReclaimServiceTest {
     void reclaimOralExerciseTokensTransfersOptionalRewardsTogetherWhenEssentialsAreCompleted() throws Exception {
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialAndOptionalRewards());
         when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(externalTokenClient.transferToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+        when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
                 .thenReturn(objectMapper.readTree("""
                         {
                           "tx_hash": "0x-reclaim-tx",
@@ -118,17 +119,17 @@ class UserRewardReclaimServiceTest {
         assertThat(response.getTransactions())
                 .extracting(UserRewardDto.TransactionResponse::getCoinId)
                 .contains("optional_video_1", "optional_video_2");
-        verify(externalTokenClient).transferToken(
-                eq("did:mitum:minic:0x-user-wallet"),
+        verify(externalTokenClient).reclaimToken(
                 eq("OPTIONAL_VIDEO_1"),
                 eq("0x-token-contract-optional-1"),
+                eq("0x-user-wallet"),
                 eq("0x-token-owner"),
                 eq(1L)
         );
-        verify(externalTokenClient).transferToken(
-                eq("did:mitum:minic:0x-user-wallet"),
+        verify(externalTokenClient).reclaimToken(
                 eq("OPTIONAL_VIDEO_2"),
                 eq("0x-token-contract-optional-2"),
+                eq("0x-user-wallet"),
                 eq("0x-token-owner"),
                 eq(1L)
         );
@@ -153,7 +154,7 @@ class UserRewardReclaimServiceTest {
         assertThat(response.getReclaimedCount()).isZero();
         assertThat(response.getSkippedCount()).isEqualTo(5);
         assertThat(response.getFailedCount()).isZero();
-        verify(externalTokenClient, never()).transferToken(anyString(), anyString(), anyString(), anyString(), anyLong());
+        verify(externalTokenClient, never()).reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong());
     }
 
     @Test
@@ -161,7 +162,7 @@ class UserRewardReclaimServiceTest {
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(localRecordedEssentialRewards());
         when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
         when(externalTokenClient.getTokenList()).thenReturn(essentialRewardTokenList());
-        when(externalTokenClient.transferToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+        when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
                 .thenReturn(objectMapper.readTree("""
                         {
                           "tx_hash": "0x-reclaim-tx",
@@ -183,10 +184,10 @@ class UserRewardReclaimServiceTest {
                         "0x-token-contract-5"
                 );
         verify(externalTokenClient).getTokenList();
-        verify(externalTokenClient).transferToken(
-                eq("did:mitum:minic:0x-user-wallet"),
+        verify(externalTokenClient).reclaimToken(
                 eq("ESSENTIAL_VIDEO_1"),
                 eq("0x-token-contract-1"),
+                eq("0x-user-wallet"),
                 eq("0x-token-owner"),
                 eq(1L)
         );
@@ -199,7 +200,7 @@ class UserRewardReclaimServiceTest {
                         .put("ESSENTIAL_VIDEO_" + index, "0x-allowed-contract-" + index));
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(localRecordedEssentialRewards());
         when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(externalTokenClient.transferToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+        when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
                 .thenReturn(objectMapper.readTree("""
                         {
                           "tx_hash": "0x-reclaim-tx"
@@ -210,10 +211,10 @@ class UserRewardReclaimServiceTest {
 
         assertThat(response.getReclaimedCount()).isEqualTo(5);
         verify(externalTokenClient, never()).getTokenList();
-        verify(externalTokenClient).transferToken(
-                eq("did:mitum:minic:0x-user-wallet"),
+        verify(externalTokenClient).reclaimToken(
                 eq("ESSENTIAL_VIDEO_1"),
                 eq("0x-allowed-contract-1"),
+                eq("0x-user-wallet"),
                 eq("0x-token-owner"),
                 eq(1L)
         );

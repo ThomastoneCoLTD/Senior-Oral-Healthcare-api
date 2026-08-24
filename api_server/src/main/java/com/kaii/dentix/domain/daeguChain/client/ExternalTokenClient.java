@@ -65,6 +65,25 @@ public class ExternalTokenClient {
         return post(properties.getTokenTransferPath(), transferBody(tokenName, contractAddress, receiver, amount));
     }
 
+    public JsonNode reclaimToken(
+            String tokenName,
+            String contractAddress,
+            String holder,
+            String receiver,
+            long amount
+    ) {
+        Map<String, Object> body = baseBody();
+        body.put("token_name", tokenName);
+        body.put("cont_addr", contractAddress);
+        body.put("contract_address", contractAddress);
+        body.put("sender", properties.getTokenOwnerAddress());
+        body.put("sender_pkey", properties.getTokenOwnerPrivateKey());
+        body.put("holder", holder);
+        body.put("receiver", receiver);
+        body.put("amount", amount);
+        return post(properties.getTokenReclaimPath(), body);
+    }
+
     private Map<String, Object> transferBody(String tokenName, String contractAddress, String receiver, long amount) {
         Map<String, Object> body = baseBody();
         body.put("token_name", tokenName);
@@ -183,7 +202,14 @@ public class ExternalTokenClient {
         if (responseBody.has("res")) {
             return !responseBody.path("res").asBoolean();
         }
-        return responseBody.has("state") && "ERROR".equalsIgnoreCase(responseBody.path("state").asText());
+        if (!responseBody.has("state")) {
+            return false;
+        }
+        String state = responseBody.path("state").asText();
+        return "ERROR".equalsIgnoreCase(state)
+                || "OOPS".equalsIgnoreCase(state)
+                || "FAIL".equalsIgnoreCase(state)
+                || "FAILED".equalsIgnoreCase(state);
     }
 
     private String extractErrorMessage(JsonNode responseBody) {

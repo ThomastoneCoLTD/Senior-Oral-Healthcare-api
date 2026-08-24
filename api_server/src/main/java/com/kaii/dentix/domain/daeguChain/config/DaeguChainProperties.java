@@ -31,6 +31,7 @@ public class DaeguChainProperties {
     private String tokenServerBaseUrl = "http://43.201.125.82";
     private String tokenCreatePath = "/token/create";
     private String tokenTransferPath = "/token/transfer";
+    private String tokenReclaimPath = "/token/retrieve";
     private String tokenListPath = "/token/token_list";
     private Map<String, String> rewardTokenContracts = new LinkedHashMap<>();
 

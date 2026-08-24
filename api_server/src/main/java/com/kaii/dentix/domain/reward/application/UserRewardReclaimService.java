@@ -75,11 +75,14 @@ public class UserRewardReclaimService {
             return recordLocalReclaim(userId, wallet, allTransactions);
         }
 
-        if (isBlank(wallet.getDaeguDid()) || isBlank(wallet.getWalletAddress())) {
-            throw new BadRequestApiException("reward wallet DID is not connected");
+        if (isBlank(wallet.getWalletAddress())) {
+            throw new BadRequestApiException("reward wallet address is not connected");
         }
         if (isBlank(daeguChainProperties.getTokenOwnerAddress())) {
             throw new BadRequestApiException("token owner address is not configured");
+        }
+        if (isBlank(daeguChainProperties.getTokenOwnerPrivateKey())) {
+            throw new BadRequestApiException("token owner private key is not configured");
         }
 
         List<UserRewardTransaction> rewardTransactions = allTransactions.stream()
@@ -139,10 +142,10 @@ public class UserRewardReclaimService {
                 JsonNode response = DaeguChainApiLogContext.withUser(
                         userId,
                         "구강체조 리워드 회수",
-                        () -> externalTokenClient.transferToken(
-                                wallet.getDaeguDid(),
+                        () -> externalTokenClient.reclaimToken(
                                 normalizeTokenName(rewardTransaction.getCoinId()),
                                 transferContractAddress,
+                                wallet.getWalletAddress(),
                                 daeguChainProperties.getTokenOwnerAddress(),
                                 rewardTransaction.getAmount()
                         )

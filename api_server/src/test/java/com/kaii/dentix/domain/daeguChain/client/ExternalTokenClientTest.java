@@ -34,6 +34,7 @@ class ExternalTokenClientTest {
         properties.setTokenServerBaseUrl("https://token.example.com");
         properties.setTokenCreatePath("/token/create");
         properties.setTokenTransferPath("/token/transfer");
+        properties.setTokenReclaimPath("/token/retrieve");
         properties.setTokenListPath("/token/token_list");
 
         MockServerRestTemplateCustomizer customizer = new MockServerRestTemplateCustomizer();
@@ -105,6 +106,46 @@ class ExternalTokenClientTest {
         client.transferTokenToWallet("ESSENTIAL_VIDEO_1", "0x-token", "0x-user", 1L);
 
         server.verify();
+    }
+
+    @Test
+    void reclaimTokenUsesHolderWalletWithoutDidLookup() {
+        properties.setTokenOwnerAddress("0x-owner");
+        properties.setTokenOwnerPrivateKey("owner-private-key");
+        server.expect(once(), requestTo("https://token.example.com/token/retrieve"))
+                .andExpect(method(POST))
+                .andExpect(content().string(containsString("\"token\":\"app-token\"")))
+                .andExpect(content().string(not(containsString("\"user_DID\""))))
+                .andExpect(content().string(containsString("\"token_name\":\"ESSENTIAL_VIDEO_1\"")))
+                .andExpect(content().string(containsString("\"cont_addr\":\"0x-token\"")))
+                .andExpect(content().string(containsString("\"sender\":\"0x-owner\"")))
+                .andExpect(content().string(containsString("\"sender_pkey\":\"owner-private-key\"")))
+                .andExpect(content().string(containsString("\"holder\":\"0x-user\"")))
+                .andExpect(content().string(containsString("\"receiver\":\"0x-owner\"")))
+                .andExpect(content().string(containsString("\"amount\":1")))
+                .andRespond(withSuccess("{\"Date\":\"2026-08-24T00:00:00Z\"}", MediaType.APPLICATION_JSON));
+
+        client.reclaimToken("ESSENTIAL_VIDEO_1", "0x-token", "0x-user", "0x-owner", 1L);
+
+        server.verify();
+    }
+
+    @Test
+    void reclaimTokenTreatsOopsResponseAsFailure() {
+        properties.setTokenOwnerAddress("0x-owner");
+        properties.setTokenOwnerPrivateKey("owner-private-key");
+        server.expect(once(), requestTo("https://token.example.com/token/retrieve"))
+                .andExpect(method(POST))
+                .andRespond(withSuccess(
+                        "{\"state\":\"OOPS\",\"msg\":\"transfer_from failed\"}",
+                        MediaType.APPLICATION_JSON
+                ));
+
+        assertThatThrownBy(() -> client.reclaimToken(
+                "ESSENTIAL_VIDEO_1", "0x-token", "0x-user", "0x-owner", 1L
+        ))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessage("transfer_from failed");
     }
 
     @Test

@@ -365,7 +365,9 @@ DAEGU_CHAIN_ID=mitumt
 DID_SERVER_BASE_URL=<PROD_DID_SERVER_BASE_URL>
 DID_CREATE_PATH=/did/create
 TOKEN_SERVER_BASE_URL=<PROD_TOKEN_SERVER_BASE_URL>
+TOKEN_RECLAIM_PATH=/token/retrieve
 DAEGU_CHAIN_TOKEN_OWNER_ADDRESS=<PROD_DAEGU_CHAIN_TOKEN_OWNER_ADDRESS>
+DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY=<PROD_DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY>
 DAEGU_CHAIN_TOKEN_SYMBOL=MYT
 DAEGU_CHAIN_TOKEN_DECIMALS=18
 USER_REWARD_TOKEN_TRANSFER_ENABLED=true
@@ -379,9 +381,9 @@ Mobile/tablet DaDaegu login uses `DADAEGU_LOGIN_ENABLED`, `DADAEGU_LOGIN_SITE_ID
 DaDaegu onboarding uses the auto-created `dadaegu_signup_session` and `dadaegu_user_identity` tables. The signup session stores a SHA-256 token hash with expiry/consumption timestamps; expired rows are removed when a new session is issued. External DaDaegu DID values must remain separate from the user's internal reward DID and wallet provisioning state.
 
 Production deploys may override those values without replacing the shared `SOH_API_ENV_PROD` payload by using dedicated Secrets: `DADAEGU_LOGIN_ENABLED_PROD`, `DADAEGU_LOGIN_SITE_ID_PROD`, `DADAEGU_LOGIN_RSA_PRIVATE_KEY_PROD`, and optional `DADAEGU_LOGIN_REQUIRED_VC_PROD`. When the enabled override is `true`, the workflow rejects the deployment unless both the site ID and RSA private key are present.
-`DID_SERVER_BASE_URL` must point to the reachable DID service used by `/did/create`; development currently uses `http://43.201.125.82`. `TOKEN_SERVER_BASE_URL` must point to the same reachable token server for `/token/create`, `/token/transfer`, and `/token/token_list`; do not leave it at `http://localhost:5000` on deployed API servers. User signup DID provisioning sends `label` with the user's login identifier, stores the returned `did:key`, and login checks the SOH user DID value and DID issued status without VC-JWT credential verification.
+`DID_SERVER_BASE_URL` must point to the reachable DID service used by `/did/create`; development currently uses `http://43.201.125.82`. `TOKEN_SERVER_BASE_URL` must point to the same reachable token server for `/token/create`, `/token/transfer`, `/token/retrieve`, and `/token/token_list`; do not leave it at `http://localhost:5000` on deployed API servers. User signup DID provisioning sends `label` with the user's login identifier, stores the returned `did:key`, and login checks the SOH user DID value and DID issued status without VC-JWT credential verification.
 Normal password-based signup and DID signup both complete only after a Daegu DID and reward wallet address are stored. If an older user reaches a reward request with a failed or missing DID/wallet, the reward service retries DID and wallet provisioning before token transfer; provisioning failures remain explicit instead of leaving a newly registered user in a partially configured state.
-Oral-exercise reward reclaim sends collected token contracts back to `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS` through the configured token server; SOH must not read, log, or persist user DID private keys for this reclaim flow.
+Oral-exercise reward reclaim uses the token server's configurable `TOKEN_RECLAIM_PATH` (default `/token/retrieve`). It sends the stored reward wallet address as `holder` and the configured token owner as both `sender` and `receiver`, so DaDaegu external DIDs are never submitted as `user_DID`. `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY` is required only in the backend environment and is masked from API audit logs; SOH must not read, log, or persist user DID private keys for this reclaim flow.
 When `USER_REWARD_TOKEN_TRANSFER_ENABLED=true`, oral-exercise video rewards are transferred through DaeguChain token contracts by reward token name. Development keeps this disabled by default so token transfer outages do not block exercise completion.
 Reward issuance addresses the stored reward wallet directly. The external `/token/transfer` request intentionally omits `user_DID`, because that field makes the token server resolve only DIDs issued in its own local DID database and rejects DaDaegu-issued DIDs before sending the chain transaction.
 
