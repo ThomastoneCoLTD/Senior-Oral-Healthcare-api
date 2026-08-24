@@ -1,10 +1,10 @@
 package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainApiLogContext;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguRewardWalletProvisioningService;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
@@ -57,7 +57,7 @@ public class UserRewardService {
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final UserRewardTransactionRepository userRewardTransactionRepository;
     private final OralExerciseContentRepository oralExerciseContentRepository;
-    private final DaeguChainAccountService daeguChainAccountService;
+    private final DaeguRewardWalletProvisioningService rewardWalletProvisioningService;
     private final DaeguChainDidService daeguChainDidService;
     private final DaeguChainPointService daeguChainPointService;
     private final ExternalTokenClient externalTokenClient;
@@ -568,6 +568,8 @@ public class UserRewardService {
                     "account_address",
                     "address"
             );
+            String walletPrivateKey = findFirstText(data, "privatekey", "private_key", "privateKey");
+            rewardWalletProvisioningService.approveActivatedWallet(userId, walletAddress, walletPrivateKey);
             if (isBlank(walletAddress)) {
                 walletAddress = extractAddressFromDid(did);
             }
@@ -598,16 +600,7 @@ public class UserRewardService {
     }
 
     private String createDaeguWalletAddress(Long userId) {
-        DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> response = DaeguChainApiLogContext.withUser(
-                userId,
-                "리워드 지갑 생성",
-                () -> daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null))
-        );
-        return response == null
-                || response.getData() == null
-                || response.getData().getKeyPair() == null
-                ? null
-                : response.getData().getKeyPair().getAddress();
+        return rewardWalletProvisioningService.createActivatedWallet(userId);
     }
 
     private boolean isDevProfile() {

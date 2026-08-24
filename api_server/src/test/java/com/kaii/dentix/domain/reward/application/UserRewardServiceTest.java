@@ -1,9 +1,9 @@
 package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainPointService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguRewardWalletProvisioningService;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
@@ -42,7 +42,7 @@ class UserRewardServiceTest {
     private UserRewardWalletRepository walletRepository;
     private UserRewardTransactionRepository transactionRepository;
     private OralExerciseContentRepository contentRepository;
-    private DaeguChainAccountService daeguChainAccountService;
+    private DaeguRewardWalletProvisioningService rewardWalletProvisioningService;
     private DaeguChainDidService daeguChainDidService;
     private DaeguChainPointService daeguChainPointService;
     private ExternalTokenClient externalTokenClient;
@@ -58,7 +58,7 @@ class UserRewardServiceTest {
         walletRepository = mock(UserRewardWalletRepository.class);
         transactionRepository = mock(UserRewardTransactionRepository.class);
         contentRepository = mock(OralExerciseContentRepository.class);
-        daeguChainAccountService = mock(DaeguChainAccountService.class);
+        rewardWalletProvisioningService = mock(DaeguRewardWalletProvisioningService.class);
         daeguChainDidService = mock(DaeguChainDidService.class);
         daeguChainPointService = mock(DaeguChainPointService.class);
         externalTokenClient = mock(ExternalTokenClient.class);
@@ -74,7 +74,7 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
-                daeguChainAccountService,
+                rewardWalletProvisioningService,
                 daeguChainDidService,
                 daeguChainPointService,
                 externalTokenClient,
@@ -287,7 +287,7 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
-                daeguChainAccountService,
+                rewardWalletProvisioningService,
                 daeguChainDidService,
                 daeguChainPointService,
                 externalTokenClient,
@@ -355,7 +355,7 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
-                daeguChainAccountService,
+                rewardWalletProvisioningService,
                 daeguChainDidService,
                 daeguChainPointService,
                 externalTokenClient,
@@ -435,7 +435,7 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
-                daeguChainAccountService,
+                rewardWalletProvisioningService,
                 daeguChainDidService,
                 daeguChainPointService,
                 externalTokenClient,
@@ -498,7 +498,7 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
-                daeguChainAccountService,
+                rewardWalletProvisioningService,
                 daeguChainDidService,
                 daeguChainPointService,
                 externalTokenClient,
@@ -553,7 +553,7 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
-                daeguChainAccountService,
+                rewardWalletProvisioningService,
                 daeguChainDidService,
                 daeguChainPointService,
                 externalTokenClient,
@@ -607,7 +607,7 @@ class UserRewardServiceTest {
                 walletRepository,
                 transactionRepository,
                 contentRepository,
-                daeguChainAccountService,
+                rewardWalletProvisioningService,
                 daeguChainDidService,
                 daeguChainPointService,
                 externalTokenClient,
@@ -729,25 +729,14 @@ class UserRewardServiceTest {
                                 """),
                         "cid"
                 ));
-        when(daeguChainAccountService.createAccount(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "OK",
-                        null,
-                        "",
-                        new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
-                                "private-key",
-                                "public-key",
-                                "0x-wallet"
-                        )),
-                        "cid-account"
-                ));
+        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn("0x-wallet");
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserRewardDto.WalletResponse response = service.connectWallet(request, null);
 
         assertThat(response.getDaeguDid()).isEqualTo("did:key:z6MkUser");
         assertThat(response.getWalletAddress()).isEqualTo("0x-wallet");
-        verify(daeguChainAccountService).createAccount(any());
+        verify(rewardWalletProvisioningService).createActivatedWallet(7L);
     }
 
     @Test

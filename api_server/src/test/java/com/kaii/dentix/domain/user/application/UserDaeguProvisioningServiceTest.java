@@ -2,10 +2,8 @@ package com.kaii.dentix.domain.user.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
-import com.kaii.dentix.domain.daeguChain.application.DaeguChainToken20Service;
-import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
+import com.kaii.dentix.domain.daeguChain.application.DaeguRewardWalletProvisioningService;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
@@ -25,36 +23,26 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class UserDaeguProvisioningServiceTest {
 
     private DaeguChainDidService daeguChainDidService;
-    private DaeguChainAccountService daeguChainAccountService;
-    private DaeguChainToken20Service daeguChainToken20Service;
-    private DaeguChainProperties daeguChainProperties;
+    private DaeguRewardWalletProvisioningService rewardWalletProvisioningService;
     private UserRewardWalletRepository userRewardWalletRepository;
     private UserDaeguProvisioningService service;
 
     @BeforeEach
     void setUp() {
         daeguChainDidService = mock(DaeguChainDidService.class);
-        daeguChainAccountService = mock(DaeguChainAccountService.class);
-        daeguChainToken20Service = mock(DaeguChainToken20Service.class);
-        daeguChainProperties = new DaeguChainProperties();
-        daeguChainProperties.setTokenOwnerAddress("0x-token-owner");
-        daeguChainProperties.getRewardTokenContracts().put("ESSENTIAL_VIDEO_1", "0x-contract-1");
-        daeguChainProperties.getRewardTokenContracts().put("OPTIONAL_VIDEO_1", "0x-contract-2");
+        rewardWalletProvisioningService = mock(DaeguRewardWalletProvisioningService.class);
         userRewardWalletRepository = mock(UserRewardWalletRepository.class);
         service = new UserDaeguProvisioningService(
                 daeguChainDidService,
-                daeguChainAccountService,
-                daeguChainToken20Service,
-                daeguChainProperties,
+                rewardWalletProvisioningService,
                 userRewardWalletRepository
         );
-        when(daeguChainToken20Service.approveToken(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", null, "cid-approve"));
     }
 
     @Test
@@ -100,6 +88,11 @@ class UserDaeguProvisioningServiceTest {
         ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
         verify(userRewardWalletRepository).save(captor.capture());
         assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
+        verify(rewardWalletProvisioningService).approveActivatedWallet(
+                7L,
+                "0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca",
+                "private-key"
+        );
     }
 
     @Test
@@ -115,18 +108,7 @@ class UserDaeguProvisioningServiceTest {
                 """);
         when(daeguChainDidService.createAccount(any()))
                 .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
-        when(daeguChainAccountService.createAccount(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "OK",
-                        null,
-                        "",
-                        new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
-                                "private-key",
-                                "public-key",
-                                "0x-wallet"
-                        )),
-                        "cid-account"
-                ));
+        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn("0x-wallet");
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
 
         String walletAddress = service.provisionForSignUp(user);
@@ -138,19 +120,7 @@ class UserDaeguProvisioningServiceTest {
         verify(userRewardWalletRepository).save(captor.capture());
         assertThat(captor.getValue().getDaeguDid()).isEqualTo("did:key:z6MkSelfGenerated");
         assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x-wallet");
-        verify(daeguChainAccountService).createAccount(any());
-        ArgumentCaptor<DaeguChainDto.TokenApproveRequest> approveCaptor =
-                ArgumentCaptor.forClass(DaeguChainDto.TokenApproveRequest.class);
-        verify(daeguChainToken20Service, org.mockito.Mockito.times(2)).approveToken(approveCaptor.capture());
-        assertThat(approveCaptor.getAllValues())
-                .extracting(DaeguChainDto.TokenApproveRequest::getContAddr)
-                .containsExactlyInAnyOrder("0x-contract-1", "0x-contract-2");
-        assertThat(approveCaptor.getAllValues()).allSatisfy(approveRequest -> {
-            assertThat(approveRequest.getHolder()).isEqualTo("0x-wallet");
-            assertThat(approveRequest.getHolderPkey()).isEqualTo("private-key");
-            assertThat(approveRequest.getApproved()).isEqualTo("0x-token-owner");
-            assertThat(approveRequest.getAmount()).isEqualTo(String.valueOf(Long.MAX_VALUE));
-        });
+        verify(rewardWalletProvisioningService).createActivatedWallet(7L);
     }
 
     @Test
@@ -185,7 +155,7 @@ class UserDaeguProvisioningServiceTest {
         when(daeguChainDidService.createAccount(any()))
                 .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
-        when(daeguChainAccountService.createAccount(any()))
+        when(rewardWalletProvisioningService.createActivatedWallet(7L))
                 .thenThrow(new BadRequestApiException("token is required"));
 
         assertThatThrownBy(() -> service.provisionForSignUp(user))
@@ -216,8 +186,7 @@ class UserDaeguProvisioningServiceTest {
 
         assertThat(walletAddress).isEqualTo("0x-existing-wallet");
         verify(daeguChainDidService, never()).createAccount(any());
-        verify(daeguChainAccountService, never()).createAccount(any());
-        verify(daeguChainToken20Service, never()).approveToken(any());
+        verifyNoInteractions(rewardWalletProvisioningService);
         verify(userRewardWalletRepository).save(wallet);
     }
 
@@ -244,8 +213,7 @@ class UserDaeguProvisioningServiceTest {
         assertThat(wallet.getDaeguDid()).isEqualTo("did:daegu:external-user");
         assertThat(wallet.getWalletAddress()).isEqualTo("0x-existing-wallet");
         verify(daeguChainDidService, never()).createAccount(any());
-        verify(daeguChainAccountService, never()).createAccount(any());
-        verify(daeguChainToken20Service, never()).approveToken(any());
+        verifyNoInteractions(rewardWalletProvisioningService);
         verify(userRewardWalletRepository).save(wallet);
     }
 
@@ -256,18 +224,7 @@ class UserDaeguProvisioningServiceTest {
                 .userLoginIdentifier("dg-user")
                 .build();
         when(userRewardWalletRepository.findByUserId(8L)).thenReturn(Optional.empty());
-        when(daeguChainAccountService.createAccount(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>(
-                        "OK",
-                        null,
-                        "",
-                        new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
-                                "private-key",
-                                "public-key",
-                                "0x-new-wallet"
-                        )),
-                        "cid-account"
-                ));
+        when(rewardWalletProvisioningService.createActivatedWallet(8L)).thenReturn("0x-new-wallet");
 
         String walletAddress = service.provisionForDadaegu(user, "did:daegu:new-user");
 
@@ -279,18 +236,17 @@ class UserDaeguProvisioningServiceTest {
         verify(userRewardWalletRepository).save(walletCaptor.capture());
         assertThat(walletCaptor.getValue().getDaeguDid()).isEqualTo("did:daegu:new-user");
         assertThat(walletCaptor.getValue().getWalletAddress()).isEqualTo("0x-new-wallet");
-        verify(daeguChainToken20Service, org.mockito.Mockito.times(2)).approveToken(any());
+        verify(rewardWalletProvisioningService).createActivatedWallet(8L);
     }
 
     @Test
     void provisionForDadaeguDoesNotStoreWalletWhenReclaimApprovalFails() {
         User user = User.builder().userId(8L).userLoginIdentifier("dg-user").build();
         when(userRewardWalletRepository.findByUserId(8L)).thenReturn(Optional.empty());
-        when(daeguChainAccountService.createAccount(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
-                "OK", null, "", new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
-                "private-key", "public-key", "0x-new-wallet")), "cid-account"));
-        when(daeguChainToken20Service.approveToken(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>("OOPS", null, "approval failed", null, "cid"));
+        when(rewardWalletProvisioningService.createActivatedWallet(8L))
+                .thenThrow(new BadRequestApiException(
+                        "DaeguChain reward reclaim approval failed. state=OOPS, msg=approval failed"
+                ));
 
         assertThatThrownBy(() -> service.provisionForDadaegu(user, "did:daegu:new-user"))
                 .isInstanceOf(BadRequestApiException.class)
