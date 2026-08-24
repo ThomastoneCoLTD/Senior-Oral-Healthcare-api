@@ -52,12 +52,12 @@ class OralExerciseContentInitializerTest {
                         "Chapter 3. 삼키는 힘 기르는 입체조",
                         "Chapter 4. 말하는 힘 기르는 입체조",
                         "Chapter 5. 씹는 힘 기르는 입체조",
-                        "Chapter 6. 구강건조증 관리법",
-                        "Chapter 7. 의치 사용 및 관리법",
-                        "Chapter 8. 올바른 칫솔질",
-                        "Chapter 9. 구취 예방과 관리",
-                        "Chapter 10. 삼킴 건강과 식사의 관계",
-                        "Chapter 11. 구강건강, 스스로 지키는 습관"
+                        "Chapter 7. 구강건조증 관리법",
+                        "Chapter 8. 의치 사용 및 관리법",
+                        "Chapter 9. 올바른 칫솔질",
+                        "Chapter 10. 구취 예방과 관리",
+                        "Chapter 11. 삼킴 건강과 식사의 관계",
+                        "Chapter 12. 구강건강, 스스로 지키는 습관"
                 );
         assertThat(introContent.getLevel()).isEqualTo("INTRO");
         assertThat(introContent.getThumbnailUrl()).endsWith("optional_video_1.png");

@@ -16,11 +16,11 @@ Artifact prefix: soh
 
 ## Oral Exercise Access Policy
 
-- The first core oral-exercise video is available immediately. Each later core video opens as soon as the immediately preceding core video is completed, without waiting for another signup week.
-- Locked core-video responses keep the thumbnail metadata but omit `videoUrl`.
-- `POST /oral-exercise/interactions` enforces the same previous-completion rule, so a client cannot bypass the sequence by calling the interaction API directly.
-- The intro and always-open videos remain available independently of the five-week core sequence.
-- Exercise titles are displayed as `Intro` for the first video and `Chapter 1` through `Chapter 11` for the remaining videos. Core reward tokens remain Chapter 1-5, while Intro and Chapter 6-11 remain always-open content.
+- Only the intro is available before the user completes it. After intro completion, the first core video and all always-open videos become available.
+- Each later core video opens as soon as the immediately preceding core video is completed, without waiting for another signup week.
+- Locked responses keep thumbnail metadata but omit `videoUrl`.
+- `POST /oral-exercise/interactions` enforces both the intro gate and the core previous-completion rule, so a client cannot bypass the sequence by calling the interaction API directly.
+- Exercise titles and token-status labels use `Intro`, core `Chapter 1` through `Chapter 5`, and always-open `Chapter 7` through `Chapter 12`. The internal content sort and token identifiers remain unchanged.
 
 ## Infrastructure Overview
 

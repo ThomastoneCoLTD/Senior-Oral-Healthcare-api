@@ -185,10 +185,10 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 일반 관리자 메뉴는 `[사용자 관리]`, `[사용자 통계]`, `[사용자 진도 현황]`, `[DID 리워드 현황]`만 표시하고 슈퍼 관리자 메뉴는 기존 구성을 유지합니다. 슈퍼 관리자의 사용자 관리·통계·진도·DID 리워드 화면은 `organizationId`가 아니라 회원가입 시 선택한 `realOrganization` 기준으로 묶으며, 값이 없는 기존 사용자는 `기관 미지정`으로 표시합니다. 진도 및 DID 리워드 응답에도 `realOrganization`을 포함합니다.
 - 기존 `user.find_pwd_question_id`, `user.find_pwd_answer` 컬럼은 비밀번호 찾기 질문과 답변 용도로 유지합니다. `POST /login/find-id`는 질문/답변을 받지 않고 이름, 정규화된 휴대폰 번호, 생년월일이 모두 일치할 때만 사용자 아이디를 반환합니다. 질문 목록은 `/password/questions`에서 조회합니다.
 - 운영/개발 앱 시작 시 과거 계정 확인 질문 9개를 ID와 정렬값 `1~9`로 upsert합니다. 신규 DB에서 `find_pwd_question`이 비어 있어 회원가입 질문을 선택할 수 없는 상태를 방지하고 기존 `user.find_pwd_question_id` 참조 의미를 유지합니다.
-- 구강체조 인트로/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
+- 구강체조는 1화 인트로만 처음부터 볼 수 있습니다. 인트로 완료 전에는 필수·상시영상 모두 `available=false`, `videoUrl=null`이며 `/oral-exercise/interactions` 직접 호출도 차단합니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
-- 구강체조 화면의 Chapter 표시는 1화가 `Intro`, 2~12화가 각각 `Chapter 1~11`입니다. 필수 토큰은 `Chapter 1~5`, 상시영상은 `Intro`와 `Chapter 6~11`로 표시하며 내부 `contentSort`와 토큰명 매핑은 변경하지 않습니다.
-- 2~6화 필수영상은 1회차를 즉시 이용할 수 있고, 이후 회차는 바로 이전 필수영상을 시청 완료하면 가입 주차를 기다리지 않고 즉시 열립니다. 잠긴 필수영상은 `/oral-exercise` 응답에서 `available=false`, `videoUrl=null`이며 `/oral-exercise/interactions` 직접 호출도 같은 선행 완료 조건으로 차단합니다. 1화 인트로 및 7~12화 상시영상은 계속 열려 있어야 합니다.
+- 구강체조 표시 편성은 1화 `Intro`, 2~6화 `Chapter 1~5`, 7~12화 `Chapter 7~12`입니다. 토큰 현황의 필수 슬롯은 `1주 차~5주 차 / Chapter 1~5`, 상시 슬롯은 `1회 차 / Intro`, `2~7회 차 / Chapter 7~12`로 표시하며 내부 `contentSort`와 토큰명 매핑은 변경하지 않습니다.
+- 인트로를 완료하면 2화 필수영상과 7~12화 상시영상이 열립니다. 3~6화 필수영상은 바로 이전 필수영상을 시청 완료하면 가입 주차를 기다리지 않고 즉시 열립니다. 잠긴 영상은 `/oral-exercise` 응답에서 `available=false`, `videoUrl=null`이며 `/oral-exercise/interactions` 직접 호출도 같은 선행 완료 조건으로 차단합니다.
 - 사용자 로그인 화면은 아이디 찾기와 비밀번호 찾기를 모두 제공합니다. 아이디 찾기는 이름·정규화된 휴대폰 번호·생년월일을 확인하고, 비밀번호 찾기는 아이디·가입 시 질문·답변 확인 후 10분 유효한 일회용 토큰을 발급해 새 비밀번호를 설정합니다. 토큰 원문은 저장하지 않고 SHA-256 해시만 `password_reset_token`에 저장하며 사용·만료 토큰은 재사용할 수 없습니다.
 - 구강체조 리워드 지급/회수 흐름을 token server 기반으로 정리했습니다.
 - 필수 구강체조 토큰 발급은 영상 완료가 아니라 `/oral-exercise/rewards/button-click` 번호 버튼 성공으로만 처리합니다.
@@ -212,7 +212,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 ## 남은 확인 및 할 일
 
 - dev 배포 후 `https://soh-dev.thomabio.com/api/actuator/health`가 `UP`인지 확인합니다.
-- 프론트 dev 배포 후 1화 인트로와 7~12화 상시영상 전체가 잠금 없이 열리고, 2~6화 필수영상은 이전 필수영상 완료 직후 다음 회차가 즉시 열리는지 실제 화면에서 확인합니다.
+- 프론트 dev 배포 후 인트로 미완료 상태에서는 다른 영상이 모두 잠기고, 인트로 완료 직후 2화 필수영상과 7~12화 상시영상이 열리며, 이후 3~6화 필수영상은 이전 필수영상 완료 직후 열리는지 실제 화면에서 확인합니다.
 - 7~12화의 backend 기본 길이는 실제 S3 MP4 메타데이터 기준으로 7화 176초, 8화 171초, 9화 163초, 10화 133초, 11화 172초, 12화 167초입니다.
 - 연결된 영상 URL이 있는 콘텐츠는 `tms-static-hosting` 정적 S3 HTTPS URL이 정상 로드되는지 확인합니다.
 - 치은염 검출이 실제 이미지 업로드/분석 결과까지 정상 동작하는지 end-to-end로 확인합니다.
@@ -224,10 +224,10 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 ## 최근 동기화 상태
 
-2026-08-24 구강체조 Chapter 표시를 Intro와 Chapter 1~11 구조로 조정했습니다.
+2026-08-24 토큰 현황 Chapter 표시와 인트로 선행 차단을 확정했습니다.
 
-- 1화 제목은 `Intro. 입체조의 효능`, 2~12화는 기존 주제를 유지하면서 Chapter 번호를 `1~11`로 한 단계씩 조정합니다.
-- 필수 토큰 `essential_video_1~5`와 상시영상 `optional_video_1~7` 매핑 및 공개 정책은 그대로 유지합니다.
+- 표시명은 1화 `Intro`, 필수 2~6화 `Chapter 1~5`, 상시 7~12화 `Chapter 7~12`로 사용합니다. 내부 토큰은 기존 `essential_video_1~5`, `optional_video_1~7`을 유지합니다.
+- 인트로 완료 전에는 필수·상시영상의 URL 응답과 진도 저장을 서버에서도 차단하고, 인트로 완료 후 상시영상 전체 및 첫 필수영상을 열도록 테스트로 고정합니다.
 
 2026-08-21 다대구 DID 사용자의 리워드 지급을 토큰 서버 로컬 DID 조회와 분리했습니다.
 

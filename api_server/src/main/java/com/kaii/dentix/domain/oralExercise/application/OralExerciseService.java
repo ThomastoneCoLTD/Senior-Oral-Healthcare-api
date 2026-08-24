@@ -81,10 +81,17 @@ public class OralExerciseService {
                 .map(transaction -> transaction.getCoinId().toLowerCase())
                 .collect(Collectors.toSet());
         int currentWeek = calculateCurrentWeek(userId);
-        List<OralExerciseDto.ContentResponse> contents = oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc()
+        List<OralExerciseContent> activeContents = oralExerciseContentRepository
+                .findByActiveTrueOrderByContentSortAsc();
+        boolean introRequired = activeContents.stream()
+                .anyMatch(content -> content.getContentSort() == 1);
+        boolean introCompleted = !introRequired || progressMap.values().stream()
+                .filter(progress -> progress.getContent().getContentSort() == 1)
+                .anyMatch(UserOralExerciseProgress::isCompleted);
+        List<OralExerciseDto.ContentResponse> contents = activeContents
                 .stream()
                 .map(content -> {
-                    boolean available = isContentAvailable(content, progressMap);
+                    boolean available = isContentAvailable(content, progressMap, introCompleted);
                     return OralExerciseDto.ContentResponse.from(
                             content,
                             progressMap.get(content.getOralExerciseContentId()),
@@ -182,6 +189,18 @@ public class OralExerciseService {
     }
 
     private void validateContentAccess(Long userId, OralExerciseContent content) {
+        if (content.getContentSort() == 1) {
+            return;
+        }
+
+        boolean introCompleted = userOralExerciseProgressRepository
+                .findByUserIdAndContent_ContentSort(userId, 1)
+                .map(UserOralExerciseProgress::isCompleted)
+                .orElse(false);
+        if (!introCompleted) {
+            throw new BadRequestApiException("인트로 구강체조 영상을 먼저 시청 완료해 주세요.");
+        }
+
         if (!isCoreContent(content)) {
             return;
         }
@@ -241,8 +260,17 @@ public class OralExerciseService {
 
     private boolean isContentAvailable(
             OralExerciseContent content,
-            Map<Long, UserOralExerciseProgress> progressMap
+            Map<Long, UserOralExerciseProgress> progressMap,
+            boolean introCompleted
     ) {
+        if (content.getContentSort() == 1) {
+            return true;
+        }
+
+        if (!introCompleted) {
+            return false;
+        }
+
         if (!isCoreContent(content)) {
             return true;
         }

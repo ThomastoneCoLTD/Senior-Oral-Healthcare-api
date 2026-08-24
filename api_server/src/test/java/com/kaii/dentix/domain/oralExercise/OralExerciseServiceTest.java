@@ -86,10 +86,12 @@ class OralExerciseServiceTest {
     @Test
     void getContentsLocksLaterCoreContentsUntilPreviousWeekIsCompleted() {
         User user = userCreatedDaysAgo(21);
+        OralExerciseContent intro = content(1);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(progressRepository.findByUserId(7L)).thenReturn(List.of(completedProgress(intro)));
         when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(
-                content(1),
+                intro,
                 content(2),
                 content(3),
                 content(4),
@@ -128,35 +130,83 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void getContentsKeepsAllExtraContentsUnlockedFromFirstWeek() {
+    void getContentsLocksAllNonIntroContentsUntilIntroIsCompleted() {
         User user = userCreatedDaysAgo(0);
+        OralExerciseContent intro = content(1, "https://example.com/intro.mp4", null);
+        OralExerciseContent firstCore = content(2, "https://example.com/core-1.mp4", null);
+        OralExerciseContent fifthCore = content(6, "https://example.com/core-5.mp4", null);
+        OralExerciseContent firstExtra = content(7, "https://example.com/extra-1.mp4", null);
+        OralExerciseContent secondExtra = content(8, "https://example.com/extra-2.mp4", null);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
         when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(
-                content(1),
-                content(2),
-                content(6),
-                content(7),
-                content(8)
+                intro,
+                firstCore,
+                fifthCore,
+                firstExtra,
+                secondExtra
         ));
 
         OralExerciseDto.ListResponse response = service.getContents(request);
 
         assertThat(response.getCurrentWeek()).isEqualTo(1);
-        assertThat(response.getCurrentContent().getSort()).isEqualTo(2);
+        assertThat(response.getCurrentContent()).isNull();
         assertThat(response.getPreviousContents()).isEmpty();
         assertThat(response.getExtraContents()).extracting(OralExerciseDto.ContentResponse::getSort)
                 .containsExactly(1, 7, 8);
+        assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() == 1)
+                .singleElement()
+                .satisfies(content -> {
+                    assertThat(content.isAvailable()).isTrue();
+                    assertThat(content.isCurrentWeekContent()).isTrue();
+                    assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue();
+                });
+        assertThat(response.getContents()).filteredOn(content -> content.getSort() > 1)
+                .allSatisfy(content -> {
+                    assertThat(content.isAvailable()).isFalse();
+                    assertThat(content.getVideoUrl()).isNull();
+                });
+        assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() > 6)
+                .allSatisfy(content -> assertThat(content.isCurrentWeekContent()).isFalse());
+    }
+
+    @Test
+    void getContentsUnlocksFirstCoreAndExtraContentsAfterIntroCompletion() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent intro = content(1, "https://example.com/intro.mp4", null);
+        OralExerciseContent firstCore = content(2, "https://example.com/core-1.mp4", null);
+        OralExerciseContent fifthCore = content(6, "https://example.com/core-5.mp4", null);
+        OralExerciseContent firstExtra = content(7, "https://example.com/extra-1.mp4", null);
+        OralExerciseContent secondExtra = content(8, "https://example.com/extra-2.mp4", null);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(List.of());
+        when(progressRepository.findByUserId(7L)).thenReturn(List.of(completedProgress(intro)));
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(
+                intro,
+                firstCore,
+                fifthCore,
+                firstExtra,
+                secondExtra
+        ));
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        assertThat(response.getCurrentContent().getSort()).isEqualTo(2);
+        assertThat(response.getContents()).filteredOn(content -> content.getSort() == 2)
+                .singleElement()
+                .satisfies(content -> {
+                    assertThat(content.isAvailable()).isTrue();
+                    assertThat(content.getVideoUrl()).isEqualTo("https://example.com/core-1.mp4");
+                });
+        assertThat(response.getContents()).filteredOn(content -> content.getSort() == 6)
+                .singleElement()
+                .satisfies(content -> assertThat(content.isAvailable()).isFalse());
         assertThat(response.getExtraContents()).allSatisfy(content -> {
-            assertThat(content.getWeek()).isEqualTo(0);
             assertThat(content.isAvailable()).isTrue();
             assertThat(content.isCurrentWeekContent()).isTrue();
         });
-        assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() == 1)
-                .singleElement()
-                .satisfies(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue());
         assertThat(response.getExtraContents()).filteredOn(content -> content.getSort() > 6)
-                .allSatisfy(content -> assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue());
+                .allSatisfy(content -> assertThat(content.getVideoUrl()).isNotNull());
     }
 
     @Test
@@ -317,9 +367,12 @@ class OralExerciseServiceTest {
 
     @Test
     void recordInteractionLocksUserBeforeCreatingProgress() {
+        OralExerciseContent intro = content(1);
         OralExerciseContent content = content(2);
         when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(User.builder().userId(7L).build()));
         when(contentRepository.findById(2L)).thenReturn(Optional.of(content));
+        when(progressRepository.findByUserIdAndContent_ContentSort(7L, 1))
+                .thenReturn(Optional.of(completedProgress(intro)));
         when(progressRepository.findByUserIdAndContent_OralExerciseContentId(7L, 2L)).thenReturn(Optional.empty());
         when(progressRepository.save(any(UserOralExerciseProgress.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -348,9 +401,12 @@ class OralExerciseServiceTest {
 
     @Test
     void recordInteractionRejectsCoreContentWhenPreviousWeekIsIncomplete() {
+        OralExerciseContent intro = content(1);
         OralExerciseContent secondContent = content(3);
         when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(userCreatedDaysAgo(14)));
         when(contentRepository.findById(3L)).thenReturn(Optional.of(secondContent));
+        when(progressRepository.findByUserIdAndContent_ContentSort(7L, 1))
+                .thenReturn(Optional.of(completedProgress(intro)));
         when(progressRepository.findByUserIdAndContent_ContentSort(7L, 2)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.recordInteraction(
@@ -375,10 +431,13 @@ class OralExerciseServiceTest {
 
     @Test
     void recordInteractionAllowsNextCoreContentBeforeItsCalendarWeekWhenPreviousIsCompleted() {
+        OralExerciseContent intro = content(1);
         OralExerciseContent firstContent = content(2);
         OralExerciseContent secondContent = content(3);
         when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(userCreatedDaysAgo(0)));
         when(contentRepository.findById(3L)).thenReturn(Optional.of(secondContent));
+        when(progressRepository.findByUserIdAndContent_ContentSort(7L, 1))
+                .thenReturn(Optional.of(completedProgress(intro)));
         when(progressRepository.findByUserIdAndContent_ContentSort(7L, 2))
                 .thenReturn(Optional.of(completedProgress(firstContent)));
         when(progressRepository.findByUserIdAndContent_OralExerciseContentId(7L, 3L))
@@ -403,6 +462,33 @@ class OralExerciseServiceTest {
         assertThat(response.getTotalWatchedSeconds()).isEqualTo(10);
         verify(interactionLogRepository).save(any());
         verify(progressRepository).save(any(UserOralExerciseProgress.class));
+    }
+
+    @Test
+    void recordInteractionRejectsNonIntroContentWhenIntroIsIncomplete() {
+        OralExerciseContent extraContent = content(7);
+        when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(userCreatedDaysAgo(0)));
+        when(contentRepository.findById(7L)).thenReturn(Optional.of(extraContent));
+        when(progressRepository.findByUserIdAndContent_ContentSort(7L, 1)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.recordInteraction(
+                request,
+                new OralExerciseDto.InteractionRequest(
+                        7L,
+                        null,
+                        10,
+                        30,
+                        100,
+                        null,
+                        false,
+                        "session-intro-gate"
+                )
+        ))
+                .isInstanceOf(com.kaii.dentix.global.common.error.exception.BadRequestApiException.class)
+                .hasMessageContaining("인트로");
+
+        verify(interactionLogRepository, never()).save(any());
+        verify(progressRepository, never()).save(any());
     }
 
     private User userCreatedDaysAgo(int daysAgo) {
