@@ -309,6 +309,7 @@ class UserRewardServiceTest {
                 .pointBalance(0L)
                 .daeguDid("did:mitum:minic:0x-user-wallet")
                 .walletAddress("0x-user-wallet")
+                .walletPrivateKeyCiphertext("encrypted-private-key")
                 .build()));
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(transactionRepository.save(any(UserRewardTransaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -338,6 +339,12 @@ class UserRewardServiceTest {
                 "0x-token-contract",
                 "0x-user-wallet",
                 1L
+        );
+        verify(rewardWalletProvisioningService).approveRewardContract(
+                7L,
+                "0x-token-contract",
+                "0x-user-wallet",
+                "encrypted-private-key"
         );
         verify(transactionRepository).save(argThat(transaction ->
                 transaction.getCoinId().equals("essential_video_1")
@@ -729,7 +736,11 @@ class UserRewardServiceTest {
                                 """),
                         "cid"
                 ));
-        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn("0x-wallet");
+        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn(
+                new DaeguRewardWalletProvisioningService.ProvisionedWallet(
+                        "0x-wallet", "encrypted-private-key"
+                )
+        );
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserRewardDto.WalletResponse response = service.connectWallet(request, null);

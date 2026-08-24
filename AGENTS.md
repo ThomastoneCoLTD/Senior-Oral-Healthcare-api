@@ -109,6 +109,8 @@ SOH_API_ENV_DEV
 SOH_API_ENV_PROD
 SOH_TERRAFORM_TFVARS_DEV
 SOH_TERRAFORM_TFVARS_PROD_HCL
+DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_DEV
+DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_PROD
 ```
 
 - `SOH_TERRAFORM_TFVARS_DEV`, `SOH_TERRAFORM_TFVARS_PROD_HCL`에는 각 환경의 `terraform.tfvars.example` 형식인 Terraform HCL만 넣습니다. 운영 workflow는 기존 앱 `.env` Secret과의 이름 충돌을 피하기 위해 `SOH_TERRAFORM_TFVARS_PROD_HCL`을 사용합니다. `SOH_API_ENV_*`의 `.env` 내용이나 DB 비밀번호/JWT secret/token/private key를 넣지 않습니다. Terraform apply workflow는 tfvars 각 줄을 사전 마스킹하고 대문자 앱 환경변수 또는 민감 변수명이 섞이면 `terraform init` 전에 차단합니다. 앱 환경변수 검사는 정상 Terraform 변수 `spring_profile`을 오인하지 않도록 대소문자를 구분해야 합니다.
@@ -117,6 +119,7 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 - 배포 EC2는 AWS Secrets Manager JDBC driver(`com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`)를 사용합니다. `SPRING_DATASOURCE_URL`은 `jdbc-secretsmanager:mysql://...`, `SPRING_DATASOURCE_USERNAME`은 RDS managed secret ARN, `SPRING_DATASOURCE_PASSWORD`는 빈 값으로 설정됩니다.
 - `DAEGU_CHAIN_APP_KEY`와 `DAEGU_CHAIN_TOKEN`은 용도가 다릅니다. `TOKEN_SERVER_BASE_URL`의 지급·회수 프록시는 앱키를 사용하고, 계정 생성·DID·토큰 approve 같은 대구체인 `/mitum/...` 직접 API는 사용자 토큰을 사용합니다. dev/prod 배포 workflow는 두 값을 모두 요구하며 `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, `TOKEN_SERVER_BASE_URL_PROD` 별도 Secret이 있으면 `.env`의 같은 키를 덮어씁니다.
 - prod 배포 workflow는 운영 토큰 발행/전송 owner 변경을 위해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS_PROD`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY_PROD` 별도 Secret이 있으면 `.env`의 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`를 덮어씁니다.
+- 리워드 지갑 서명키는 `DAEGU_CHAIN_WALLET_ENCRYPTION_KEY`의 32바이트 Base64 AES 키로 AES-256-GCM 암호화해 `user_reward_wallet.wallet_private_key_ciphertext`에만 저장합니다. 운영 workflow는 `DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_PROD` 전용 Secret을 덮어쓰며 값이 없으면 배포를 차단합니다. 이 키를 저장소, 공용 `.env` 문서, 프론트 코드에 넣거나 변경/분실하면 기존 지갑의 토큰 승인을 복호화할 수 없습니다.
 - datasource 비밀번호는 앱이 EC2 instance profile 권한으로 RDS Secrets Manager에서 직접 가져옵니다. EC2 IAM role에는 해당 secret에 대한 `secretsmanager:DescribeSecret`, `secretsmanager:GetSecretValue` 권한이 필요합니다.
 - DaeguChain/DID 기능에는 `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, `USER_REWARD_TOKEN_TRANSFER_ENABLED` 등을 환경별로 확인합니다.
 - 모바일·태블릿 다대구 로그인은 `DADAEGU_LOGIN_ENABLED=true`, 발급받은 `DADAEGU_LOGIN_SITE_ID`, PKCS#8 Base64/PEM 형식의 `DADAEGU_LOGIN_RSA_PRIVATE_KEY`, 선택값 `DADAEGU_LOGIN_REQUIRED_VC`(기본 `DaeguMasterVC`)가 모두 필요합니다. RSA 개인키는 백엔드 `.env` Secret에만 두고 Vite 환경변수나 프론트 코드에 넣지 않습니다. 공개 `/login/dadaegu/config`는 준비 여부·site ID·required VC만 반환하며, `/login/dadaegu` 요청의 암호화 콜백 원문은 시스템 로그에서 마스킹합니다.
@@ -125,7 +128,7 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 - 다대구 성별은 추가 입력 없이 VC 값을 백엔드 `M`/`W`로 정규화합니다. 영문 `M/F/W`, `MALE/FEMALE`, `MAN/WOMAN`, 한글 `남/남성/남자`, `여/여성/여자`, 주민번호 성별 코드 `1~8`, 따옴표·공백·괄호가 포함된 표현을 지원합니다.
 - 개발 DID/token 서버는 현재 `DID_SERVER_BASE_URL=http://43.201.125.82`, `TOKEN_SERVER_BASE_URL=http://43.201.125.82`를 사용합니다. 배포 API에서 `TOKEN_SERVER_BASE_URL`이 `http://localhost:5000`이면 EC2 자기 자신을 호출해 token list/create/transfer가 connection refused로 실패합니다.
 - DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. DID 로그인은 SOH DB에 저장된 사용자 자체 DID 발급 상태와 DID 문자열만 확인하며, VC-JWT credential 발급/검증은 사용하지 않습니다.
-- 일반 비밀번호 회원가입과 DID/다대구 회원가입은 모두 내부 DID·리워드 지갑 생성이 완료되어야 성공합니다. 외부 프로비저닝 실패를 `null`로 삼켜 불완전 계정을 남기지 않습니다. 기존 로컬 사용자가 다대구 로그인을 연결할 때는 저장된 내부 DID와 지갑 주소를 재사용하며, 누락된 항목만 멱등성 보정하여 두 번째 지갑을 만들지 않습니다. 배포 전 생성된 DID/지갑 누락 계정은 첫 다대구 연결 또는 리워드 요청에서 로그인 아이디 `label`로 DID와 실제 지갑을 재프로비저닝한 뒤 토큰 전송을 재시도합니다. `/mitum/com/acc_create`는 키쌍만 생성하므로 raw 리워드 지갑은 `/mitum/com/acc_faucet`으로 체인 계정을 활성화한 다음 토큰별 reclaim allowance를 승인합니다. 활성화 직후 `P06D502 Account not found`가 잠시 반환되면 제한적으로 승인을 재시도합니다.
+- 일반 비밀번호 회원가입과 DID/다대구 회원가입은 모두 내부 DID·리워드 지갑 생성이 완료되어야 성공합니다. 외부 프로비저닝 실패를 `null`로 삼켜 불완전 계정을 남기지 않습니다. 기존 로컬 사용자가 다대구 로그인을 연결할 때는 저장된 내부 DID와 지갑 주소를 재사용하며, 누락된 항목만 멱등성 보정하여 두 번째 지갑을 만들지 않습니다. 배포 전 생성된 DID/지갑 누락 계정은 첫 다대구 연결 또는 리워드 요청에서 로그인 아이디 `label`로 DID와 실제 지갑을 재프로비저닝한 뒤 토큰 전송을 재시도합니다. `/mitum/com/acc_create`는 키쌍만 생성하므로 raw 리워드 지갑은 `/mitum/com/acc_faucet`으로 체인 계정을 활성화합니다. 토큰 balance state가 생기기 전 approve는 `P06D504`로 실패하므로 로그인에서는 승인하지 않고, 실제 토큰 지급 성공 직후 해당 contract만 승인하며 회수 직전에도 재확인합니다.
 - reward reclaim은 사용자 DID private key를 SOH에서 읽거나 저장하지 않고, token server의 `TOKEN_RECLAIM_PATH`(기본 `/token/retrieve`)로 요청합니다. 저장된 리워드 지갑 주소를 `holder`, 운영 owner 주소를 `sender`·`receiver`로 사용하고 운영 owner private key만 백엔드 Secret에서 읽습니다. 다대구 외부 DID는 회수 요청의 `user_DID`로 보내지 않으며 owner private key는 API 감사 로그에서 마스킹합니다.
 - SOH가 대구체인 raw 리워드 지갑을 생성할 때는 응답의 지갑 private key를 메모리에서만 사용해 설정된 모든 리워드 토큰 contract에 운영 owner의 회수 권한을 승인하고 즉시 폐기합니다. `holder_pkey`는 API 감사 로그에서 마스킹합니다. 슈퍼 관리자는 사용자 관리 화면에서 정확한 대상 로그인 ID를 재입력한 경우에만 구강체조 진도·리워드 거래·리워드 지갑을 초기화할 수 있습니다. 계정·기본 인적정보·기관·다대구 연결은 유지되며 다음 다대구 로그인에서 승인된 새 지갑을 생성합니다.
 
@@ -227,8 +230,8 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 2026-08-24 신규 리워드 지갑의 체인 활성화 순서를 보강했습니다.
 
-- `/mitum/com/acc_create` 응답 주소는 아직 체인 계정이 아니므로 곧바로 `/mitum/token/approve`를 호출하면 `B0593/P06D502 Account not found: sender account`가 발생합니다.
-- 로컬 가입, 다대구 가입, 과거 누락 지갑 자동복구가 공통으로 `키쌍 생성 → acc_faucet 활성화 → token approve` 순서를 사용합니다. 체인 반영 지연에 한해 approve를 짧게 재시도하며 개인키는 메모리에서만 사용하고 저장하지 않습니다.
+- `/mitum/com/acc_create` 응답 주소는 아직 체인 계정이 아니므로 `acc_faucet`으로 활성화합니다. 활성화 후에도 특정 토큰을 받은 적이 없으면 contract token balance state가 없어 approve가 `B0593/P06D504`로 실패합니다.
+- 로컬 가입, 다대구 가입, 과거 누락 지갑 자동복구는 로그인 중 토큰 approve를 하지 않습니다. 지갑 서명키를 AES-256-GCM으로 암호화해 저장하고, 실제 토큰 지급으로 contract balance state가 생긴 직후 해당 contract를 승인합니다. 회수 직전에도 같은 승인을 재확인한 뒤 `transfer_from`을 호출합니다.
 
 2026-08-24 다대구 로그인 중 대구체인 API 실패 로그 보존을 보강했습니다.
 

@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kaii.dentix.domain.daeguChain.application.DaeguRewardWalletProvisioningService;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
@@ -31,6 +32,7 @@ class UserRewardReclaimServiceTest {
     private UserRewardTransactionRepository transactionRepository;
     private UserRewardWalletRepository walletRepository;
     private ExternalTokenClient externalTokenClient;
+    private DaeguRewardWalletProvisioningService rewardWalletProvisioningService;
     private DaeguChainProperties daeguChainProperties;
     private JwtTokenUtil jwtTokenUtil;
     private UserRewardReclaimService service;
@@ -42,6 +44,7 @@ class UserRewardReclaimServiceTest {
         transactionRepository = mock(UserRewardTransactionRepository.class);
         walletRepository = mock(UserRewardWalletRepository.class);
         externalTokenClient = mock(ExternalTokenClient.class);
+        rewardWalletProvisioningService = mock(DaeguRewardWalletProvisioningService.class);
         jwtTokenUtil = mock(JwtTokenUtil.class);
         request = mock(HttpServletRequest.class);
 
@@ -55,6 +58,7 @@ class UserRewardReclaimServiceTest {
                 transactionRepository,
                 walletRepository,
                 externalTokenClient,
+                rewardWalletProvisioningService,
                 daeguChainProperties,
                 userRewardProperties,
                 jwtTokenUtil
@@ -67,6 +71,7 @@ class UserRewardReclaimServiceTest {
                 .pointBalance(5L)
                 .daeguDid("did:key:z6Mk-dadaegu-external")
                 .walletAddress("0x-user-wallet")
+                .walletPrivateKeyCiphertext("encrypted-private-key")
                 .build()));
         when(transactionRepository.save(any(UserRewardTransaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -96,6 +101,12 @@ class UserRewardReclaimServiceTest {
                 eq("0x-user-wallet"),
                 eq("0x-token-owner"),
                 eq(1L)
+        );
+        verify(rewardWalletProvisioningService, times(5)).approveRewardContract(
+                eq(7L),
+                anyString(),
+                eq("0x-user-wallet"),
+                eq("encrypted-private-key")
         );
     }
 

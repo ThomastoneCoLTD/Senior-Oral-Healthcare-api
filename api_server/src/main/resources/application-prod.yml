@@ -103,6 +103,7 @@ daegu-chain:
   token: ${DAEGU_CHAIN_TOKEN:}
   token-owner-address: ${DAEGU_CHAIN_TOKEN_OWNER_ADDRESS:}
   token-owner-private-key: ${DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY:}
+  wallet-encryption-key: ${DAEGU_CHAIN_WALLET_ENCRYPTION_KEY:}
   token-symbol: ${DAEGU_CHAIN_TOKEN_SYMBOL:MYT}
   token-decimals: ${DAEGU_CHAIN_TOKEN_DECIMALS:18}
   token-mintable: ${DAEGU_CHAIN_TOKEN_MINTABLE:true}

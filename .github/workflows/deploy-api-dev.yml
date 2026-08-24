@@ -75,6 +75,7 @@ jobs:
           SOH_API_ENV: ${{ secrets.SOH_API_ENV_DEV }}
           DAEGU_CHAIN_APP_KEY_OVERRIDE: ${{ secrets.DAEGU_CHAIN_APP_KEY_DEV || secrets.DAEGU_CHAIN_APP_KEY }}
           DAEGU_CHAIN_TOKEN_OVERRIDE: ${{ secrets.DAEGU_CHAIN_TOKEN_DEV || secrets.DAEGU_CHAIN_TOKEN }}
+          DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_OVERRIDE: ${{ secrets.DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_DEV || secrets.DAEGU_CHAIN_WALLET_ENCRYPTION_KEY }}
           TOKEN_SERVER_BASE_URL_OVERRIDE: ${{ secrets.TOKEN_SERVER_BASE_URL_DEV || secrets.TOKEN_SERVER_BASE_URL }}
         run: |
           test -n "${SOH_API_ENV}" || (echo "SOH_API_ENV_DEV secret is empty" && exit 1)
@@ -97,12 +98,15 @@ jobs:
 
           upsert_env "DAEGU_CHAIN_APP_KEY" "${DAEGU_CHAIN_APP_KEY_OVERRIDE}"
           upsert_env "DAEGU_CHAIN_TOKEN" "${DAEGU_CHAIN_TOKEN_OVERRIDE}"
+          upsert_env "DAEGU_CHAIN_WALLET_ENCRYPTION_KEY" "${DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_OVERRIDE}"
           upsert_env "TOKEN_SERVER_BASE_URL" "${TOKEN_SERVER_BASE_URL_OVERRIDE}"
 
           grep -Eq '^DAEGU_CHAIN_APP_KEY=.+' "${ENV_FILE}" \
             || (echo "DAEGU_CHAIN_APP_KEY is required for the token server proxy" && exit 1)
           grep -Eq '^DAEGU_CHAIN_TOKEN=.+' "${ENV_FILE}" \
             || (echo "DAEGU_CHAIN_TOKEN is required for direct DaeguChain APIs" && exit 1)
+          grep -Eq '^DAEGU_CHAIN_WALLET_ENCRYPTION_KEY=.+' "${ENV_FILE}" \
+            || (echo "DAEGU_CHAIN_WALLET_ENCRYPTION_KEY is required for reward wallet signing key encryption" && exit 1)
 
           chmod 600 "${ENV_FILE}"
 

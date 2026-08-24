@@ -29,6 +29,7 @@ import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserRewardService {
 
     private static final EnumSet<UserRewardTransactionStatus> NON_REWARDED_STATUSES = EnumSet.of(
@@ -114,6 +116,7 @@ public class UserRewardService {
                 daeguDid = didWallet.did();
             }
             walletAddress = didWallet.walletAddress();
+            wallet.updateWalletPrivateKeyCiphertext(didWallet.privateKeyCiphertext());
         }
 
         if (isBlank(walletAddress) && isBlank(wallet.getWalletAddress())) {
@@ -255,6 +258,7 @@ public class UserRewardService {
                             ? user.getDaeguDid()
                             : wallet.getDaeguDid();
                     String walletAddress = wallet.getWalletAddress();
+                    String walletPrivateKeyCiphertext = wallet.getWalletPrivateKeyCiphertext();
 
                     if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || isBlank(daeguDid)) {
                         DidWallet provisioned = createDidWallet(userId, user.getUserLoginIdentifier());
@@ -264,6 +268,7 @@ public class UserRewardService {
                         daeguDid = provisioned.did();
                         if (isBlank(walletAddress)) {
                             walletAddress = provisioned.walletAddress();
+                            walletPrivateKeyCiphertext = provisioned.privateKeyCiphertext();
                         }
                         user.updateDaeguDid(
                                 provisioned.did(),
@@ -276,12 +281,16 @@ public class UserRewardService {
                         walletAddress = extractWalletAddress(user);
                     }
                     if (isBlank(walletAddress)) {
-                        walletAddress = createDaeguWalletAddress(userId);
+                        DaeguRewardWalletProvisioningService.ProvisionedWallet provisionedWallet =
+                                rewardWalletProvisioningService.createActivatedWallet(userId);
+                        walletAddress = provisionedWallet.walletAddress();
+                        walletPrivateKeyCiphertext = provisionedWallet.privateKeyCiphertext();
                     }
                     if (isBlank(walletAddress)) {
                         throw new BadRequestApiException("DaeguChain wallet address is empty");
                     }
                     wallet.updateDaeguWallet(daeguDid, walletAddress);
+                    wallet.updateWalletPrivateKeyCiphertext(walletPrivateKeyCiphertext);
                 });
     }
 
@@ -363,6 +372,21 @@ public class UserRewardService {
                     findFirstText(response, "tx_hash", "transaction_hash", "hash", "Date"),
                     findFirstText(response, "fact_hash")
             );
+            try {
+                rewardWalletProvisioningService.approveRewardContract(
+                        transaction.getUserId(),
+                        rewardToken.contractAddress(),
+                        wallet.getWalletAddress(),
+                        wallet.getWalletPrivateKeyCiphertext()
+                );
+            } catch (RuntimeException exception) {
+                log.warn(
+                        "Reward token was transferred but reclaim approval is pending. userId={}, contract={}",
+                        transaction.getUserId(),
+                        rewardToken.contractAddress(),
+                        exception
+                );
+            }
         } catch (RuntimeException exception) {
             transaction.markTokenTransferFailed();
             throwRewardFailure(exception);
@@ -569,20 +593,24 @@ public class UserRewardService {
                     "address"
             );
             String walletPrivateKey = findFirstText(data, "privatekey", "private_key", "privateKey");
-            rewardWalletProvisioningService.approveActivatedWallet(userId, walletAddress, walletPrivateKey);
+            String walletPrivateKeyCiphertext =
+                    rewardWalletProvisioningService.encryptWalletPrivateKey(walletPrivateKey);
             if (isBlank(walletAddress)) {
                 walletAddress = extractAddressFromDid(did);
             }
             if (isBlank(walletAddress)) {
-                walletAddress = createDaeguWalletAddress(userId);
+                DaeguRewardWalletProvisioningService.ProvisionedWallet provisionedWallet =
+                        rewardWalletProvisioningService.createActivatedWallet(userId);
+                walletAddress = provisionedWallet.walletAddress();
+                walletPrivateKeyCiphertext = provisionedWallet.privateKeyCiphertext();
             }
             if (isBlank(walletAddress)) {
                 throw new BadRequestApiException("DaeguChain DID wallet address is empty");
             }
-            return new DidWallet(did, publicKey, walletAddress);
+            return new DidWallet(did, publicKey, walletAddress, walletPrivateKeyCiphertext);
         } catch (BadRequestApiException exception) {
             if (isDevProfile() && exception.getMessage() != null && exception.getMessage().contains("token is required")) {
-                return new DidWallet(null, null, buildLocalTestWalletAddress(userId));
+                return new DidWallet(null, null, buildLocalTestWalletAddress(userId), null);
             }
             throw exception;
         }
@@ -597,10 +625,6 @@ public class UserRewardService {
     private String buildLocalTestWalletAddress(Long userId) {
         long hash = Integer.toUnsignedLong(Objects.hash("soh-local-wallet", userId));
         return "0x" + "%040x".formatted(hash);
-    }
-
-    private String createDaeguWalletAddress(Long userId) {
-        return rewardWalletProvisioningService.createActivatedWallet(userId);
     }
 
     private boolean isDevProfile() {
@@ -621,7 +645,12 @@ public class UserRewardService {
         return candidate != null && candidate.startsWith("0x") ? candidate : null;
     }
 
-    private record DidWallet(String did, String publicKey, String walletAddress) {
+    private record DidWallet(
+            String did,
+            String publicKey,
+            String walletAddress,
+            String privateKeyCiphertext
+    ) {
     }
 
     private record RewardTokenRef(String tokenName, String contractAddress) {

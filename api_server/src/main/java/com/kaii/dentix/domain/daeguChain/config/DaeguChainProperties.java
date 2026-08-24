@@ -22,6 +22,7 @@ public class DaeguChainProperties {
     private String token;
     private String tokenOwnerAddress;
     private String tokenOwnerPrivateKey;
+    private String walletEncryptionKey;
     private String tokenSymbol = "MYT";
     private Integer tokenDecimals = 18;
     private Boolean tokenMintable = true;

@@ -33,12 +33,21 @@ public class UserRewardWallet extends TimeEntity {
     @Column(length = 255)
     private String walletAddress;
 
+    @Column(name = "wallet_private_key_ciphertext", length = 1024)
+    private String walletPrivateKeyCiphertext;
+
     public void updateDaeguWallet(String daeguDid, String walletAddress) {
         if (daeguDid != null && !daeguDid.isBlank()) {
             this.daeguDid = daeguDid;
         }
         if (walletAddress != null && !walletAddress.isBlank()) {
             this.walletAddress = walletAddress;
+        }
+    }
+
+    public void updateWalletPrivateKeyCiphertext(String walletPrivateKeyCiphertext) {
+        if (walletPrivateKeyCiphertext != null && !walletPrivateKeyCiphertext.isBlank()) {
+            this.walletPrivateKeyCiphertext = walletPrivateKeyCiphertext;
         }
     }
 

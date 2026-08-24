@@ -2,6 +2,7 @@ package com.kaii.dentix.domain.reward.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainApiLogContext;
+import com.kaii.dentix.domain.daeguChain.application.DaeguRewardWalletProvisioningService;
 import com.kaii.dentix.domain.daeguChain.client.ExternalTokenClient;
 import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
@@ -46,6 +47,7 @@ public class UserRewardReclaimService {
     private final UserRewardTransactionRepository userRewardTransactionRepository;
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final ExternalTokenClient externalTokenClient;
+    private final DaeguRewardWalletProvisioningService rewardWalletProvisioningService;
     private final DaeguChainProperties daeguChainProperties;
     private final UserRewardProperties userRewardProperties;
     private final JwtTokenUtil jwtTokenUtil;
@@ -139,6 +141,12 @@ public class UserRewardReclaimService {
 
             String transferContractAddress = reclaimTokenContractAddress;
             try {
+                rewardWalletProvisioningService.approveRewardContract(
+                        userId,
+                        transferContractAddress,
+                        wallet.getWalletAddress(),
+                        wallet.getWalletPrivateKeyCiphertext()
+                );
                 JsonNode response = DaeguChainApiLogContext.withUser(
                         userId,
                         "구강체조 리워드 회수",

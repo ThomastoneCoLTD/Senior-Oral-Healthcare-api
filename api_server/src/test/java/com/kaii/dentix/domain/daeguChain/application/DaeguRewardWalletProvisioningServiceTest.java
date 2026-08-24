@@ -7,16 +7,14 @@ import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 
+import java.util.Base64;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -25,6 +23,7 @@ class DaeguRewardWalletProvisioningServiceTest {
 
     private DaeguChainAccountService accountService;
     private DaeguChainToken20Service token20Service;
+    private DaeguWalletPrivateKeyCipher privateKeyCipher;
     private DaeguRewardWalletProvisioningService service;
 
     @BeforeEach
@@ -33,13 +32,18 @@ class DaeguRewardWalletProvisioningServiceTest {
         token20Service = mock(DaeguChainToken20Service.class);
         DaeguChainProperties properties = new DaeguChainProperties();
         properties.setTokenOwnerAddress("0x-owner");
-        properties.getRewardTokenContracts().put("ESSENTIAL_VIDEO_1", "0x-contract-1");
-        properties.getRewardTokenContracts().put("OPTIONAL_VIDEO_1", "0x-contract-2");
-        service = new DaeguRewardWalletProvisioningService(accountService, token20Service, properties);
+        properties.setWalletEncryptionKey(Base64.getEncoder().encodeToString(new byte[32]));
+        privateKeyCipher = new DaeguWalletPrivateKeyCipher(properties);
+        service = new DaeguRewardWalletProvisioningService(
+                accountService,
+                token20Service,
+                properties,
+                privateKeyCipher
+        );
     }
 
     @Test
-    void activatesNewAddressBeforeApprovingRewardContracts() {
+    void activatesNewAddressAndEncryptsSigningKeyWithoutPrematureApproval() {
         when(accountService.createAccount(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
                 "OK",
                 Map.of(),
@@ -54,35 +58,20 @@ class DaeguRewardWalletProvisioningServiceTest {
         when(accountService.faucet(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
                 "OK", Map.of(), "", null, "cid-faucet"
         ));
-        when(token20Service.approveToken(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
-                "OK", Map.of(), "", null, "cid-approve"
-        ));
+        DaeguRewardWalletProvisioningService.ProvisionedWallet wallet = service.createActivatedWallet(7L);
 
-        String walletAddress = service.createActivatedWallet(7L);
-
-        assertThat(walletAddress).isEqualTo("0x-wallet");
-        InOrder inOrder = inOrder(accountService, token20Service);
-        inOrder.verify(accountService).createAccount(any());
-        inOrder.verify(accountService).faucet(any());
-        inOrder.verify(token20Service, times(2)).approveToken(any());
+        assertThat(wallet.walletAddress()).isEqualTo("0x-wallet");
+        assertThat(wallet.privateKeyCiphertext()).startsWith("v1:");
+        assertThat(wallet.privateKeyCiphertext()).doesNotContain("private-key");
+        assertThat(privateKeyCipher.decrypt(wallet.privateKeyCiphertext())).isEqualTo("private-key");
+        verify(accountService).createAccount(any());
 
         ArgumentCaptor<DaeguChainDto.AccountAddressRequest> faucetCaptor =
                 ArgumentCaptor.forClass(DaeguChainDto.AccountAddressRequest.class);
         verify(accountService).faucet(faucetCaptor.capture());
         assertThat(faucetCaptor.getValue().getAddress()).isEqualTo("0x-wallet");
 
-        ArgumentCaptor<DaeguChainDto.TokenApproveRequest> approveCaptor =
-                ArgumentCaptor.forClass(DaeguChainDto.TokenApproveRequest.class);
-        verify(token20Service, times(2)).approveToken(approveCaptor.capture());
-        assertThat(approveCaptor.getAllValues())
-                .extracting(DaeguChainDto.TokenApproveRequest::getContAddr)
-                .containsExactlyInAnyOrder("0x-contract-1", "0x-contract-2");
-        assertThat(approveCaptor.getAllValues()).allSatisfy(request -> {
-            assertThat(request.getHolder()).isEqualTo("0x-wallet");
-            assertThat(request.getHolderPkey()).isEqualTo("private-key");
-            assertThat(request.getApproved()).isEqualTo("0x-owner");
-            assertThat(request.getAmount()).isEqualTo(String.valueOf(Long.MAX_VALUE));
-        });
+        verifyNoInteractions(token20Service);
     }
 
     @Test
@@ -124,7 +113,10 @@ class DaeguRewardWalletProvisioningServiceTest {
                 "cid-approve"
         ));
 
-        assertThatThrownBy(() -> service.approveActivatedWallet(7L, "0x-wallet", "private-key"))
+        String ciphertext = privateKeyCipher.encrypt("private-key");
+        assertThatThrownBy(() -> service.approveRewardContract(
+                7L, "0x-contract", "0x-wallet", ciphertext
+        ))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessageContaining("DaeguChain reward reclaim approval failed")
                 .hasMessageContaining("approval operation failed")
@@ -132,14 +124,23 @@ class DaeguRewardWalletProvisioningServiceTest {
     }
 
     @Test
-    void retriesApprovalWhileActivatedAccountIsPropagating() {
+    void approvesOnlyTheRewardContractThatAlreadyHasTokenBalance() {
         when(token20Service.approveToken(any()))
-                .thenThrow(new BadRequestApiException("P06D502 Account not found: sender account"))
-                .thenThrow(new BadRequestApiException("P06D502 Account not found: sender account"))
                 .thenReturn(new DaeguChainDto.ApiResponse<>("OK", Map.of(), "", null, "cid-approve"));
 
-        service.approveActivatedWallet(7L, "0x-wallet", "private-key");
+        service.approveRewardContract(
+                7L,
+                "0x-contract",
+                "0x-wallet",
+                privateKeyCipher.encrypt("private-key")
+        );
 
-        verify(token20Service, times(4)).approveToken(any());
+        ArgumentCaptor<DaeguChainDto.TokenApproveRequest> captor =
+                ArgumentCaptor.forClass(DaeguChainDto.TokenApproveRequest.class);
+        verify(token20Service).approveToken(captor.capture());
+        assertThat(captor.getValue().getContAddr()).isEqualTo("0x-contract");
+        assertThat(captor.getValue().getHolder()).isEqualTo("0x-wallet");
+        assertThat(captor.getValue().getHolderPkey()).isEqualTo("private-key");
+        assertThat(captor.getValue().getApproved()).isEqualTo("0x-owner");
     }
 }

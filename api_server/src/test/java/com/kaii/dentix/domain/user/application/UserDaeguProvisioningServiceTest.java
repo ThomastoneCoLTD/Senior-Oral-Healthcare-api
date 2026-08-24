@@ -37,6 +37,7 @@ class UserDaeguProvisioningServiceTest {
     void setUp() {
         daeguChainDidService = mock(DaeguChainDidService.class);
         rewardWalletProvisioningService = mock(DaeguRewardWalletProvisioningService.class);
+        when(rewardWalletProvisioningService.encryptWalletPrivateKey(any())).thenReturn("encrypted-private-key");
         userRewardWalletRepository = mock(UserRewardWalletRepository.class);
         service = new UserDaeguProvisioningService(
                 daeguChainDidService,
@@ -88,11 +89,8 @@ class UserDaeguProvisioningServiceTest {
         ArgumentCaptor<UserRewardWallet> captor = ArgumentCaptor.forClass(UserRewardWallet.class);
         verify(userRewardWalletRepository).save(captor.capture());
         assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca");
-        verify(rewardWalletProvisioningService).approveActivatedWallet(
-                7L,
-                "0x3e33E1C95833809532A08f84b0A145277AFC1eA9fca",
-                "private-key"
-        );
+        verify(rewardWalletProvisioningService).encryptWalletPrivateKey("private-key");
+        assertThat(captor.getValue().getWalletPrivateKeyCiphertext()).isEqualTo("encrypted-private-key");
     }
 
     @Test
@@ -108,7 +106,9 @@ class UserDaeguProvisioningServiceTest {
                 """);
         when(daeguChainDidService.createAccount(any()))
                 .thenReturn(new DaeguChainDto.ApiResponse<>("OK", null, "", didData, "cid"));
-        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn("0x-wallet");
+        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn(
+                new DaeguRewardWalletProvisioningService.ProvisionedWallet("0x-wallet", "encrypted-private-key")
+        );
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.empty());
 
         String walletAddress = service.provisionForSignUp(user);
@@ -120,6 +120,7 @@ class UserDaeguProvisioningServiceTest {
         verify(userRewardWalletRepository).save(captor.capture());
         assertThat(captor.getValue().getDaeguDid()).isEqualTo("did:key:z6MkSelfGenerated");
         assertThat(captor.getValue().getWalletAddress()).isEqualTo("0x-wallet");
+        assertThat(captor.getValue().getWalletPrivateKeyCiphertext()).isEqualTo("encrypted-private-key");
         verify(rewardWalletProvisioningService).createActivatedWallet(7L);
     }
 
@@ -224,7 +225,11 @@ class UserDaeguProvisioningServiceTest {
                 .userLoginIdentifier("dg-user")
                 .build();
         when(userRewardWalletRepository.findByUserId(8L)).thenReturn(Optional.empty());
-        when(rewardWalletProvisioningService.createActivatedWallet(8L)).thenReturn("0x-new-wallet");
+        when(rewardWalletProvisioningService.createActivatedWallet(8L)).thenReturn(
+                new DaeguRewardWalletProvisioningService.ProvisionedWallet(
+                        "0x-new-wallet", "encrypted-private-key"
+                )
+        );
 
         String walletAddress = service.provisionForDadaegu(user, "did:daegu:new-user");
 
@@ -236,6 +241,7 @@ class UserDaeguProvisioningServiceTest {
         verify(userRewardWalletRepository).save(walletCaptor.capture());
         assertThat(walletCaptor.getValue().getDaeguDid()).isEqualTo("did:daegu:new-user");
         assertThat(walletCaptor.getValue().getWalletAddress()).isEqualTo("0x-new-wallet");
+        assertThat(walletCaptor.getValue().getWalletPrivateKeyCiphertext()).isEqualTo("encrypted-private-key");
         verify(rewardWalletProvisioningService).createActivatedWallet(8L);
     }
 

@@ -49,19 +49,23 @@ public class UserDaeguProvisioningService {
                 .map(wallet -> {
                     String walletAddress = wallet.getWalletAddress();
                     if (isBlank(walletAddress)) {
-                        walletAddress = resolveWalletAddress(user.getUserId(), null);
+                        WalletProvision provision = resolveWallet(user.getUserId(), null);
+                        walletAddress = provision.walletAddress();
+                        wallet.updateWalletPrivateKeyCiphertext(provision.privateKeyCiphertext());
                     }
                     wallet.updateDaeguWallet(externalDid, walletAddress);
                     userRewardWalletRepository.save(wallet);
                     return walletAddress;
                 })
                 .orElseGet(() -> {
-                    String walletAddress = resolveWalletAddress(user.getUserId(), null);
+                    WalletProvision provision = resolveWallet(user.getUserId(), null);
+                    String walletAddress = provision.walletAddress();
                     userRewardWalletRepository.save(UserRewardWallet.builder()
                             .userId(user.getUserId())
                             .pointBalance(0L)
                             .daeguDid(externalDid)
                             .walletAddress(walletAddress)
+                            .walletPrivateKeyCiphertext(provision.privateKeyCiphertext())
                             .build());
                     return walletAddress;
                 });
@@ -72,17 +76,17 @@ public class UserDaeguProvisioningService {
             throw new BadRequestApiException("User is required for Daegu provisioning");
         }
 
-        String walletAddress = null;
+        WalletProvision walletProvision = null;
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || isBlank(user.getDaeguDid())) {
-            walletAddress = provisionDid(user);
+            walletProvision = provisionDid(user);
         }
         if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED) {
             throw new BadRequestApiException("Daegu DID provisioning failed");
         }
-        return provisionWallet(user, walletAddress);
+        return provisionWallet(user, walletProvision);
     }
 
-    private String provisionDid(User user) {
+    private WalletProvision provisionDid(User user) {
         try {
             DaeguChainDto.ApiResponse<JsonNode> response = DaeguChainApiLogContext.withUser(
                     user.getUserId(),
@@ -104,13 +108,9 @@ public class UserDaeguProvisioningService {
             if (isBlank(did)) {
                 throw new BadRequestApiException("DaeguChain DID is empty");
             }
-            rewardWalletProvisioningService.approveActivatedWallet(
-                    user.getUserId(),
-                    walletAddress,
-                    walletPrivateKey
-            );
+            String privateKeyCiphertext = rewardWalletProvisioningService.encryptWalletPrivateKey(walletPrivateKey);
             user.updateDaeguDid(did, key, UserDaeguIdentityStatus.ISSUED);
-            return walletAddress;
+            return new WalletProvision(walletAddress, privateKeyCiphertext);
         } catch (RuntimeException exception) {
             log.warn("Daegu DID provisioning failed. userId={}", user.getUserId(), exception);
             user.updateDaeguDid(null, null, UserDaeguIdentityStatus.FAILED);
@@ -127,7 +127,7 @@ public class UserDaeguProvisioningService {
         );
     }
 
-    private String provisionWallet(User user, String didWalletAddress) {
+    private String provisionWallet(User user, WalletProvision didWallet) {
         return userRewardWalletRepository.findByUserId(user.getUserId())
                 .map(wallet -> {
                     String daeguDid = user.getDaeguDid();
@@ -136,32 +136,34 @@ public class UserDaeguProvisioningService {
                         userRewardWalletRepository.save(wallet);
                         return wallet.getWalletAddress();
                     }
-                    String walletAddress = resolveWalletAddress(user.getUserId(), didWalletAddress);
+                    WalletProvision provision = resolveWallet(user.getUserId(), didWallet);
+                    String walletAddress = provision.walletAddress();
                     wallet.updateDaeguWallet(daeguDid, walletAddress);
+                    wallet.updateWalletPrivateKeyCiphertext(provision.privateKeyCiphertext());
                     userRewardWalletRepository.save(wallet);
                     return walletAddress;
                 })
                 .orElseGet(() -> {
-                    String walletAddress = resolveWalletAddress(user.getUserId(), didWalletAddress);
+                    WalletProvision provision = resolveWallet(user.getUserId(), didWallet);
+                    String walletAddress = provision.walletAddress();
                     userRewardWalletRepository.save(UserRewardWallet.builder()
                             .userId(user.getUserId())
                             .pointBalance(0L)
                             .daeguDid(user.getDaeguDid())
                             .walletAddress(walletAddress)
+                            .walletPrivateKeyCiphertext(provision.privateKeyCiphertext())
                             .build());
                     return walletAddress;
                 });
     }
 
-    private String resolveWalletAddress(Long userId, String didWalletAddress) {
-        if (!isBlank(didWalletAddress)) {
-            return didWalletAddress;
+    private WalletProvision resolveWallet(Long userId, WalletProvision didWallet) {
+        if (didWallet != null && !isBlank(didWallet.walletAddress())) {
+            return didWallet;
         }
-        return createDaeguWalletAddress(userId);
-    }
-
-    private String createDaeguWalletAddress(Long userId) {
-        return rewardWalletProvisioningService.createActivatedWallet(userId);
+        DaeguRewardWalletProvisioningService.ProvisionedWallet provisioned =
+                rewardWalletProvisioningService.createActivatedWallet(userId);
+        return new WalletProvision(provisioned.walletAddress(), provisioned.privateKeyCiphertext());
     }
 
     private String findFirstText(JsonNode node, String... fieldNames) {
@@ -196,5 +198,8 @@ public class UserDaeguProvisioningService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private record WalletProvision(String walletAddress, String privateKeyCiphertext) {
     }
 }

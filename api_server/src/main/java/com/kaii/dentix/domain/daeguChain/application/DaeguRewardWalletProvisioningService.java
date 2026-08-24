@@ -7,22 +7,18 @@ import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 @Service
 @RequiredArgsConstructor
 public class DaeguRewardWalletProvisioningService {
 
     private static final String RECLAIM_ALLOWANCE = String.valueOf(Long.MAX_VALUE);
-    private static final int ACTIVATION_RETRY_COUNT = 6;
-    private static final long ACTIVATION_RETRY_DELAY_MILLIS = 500L;
 
     private final DaeguChainAccountService accountService;
     private final DaeguChainToken20Service token20Service;
     private final DaeguChainProperties properties;
+    private final DaeguWalletPrivateKeyCipher privateKeyCipher;
 
-    public String createActivatedWallet(Long userId) {
+    public ProvisionedWallet createActivatedWallet(Long userId) {
         DaeguChainDto.ApiResponse<DaeguChainDto.KeyPairData> response = DaeguChainApiLogContext.withUser(
                 userId,
                 "리워드 지갑 생성",
@@ -41,15 +37,11 @@ public class DaeguRewardWalletProvisioningService {
         }
 
         activateWallet(userId, walletAddress);
-        approveRewardReclaim(userId, walletAddress, walletPrivateKey);
-        return walletAddress;
+        return new ProvisionedWallet(walletAddress, privateKeyCipher.encrypt(walletPrivateKey));
     }
 
-    public void approveActivatedWallet(Long userId, String walletAddress, String walletPrivateKey) {
-        if (isBlank(walletAddress) || isBlank(walletPrivateKey)) {
-            return;
-        }
-        approveRewardReclaim(userId, walletAddress, walletPrivateKey);
+    public String encryptWalletPrivateKey(String walletPrivateKey) {
+        return privateKeyCipher.encrypt(walletPrivateKey);
     }
 
     private void activateWallet(Long userId, String walletAddress) {
@@ -61,68 +53,33 @@ public class DaeguRewardWalletProvisioningService {
         assertSuccessful("DaeguChain reward wallet activation failed", response);
     }
 
-    private void approveRewardReclaim(Long userId, String walletAddress, String walletPrivateKey) {
-        if (properties.getRewardTokenContracts() == null || properties.getRewardTokenContracts().isEmpty()) {
-            return;
+    public void approveRewardContract(
+            Long userId,
+            String contractAddress,
+            String walletAddress,
+            String walletPrivateKeyCiphertext
+    ) {
+        if (isBlank(contractAddress) || isBlank(walletAddress)) {
+            throw new BadRequestApiException("reward token contract and wallet address are required");
         }
         if (isBlank(properties.getTokenOwnerAddress())) {
             throw new BadRequestApiException("token owner address is not configured");
         }
-
-        Set<String> contractAddresses = new LinkedHashSet<>(properties.getRewardTokenContracts().values());
-        for (String contractAddress : contractAddresses) {
-            if (isBlank(contractAddress)) {
-                continue;
-            }
-            approveWithActivationRetry(userId, new DaeguChainDto.TokenApproveRequest(
-                    null,
-                    null,
-                    contractAddress,
-                    walletAddress,
-                    walletPrivateKey,
-                    properties.getTokenOwnerAddress(),
-                    RECLAIM_ALLOWANCE
-            ));
-        }
-    }
-
-    private void approveWithActivationRetry(Long userId, DaeguChainDto.TokenApproveRequest request) {
-        for (int attempt = 1; attempt <= ACTIVATION_RETRY_COUNT; attempt++) {
-            try {
-                DaeguChainDto.ApiResponse<JsonNode> response = DaeguChainApiLogContext.withUser(
-                        userId,
-                        "리워드 지갑 회수 권한 승인",
-                        () -> token20Service.approveToken(request)
-                );
-                assertSuccessful("DaeguChain reward reclaim approval failed", response);
-                return;
-            } catch (BadRequestApiException exception) {
-                if (attempt == ACTIVATION_RETRY_COUNT || !isActivationPending(exception)) {
-                    throw exception;
-                }
-                waitForActivation();
-            }
-        }
-    }
-
-    private boolean isActivationPending(BadRequestApiException exception) {
-        String message = exception.getMessage();
-        if (isBlank(message)) {
-            return false;
-        }
-        String normalized = message.toLowerCase(java.util.Locale.ROOT);
-        return normalized.contains("p06d502")
-                || normalized.contains("account not found")
-                || normalized.contains("sender account");
-    }
-
-    private void waitForActivation() {
-        try {
-            Thread.sleep(ACTIVATION_RETRY_DELAY_MILLIS);
-        } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw new BadRequestApiException("Interrupted while waiting for DaeguChain wallet activation");
-        }
+        String walletPrivateKey = privateKeyCipher.decrypt(walletPrivateKeyCiphertext);
+        DaeguChainDto.ApiResponse<JsonNode> response = DaeguChainApiLogContext.withUser(
+                userId,
+                "리워드 지갑 회수 권한 승인",
+                () -> token20Service.approveToken(new DaeguChainDto.TokenApproveRequest(
+                        null,
+                        null,
+                        contractAddress,
+                        walletAddress,
+                        walletPrivateKey,
+                        properties.getTokenOwnerAddress(),
+                        RECLAIM_ALLOWANCE
+                ))
+        );
+        assertSuccessful("DaeguChain reward reclaim approval failed", response);
     }
 
     private void assertSuccessful(String action, DaeguChainDto.ApiResponse<?> response) {
@@ -155,5 +112,8 @@ public class DaeguRewardWalletProvisioningService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    public record ProvisionedWallet(String walletAddress, String privateKeyCiphertext) {
     }
 }
