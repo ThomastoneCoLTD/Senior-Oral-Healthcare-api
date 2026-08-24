@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainAccountService;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainApiLogContext;
 import com.kaii.dentix.domain.daeguChain.application.DaeguChainDidService;
+import com.kaii.dentix.domain.daeguChain.application.DaeguChainToken20Service;
+import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
@@ -15,14 +17,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserDaeguProvisioningService {
 
+    private static final String RECLAIM_ALLOWANCE = Long.MAX_VALUE + "";
+
     private final DaeguChainDidService daeguChainDidService;
     private final DaeguChainAccountService daeguChainAccountService;
+    private final DaeguChainToken20Service daeguChainToken20Service;
+    private final DaeguChainProperties daeguChainProperties;
     private final UserRewardWalletRepository userRewardWalletRepository;
 
     public String provisionForSignUp(User user) {
@@ -160,15 +168,64 @@ public class UserDaeguProvisioningService {
                 "리워드 지갑 생성",
                 () -> daeguChainAccountService.createAccount(new DaeguChainDto.AccountCreateRequest(null, null))
         );
-        String walletAddress = response == null
-                || response.getData() == null
-                || response.getData().getKeyPair() == null
+        DaeguChainDto.KeyPair keyPair = response == null || response.getData() == null
                 ? null
-                : response.getData().getKeyPair().getAddress();
+                : response.getData().getKeyPair();
+        String walletAddress = keyPair == null ? null : keyPair.getAddress();
         if (isBlank(walletAddress)) {
             throw new BadRequestApiException("DaeguChain wallet address is empty");
         }
+        if (isBlank(keyPair.getPrivatekey())) {
+            throw new BadRequestApiException("DaeguChain wallet private key is empty");
+        }
+        approveRewardReclaim(userId, walletAddress, keyPair.getPrivatekey());
         return walletAddress;
+    }
+
+    private void approveRewardReclaim(Long userId, String walletAddress, String walletPrivateKey) {
+        if (daeguChainProperties.getRewardTokenContracts() == null
+                || daeguChainProperties.getRewardTokenContracts().isEmpty()) {
+            return;
+        }
+        if (isBlank(daeguChainProperties.getTokenOwnerAddress())) {
+            throw new BadRequestApiException("token owner address is not configured");
+        }
+
+        Set<String> contractAddresses = new LinkedHashSet<>(
+                daeguChainProperties.getRewardTokenContracts().values()
+        );
+        for (String contractAddress : contractAddresses) {
+            if (isBlank(contractAddress)) {
+                continue;
+            }
+            DaeguChainDto.ApiResponse<JsonNode> response = DaeguChainApiLogContext.withUser(
+                    userId,
+                    "리워드 지갑 회수 권한 승인",
+                    () -> daeguChainToken20Service.approveToken(new DaeguChainDto.TokenApproveRequest(
+                            null,
+                            null,
+                            contractAddress,
+                            walletAddress,
+                            walletPrivateKey,
+                            daeguChainProperties.getTokenOwnerAddress(),
+                            RECLAIM_ALLOWANCE
+                    ))
+            );
+            if (isFailedResponse(response)) {
+                throw new BadRequestApiException("DaeguChain reward reclaim approval failed");
+            }
+        }
+    }
+
+    private boolean isFailedResponse(DaeguChainDto.ApiResponse<?> response) {
+        if (response == null || isBlank(response.getState())) {
+            return false;
+        }
+        String state = response.getState();
+        return "ERROR".equalsIgnoreCase(state)
+                || "OOPS".equalsIgnoreCase(state)
+                || "FAIL".equalsIgnoreCase(state)
+                || "FAILED".equalsIgnoreCase(state);
     }
 
     private String findFirstText(JsonNode node, String... fieldNames) {

@@ -30,6 +30,7 @@ public class DaeguChainApiAuditService {
             "pkey",
             "ownerpkey",
             "senderpkey",
+            "holderpkey",
             "jwt",
             "password",
             "secret",

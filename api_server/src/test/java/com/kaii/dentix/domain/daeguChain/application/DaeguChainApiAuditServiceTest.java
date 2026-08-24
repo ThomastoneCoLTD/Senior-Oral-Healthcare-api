@@ -22,7 +22,11 @@ class DaeguChainApiAuditServiceTest {
         DaeguChainApiLogContext.withUser(17L, "구강체조 리워드 지급", () -> {
             service.record(
                     "https://token.example/transfer",
-                    Map.of("token", "secret-app-key", "receiver", "0x123"),
+                    Map.of(
+                            "token", "secret-app-key",
+                            "holder_pkey", "secret-holder-private-key",
+                            "receiver", "0x123"
+                    ),
                     Map.of(
                             "state", "OK",
                             "data", Map.of("private_key", "secret-private-key", "tx_hash", "0xabc")
@@ -40,6 +44,8 @@ class DaeguChainApiAuditServiceTest {
         assertThat(saved.getFeature()).isEqualTo("구강체조 리워드 지급");
         assertThat(saved.getRequestPayload()).contains("\"token\":\"***\"");
         assertThat(saved.getRequestPayload()).doesNotContain("secret-app-key");
+        assertThat(saved.getRequestPayload()).contains("\"holder_pkey\":\"***\"");
+        assertThat(saved.getRequestPayload()).doesNotContain("secret-holder-private-key");
         assertThat(saved.getResponsePayload()).contains("\"private_key\":\"***\"");
         assertThat(saved.getResponsePayload()).doesNotContain("secret-private-key");
         assertThat(saved.isSuccess()).isTrue();

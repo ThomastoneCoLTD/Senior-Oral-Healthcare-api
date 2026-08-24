@@ -15,6 +15,8 @@ public interface UserRewardWalletRepository extends JpaRepository<UserRewardWall
 
     Optional<UserRewardWallet> findByUserId(Long userId);
 
+    long deleteByUserId(Long userId);
+
     List<UserRewardWallet> findByUserIdIn(Collection<Long> userIds);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

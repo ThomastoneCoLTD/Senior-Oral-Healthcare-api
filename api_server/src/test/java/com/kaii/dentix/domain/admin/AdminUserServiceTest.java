@@ -19,6 +19,10 @@ import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionS
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
+import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
 import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
@@ -47,6 +51,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
@@ -55,6 +60,9 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AdminUserServiceTest {
+
+    private static final String AUTHORIZED_TEST_WALLET =
+            "0x64770d4a82ec450AA58875f86a3Ad977141C57A1fca";
 
     @Mock private ModelMapper modelMapper;
     @Mock private AdminService adminService;
@@ -169,6 +177,63 @@ class AdminUserServiceTest {
 
         assertThat(response.getUsers()).hasSize(1);
         assertThat(response.getUsers().get(0).getRealOrganization()).isEqualTo("대구2");
+    }
+
+    @Test
+    void resetFailedRewardWalletDeletesOnlyRewardWalletAndTransactionsForSuperAdmin() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        Admin superAdmin = Admin.builder().adminIsSuper(YnType.Y).build();
+        User user = User.builder().userId(10L).build();
+        UserRewardWallet wallet = UserRewardWallet.builder()
+                .userId(10L)
+                .walletAddress(AUTHORIZED_TEST_WALLET)
+                .pointBalance(5L)
+                .build();
+        UserRewardTransaction failedReclaim = UserRewardTransaction.builder()
+                .userId(10L)
+                .type(UserRewardTransactionType.ORAL_EXERCISE_RECLAIM)
+                .status(UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED)
+                .amount(1L)
+                .build();
+        AdminUserDto.RewardWalletResetRequest resetRequest =
+                new AdminUserDto.RewardWalletResetRequest(10L, AUTHORIZED_TEST_WALLET, "RESET_REWARD_WALLET");
+
+        when(adminService.getTokenAdmin(request)).thenReturn(superAdmin);
+        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+        when(userRewardWalletRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(wallet));
+        when(userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(10L))
+                .thenReturn(List.of(failedReclaim));
+        when(userRewardTransactionRepository.deleteByUserId(10L)).thenReturn(6L);
+        when(userRewardWalletRepository.deleteByUserId(10L)).thenReturn(1L);
+
+        AdminUserDto.RewardWalletResetResponse response =
+                adminUserService.resetFailedRewardWallet(request, resetRequest);
+
+        assertThat(response.getUserId()).isEqualTo(10L);
+        assertThat(response.getResetWalletAddress()).isEqualTo(AUTHORIZED_TEST_WALLET);
+        assertThat(response.getDeletedTransactionCount()).isEqualTo(6L);
+        verify(userRewardTransactionRepository).deleteByUserId(10L);
+        verify(userRewardWalletRepository).deleteByUserId(10L);
+    }
+
+    @Test
+    void resetFailedRewardWalletRejectsAccountWithoutFailedReclaim() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        Admin superAdmin = Admin.builder().adminIsSuper(YnType.Y).build();
+        AdminUserDto.RewardWalletResetRequest resetRequest =
+                new AdminUserDto.RewardWalletResetRequest(10L, AUTHORIZED_TEST_WALLET, "RESET_REWARD_WALLET");
+
+        when(adminService.getTokenAdmin(request)).thenReturn(superAdmin);
+        when(userRepository.findById(10L)).thenReturn(Optional.of(User.builder().userId(10L).build()));
+        when(userRewardWalletRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(
+                UserRewardWallet.builder().userId(10L).walletAddress(AUTHORIZED_TEST_WALLET).build()
+        ));
+        when(userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(10L)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> adminUserService.resetFailedRewardWallet(request, resetRequest))
+                .hasMessage("실패한 토큰 회수 이력이 있는 테스트 계정만 초기화할 수 있습니다.");
+        verify(userRewardTransactionRepository, org.mockito.Mockito.never()).deleteByUserId(any());
+        verify(userRewardWalletRepository, org.mockito.Mockito.never()).deleteByUserId(any());
     }
 
     private byte[] createWorkbookBytes() throws Exception {

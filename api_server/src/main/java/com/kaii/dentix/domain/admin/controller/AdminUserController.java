@@ -112,6 +112,14 @@ public class AdminUserController {
         return new DataResponse<>(adminUserService.getDaeguRewardStatus(request));
     }
 
+    @PostMapping(value = "/reward-wallet/reset", name = "실패한 테스트 리워드 지갑 초기화")
+    public DataResponse<AdminUserDto.RewardWalletResetResponse> resetFailedRewardWallet(
+            HttpServletRequest request,
+            @Valid @RequestBody AdminUserDto.RewardWalletResetRequest resetRequest
+    ) {
+        return new DataResponse<>(adminUserService.resetFailedRewardWallet(request, resetRequest));
+    }
+
     @GetMapping(value = "/daegu-chain-usage-logs", name = "대구체인 기능 사용 로그")
     public DataResponse<AdminUserDto.DaeguChainUsageLogResponse> getDaeguChainUsageLogs(
             HttpServletRequest request

@@ -127,6 +127,7 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 - DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. DID 로그인은 SOH DB에 저장된 사용자 자체 DID 발급 상태와 DID 문자열만 확인하며, VC-JWT credential 발급/검증은 사용하지 않습니다.
 - 일반 비밀번호 회원가입과 DID/다대구 회원가입은 모두 내부 DID·리워드 지갑 생성이 완료되어야 성공합니다. 외부 프로비저닝 실패를 `null`로 삼켜 불완전 계정을 남기지 않습니다. 기존 로컬 사용자가 다대구 로그인을 연결할 때는 저장된 내부 DID와 지갑 주소를 재사용하며, 누락된 항목만 멱등성 보정하여 두 번째 지갑을 만들지 않습니다. 배포 전 생성된 DID/지갑 누락 계정은 첫 다대구 연결 또는 리워드 요청에서 로그인 아이디 `label`로 DID와 실제 지갑을 재프로비저닝한 뒤 토큰 전송을 재시도합니다.
 - reward reclaim은 사용자 DID private key를 SOH에서 읽거나 저장하지 않고, token server의 `TOKEN_RECLAIM_PATH`(기본 `/token/retrieve`)로 요청합니다. 저장된 리워드 지갑 주소를 `holder`, 운영 owner 주소를 `sender`·`receiver`로 사용하고 운영 owner private key만 백엔드 Secret에서 읽습니다. 다대구 외부 DID는 회수 요청의 `user_DID`로 보내지 않으며 owner private key는 API 감사 로그에서 마스킹합니다.
+- SOH가 대구체인 raw 리워드 지갑을 생성할 때는 응답의 지갑 private key를 메모리에서만 사용해 설정된 모든 리워드 토큰 contract에 운영 owner의 회수 권한을 승인하고 즉시 폐기합니다. `holder_pkey`는 API 감사 로그에서 마스킹합니다. 2026-08-24 회수 실패 테스트 지갑 `0x64770d4a82ec450AA58875f86a3Ad977141C57A1fca`만 슈퍼 관리자 초기화를 임시 허용하며, 정확한 주소·실패 이력이 모두 맞을 때 SOH 리워드 지갑/트랜잭션만 삭제합니다. 초기화 완료 확인 후 이 일회성 허용 코드와 화면 버튼을 제거해야 합니다.
 
 ## Terraform 및 수동 구축
 
@@ -229,6 +230,8 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 회수는 `/token/transfer`에 `user_DID`를 보내지 않고 회수 전용 `/token/retrieve`(`transfer_from`)를 사용합니다. 가입 경로와 무관하게 저장된 지갑 주소를 `holder`로 보내므로 토큰 서버 로컬 DID DB에 없는 다대구 `did:key`도 회수 흐름에 영향을 주지 않습니다.
 - 운영 owner 주소·private key를 각각 `sender`·`sender_pkey`로 사용하고 owner 주소로 회수하며, private key는 기존 감사 로그 민감 필드 마스킹 대상입니다. 토큰 서버의 HTTP 200 `state=OOPS` 응답도 실패로 처리합니다.
 - `ExternalTokenClientTest`, `UserRewardReclaimServiceTest`를 통과했습니다.
+- 체인 `transfer_from`이 요구하는 사전 allowance를 새 raw 지갑 생성 시 토큰별 `approve`로 설정하도록 보강했습니다. 사용자 지갑 private key는 저장하지 않고 승인 호출 중에만 사용하며 `holder_pkey` 감사 로그를 마스킹합니다.
+- 사용자가 초기화를 승인한 특정 테스트 지갑 한 건만 슈퍼 관리자 DID 리워드 현황에서 초기화할 수 있습니다. SOH 리워드 지갑/거래 이력 삭제 후 다음 다대구 로그인에서 승인된 새 지갑을 생성하며, 기존 체인 지갑/토큰 기록은 삭제되지 않습니다.
 
 2026-08-24 토큰 현황 Chapter 표시와 인트로 선행 차단을 확정했습니다.
 

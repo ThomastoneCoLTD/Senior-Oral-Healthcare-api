@@ -8,6 +8,8 @@ import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import com.kaii.dentix.global.common.dto.PagingDTO;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
@@ -268,6 +270,25 @@ public class AdminUserDto {
         private String txHash;
         private String factHash;
         private Date created;
+    }
+
+    @Getter @Setter
+    @NoArgsConstructor @AllArgsConstructor
+    public static class RewardWalletResetRequest {
+        @NotNull
+        private Long userId;
+        @NotBlank
+        private String currentWalletAddress;
+        @NotBlank
+        private String confirmation;
+    }
+
+    @Getter @Builder
+    @NoArgsConstructor @AllArgsConstructor
+    public static class RewardWalletResetResponse {
+        private Long userId;
+        private String resetWalletAddress;
+        private long deletedTransactionCount;
     }
 
     @Getter @Builder
