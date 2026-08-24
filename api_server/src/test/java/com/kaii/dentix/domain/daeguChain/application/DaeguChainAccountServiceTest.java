@@ -29,11 +29,12 @@ class DaeguChainAccountServiceTest {
         properties = new DaeguChainProperties();
         properties.setChain("dchain");
         properties.setToken("configured-token");
+        properties.setAppKey("configured-app-key");
         service = new DaeguChainAccountService(daeguChainClient, properties);
     }
 
     @Test
-    void createAccountUsesConfiguredTokenAndChainWhenRequestOmitsThem() {
+    void createAccountUsesConfiguredUserTokenInsteadOfAppKeyWhenRequestOmitsThem() {
         service.createAccount(new DaeguChainDto.AccountCreateRequest(null, null));
 
         ArgumentCaptor<DaeguChainDto.TokenChainRequest> captor =
@@ -47,6 +48,7 @@ class DaeguChainAccountServiceTest {
     @Test
     void createAccountRequiresTokenWhenRequestAndConfigurationAreEmpty() {
         properties.setToken(null);
+        properties.setAppKey(null);
 
         assertThatThrownBy(() -> service.createAccount(new DaeguChainDto.AccountCreateRequest(null, null)))
                 .isInstanceOf(BadRequestApiException.class)

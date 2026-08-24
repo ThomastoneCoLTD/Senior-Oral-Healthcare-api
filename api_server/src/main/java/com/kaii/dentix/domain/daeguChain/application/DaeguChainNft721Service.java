@@ -117,8 +117,8 @@ public class DaeguChainNft721Service {
     }
 
     private String resolveToken(String token) {
-        String configuredAppKey = properties.resolveAppKey();
-        String resolvedToken = configuredAppKey == null || configuredAppKey.isBlank() ? token : configuredAppKey;
+        String configuredUserToken = properties.resolveUserToken();
+        String resolvedToken = configuredUserToken == null || configuredUserToken.isBlank() ? token : configuredUserToken;
         if (resolvedToken == null || resolvedToken.isBlank()) {
             throw new BadRequestApiException("token is required");
         }

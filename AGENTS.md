@@ -115,7 +115,7 @@ SOH_TERRAFORM_TFVARS_PROD_HCL
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 RDS 비밀번호를 넣지 않습니다. 특히 prod workflow는 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_DATASOURCE_DRIVER_CLASS_NAME`이 `SOH_API_ENV_PROD`에 있으면 배포를 차단합니다. EC2 launch template user-data만 Terraform의 `db_address`, `db_port`, `db_name`, `db_master_user_secret_arn` 값으로 datasource 설정을 생성합니다.
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`는 여러 줄 `KEY=VALUE` 텍스트로 저장합니다. 각 항목은 한 줄에 하나씩 들어가야 하며, 한 줄로 이어 붙이면 Spring이 `SERVER_PORT` 같은 값을 잘못 읽어 시작에 실패할 수 있습니다.
 - 배포 EC2는 AWS Secrets Manager JDBC driver(`com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`)를 사용합니다. `SPRING_DATASOURCE_URL`은 `jdbc-secretsmanager:mysql://...`, `SPRING_DATASOURCE_USERNAME`은 RDS managed secret ARN, `SPRING_DATASOURCE_PASSWORD`는 빈 값으로 설정됩니다.
-- DaeguChain 토큰 API는 `DAEGU_CHAIN_APP_KEY` 또는 `DAEGU_CHAIN_TOKEN`이 없으면 실패합니다. dev/prod 배포 workflow는 `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, `TOKEN_SERVER_BASE_URL_PROD` 별도 Secret이 있으면 `.env`의 같은 키를 덮어씁니다.
+- `DAEGU_CHAIN_APP_KEY`와 `DAEGU_CHAIN_TOKEN`은 용도가 다릅니다. `TOKEN_SERVER_BASE_URL`의 지급·회수 프록시는 앱키를 사용하고, 계정 생성·DID·토큰 approve 같은 대구체인 `/mitum/...` 직접 API는 사용자 토큰을 사용합니다. dev/prod 배포 workflow는 두 값을 모두 요구하며 `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, `TOKEN_SERVER_BASE_URL_PROD` 별도 Secret이 있으면 `.env`의 같은 키를 덮어씁니다.
 - prod 배포 workflow는 운영 토큰 발행/전송 owner 변경을 위해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS_PROD`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY_PROD` 별도 Secret이 있으면 `.env`의 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`를 덮어씁니다.
 - datasource 비밀번호는 앱이 EC2 instance profile 권한으로 RDS Secrets Manager에서 직접 가져옵니다. EC2 IAM role에는 해당 secret에 대한 `secretsmanager:DescribeSecret`, `secretsmanager:GetSecretValue` 권한이 필요합니다.
 - DaeguChain/DID 기능에는 `DAEGU_CHAIN_APP_KEY`, `DAEGU_CHAIN_ID`, `DID_SERVER_BASE_URL`, `DID_CREATE_PATH`, `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_SYMBOL`, `DAEGU_CHAIN_TOKEN_DECIMALS`, `USER_REWARD_TOKEN_TRANSFER_ENABLED` 등을 환경별로 확인합니다.
@@ -231,6 +231,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 운영 owner 주소·private key를 각각 `sender`·`sender_pkey`로 사용하고 owner 주소로 회수하며, private key는 기존 감사 로그 민감 필드 마스킹 대상입니다. 토큰 서버의 HTTP 200 `state=OOPS` 응답도 실패로 처리합니다.
 - `ExternalTokenClientTest`, `UserRewardReclaimServiceTest`를 통과했습니다.
 - 체인 `transfer_from`이 요구하는 사전 allowance를 새 raw 지갑 생성 시 토큰별 `approve`로 설정하도록 보강했습니다. 사용자 지갑 private key는 저장하지 않고 승인 호출 중에만 사용하며 `holder_pkey` 감사 로그를 마스킹합니다.
+- 운영 다대구 재로그인 중 `B0701 유효하지 않은 사용자 토큰`이 발생한 원인은 직접 `/mitum/...` API에도 앱키를 우선 넣던 인증값 혼용이었습니다. 직접 API 서비스는 `DAEGU_CHAIN_TOKEN`을 우선 사용하고, 지급·회수 프록시 `ExternalTokenClient`만 `DAEGU_CHAIN_APP_KEY`를 우선 사용하도록 분리했습니다.
 - 슈퍼 관리자 사용자 관리 화면에 사용자 정보 초기화를 추가했습니다. `POST /admin/user/test-data/reset`은 로그인 ID 재입력을 검증한 뒤 구강체조 진도·SOH 리워드 거래·리워드 지갑을 삭제하고, 계정·기본 인적정보·기관·다대구 연결은 보존합니다. 기존 체인 지갑/토큰 기록은 삭제되지 않습니다.
 
 2026-08-24 토큰 현황 Chapter 표시와 인트로 선행 차단을 확정했습니다.

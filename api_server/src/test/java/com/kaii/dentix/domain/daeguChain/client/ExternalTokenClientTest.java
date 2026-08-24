@@ -31,6 +31,7 @@ class ExternalTokenClientTest {
     void setUp() {
         properties = new DaeguChainProperties();
         properties.setAppKey("app-token");
+        properties.setToken("user-token");
         properties.setTokenServerBaseUrl("https://token.example.com");
         properties.setTokenCreatePath("/token/create");
         properties.setTokenTransferPath("/token/transfer");

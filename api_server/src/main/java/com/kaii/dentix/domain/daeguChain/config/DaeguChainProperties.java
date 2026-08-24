@@ -39,6 +39,10 @@ public class DaeguChainProperties {
         return hasText(appKey) ? appKey : token;
     }
 
+    public String resolveUserToken() {
+        return hasText(token) ? token : appKey;
+    }
+
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
     }
