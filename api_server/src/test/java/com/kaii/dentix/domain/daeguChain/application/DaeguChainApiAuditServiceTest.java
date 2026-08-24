@@ -5,7 +5,10 @@ import com.kaii.dentix.domain.daeguChain.dao.DaeguChainApiLogRepository;
 import com.kaii.dentix.domain.daeguChain.domain.DaeguChainApiLog;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,6 +16,21 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 class DaeguChainApiAuditServiceTest {
+
+    @Test
+    void failureAuditUsesIndependentTransaction() throws Exception {
+        Method method = DaeguChainApiAuditService.class.getMethod(
+                "recordFailure",
+                String.class,
+                Object.class,
+                RuntimeException.class
+        );
+
+        Transactional transactional = method.getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.propagation()).isEqualTo(Propagation.REQUIRES_NEW);
+    }
 
     @Test
     void recordsMaskedRequestAndResponseForCurrentUser() {

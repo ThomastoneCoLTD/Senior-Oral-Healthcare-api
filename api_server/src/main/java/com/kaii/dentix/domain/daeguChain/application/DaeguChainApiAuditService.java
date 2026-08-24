@@ -60,6 +60,7 @@ public class DaeguChainApiAuditService {
         }
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordFailure(String api, Object request, RuntimeException exception) {
         record(
                 api,

@@ -294,7 +294,8 @@ class UserDaeguProvisioningServiceTest {
 
         assertThatThrownBy(() -> service.provisionForDadaegu(user, "did:daegu:new-user"))
                 .isInstanceOf(BadRequestApiException.class)
-                .hasMessage("DaeguChain reward reclaim approval failed");
+                .hasMessageContaining("DaeguChain reward reclaim approval failed")
+                .hasMessageContaining("state=OOPS");
         verify(userRewardWalletRepository, never()).save(any(UserRewardWallet.class));
     }
 }

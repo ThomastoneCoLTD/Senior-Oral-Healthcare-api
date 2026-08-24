@@ -212,9 +212,23 @@ public class UserDaeguProvisioningService {
                     ))
             );
             if (isFailedResponse(response)) {
-                throw new BadRequestApiException("DaeguChain reward reclaim approval failed");
+                throw new BadRequestApiException(buildApprovalFailureMessage(response));
             }
         }
+    }
+
+    private String buildApprovalFailureMessage(DaeguChainDto.ApiResponse<?> response) {
+        StringBuilder message = new StringBuilder("DaeguChain reward reclaim approval failed");
+        if (!isBlank(response.getState())) {
+            message.append(". state=").append(response.getState());
+        }
+        if (!isBlank(response.getMsg())) {
+            message.append(", msg=").append(response.getMsg());
+        }
+        if (response.getRcode() != null && !response.getRcode().isEmpty()) {
+            message.append(", rcode=").append(response.getRcode());
+        }
+        return message.toString();
     }
 
     private boolean isFailedResponse(DaeguChainDto.ApiResponse<?> response) {

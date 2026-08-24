@@ -225,6 +225,11 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 ## 최근 동기화 상태
 
+2026-08-24 다대구 로그인 중 대구체인 API 실패 로그 보존을 보강했습니다.
+
+- `user_login_history`는 로그인 성공 이력만 저장하므로 지갑 생성·회수 권한 승인 단계에서 실패한 요청은 로그인 이력에 남지 않습니다.
+- 실패한 대구체인 API 감사 로그는 바깥 로그인 트랜잭션이 롤백되어도 보존되도록 `REQUIRES_NEW` 트랜잭션으로 저장합니다. HTTP 오류뿐 아니라 HTTP 200의 `state=OOPS/ERROR/FAIL` 승인 응답도 state, msg, rcode를 예외 메시지에 포함해 원인을 확인할 수 있게 했습니다.
+
 2026-08-24 다대구 로그인 계정의 리워드 토큰 회수를 외부 DID 조회와 분리했습니다.
 
 - 회수는 `/token/transfer`에 `user_DID`를 보내지 않고 회수 전용 `/token/retrieve`(`transfer_from`)를 사용합니다. 가입 경로와 무관하게 저장된 지갑 주소를 `holder`로 보내므로 토큰 서버 로컬 DID DB에 없는 다대구 `did:key`도 회수 흐름에 영향을 주지 않습니다.
