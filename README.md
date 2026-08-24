@@ -20,6 +20,7 @@ Artifact prefix: soh
 - Locked core-video responses keep the thumbnail metadata but omit `videoUrl`.
 - `POST /oral-exercise/interactions` enforces the same previous-completion rule, so a client cannot bypass the sequence by calling the interaction API directly.
 - The intro and always-open videos remain available independently of the five-week core sequence.
+- Exercise titles are displayed as `Intro` for the first video and `Chapter 1` through `Chapter 11` for the remaining videos. Core reward tokens remain Chapter 1-5, while Intro and Chapter 6-11 remain always-open content.
 
 ## Infrastructure Overview
 

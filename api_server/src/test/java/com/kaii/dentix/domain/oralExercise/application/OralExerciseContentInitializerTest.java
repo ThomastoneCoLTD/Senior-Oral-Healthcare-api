@@ -42,6 +42,23 @@ class OralExerciseContentInitializerTest {
         List<OralExerciseContent> savedContents = contentCaptor.getAllValues();
         OralExerciseContent introContent = findBySort(savedContents, 1);
 
+        assertThat(savedContents.stream()
+                .sorted(java.util.Comparator.comparingInt(OralExerciseContent::getContentSort))
+                .map(OralExerciseContent::getTitle))
+                .containsExactly(
+                        "Intro. 입체조의 효능",
+                        "Chapter 1. 목 스트레칭",
+                        "Chapter 2. 타액이 나오는 입체조",
+                        "Chapter 3. 삼키는 힘 기르는 입체조",
+                        "Chapter 4. 말하는 힘 기르는 입체조",
+                        "Chapter 5. 씹는 힘 기르는 입체조",
+                        "Chapter 6. 구강건조증 관리법",
+                        "Chapter 7. 의치 사용 및 관리법",
+                        "Chapter 8. 올바른 칫솔질",
+                        "Chapter 9. 구취 예방과 관리",
+                        "Chapter 10. 삼킴 건강과 식사의 관계",
+                        "Chapter 11. 구강건강, 스스로 지키는 습관"
+                );
         assertThat(introContent.getLevel()).isEqualTo("INTRO");
         assertThat(introContent.getThumbnailUrl()).endsWith("optional_video_1.png");
         assertThat(findBySort(savedContents, 2).getThumbnailUrl()).endsWith("essential_video_1.png");

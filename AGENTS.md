@@ -187,6 +187,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 운영/개발 앱 시작 시 과거 계정 확인 질문 9개를 ID와 정렬값 `1~9`로 upsert합니다. 신규 DB에서 `find_pwd_question`이 비어 있어 회원가입 질문을 선택할 수 없는 상태를 방지하고 기존 `user.find_pwd_question_id` 참조 의미를 유지합니다.
 - 구강체조 인트로/상시영상은 처음부터 볼 수 있도록 `available`, `currentWeekContent`, `week` 응답 값을 조정했습니다.
 - 구강체조 편성은 1화 인트로가 `optional_video_1`, 2~6화 필수영상이 `essential_video_1~5`, 7~12화 상시영상이 `optional_video_2~7`입니다.
+- 구강체조 화면의 Chapter 표시는 1화가 `Intro`, 2~12화가 각각 `Chapter 1~11`입니다. 필수 토큰은 `Chapter 1~5`, 상시영상은 `Intro`와 `Chapter 6~11`로 표시하며 내부 `contentSort`와 토큰명 매핑은 변경하지 않습니다.
 - 2~6화 필수영상은 1회차를 즉시 이용할 수 있고, 이후 회차는 바로 이전 필수영상을 시청 완료하면 가입 주차를 기다리지 않고 즉시 열립니다. 잠긴 필수영상은 `/oral-exercise` 응답에서 `available=false`, `videoUrl=null`이며 `/oral-exercise/interactions` 직접 호출도 같은 선행 완료 조건으로 차단합니다. 1화 인트로 및 7~12화 상시영상은 계속 열려 있어야 합니다.
 - 사용자 로그인 화면은 아이디 찾기와 비밀번호 찾기를 모두 제공합니다. 아이디 찾기는 이름·정규화된 휴대폰 번호·생년월일을 확인하고, 비밀번호 찾기는 아이디·가입 시 질문·답변 확인 후 10분 유효한 일회용 토큰을 발급해 새 비밀번호를 설정합니다. 토큰 원문은 저장하지 않고 SHA-256 해시만 `password_reset_token`에 저장하며 사용·만료 토큰은 재사용할 수 없습니다.
 - 구강체조 리워드 지급/회수 흐름을 token server 기반으로 정리했습니다.
@@ -222,6 +223,11 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 운영 환경에서 과거 DID·지갑 미완성 로컬 가입 계정으로 리워드 버튼을 눌러 DID·지갑 자동 복구와 실제 토큰 전송이 성공하는지 확인합니다.
 
 ## 최근 동기화 상태
+
+2026-08-24 구강체조 Chapter 표시를 Intro와 Chapter 1~11 구조로 조정했습니다.
+
+- 1화 제목은 `Intro. 입체조의 효능`, 2~12화는 기존 주제를 유지하면서 Chapter 번호를 `1~11`로 한 단계씩 조정합니다.
+- 필수 토큰 `essential_video_1~5`와 상시영상 `optional_video_1~7` 매핑 및 공개 정책은 그대로 유지합니다.
 
 2026-08-21 다대구 DID 사용자의 리워드 지급을 토큰 서버 로컬 DID 조회와 분리했습니다.
 
