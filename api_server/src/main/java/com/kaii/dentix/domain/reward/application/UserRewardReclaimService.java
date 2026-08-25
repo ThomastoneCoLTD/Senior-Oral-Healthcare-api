@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -51,6 +52,134 @@ public class UserRewardReclaimService {
     private final DaeguChainProperties daeguChainProperties;
     private final UserRewardProperties userRewardProperties;
     private final JwtTokenUtil jwtTokenUtil;
+
+    public record ResetReclaimResult(
+            int reclaimedCount,
+            int skippedCount,
+            int failedCount,
+            long reclaimedAmount
+    ) {
+    }
+
+    /**
+     * Reclaims every token that was actually transferred before an administrator deletes
+     * the user's reward records. The token server resolves the holder signing key by wallet
+     * address, so this path also supports legacy wallets whose stored SOH key is a DID key.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public ResetReclaimResult reclaimTransferredTokensForReset(Long userId) {
+        List<UserRewardTransaction> allTransactions =
+                userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId);
+        List<UserRewardTransaction> transferredRewards = allTransactions.stream()
+                .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
+                .filter(transaction -> transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                .toList();
+        if (transferredRewards.isEmpty()) {
+            return new ResetReclaimResult(0, 0, 0, 0L);
+        }
+
+        List<UserRewardTransaction> pendingRewards = new ArrayList<>();
+        int skippedCount = 0;
+        for (UserRewardTransaction rewardTransaction : transferredRewards) {
+            String idempotencyKey = buildReclaimIdempotencyKey(userId, rewardTransaction);
+            if (userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey)
+                    .filter(transaction -> transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                    .isPresent()) {
+                skippedCount += 1;
+            } else {
+                pendingRewards.add(rewardTransaction);
+            }
+        }
+        if (pendingRewards.isEmpty()) {
+            return new ResetReclaimResult(0, skippedCount, 0, 0L);
+        }
+
+        UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
+                .orElseThrow(() -> new BadRequestApiException(
+                        "reward wallet is required to reclaim transferred tokens before reset"
+                ));
+        if (isBlank(wallet.getWalletAddress())) {
+            throw new BadRequestApiException(
+                    "reward wallet address is required to reclaim transferred tokens before reset"
+            );
+        }
+        if (isBlank(daeguChainProperties.getTokenOwnerAddress())) {
+            throw new BadRequestApiException("token owner address is not configured");
+        }
+        if (isBlank(daeguChainProperties.getTokenOwnerPrivateKey())) {
+            throw new BadRequestApiException("token owner private key is not configured");
+        }
+
+        Map<String, String> tokenContracts = DaeguChainApiLogContext.withUser(
+                userId,
+                "사용자 정보 초기화 전 리워드 회수",
+                () -> getRewardTokenContractsIfNeeded(pendingRewards)
+        );
+        int reclaimedCount = 0;
+        int failedCount = 0;
+        long reclaimedAmount = 0L;
+
+        for (UserRewardTransaction rewardTransaction : pendingRewards) {
+            String tokenContractAddress = resolveTokenContractAddress(rewardTransaction, tokenContracts);
+            String idempotencyKey = buildReclaimIdempotencyKey(userId, rewardTransaction);
+            UserRewardTransaction reclaimTransaction = userRewardTransactionRepository
+                    .findByIdempotencyKey(idempotencyKey)
+                    .orElseGet(() -> userRewardTransactionRepository.save(UserRewardTransaction.builder()
+                            .userId(userId)
+                            .oralExerciseContent(rewardTransaction.getOralExerciseContent())
+                            .type(UserRewardTransactionType.ORAL_EXERCISE_RECLAIM)
+                            .status(UserRewardTransactionStatus.LOCAL_RECORDED)
+                            .amount(rewardTransaction.getAmount())
+                            .balanceAfter(rewardTransaction.getBalanceAfter())
+                            .idempotencyKey(idempotencyKey)
+                            .sessionId(rewardTransaction.getSessionId())
+                            .coinId(rewardTransaction.getCoinId())
+                            .tokenContractAddress(tokenContractAddress)
+                            .build()));
+            if (isBlank(reclaimTransaction.getTokenContractAddress()) && !isBlank(tokenContractAddress)) {
+                reclaimTransaction.updateTokenContractAddress(tokenContractAddress);
+            }
+
+            if (isBlank(tokenContractAddress)) {
+                reclaimTransaction.markTokenTransferFailed();
+                userRewardTransactionRepository.save(reclaimTransaction);
+                failedCount += 1;
+                continue;
+            }
+
+            try {
+                JsonNode response = DaeguChainApiLogContext.withUser(
+                        userId,
+                        "사용자 정보 초기화 전 리워드 회수",
+                        () -> externalTokenClient.reclaimToken(
+                                normalizeTokenName(rewardTransaction.getCoinId()),
+                                tokenContractAddress,
+                                wallet.getWalletAddress(),
+                                daeguChainProperties.getTokenOwnerAddress(),
+                                rewardTransaction.getAmount()
+                        )
+                );
+                reclaimTransaction.markTokenTransferred(
+                        findFirstText(response, "tx_hash", "transaction_hash", "hash", "Date"),
+                        findFirstText(response, "fact_hash")
+                );
+                reclaimedCount += 1;
+                reclaimedAmount += rewardTransaction.getAmount();
+            } catch (RuntimeException exception) {
+                reclaimTransaction.markTokenTransferFailed();
+                failedCount += 1;
+                log.warn(
+                        "Unable to reclaim reward before reset. userId={}, transactionId={}, message={}",
+                        userId,
+                        rewardTransaction.getUserRewardTransactionId(),
+                        exception.getMessage()
+                );
+            }
+            userRewardTransactionRepository.save(reclaimTransaction);
+        }
+
+        return new ResetReclaimResult(reclaimedCount, skippedCount, failedCount, reclaimedAmount);
+    }
 
     @Transactional
     public UserRewardDto.ReclaimResponse reclaimOralExerciseTokens(HttpServletRequest request) {

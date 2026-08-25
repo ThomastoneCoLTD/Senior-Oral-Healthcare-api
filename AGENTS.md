@@ -252,7 +252,12 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - `ExternalTokenClientTest`, `UserRewardReclaimServiceTest`를 통과했습니다.
 - 체인 `transfer_from`이 요구하는 사전 allowance를 새 raw 지갑 생성 시 토큰별 `approve`로 설정하도록 보강했습니다. 사용자 지갑 private key는 저장하지 않고 승인 호출 중에만 사용하며 `holder_pkey` 감사 로그를 마스킹합니다.
 - 운영 다대구 재로그인 중 `B0701 유효하지 않은 사용자 토큰`이 발생한 원인은 직접 `/mitum/...` API에도 앱키를 우선 넣던 인증값 혼용이었습니다. 직접 API 서비스는 `DAEGU_CHAIN_TOKEN`을 우선 사용하고, 지급·회수 프록시 `ExternalTokenClient`만 `DAEGU_CHAIN_APP_KEY`를 우선 사용하도록 분리했습니다.
-- 슈퍼 관리자 사용자 관리 화면에 사용자 정보 초기화를 추가했습니다. `POST /admin/user/test-data/reset`은 로그인 ID 재입력을 검증한 뒤 구강체조 진도·SOH 리워드 거래·리워드 지갑을 삭제하고, 계정·기본 인적정보·기관·다대구 연결은 보존합니다. 기존 체인 지갑/토큰 기록은 삭제되지 않습니다.
+- 슈퍼 관리자 사용자 관리 화면에 사용자 정보 초기화를 추가했습니다. `POST /admin/user/test-data/reset`은 로그인 ID 재입력을 검증하고 `TOKEN_TRANSFERRED` 리워드를 운영 owner 지갑으로 모두 회수한 뒤에만 구강체조 진도·SOH 리워드 거래·리워드 지갑을 삭제합니다. 한 건이라도 회수에 실패하면 DB 초기화를 중단하고 성공한 회수 이력을 보존해 재시도 시 중복 회수를 방지합니다. 계정·기본 인적정보·기관·다대구 연결은 보존합니다.
+
+2026-08-25 사용자 정보 초기화 전 체인 토큰 회수를 추가했습니다.
+
+- 슈퍼 관리자 초기화는 실제 전송 완료된 리워드를 `/token/retrieve`로 먼저 회수하며, 전부 성공한 경우에만 진도·거래·지갑 DB 행을 삭제합니다.
+- 기존 로컬 가입 지갑은 SOH에 잘못 저장된 Ed25519 DID 키를 사용하지 않습니다. DID 서버가 자체 키 저장소에서 해당 주소의 체인 지갑키를 읽어 공식 대구체인 `/token/approve`에만 전달하고 owner allowance를 승인한 뒤 `transfer_from`을 수행합니다. 키는 API 응답·감사 로그에 노출하지 않습니다.
 
 2026-08-24 토큰 현황 Chapter 표시와 인트로 선행 차단을 확정했습니다.
 

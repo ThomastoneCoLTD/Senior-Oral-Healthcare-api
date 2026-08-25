@@ -17,6 +17,7 @@ import com.kaii.dentix.domain.oralExercise.dao.OralExerciseContentRepository;
 import com.kaii.dentix.domain.oralExercise.dao.UserOralExerciseProgressRepository;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.domain.Organization;
+import com.kaii.dentix.domain.reward.application.UserRewardReclaimService;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.type.YnType;
@@ -75,6 +76,7 @@ class AdminUserServiceTest {
     @Mock private UserRewardWalletRepository userRewardWalletRepository;
     @Mock private UserLoginHistoryRepository userLoginHistoryRepository;
     @Mock private DaeguChainApiLogRepository daeguChainApiLogRepository;
+    @Mock private UserRewardReclaimService userRewardReclaimService;
 
     private AdminUserService adminUserService;
 
@@ -99,7 +101,8 @@ class AdminUserServiceTest {
                 userRewardTransactionRepository,
                 userRewardWalletRepository,
                 userLoginHistoryRepository,
-                daeguChainApiLogRepository
+                daeguChainApiLogRepository,
+                userRewardReclaimService
         );
     }
 
@@ -182,6 +185,8 @@ class AdminUserServiceTest {
 
         when(adminService.getTokenAdmin(request)).thenReturn(superAdmin);
         when(userRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(user));
+        when(userRewardReclaimService.reclaimTransferredTokensForReset(10L))
+                .thenReturn(new UserRewardReclaimService.ResetReclaimResult(5, 0, 0, 5L));
         when(userRewardTransactionRepository.deleteByUserId(10L)).thenReturn(6L);
         when(oralExerciseProgressRepository.deleteByUserId(10L)).thenReturn(12L);
         when(userRewardWalletRepository.deleteByUserId(10L)).thenReturn(1L);
@@ -191,12 +196,37 @@ class AdminUserServiceTest {
 
         assertThat(response.getUserId()).isEqualTo(10L);
         assertThat(response.getUserLoginIdentifier()).isEqualTo("test-user");
+        assertThat(response.getReclaimedTokenCount()).isEqualTo(5);
+        assertThat(response.getSkippedReclaimCount()).isZero();
+        assertThat(response.getReclaimedAmount()).isEqualTo(5L);
         assertThat(response.getDeletedProgressCount()).isEqualTo(12L);
         assertThat(response.getDeletedTransactionCount()).isEqualTo(6L);
         assertThat(response.getDeletedWalletCount()).isEqualTo(1L);
         verify(userRewardTransactionRepository).deleteByUserId(10L);
         verify(oralExerciseProgressRepository).deleteByUserId(10L);
         verify(userRewardWalletRepository).deleteByUserId(10L);
+    }
+
+    @Test
+    void resetUserTestDataStopsWithoutDeletingWhenTokenReclaimFails() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        Admin superAdmin = Admin.builder().adminIsSuper(YnType.Y).build();
+        User user = User.builder().userId(10L).userLoginIdentifier("test-user").build();
+        AdminUserDto.UserTestDataResetRequest resetRequest =
+                new AdminUserDto.UserTestDataResetRequest(10L, "test-user");
+
+        when(adminService.getTokenAdmin(request)).thenReturn(superAdmin);
+        when(userRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(user));
+        when(userRewardReclaimService.reclaimTransferredTokensForReset(10L))
+                .thenReturn(new UserRewardReclaimService.ResetReclaimResult(4, 0, 1, 4L));
+
+        assertThatThrownBy(() -> adminUserService.resetUserTestData(request, resetRequest))
+                .hasMessageContaining("토큰 회수에 실패")
+                .hasMessageContaining("1");
+
+        verify(userRewardTransactionRepository, org.mockito.Mockito.never()).deleteByUserId(any());
+        verify(oralExerciseProgressRepository, org.mockito.Mockito.never()).deleteByUserId(any());
+        verify(userRewardWalletRepository, org.mockito.Mockito.never()).deleteByUserId(any());
     }
 
     @Test

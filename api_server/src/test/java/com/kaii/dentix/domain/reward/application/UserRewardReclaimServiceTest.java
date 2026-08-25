@@ -74,6 +74,13 @@ class UserRewardReclaimServiceTest {
                 .walletAddress("0x-user-wallet")
                 .walletPrivateKeyCiphertext("encrypted-private-key")
                 .build()));
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(5L)
+                .daeguDid("did:key:z6Mk-local")
+                .walletAddress("0x-legacy-wallet")
+                .walletPrivateKeyCiphertext("encrypted-legacy-did-key")
+                .build()));
         when(transactionRepository.save(any(UserRewardTransaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
@@ -123,6 +130,52 @@ class UserRewardReclaimServiceTest {
 
         verifyNoInteractions(externalTokenClient);
         verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any());
+    }
+
+    @Test
+    void reclaimTransferredTokensForResetUsesTokenServerForLegacyWalletWithoutDirectApproval() throws Exception {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
+        when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
+        when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(objectMapper.readTree("""
+                        {
+                          "tx_hash": "0x-reset-reclaim-tx",
+                          "fact_hash": "reset-reclaim-fact"
+                        }
+                        """));
+
+        UserRewardReclaimService.ResetReclaimResult result =
+                service.reclaimTransferredTokensForReset(7L);
+
+        assertThat(result.reclaimedCount()).isEqualTo(5);
+        assertThat(result.skippedCount()).isZero();
+        assertThat(result.failedCount()).isZero();
+        assertThat(result.reclaimedAmount()).isEqualTo(5L);
+        verify(externalTokenClient, times(5)).reclaimToken(
+                startsWith("ESSENTIAL_VIDEO_"),
+                startsWith("0x-token-contract-"),
+                eq("0x-legacy-wallet"),
+                eq("0x-token-owner"),
+                eq(1L)
+        );
+        verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any());
+    }
+
+    @Test
+    void reclaimTransferredTokensForResetReturnsFailureForAdminToAbortDeletion() {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
+        when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
+        when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+                .thenThrow(new com.kaii.dentix.global.common.error.exception.BadRequestApiException(
+                        "token retrieve failed"
+                ));
+
+        UserRewardReclaimService.ResetReclaimResult result =
+                service.reclaimTransferredTokensForReset(7L);
+
+        assertThat(result.reclaimedCount()).isZero();
+        assertThat(result.failedCount()).isEqualTo(5);
+        assertThat(result.reclaimedAmount()).isZero();
     }
 
     @Test

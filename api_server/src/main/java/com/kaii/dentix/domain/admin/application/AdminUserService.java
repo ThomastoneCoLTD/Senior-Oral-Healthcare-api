@@ -20,6 +20,7 @@ import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.organization.application.OrganizationSubscriptionService;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.domain.organization.domain.OrganizationSubscription;
+import com.kaii.dentix.domain.reward.application.UserRewardReclaimService;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
@@ -107,6 +108,7 @@ public class AdminUserService {
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final UserLoginHistoryRepository userLoginHistoryRepository;
     private final DaeguChainApiLogRepository daeguChainApiLogRepository;
+    private final UserRewardReclaimService userRewardReclaimService;
 
     @Transactional
     public AdminUserDto.UserTestDataResetResponse resetUserTestData(
@@ -126,18 +128,32 @@ public class AdminUserService {
             throw new BadRequestApiException("확인용 사용자 로그인 ID가 일치하지 않습니다.");
         }
 
+        UserRewardReclaimService.ResetReclaimResult reclaimResult =
+                userRewardReclaimService.reclaimTransferredTokensForReset(userId);
+        if (reclaimResult.failedCount() > 0) {
+            throw new BadRequestApiException(
+                    "토큰 회수에 실패하여 사용자 정보 초기화를 중단했습니다. "
+                            + "실패 건수: " + reclaimResult.failedCount()
+            );
+        }
+
         userRewardWalletRepository.findByUserIdForUpdate(userId);
         long deletedTransactionCount = userRewardTransactionRepository.deleteByUserId(userId);
         long deletedProgressCount = oralExerciseProgressRepository.deleteByUserId(userId);
         long deletedWalletCount = userRewardWalletRepository.deleteByUserId(userId);
         log.warn(
-                "Super admin reset user test data. adminId={}, userId={}, progress={}, transactions={}, wallets={}",
-                admin.getAdminId(), userId, deletedProgressCount, deletedTransactionCount, deletedWalletCount
+                "Super admin reset user test data. adminId={}, userId={}, reclaimed={}, skipped={}, "
+                        + "reclaimedAmount={}, progress={}, transactions={}, wallets={}",
+                admin.getAdminId(), userId, reclaimResult.reclaimedCount(), reclaimResult.skippedCount(),
+                reclaimResult.reclaimedAmount(), deletedProgressCount, deletedTransactionCount, deletedWalletCount
         );
 
         return AdminUserDto.UserTestDataResetResponse.builder()
                 .userId(userId)
                 .userLoginIdentifier(user.getUserLoginIdentifier())
+                .reclaimedTokenCount(reclaimResult.reclaimedCount())
+                .skippedReclaimCount(reclaimResult.skippedCount())
+                .reclaimedAmount(reclaimResult.reclaimedAmount())
                 .deletedProgressCount(deletedProgressCount)
                 .deletedTransactionCount(deletedTransactionCount)
                 .deletedWalletCount(deletedWalletCount)

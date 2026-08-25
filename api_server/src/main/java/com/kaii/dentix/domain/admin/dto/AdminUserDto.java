@@ -286,6 +286,9 @@ public class AdminUserDto {
     public static class UserTestDataResetResponse {
         private Long userId;
         private String userLoginIdentifier;
+        private int reclaimedTokenCount;
+        private int skippedReclaimCount;
+        private long reclaimedAmount;
         private long deletedProgressCount;
         private long deletedTransactionCount;
         private long deletedWalletCount;
