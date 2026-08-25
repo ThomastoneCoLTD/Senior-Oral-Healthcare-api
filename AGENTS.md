@@ -128,9 +128,9 @@ DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_PROD
 - 다대구 성별은 추가 입력 없이 VC 값을 백엔드 `M`/`W`로 정규화합니다. 영문 `M/F/W`, `MALE/FEMALE`, `MAN/WOMAN`, 한글 `남/남성/남자`, `여/여성/여자`, 주민번호 성별 코드 `1~8`, 따옴표·공백·괄호가 포함된 표현을 지원합니다.
 - 개발 DID/token 서버는 현재 `DID_SERVER_BASE_URL=http://43.201.125.82`, `TOKEN_SERVER_BASE_URL=http://43.201.125.82`를 사용합니다. 배포 API에서 `TOKEN_SERVER_BASE_URL`이 `http://localhost:5000`이면 EC2 자기 자신을 호출해 token list/create/transfer가 connection refused로 실패합니다.
 - DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. DID 로그인은 SOH DB에 저장된 사용자 자체 DID 발급 상태와 DID 문자열만 확인하며, VC-JWT credential 발급/검증은 사용하지 않습니다.
-- 일반 비밀번호 회원가입과 DID/다대구 회원가입은 모두 DID 연결·리워드 지갑 생성이 완료되어야 성공합니다. 외부 프로비저닝 실패를 `null`로 삼켜 불완전 계정을 남기지 않습니다. 로컬 회원가입은 SOH DID 서버 응답에서 DID와 공개키만 사용하고, DID 응답의 주소·private key를 리워드 지갑에 재사용하지 않습니다. 가입 경로와 무관하게 리워드 지갑은 `/mitum/com/acc_create`의 주소·private key 한 쌍으로 별도 생성하고 `/mitum/com/acc_faucet`으로 체인 계정을 활성화합니다. 기존 지갑 주소와 암호화된 서명키가 모두 있으면 재사용하며, 서명키가 없는 기존 지갑만 새 주소·키로 멱등성 보정합니다. 토큰 balance state가 생기기 전 approve는 `P06D504`로 실패하므로 로그인에서는 승인하지 않고, 실제 토큰 지급 성공 직후 해당 contract만 승인하며 회수 직전에도 재확인합니다.
+- 일반 비밀번호 회원가입과 DID/다대구 회원가입은 모두 DID 연결·리워드 지갑 생성이 완료되어야 성공합니다. 외부 프로비저닝 실패를 `null`로 삼켜 불완전 계정을 남기지 않습니다. 로컬 회원가입은 SOH DID 서버 응답에서 DID와 공개키만 사용하고, DID 응답의 주소·private key를 리워드 지갑에 재사용하지 않습니다. 가입 경로와 무관하게 리워드 지갑은 `/mitum/com/acc_create`의 주소·private key 한 쌍으로 별도 생성하고 `/mitum/com/acc_faucet`으로 체인 계정을 활성화합니다. 기존 지갑 주소와 암호화된 대구체인 서명키가 모두 있으면 재사용하며, 서명키가 없거나 과거 Ed25519 DID private key 형식이면 새 주소·키로 멱등성 보정합니다. 토큰 balance state가 생기기 전 approve는 `P06D504`로 실패하므로 로그인에서는 승인하지 않고, 실제 토큰 지급 성공 직후 해당 contract만 승인하며 회수 직전에도 재확인합니다.
 - reward reclaim은 사용자 DID private key를 SOH에서 읽거나 저장하지 않고, token server의 `TOKEN_RECLAIM_PATH`(기본 `/token/retrieve`)로 요청합니다. 저장된 리워드 지갑 주소를 `holder`, 운영 owner 주소를 `sender`·`receiver`로 사용하고 운영 owner private key만 백엔드 Secret에서 읽습니다. 다대구 외부 DID는 회수 요청의 `user_DID`로 보내지 않으며 owner private key는 API 감사 로그에서 마스킹합니다.
-- SOH가 대구체인 raw 리워드 지갑을 생성할 때는 응답의 지갑 private key를 AES-256-GCM으로 암호화해 저장하고 평문은 즉시 폐기합니다. 기존 DID 서버가 반환한 64자리 raw hex 지갑키는 승인 요청 직전에 `0x` 접두사를 보정해 기존 주소와 토큰을 유지합니다. `holder_pkey`는 API 감사 로그에서 마스킹합니다. 슈퍼 관리자는 사용자 관리 화면에서 정확한 대상 로그인 ID를 재입력한 경우에만 구강체조 진도·리워드 거래·리워드 지갑을 초기화할 수 있습니다. 계정·기본 인적정보·기관·다대구 연결은 유지되며 다음 로그인 또는 지갑 조회에서 승인 가능한 새 지갑을 생성합니다.
+- SOH가 대구체인 raw 리워드 지갑을 생성할 때는 응답의 지갑 private key를 AES-256-GCM으로 암호화해 저장하고 평문은 즉시 폐기합니다. 기존 DID 서버가 반환한 64자리 raw hex/`0x` hex 키는 Ed25519 DID 키이므로 `/mitum/token/approve` 지갑키로 변환하거나 재사용하지 않고 새 대구체인 지갑을 생성합니다. `holder_pkey`는 API 감사 로그에서 마스킹합니다. 슈퍼 관리자는 사용자 관리 화면에서 정확한 대상 로그인 ID를 재입력한 경우에만 구강체조 진도·리워드 거래·리워드 지갑을 초기화할 수 있습니다. 계정·기본 인적정보·기관·다대구 연결은 유지되며 다음 로그인 또는 지갑 조회에서 승인 가능한 새 지갑을 생성합니다.
 
 ## Terraform 및 수동 구축
 
@@ -232,7 +232,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 2026-08-25 로컬 가입 DID 키와 리워드 지갑 서명키를 분리했습니다.
 
 - 로컬 가입은 SOH DID 서버의 DID·공개키만 저장하고 리워드 지갑은 다대구 가입과 동일하게 `/mitum/com/acc_create`와 `acc_faucet`으로 별도 생성합니다.
-- 기존 로컬 지갑에 저장된 64자리 raw hex 개인키는 `/mitum/token/approve` 호출 시 `0x` 형식으로 보정하며, 주소는 있으나 암호화된 서명키가 없는 지갑만 새 지갑으로 교체합니다.
+- 기존 로컬 지갑의 64자리 raw hex/`0x` hex 키는 접두사 문제가 아니라 Ed25519 DID 키이므로 비호환 지갑으로 판정해 새 `/mitum/com/acc_create` 지갑으로 교체합니다. 이미 구 지갑으로 토큰 지급이 완료된 테스트 사용자는 자동 중복 지급하지 않으며 슈퍼 관리자 테스트 데이터 초기화 후 새 지갑으로 다시 수령해야 합니다. 비호환 지갑의 회수 요청은 외부 approve를 호출하지 않고 초기화·재지급 안내 오류로 차단합니다.
 - 대구체인 오류 응답이 `holder_pkey` 등 요청 민감값을 메시지 안에 되돌려 보내더라도 API 예외와 감사 로그에 원문이 남지 않도록 재마스킹합니다.
 
 2026-08-24 신규 리워드 지갑의 체인 활성화 순서를 보강했습니다.

@@ -251,7 +251,10 @@ public class UserRewardService {
     private void syncWalletFromUser(Long userId, UserRewardWallet wallet) {
         if (!isBlank(wallet.getDaeguDid())
                 && !isBlank(wallet.getWalletAddress())
-                && !isBlank(wallet.getWalletPrivateKeyCiphertext())) {
+                && !isBlank(wallet.getWalletPrivateKeyCiphertext())
+                && !rewardWalletProvisioningService.requiresWalletReplacement(
+                        wallet.getWalletPrivateKeyCiphertext()
+                )) {
             return;
         }
         userRepository.findById(userId)
@@ -282,7 +285,11 @@ public class UserRewardService {
                     if (isBlank(walletAddress)) {
                         walletAddress = extractWalletAddress(user);
                     }
-                    if (isBlank(walletAddress) || isBlank(walletPrivateKeyCiphertext)) {
+                    if (isBlank(walletAddress)
+                            || isBlank(walletPrivateKeyCiphertext)
+                            || rewardWalletProvisioningService.requiresWalletReplacement(
+                                    walletPrivateKeyCiphertext
+                            )) {
                         DaeguRewardWalletProvisioningService.ProvisionedWallet provisionedWallet =
                                 rewardWalletProvisioningService.createActivatedWallet(userId);
                         walletAddress = provisionedWallet.walletAddress();

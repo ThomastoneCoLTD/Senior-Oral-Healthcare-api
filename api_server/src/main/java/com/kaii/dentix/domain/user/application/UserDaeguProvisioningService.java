@@ -48,7 +48,7 @@ public class UserDaeguProvisioningService {
         return userRewardWalletRepository.findByUserId(user.getUserId())
                 .map(wallet -> {
                     String walletAddress = wallet.getWalletAddress();
-                    if (isBlank(walletAddress) || isBlank(wallet.getWalletPrivateKeyCiphertext())) {
+                    if (requiresWalletProvisioning(walletAddress, wallet.getWalletPrivateKeyCiphertext())) {
                         WalletProvision provision = resolveWallet(user.getUserId());
                         walletAddress = provision.walletAddress();
                         wallet.updateWalletPrivateKeyCiphertext(provision.privateKeyCiphertext());
@@ -119,8 +119,10 @@ public class UserDaeguProvisioningService {
         return userRewardWalletRepository.findByUserId(user.getUserId())
                 .map(wallet -> {
                     String daeguDid = user.getDaeguDid();
-                    if (!isBlank(wallet.getWalletAddress())
-                            && !isBlank(wallet.getWalletPrivateKeyCiphertext())) {
+                    if (!requiresWalletProvisioning(
+                            wallet.getWalletAddress(),
+                            wallet.getWalletPrivateKeyCiphertext()
+                    )) {
                         wallet.updateDaeguWallet(daeguDid, wallet.getWalletAddress());
                         userRewardWalletRepository.save(wallet);
                         return wallet.getWalletAddress();
@@ -150,6 +152,12 @@ public class UserDaeguProvisioningService {
         DaeguRewardWalletProvisioningService.ProvisionedWallet provisioned =
                 rewardWalletProvisioningService.createActivatedWallet(userId);
         return new WalletProvision(provisioned.walletAddress(), provisioned.privateKeyCiphertext());
+    }
+
+    private boolean requiresWalletProvisioning(String walletAddress, String walletPrivateKeyCiphertext) {
+        return isBlank(walletAddress)
+                || isBlank(walletPrivateKeyCiphertext)
+                || rewardWalletProvisioningService.requiresWalletReplacement(walletPrivateKeyCiphertext);
     }
 
     private String findFirstText(JsonNode node, String... fieldNames) {

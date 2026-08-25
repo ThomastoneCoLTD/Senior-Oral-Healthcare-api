@@ -23,7 +23,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class UserDaeguProvisioningServiceTest {
@@ -194,7 +193,8 @@ class UserDaeguProvisioningServiceTest {
 
         assertThat(walletAddress).isEqualTo("0x-existing-wallet");
         verify(daeguChainDidService, never()).createAccount(any());
-        verifyNoInteractions(rewardWalletProvisioningService);
+        verify(rewardWalletProvisioningService).requiresWalletReplacement("encrypted-private-key");
+        verify(rewardWalletProvisioningService, never()).createActivatedWallet(any());
         verify(userRewardWalletRepository).save(wallet);
     }
 
@@ -222,7 +222,8 @@ class UserDaeguProvisioningServiceTest {
         assertThat(wallet.getDaeguDid()).isEqualTo("did:daegu:external-user");
         assertThat(wallet.getWalletAddress()).isEqualTo("0x-existing-wallet");
         verify(daeguChainDidService, never()).createAccount(any());
-        verifyNoInteractions(rewardWalletProvisioningService);
+        verify(rewardWalletProvisioningService).requiresWalletReplacement("encrypted-private-key");
+        verify(rewardWalletProvisioningService, never()).createActivatedWallet(any());
         verify(userRewardWalletRepository).save(wallet);
     }
 
@@ -241,6 +242,40 @@ class UserDaeguProvisioningServiceTest {
                 .walletAddress("0x-wallet-without-key")
                 .build();
         when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.of(wallet));
+        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn(
+                new DaeguRewardWalletProvisioningService.ProvisionedWallet(
+                        "0x-repaired-wallet", "encrypted-repaired-private-key"
+                )
+        );
+
+        String walletAddress = service.provisionForDadaegu(user, "did:daegu:external-user");
+
+        assertThat(walletAddress).isEqualTo("0x-repaired-wallet");
+        assertThat(wallet.getDaeguDid()).isEqualTo("did:daegu:external-user");
+        assertThat(wallet.getWalletAddress()).isEqualTo("0x-repaired-wallet");
+        assertThat(wallet.getWalletPrivateKeyCiphertext()).isEqualTo("encrypted-repaired-private-key");
+        verify(rewardWalletProvisioningService).createActivatedWallet(7L);
+        verify(userRewardWalletRepository).save(wallet);
+    }
+
+    @Test
+    void provisionForDadaeguReplacesARewardWalletThatContainsALegacyDidKey() {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("local-user")
+                .daeguDid("did:key:self-issued")
+                .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
+                .build();
+        UserRewardWallet wallet = UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(0L)
+                .daeguDid("did:key:self-issued")
+                .walletAddress("0x-legacy-wallet")
+                .walletPrivateKeyCiphertext("encrypted-legacy-did-key")
+                .build();
+        when(userRewardWalletRepository.findByUserId(7L)).thenReturn(Optional.of(wallet));
+        when(rewardWalletProvisioningService.requiresWalletReplacement("encrypted-legacy-did-key"))
+                .thenReturn(true);
         when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn(
                 new DaeguRewardWalletProvisioningService.ProvisionedWallet(
                         "0x-repaired-wallet", "encrypted-repaired-private-key"

@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 public class DaeguRewardWalletProvisioningService {
 
     private static final String RECLAIM_ALLOWANCE = String.valueOf(Long.MAX_VALUE);
-    private static final Pattern RAW_HEX_PRIVATE_KEY = Pattern.compile("^[0-9a-fA-F]{64}$");
+    private static final Pattern LEGACY_DID_PRIVATE_KEY = Pattern.compile("^(?:0x)?[0-9a-fA-F]{64}$");
 
     private final DaeguChainAccountService accountService;
     private final DaeguChainToken20Service token20Service;
@@ -40,11 +40,19 @@ public class DaeguRewardWalletProvisioningService {
         }
 
         activateWallet(userId, walletAddress);
-        return new ProvisionedWallet(walletAddress, encryptWalletPrivateKey(walletPrivateKey));
+        return new ProvisionedWallet(walletAddress, privateKeyCipher.encrypt(walletPrivateKey));
     }
 
     public String encryptWalletPrivateKey(String walletPrivateKey) {
-        return privateKeyCipher.encrypt(normalizeWalletPrivateKey(walletPrivateKey));
+        return privateKeyCipher.encrypt(walletPrivateKey);
+    }
+
+    public boolean requiresWalletReplacement(String walletPrivateKeyCiphertext) {
+        if (isBlank(walletPrivateKeyCiphertext)) {
+            return true;
+        }
+        String walletPrivateKey = privateKeyCipher.decrypt(walletPrivateKeyCiphertext).trim();
+        return isLegacyDidPrivateKey(walletPrivateKey);
     }
 
     private void activateWallet(Long userId, String walletAddress) {
@@ -68,7 +76,12 @@ public class DaeguRewardWalletProvisioningService {
         if (isBlank(properties.getTokenOwnerAddress())) {
             throw new BadRequestApiException("token owner address is not configured");
         }
-        String walletPrivateKey = normalizeWalletPrivateKey(privateKeyCipher.decrypt(walletPrivateKeyCiphertext));
+        String walletPrivateKey = privateKeyCipher.decrypt(walletPrivateKeyCiphertext);
+        if (isLegacyDidPrivateKey(walletPrivateKey.trim())) {
+            throw new BadRequestApiException(
+                    "legacy DID key cannot approve reward tokens; reward wallet replacement is required"
+            );
+        }
         DaeguChainDto.ApiResponse<JsonNode> response = DaeguChainApiLogContext.withUser(
                 userId,
                 "리워드 지갑 회수 권한 승인",
@@ -117,14 +130,8 @@ public class DaeguRewardWalletProvisioningService {
         return value == null || value.isBlank();
     }
 
-    private String normalizeWalletPrivateKey(String walletPrivateKey) {
-        if (isBlank(walletPrivateKey)) {
-            return walletPrivateKey;
-        }
-        String normalized = walletPrivateKey.trim();
-        return RAW_HEX_PRIVATE_KEY.matcher(normalized).matches()
-                ? "0x" + normalized
-                : normalized;
+    private boolean isLegacyDidPrivateKey(String walletPrivateKey) {
+        return LEGACY_DID_PRIVATE_KEY.matcher(walletPrivateKey).matches();
     }
 
     public record ProvisionedWallet(String walletAddress, String privateKeyCiphertext) {

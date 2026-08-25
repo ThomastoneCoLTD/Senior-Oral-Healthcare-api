@@ -75,30 +75,6 @@ class DaeguRewardWalletProvisioningServiceTest {
     }
 
     @Test
-    void normalizesRawHexSigningKeyBeforeEncryptingIt() {
-        String rawPrivateKey = "a".repeat(64);
-        when(accountService.createAccount(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
-                "OK",
-                Map.of(),
-                "",
-                new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
-                        rawPrivateKey,
-                        "public-key",
-                        "0x-wallet"
-                )),
-                "cid-create"
-        ));
-        when(accountService.faucet(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
-                "OK", Map.of(), "", null, "cid-faucet"
-        ));
-
-        DaeguRewardWalletProvisioningService.ProvisionedWallet wallet = service.createActivatedWallet(7L);
-
-        assertThat(privateKeyCipher.decrypt(wallet.privateKeyCiphertext()))
-                .isEqualTo("0x" + rawPrivateKey);
-    }
-
-    @Test
     void doesNotApproveWhenWalletActivationFails() {
         when(accountService.createAccount(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
                 "OK",
@@ -169,21 +145,28 @@ class DaeguRewardWalletProvisioningServiceTest {
     }
 
     @Test
-    void normalizesAnExistingEncryptedRawHexKeyBeforeApproval() {
-        when(token20Service.approveToken(any()))
-                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", Map.of(), "", null, "cid-approve"));
+    void identifiesLegacyDidKeysAsRequiringRewardWalletReplacement() {
         String rawPrivateKey = "a".repeat(64);
 
-        service.approveRewardContract(
+        assertThat(service.requiresWalletReplacement(null)).isTrue();
+        assertThat(service.requiresWalletReplacement(privateKeyCipher.encrypt(rawPrivateKey))).isTrue();
+        assertThat(service.requiresWalletReplacement(privateKeyCipher.encrypt("0x" + rawPrivateKey))).isTrue();
+        assertThat(service.requiresWalletReplacement(privateKeyCipher.encrypt("daegu-wallet-private-key"))).isFalse();
+    }
+
+    @Test
+    void rejectsLegacyDidKeysBeforeCallingTheApprovalApi() {
+        String rawPrivateKey = "a".repeat(64);
+
+        assertThatThrownBy(() -> service.approveRewardContract(
                 7L,
                 "0x-contract",
-                "0x-wallet",
+                "0x-legacy-wallet",
                 privateKeyCipher.encrypt(rawPrivateKey)
-        );
+        ))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessageContaining("reward wallet replacement is required");
 
-        ArgumentCaptor<DaeguChainDto.TokenApproveRequest> captor =
-                ArgumentCaptor.forClass(DaeguChainDto.TokenApproveRequest.class);
-        verify(token20Service).approveToken(captor.capture());
-        assertThat(captor.getValue().getHolderPkey()).isEqualTo("0x" + rawPrivateKey);
+        verifyNoInteractions(token20Service);
     }
 }

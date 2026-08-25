@@ -80,6 +80,13 @@ public class UserRewardReclaimService {
         if (isBlank(wallet.getWalletAddress())) {
             throw new BadRequestApiException("reward wallet address is not connected");
         }
+        if (rewardWalletProvisioningService.requiresWalletReplacement(
+                wallet.getWalletPrivateKeyCiphertext()
+        )) {
+            throw new BadRequestApiException(
+                    "legacy reward wallet cannot be reclaimed; reset and reissue rewards to a new wallet"
+            );
+        }
         if (isBlank(daeguChainProperties.getTokenOwnerAddress())) {
             throw new BadRequestApiException("token owner address is not configured");
         }

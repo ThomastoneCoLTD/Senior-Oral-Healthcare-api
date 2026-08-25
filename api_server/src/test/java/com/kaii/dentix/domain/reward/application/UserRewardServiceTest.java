@@ -796,6 +796,40 @@ class UserRewardServiceTest {
     }
 
     @Test
+    void getWalletReplacesAnExistingAddressWhenItContainsALegacyDidKey() {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("local-user")
+                .daeguDid("did:key:self-issued")
+                .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
+                .build();
+        UserRewardWallet wallet = UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(0L)
+                .daeguDid("did:key:self-issued")
+                .walletAddress("0x-legacy-wallet")
+                .walletPrivateKeyCiphertext("encrypted-legacy-did-key")
+                .build();
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(wallet));
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardWalletProvisioningService.requiresWalletReplacement("encrypted-legacy-did-key"))
+                .thenReturn(true);
+        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn(
+                new DaeguRewardWalletProvisioningService.ProvisionedWallet(
+                        "0x-repaired-wallet", "encrypted-repaired-private-key"
+                )
+        );
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserRewardDto.WalletResponse response = service.getWallet(request);
+
+        assertThat(response.getDaeguDid()).isEqualTo("did:key:self-issued");
+        assertThat(response.getWalletAddress()).isEqualTo("0x-repaired-wallet");
+        assertThat(wallet.getWalletPrivateKeyCiphertext()).isEqualTo("encrypted-repaired-private-key");
+        verify(rewardWalletProvisioningService).createActivatedWallet(7L);
+    }
+
+    @Test
     void connectWalletCreatesLocalTestAddressInDevWhenDaeguTokenIsMissing() {
         when(environment.getActiveProfiles()).thenReturn(new String[]{"dev"});
         when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.empty());

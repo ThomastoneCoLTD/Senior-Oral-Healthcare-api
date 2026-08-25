@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -108,6 +109,20 @@ class UserRewardReclaimServiceTest {
                 eq("0x-user-wallet"),
                 eq("encrypted-private-key")
         );
+    }
+
+    @Test
+    void reclaimOralExerciseTokensRejectsLegacyDidKeyWalletBeforeCallingDaeguChain() {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
+        when(rewardWalletProvisioningService.requiresWalletReplacement("encrypted-private-key"))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> service.reclaimOralExerciseTokens(request))
+                .isInstanceOf(com.kaii.dentix.global.common.error.exception.BadRequestApiException.class)
+                .hasMessageContaining("reset and reissue rewards");
+
+        verifyNoInteractions(externalTokenClient);
+        verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any());
     }
 
     @Test
