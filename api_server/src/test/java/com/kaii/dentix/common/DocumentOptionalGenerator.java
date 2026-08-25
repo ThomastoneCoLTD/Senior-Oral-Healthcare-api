@@ -43,7 +43,7 @@ public class DocumentOptionalGenerator {
     }
 
     public static Attributes.Attribute oralSectionTypeFormat() {
-        return setFormat("ORAL_CHECK : 구강 촬영, TOOTH_BRUSHING : 양치질, QUESTIONNAIRE : 문진표");
+        return setFormat("ORAL_CHECK : 구강 촬영, QUESTIONNAIRE : 문진표");
     }
 
     public static Attributes.Attribute oralDateStatusTypeFormat() {

@@ -24,11 +24,6 @@ import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
 import com.kaii.dentix.domain.questionnaire.dto.QuestionnaireDto;
-import com.kaii.dentix.domain.toothBrushing.dao.ToothBrushingCustomRepository;
-import com.kaii.dentix.domain.toothBrushing.dao.ToothBrushingRepository;
-import com.kaii.dentix.domain.toothBrushing.domain.ToothBrushing;
-import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingDailyCountDto;
-import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingDto;
 import com.kaii.dentix.domain.type.OralDateStatusType;
 import com.kaii.dentix.domain.type.OralSectionType;
 import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
@@ -77,10 +72,8 @@ public class OralCheckService {
     private final UserRepository userRepository;
     private final OralCheckRepository oralCheckRepository;
     private final OralStatusRepository oralStatusRepository;
-    private final ToothBrushingRepository toothBrushingRepository;
     private final QuestionnaireRepository questionnaireRepository;
     private final OralStatusAssignmentRepository oralStatusAssignmentRepository;
-    private final ToothBrushingCustomRepository toothBrushingCustomRepository;
     private final QuestionnaireCustomRepository questionnaireCustomRepository;
     private final ContentsCustomRepository contentsCustomRepository;
     private final ContentsRepository contentsRepository;
@@ -915,7 +908,6 @@ public class OralCheckService {
                 .filter(oralCheck -> oralCheck.getOralCheckAnalysisState() == OralCheckAnalysisState.SUCCESS)
                 .filter(oralCheck -> oralCheck.getOralCheckResultTotalType() != null)
                 .toList();
-        List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         Map<Long, List<OralStatusDto.OralStatusType>> oralStatusByQuestionnaireId = buildOralStatusByQuestionnaireId(questionnaireList);
 
@@ -923,7 +915,7 @@ public class OralCheckService {
         Calendar calendar = Calendar.getInstance();
         Date today = calendar.getTime();
         String todayString = DateFormatUtil.dateToString(datePattern, today);
-        Date timelineStartDate = resolveTimelineStartDate(today, oralCheckList, toothBrushingList, questionnaireList);
+        Date timelineStartDate = resolveTimelineStartDate(today, oralCheckList, questionnaireList);
 
         // 상단 섹션
         List<OralCheckDto.Section> sectionList = new ArrayList<>();
@@ -948,31 +940,13 @@ public class OralCheckService {
             oralCheckPeriodAfter = DateFormatUtil.dateToString(datePattern, c.getTime());
         }
 
-        Calendar recentWindowCalendar = Calendar.getInstance();
-        recentWindowCalendar.setTime(today);
-        recentWindowCalendar.add(Calendar.DATE, -30);
-
-        // 2. 양치질
-        ToothBrushing latestToothBrushing = !toothBrushingList.isEmpty() ? toothBrushingList.get(0) : null;
-        sectionList.add(OralCheckDto.Section.builder()
-                .sectionType(OralSectionType.TOOTH_BRUSHING)
-                .date(latestToothBrushing != null ? latestToothBrushing.getCreated() : null)
-                .timeInterval(latestToothBrushing != null ? (today.getTime() - latestToothBrushing.getCreated().getTime()) / 1000 : null)
-                .toothBrushingList(toothBrushingList.stream()
-                        .filter(tb -> DateFormatUtil.dateToString(datePattern, tb.getCreated()).equals(todayString))
-                        .map(tb -> ToothBrushingDto.builder().toothBrushingId(tb.getToothBrushingId()).created(tb.getCreated()).build())
-                        .sorted(Comparator.comparing(ToothBrushingDto::getCreated))
-                        .collect(Collectors.toList()))
-                .build());
-
-        // 3. 문진표
+        // 2. 문진표
         Questionnaire latestQuestionnaire = !questionnaireList.isEmpty() ? questionnaireList.get(0) : null;
-        sectionList.add(latestQuestionnaire == null || latestQuestionnaire.getCreated().before(recentWindowCalendar.getTime()) ? 1 : 2,
-                OralCheckDto.Section.builder()
-                        .sectionType(OralSectionType.QUESTIONNAIRE)
-                        .date(latestQuestionnaire != null ? latestQuestionnaire.getCreated() : null)
-                        .timeInterval(latestQuestionnaire != null ? (today.getTime() - latestQuestionnaire.getCreated().getTime()) / 1000 : null)
-                        .build());
+        sectionList.add(OralCheckDto.Section.builder()
+                .sectionType(OralSectionType.QUESTIONNAIRE)
+                .date(latestQuestionnaire != null ? latestQuestionnaire.getCreated() : null)
+                .timeInterval(latestQuestionnaire != null ? (today.getTime() - latestQuestionnaire.getCreated().getTime()) / 1000 : null)
+                .build());
 
         for (int i = 0; i < sectionList.size(); i++) {
             sectionList.get(i).setSort(i + 1);
@@ -999,19 +973,6 @@ public class OralCheckService {
                             .oralCheckAnalysisType(getOralCheckAnalysisType(oc))
                             .build())
                     .toList());
-
-            // 양치질 상세
-            List<ToothBrushing> dailyToothBrushingList = toothBrushingList.stream()
-                    .filter(tb -> DateFormatUtil.dateToString(datePattern, tb.getCreated()).equals(dateString)).toList();
-            for (int i = 0; i < dailyToothBrushingList.size(); i++) {
-                detailList.add(OralCheckDto.Detail.builder()
-                        .sectionType(OralSectionType.TOOTH_BRUSHING)
-                        .date(dailyToothBrushingList.get(i).getCreated())
-                        .identifier(dailyToothBrushingList.get(i).getToothBrushingId())
-                        .toothBrushingId(dailyToothBrushingList.get(i).getToothBrushingId())
-                        .toothBrushingCount(dailyToothBrushingList.size() - i)
-                        .build());
-            }
 
             // 문진표 상세
             // 1. 해당 날짜의 문진표 필터링
@@ -1079,16 +1040,12 @@ public class OralCheckService {
     private Date resolveTimelineStartDate(
             Date today,
             List<OralCheck> oralCheckList,
-            List<ToothBrushing> toothBrushingList,
             List<Questionnaire> questionnaireList
     ) {
         Date earliest = today;
 
         if (!oralCheckList.isEmpty()) {
             earliest = oralCheckList.get(oralCheckList.size() - 1).getCreated();
-        }
-        if (!toothBrushingList.isEmpty() && toothBrushingList.get(toothBrushingList.size() - 1).getCreated().before(earliest)) {
-            earliest = toothBrushingList.get(toothBrushingList.size() - 1).getCreated();
         }
         if (!questionnaireList.isEmpty() && questionnaireList.get(questionnaireList.size() - 1).getCreated().before(earliest)) {
             earliest = questionnaireList.get(questionnaireList.size() - 1).getCreated();
@@ -1149,9 +1106,6 @@ public class OralCheckService {
         }
 
         OralCheck latestOralCheck = oralCheckList.get(0);
-        List<ToothBrushingDailyCountDto> toothBrushingDailyCountList = toothBrushingCustomRepository.getDailyCount(user.getUserId());
-        int toothBrushingTotalCount = toothBrushingDailyCountList.stream().mapToInt(ToothBrushingDailyCountDto::getCount).sum();
-
         QuestionnaireDto.Summary latestQuestionnaire = questionnaireCustomRepository.getLatestQuestionnaireAndHigherStatus(user.getUserId());
 
         int healthy = 0, good = 0, attention = 0, danger = 0;
@@ -1182,8 +1136,6 @@ public class OralCheckService {
                 .oralCheckGoodCount(good)
                 .oralCheckAttentionCount(attention)
                 .oralCheckDangerCount(danger)
-                .toothBrushingTotalCount(toothBrushingTotalCount)
-                .toothBrushingAverage(toothBrushingDailyCountList.isEmpty() ? 0 : Utils.getDeleteDecimalValue((float) toothBrushingTotalCount / toothBrushingDailyCountList.size(), 1))
                 .oralStatus(latestQuestionnaire != null ? new OralStatusDto.OralStatusType(latestQuestionnaire.getOralStatusType(), latestQuestionnaire.getOralStatusTitle()) : null)
                 .questionnaireCreated(latestQuestionnaire != null ? latestQuestionnaire.getCreated() : null)
                 .oralCheckCreated(latestOralCheck.getCreated())

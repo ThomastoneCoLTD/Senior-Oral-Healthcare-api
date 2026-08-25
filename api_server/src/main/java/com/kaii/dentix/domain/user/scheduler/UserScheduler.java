@@ -5,8 +5,6 @@ import com.kaii.dentix.domain.oralCheck.dao.OralCheckRepository;
 import com.kaii.dentix.domain.oralCheck.domain.OralCheck;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
-import com.kaii.dentix.domain.toothBrushing.dao.ToothBrushingRepository;
-import com.kaii.dentix.domain.toothBrushing.domain.ToothBrushing;
 import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -33,7 +31,6 @@ public class UserScheduler {
     private final OralCheckRepository oralCheckRepository;
     private final OralStatusAssignmentRepository oralStatusAssignmentRepository;
     private final QuestionnaireRepository questionnaireRepository;
-    private final ToothBrushingRepository toothBrushingRepository;
 
     private final OralCheckService oralCheckService;
 
@@ -45,11 +42,9 @@ public class UserScheduler {
         if (user == null) return;
 
         List<OralCheck> oralCheckList = oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(user.getUserId());
-        List<ToothBrushing> toothBrushingList = toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Questionnaire> questionnaireList = questionnaireRepository.findAllByUserIdOrderByCreatedDesc(user.getUserId());
         List<Long> questionnaireIds = questionnaireList.stream().map(Questionnaire::getQuestionnaireId).toList();
 
-        toothBrushingRepository.deleteAllInBatch(toothBrushingList);
         if (!questionnaireIds.isEmpty()) {
             oralStatusAssignmentRepository.deleteByQuestionnaireIds(questionnaireIds);
         }
@@ -77,13 +72,6 @@ public class UserScheduler {
 
             Date targetDate = calendar.getTime();
             if (DateFormatUtil.dateToString(datePattern, targetDate).compareTo(todayString) >= 0) break;
-
-            for (int j = 0; j < random.nextInt(4); j++) { // 0 ~ 3
-                calendar.setTime(targetDate);
-                calendar.add(Calendar.SECOND, random.nextInt(24 * 60 * 60));
-
-                toothBrushingRepository.nativeInsert(user.getUserId(), calendar.getTime());
-            }
 
             for (int j = 0; j < random.nextInt(4); j++) { // 0 ~ 3
                 calendar.setTime(targetDate);

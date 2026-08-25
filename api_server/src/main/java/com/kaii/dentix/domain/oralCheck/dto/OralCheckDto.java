@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
 import com.kaii.dentix.domain.contents.dto.ContentsDto;
-import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingDto;
 import com.kaii.dentix.domain.type.OralDateStatusType;
 import com.kaii.dentix.domain.type.OralSectionType;
 import com.kaii.dentix.domain.type.oral.OralCheckResultType;
@@ -79,8 +78,6 @@ public class OralCheckDto {
         private int oralCheckGoodCount;
         private int oralCheckAttentionCount;
         private int oralCheckDangerCount;
-        private long toothBrushingTotalCount;
-        private float toothBrushingAverage;
         private OralStatusDto.OralStatusType oralStatus;
 
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
@@ -124,8 +121,6 @@ public class OralCheckDto {
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
         private Date date;
         private Long timeInterval;
-        @Builder.Default
-        private List<ToothBrushingDto> toothBrushingList = new ArrayList<>();
     }
 
     @Getter @Builder
@@ -148,10 +143,8 @@ public class OralCheckDto {
         private long identifier;
         private Long oralCheckId;
         private Long questionnaireId;
-        private Long toothBrushingId;
         private OralCheckResultType oralCheckResultTotalType;
         private String oralCheckAnalysisType;
-        private Integer toothBrushingCount;
         @Builder.Default
         private List<OralStatusDto.OralStatusType> oralStatusList = new ArrayList<>();
     }

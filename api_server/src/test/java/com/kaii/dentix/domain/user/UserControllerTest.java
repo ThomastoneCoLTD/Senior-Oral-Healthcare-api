@@ -6,10 +6,6 @@ import com.kaii.dentix.domain.oralCheck.dto.OralCheckDto;
 import com.kaii.dentix.domain.oralStatus.dto.OralStatusDto;
 import com.kaii.dentix.domain.agreement.application.ServiceAgreementConsentService;
 import com.kaii.dentix.domain.agreement.dto.ServiceAgreementConsentDto;
-import com.kaii.dentix.domain.toothBrushing.application.ToothBrushingService;
-import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingDto;
-import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRegisterDto;
-import com.kaii.dentix.domain.toothBrushing.dto.ToothBrushingRequestDto;
 import com.kaii.dentix.domain.type.OralDateStatusType;
 import com.kaii.dentix.domain.type.OralSectionType;
 import com.kaii.dentix.domain.type.GenderType;
@@ -77,9 +73,6 @@ public class UserControllerTest {
     private OralCheckService oralCheckService;
 
     @MockBean
-    private ToothBrushingService toothBrushingService;
-
-    @MockBean
     private ServiceAgreementConsentService serviceAgreementConsentService;
 
     private UserLoginDto userLoginDto(){
@@ -126,12 +119,6 @@ public class UserControllerTest {
                 .build();
     }
 
-    private ToothBrushingRegisterDto toothBrushingRegisterResponse() {
-        return ToothBrushingRegisterDto.builder()
-                .toothBrushingList(List.of(new ToothBrushingDto(1L, new Date())))
-                .build();
-    }
-
     private OralCheckDto.TimelineResponse oralStatusResponse() {
         Date now = new Date();
         return OralCheckDto.TimelineResponse.builder()
@@ -147,13 +134,6 @@ public class UserControllerTest {
                                 .sectionType(OralSectionType.QUESTIONNAIRE)
                                 .date(now)
                                 .timeInterval(1800L)
-                                .build(),
-                        OralCheckDto.Section.builder()
-                                .sort(3)
-                                .sectionType(OralSectionType.TOOTH_BRUSHING)
-                                .date(now)
-                                .timeInterval(600L)
-                                .toothBrushingList(List.of(new ToothBrushingDto(1L, now)))
                                 .build()
                 ))
                 .dailyList(List.of(
@@ -175,13 +155,6 @@ public class UserControllerTest {
                                                 .identifier(21L)
                                                 .questionnaireId(21L)
                                                 .oralStatusList(List.of(new OralStatusDto.OralStatusType("A", "건강형")))
-                                                .build(),
-                                        OralCheckDto.Detail.builder()
-                                                .sectionType(OralSectionType.TOOTH_BRUSHING)
-                                                .date(now)
-                                                .identifier(31L)
-                                                .toothBrushingId(31L)
-                                                .toothBrushingCount(1)
                                                 .build()
                                 ))
                                 .build()
@@ -423,72 +396,6 @@ public class UserControllerTest {
     }
 
     @Test
-    public void recordToothBrushing() throws Exception{
-
-        // given
-        ToothBrushingRequestDto requestDto = ToothBrushingRequestDto.builder()
-                .brushingTime("09:30")
-                .build();
-
-        given(toothBrushingService.recordToothBrushing(any(HttpServletRequest.class), any(ToothBrushingRequestDto.class)))
-                .willReturn(toothBrushingRegisterResponse());
-
-        // when
-        ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.post("/user/brushing")
-                        .content(objectMapper.writeValueAsString(requestDto))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
-                        .with(user("user").roles("USER"))
-        );
-
-        // then
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andDo(document("user/brushing",
-                        getDocumentRequest(),
-                        getDocumentResponse(),
-                        requestFields(
-                                fieldWithPath("brushingTime").type(JsonFieldType.STRING).description("양치 시간(HH:mm 또는 HH:mm:ss)")
-                        ),
-                        responseFields(
-                                fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
-                                fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
-                                fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
-                                fieldWithPath("response.toothBrushingList").type(JsonFieldType.ARRAY).description("해당 일자 양치 기록 목록"),
-                                fieldWithPath("response.toothBrushingList[].toothBrushingId").type(JsonFieldType.NUMBER).description("양치 기록 ID"),
-                                fieldWithPath("response.toothBrushingList[].created").type(JsonFieldType.STRING).attributes(dateTimeFormat()).description("양치 기록 시각"),
-                                fieldWithPath("response.timeInterval").type(JsonFieldType.NUMBER).optional().attributes(timeIntervalFormat()).description("다음 기록 가능까지 남은 시간(초)")
-                        )
-                ));
-
-        verify(toothBrushingService).recordToothBrushing(any(HttpServletRequest.class), any(ToothBrushingRequestDto.class));
-
-    }
-
-    @Test
-    public void getToothBrushingByDate() throws Exception {
-
-        given(toothBrushingService.getToothBrushingByDate(any(HttpServletRequest.class), any(String.class)))
-                .willReturn(toothBrushingRegisterResponse());
-
-        ResultActions resultActions = mockMvc.perform(
-                RestDocumentationRequestBuilders.get("/user/brushing")
-                        .param("date", "2026-03-18")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header(HttpHeaders.AUTHORIZATION, "user-info.고유경.AccessToken")
-                        .with(user("user").roles("USER"))
-        );
-
-        resultActions.andExpect(status().isOk())
-                .andExpect(jsonPath("rt").value(200))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
-
-        verify(toothBrushingService).getToothBrushingByDate(any(HttpServletRequest.class), any(String.class));
-    }
-
-    @Test
     public void getOralStatus() throws Exception {
 
         given(oralCheckService.oralCheck(any(HttpServletRequest.class)))
@@ -505,8 +412,7 @@ public class UserControllerTest {
                 .andExpect(jsonPath("rt").value(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("response.dailyList[0].detailList[0].oralCheckId").value(11))
-                .andExpect(jsonPath("response.dailyList[0].detailList[1].oralStatusList[0].title").value("건강형"))
-                .andExpect(jsonPath("response.dailyList[0].detailList[2].toothBrushingCount").value(1));
+                .andExpect(jsonPath("response.dailyList[0].detailList[1].oralStatusList[0].title").value("건강형"));
 
         verify(oralCheckService).oralCheck(any(HttpServletRequest.class));
     }

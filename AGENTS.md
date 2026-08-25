@@ -231,6 +231,12 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 ## 최근 동기화 상태
 
+2026-08-26 양치질 기록 기능을 폐기했습니다.
+
+- `/user/brushing`, `/toothBrushing` API와 `domain/toothBrushing` 구현을 제거하고, 구강상태 타임라인·대시보드 응답에서 양치 기록 및 통계 필드를 제거했습니다.
+- 앱 시작 시 `DROP TABLE IF EXISTS tooth_brushing`을 실행해 기존 양치 기록 테이블과 데이터를 삭제합니다. 다른 사용자·문진·구강분석·리워드 테이블은 삭제하지 않습니다.
+- 문진표의 양치 습관 문항, 분석 규칙, 양치 교육 콘텐츠는 독립적인 서비스 데이터이므로 유지합니다.
+
 2026-08-25 로컬 가입 DID 키와 리워드 지갑 서명키를 분리했습니다.
 
 - 로컬 가입은 SOH DID 서버의 DID·공개키만 저장하고 리워드 지갑은 다대구 가입과 동일하게 `/mitum/com/acc_create`와 `acc_faucet`으로 별도 생성합니다.

@@ -300,18 +300,8 @@ include::{snippets}/oralCheck/result/query-parameters.adoc[]
 include::{snippets}/oralCheck/result/response-fields.adoc[]
 include::{snippets}/oralCheck/result/response-body.adoc[]
 
-[[toothBrushing]]
-== 20. 양치질 기록
-*양치질 기록 API*
-
-=== Http
-include::{snippets}/toothBrushing/http-request.adoc[]
-=== Response
-include::{snippets}/toothBrushing/response-fields.adoc[]
-include::{snippets}/toothBrushing/response-body.adoc[]
-
 [[questionnaireTemplate]]
-== 21. 문진표 양식 조회
+== 20. 문진표 양식 조회
 *문진표 양식 조회 API*
 
 : 문진표 이어작성 시 조회 결과 버전과 앱 내에서 작성중인 버전이 맞지 않은 경우 재작성 필요
@@ -323,7 +313,7 @@ include::{snippets}/questionnaire/template/response-fields.adoc[]
 include::{snippets}/questionnaire/template/response-body.adoc[]
 
 [[questionnaireSubmit]]
-== 22. 문진표 제출
+== 21. 문진표 제출
 *문진표 제출 API*
 
 *[ 개발 중 잘못된 Request나 데이터 오류로 인해 발생할 수 있는 경우 ]*::
@@ -341,7 +331,7 @@ include::{snippets}/questionnaire/submit/response-fields.adoc[]
 include::{snippets}/questionnaire/submit/response-body.adoc[]
 
 [[questionnaireResult]]
-== 23. 문진표 결과 조회
+== 22. 문진표 결과 조회
 *문진표 결과 조회 API*
 
 *[ 개발 중 잘못된 Request나 데이터 오류로 인해 발생할 수 있는 경우 ]*::
@@ -357,7 +347,7 @@ include::{snippets}/questionnaire/result/response-fields.adoc[]
 include::{snippets}/questionnaire/result/response-body.adoc[]
 
 [[oralCheck]]
-== 24. 구강 상태 조회
+== 23. 구강 상태 조회
 *구강 상태 조회 API*
 
 === Http
@@ -367,7 +357,7 @@ include::{snippets}/oralCheck/response-fields.adoc[]
 include::{snippets}/oralCheck/response-body.adoc[]
 
 [[dashboard]]
-== 25. 대시보드 조회
+== 24. 대시보드 조회
 *대시보드 조회 API*
 
 === Http
@@ -377,7 +367,7 @@ include::{snippets}/oralCheck/dashboard/response-fields.adoc[]
 include::{snippets}/oralCheck/dashboard/response-body.adoc[]
 
 [[contents]]
-== 26. 콘텐츠 조회
+== 25. 콘텐츠 조회
 *콘텐츠 조회 API*
 
 : 회원 상태에 따른 맞춤형 콘텐츠 여부는 다음과 같습니다.
@@ -397,7 +387,7 @@ include::{snippets}/contents/response-fields.adoc[]
 include::{snippets}/contents/response-body.adoc[]
 
 [[contentsCard]]
-== 27. 콘텐츠 카드뉴스 조회
+== 26. 콘텐츠 카드뉴스 조회
 *콘텐츠 카드뉴스 조회 API*
 
 *[ 개발 중 잘못된 Request나 데이터 오류로 인해 발생할 수 있는 경우 ]*::
@@ -412,7 +402,7 @@ include::{snippets}/contents/card/response-fields.adoc[]
 include::{snippets}/contents/card/response-body.adoc[]
 
 [[serviceAgreement]]
-== 28. 약관 조회
+== 27. 약관 조회
 *약관 조회 API*
 
 : 테스트 시, 적용되는 링크는 다음과 같습니다.

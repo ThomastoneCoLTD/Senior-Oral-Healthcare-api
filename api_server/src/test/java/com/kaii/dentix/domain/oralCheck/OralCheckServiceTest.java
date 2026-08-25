@@ -15,9 +15,6 @@ import com.kaii.dentix.domain.organizationSubscriptionHistory.application.Organi
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireCustomRepository;
 import com.kaii.dentix.domain.questionnaire.dao.QuestionnaireRepository;
 import com.kaii.dentix.domain.questionnaire.domain.Questionnaire;
-import com.kaii.dentix.domain.toothBrushing.dao.ToothBrushingCustomRepository;
-import com.kaii.dentix.domain.toothBrushing.dao.ToothBrushingRepository;
-import com.kaii.dentix.domain.toothBrushing.domain.ToothBrushing;
 import com.kaii.dentix.domain.type.OralDateStatusType;
 import com.kaii.dentix.domain.type.OralSectionType;
 import com.kaii.dentix.domain.type.oral.OralCheckAnalysisState;
@@ -56,10 +53,8 @@ class OralCheckServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private OralCheckRepository oralCheckRepository;
     @Mock private OralStatusRepository oralStatusRepository;
-    @Mock private ToothBrushingRepository toothBrushingRepository;
     @Mock private QuestionnaireRepository questionnaireRepository;
     @Mock private OralStatusAssignmentRepository oralStatusAssignmentRepository;
-    @Mock private ToothBrushingCustomRepository toothBrushingCustomRepository;
     @Mock private QuestionnaireCustomRepository questionnaireCustomRepository;
     @Mock private OrganizationSubscriptionHistoryService organizationSubscriptionHistoryService;
     @Mock private ContentCurationService contentCurationService;
@@ -98,7 +93,6 @@ class OralCheckServiceTest {
 
         given(userService.getTokenUser(request)).willReturn(user);
         given(oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(1L)).willReturn(List.of(recentOralCheck, oldOralCheck));
-        given(toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(Collections.<ToothBrushing>emptyList());
         given(questionnaireRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(Collections.<Questionnaire>emptyList());
         OralCheckDto.TimelineResponse response = oralCheckService.oralCheck(request);
 
@@ -144,7 +138,6 @@ class OralCheckServiceTest {
 
         given(userService.getTokenUser(request)).willReturn(user);
         given(oralCheckRepository.findAllByUser_UserIdOrderByCreatedDesc(1L)).willReturn(List.of(failedOralCheck));
-        given(toothBrushingRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(Collections.<ToothBrushing>emptyList());
         given(questionnaireRepository.findAllByUserIdOrderByCreatedDesc(1L)).willReturn(List.of(questionnaire));
         given(oralStatusAssignmentRepository.findQuestionnaireOralStatuses(List.of(questionnaire.getQuestionnaireId())))
                 .willReturn(List.of(new OralStatusAssignmentProjection(questionnaire.getQuestionnaireId(), "A")));

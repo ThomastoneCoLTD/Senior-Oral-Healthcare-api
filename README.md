@@ -22,6 +22,12 @@ Artifact prefix: soh
 - `POST /oral-exercise/interactions` enforces both the intro gate and the core previous-completion rule, so a client cannot bypass the sequence by calling the interaction API directly.
 - Exercise titles and token-status labels use `Intro`, core `Chapter 1` through `Chapter 5`, and always-open `Chapter 7` through `Chapter 12`. The internal content sort and token identifiers remain unchanged.
 
+## Retired Brushing Feature
+
+- The standalone brushing-record feature and its `/user/brushing` and `/toothBrushing` APIs are retired.
+- Oral-status and dashboard responses no longer contain brushing-record sections or statistics.
+- Application startup drops only the retired `tooth_brushing` table with `DROP TABLE IF EXISTS`; questionnaire answers and educational content about brushing remain supported.
+
 ## Infrastructure Overview
 
 Terraform creates the AWS infrastructure instead of manual console setup:

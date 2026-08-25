@@ -282,7 +282,6 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.sectionList[].date").type(JsonFieldType.STRING).optional().description("최근 날짜"),
                                 fieldWithPath("response.sectionList[].timeInterval").type(JsonFieldType.NUMBER).optional().description("경과 시간(초)"),
                                 fieldWithPath("response.sectionList[].sort").type(JsonFieldType.NUMBER).description("정렬 순서"),
-                                fieldWithPath("response.sectionList[].toothBrushingList").type(JsonFieldType.ARRAY).optional().description("양치 목록"),
 
                                 fieldWithPath("response.dailyList").type(JsonFieldType.ARRAY).description("일별 상세 목록"),
                                 fieldWithPath("response.dailyList[].date").type(JsonFieldType.STRING).description("날짜"),
@@ -294,10 +293,8 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.dailyList[].detailList[].identifier").type(JsonFieldType.NUMBER).description("상세 활동 식별자"),
                                 fieldWithPath("response.dailyList[].detailList[].oralCheckId").type(JsonFieldType.NUMBER).optional().description("구강 검진 ID"),
                                 fieldWithPath("response.dailyList[].detailList[].questionnaireId").type(JsonFieldType.NUMBER).optional().description("문진표 ID"),
-                                fieldWithPath("response.dailyList[].detailList[].toothBrushingId").type(JsonFieldType.NUMBER).optional().description("양치 기록 ID"),
                                 fieldWithPath("response.dailyList[].detailList[].oralCheckResultTotalType").type(JsonFieldType.STRING).optional().description("구강 검진 종합 결과"),
                                 fieldWithPath("response.dailyList[].detailList[].oralCheckAnalysisType").type(JsonFieldType.STRING).optional().description("분석 유형(PLAQUE/GINGIVITIS)"),
-                                fieldWithPath("response.dailyList[].detailList[].toothBrushingCount").type(JsonFieldType.NUMBER).optional().description("양치 횟수"),
                                 fieldWithPath("response.dailyList[].detailList[].oralStatusList").type(JsonFieldType.ARRAY).description("구강 상태 목록")
                         )
                 ));
@@ -319,8 +316,6 @@ public class OralCheckControllerTest {
                 .oralCheckGoodCount(4)
                 .oralCheckAttentionCount(2)
                 .oralCheckDangerCount(1)
-                .toothBrushingTotalCount(20)
-                .toothBrushingAverage(2.5f)
                 .oralStatus(new OralStatusDto.OralStatusType("A", "건강형"))
                 .oralCheckCreated(new Date())
                 .oralCheckDailyList(List.of(
@@ -357,8 +352,6 @@ public class OralCheckControllerTest {
                                 fieldWithPath("response.oralCheckGoodCount").type(JsonFieldType.NUMBER).description("구강 촬영 양호 횟수"),
                                 fieldWithPath("response.oralCheckAttentionCount").type(JsonFieldType.NUMBER).description("구강 촬영 주의 횟수"),
                                 fieldWithPath("response.oralCheckDangerCount").type(JsonFieldType.NUMBER).description("구강 촬영 위험 횟수"),
-                                fieldWithPath("response.toothBrushingTotalCount").type(JsonFieldType.NUMBER).description("양치 횟수"),
-                                fieldWithPath("response.toothBrushingAverage").type(JsonFieldType.NUMBER).description("양치 일 평균"),
                                 fieldWithPath("response.oralStatus").type(JsonFieldType.OBJECT).optional().description("구강 상태"),
                                 fieldWithPath("response.oralStatus.type").type(JsonFieldType.STRING).description("구강 상태 타입"),
                                 fieldWithPath("response.oralStatus.title").type(JsonFieldType.STRING).description("구강 상태 제목"),
