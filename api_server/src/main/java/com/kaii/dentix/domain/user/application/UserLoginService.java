@@ -193,7 +193,8 @@ public class UserLoginService {
             String userPhoneNumber,
             String userBirthDate,
             String realOrganization,
-            List<Long> agreementIds
+            List<Long> agreementIds,
+            boolean oralAnalysisServiceEnabled
     ) {
         loginIdCheck(loginIdentifier);
         assertPhoneNumberAvailable(userPhoneNumber);
@@ -213,6 +214,7 @@ public class UserLoginService {
                 .userPhoneNumber(userPhoneNumber)
                 .userBirthDate(userBirthDate)
                 .realOrganization(realOrganization)
+                .oralAnalysisServiceEnabled(oralAnalysisServiceEnabled)
                 .organization(organization)
                 .isVerify(YnType.Y)
                 .build());
@@ -368,9 +370,10 @@ public class UserLoginService {
             }
         }
 
-        List<UserDto.ServiceInfo> services = UserDto.defaultServiceInfo();
-        Long mainServiceId = services.get(0).getServiceId();
-        String mainServiceName = services.get(0).getName();
+        boolean oralAnalysisServiceEnabled = user.isOralAnalysisServiceEnabled();
+        List<UserDto.ServiceInfo> services = UserDto.serviceInfo(oralAnalysisServiceEnabled);
+        Long mainServiceId = services.isEmpty() ? null : services.get(0).getServiceId();
+        String mainServiceName = services.isEmpty() ? null : services.get(0).getName();
 
         return UserDto.LoginResponse.builder()
                 .userId(user.getUserId())
@@ -384,6 +387,7 @@ public class UserLoginService {
                 .organizationName(org != null ? org.getOrganizationName() : null)
                 .organizationPlanName(planName)
                 .organizationCustomSurveyEnabled(customSurvey)
+                .oralAnalysisServiceEnabled(oralAnalysisServiceEnabled)
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
                 .build();

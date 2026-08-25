@@ -136,7 +136,8 @@ public class DadaeguLoginService {
                 claims.phoneNumber(),
                 claims.birthDate(),
                 request.getRealOrganization(),
-                request.getUserServiceAgreementRequest()
+                request.getUserServiceAgreementRequest(),
+                request.getOralAnalysisServiceEnabled()
         );
         bindIdentity(claims.did(), claims.ciHash(), user);
         userDaeguProvisioningService.provisionForDadaegu(user, claims.did());

@@ -91,6 +91,7 @@ public class UserDto {
         private String organizationName;
         private String organizationPlanName;
         private Boolean organizationCustomSurveyEnabled;
+        private boolean oralAnalysisServiceEnabled;
         private String daeguDid;
         private UserDaeguIdentityStatus daeguDidStatus;
 
@@ -113,6 +114,9 @@ public class UserDto {
 
         @NotNull(message = "필수 약관 동의는 필수입니다.")
         private List<Long> userServiceAgreementRequest;
+
+        @NotNull(message = "구강분석 서비스 선택 여부는 필수입니다.")
+        private Boolean oralAnalysisServiceEnabled;
     }
 
     @Getter @Builder
@@ -212,6 +216,10 @@ public class UserDto {
                         .serviceType(ServiceType.PERIODONTAL_DETECTION)
                         .build()
         );
+    }
+
+    public static List<ServiceInfo> serviceInfo(boolean oralAnalysisServiceEnabled) {
+        return oralAnalysisServiceEnabled ? defaultServiceInfo() : List.of();
     }
 
     // =================================================================
@@ -317,6 +325,7 @@ public class UserDto {
         private GenderType userGender;
         private String realOrganization;
         private List<ServiceInfo> services;
+        private boolean oralAnalysisServiceEnabled;
         private String daeguDid;
         private UserDaeguIdentityStatus daeguDidStatus;
     }
@@ -327,6 +336,7 @@ public class UserDto {
         @NotBlank(message = "닉네임은 필수입니다.")
         private String userName;
         private GenderType userGender;
+        private Boolean oralAnalysisServiceEnabled;
     }
 
     // =================================================================

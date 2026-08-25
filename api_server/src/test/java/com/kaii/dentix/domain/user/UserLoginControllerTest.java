@@ -513,6 +513,7 @@ public class UserLoginControllerTest {
                                 fieldWithPath("response.organizationName").type(JsonFieldType.STRING).optional().description("소속 기관 이름"),
                                 fieldWithPath("response.organizationPlanName").type(JsonFieldType.STRING).optional().description("기관 구독 플랜 이름"),
                                 fieldWithPath("response.organizationCustomSurveyEnabled").type(JsonFieldType.BOOLEAN).optional().description("커스텀 설문 기능 사용 가능 여부"),
+                                fieldWithPath("response.oralAnalysisServiceEnabled").type(JsonFieldType.BOOLEAN).description("구강분석 서비스 신청 여부"),
                                 fieldWithPath("response.daeguDid").type(JsonFieldType.STRING).optional().description("DaeguChain DID"),
                                 fieldWithPath("response.daeguDidStatus").type(JsonFieldType.STRING).optional().description("DaeguChain DID status"),
                                 fieldWithPath("response.dadaeguOnboardingRequired").type(JsonFieldType.BOOLEAN).optional().description("다대구 최초 로그인 추가가입 필요 여부"),
@@ -628,7 +629,8 @@ public class UserLoginControllerTest {
                                 {
                                   "onboardingToken": "one-time-token",
                                   "realOrganization": "대구2",
-                                  "userServiceAgreementRequest": [1, 2]
+                                  "userServiceAgreementRequest": [1, 2],
+                                  "oralAnalysisServiceEnabled": true
                                 }
                                 """)
                         .contentType(MediaType.APPLICATION_JSON))

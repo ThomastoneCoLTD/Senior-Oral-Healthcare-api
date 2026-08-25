@@ -40,6 +40,10 @@ public class User extends TimeEntity {
     @Column(name = "real_organization", length = 20)
     private String realOrganization;
 
+    @Builder.Default
+    @Column(name = "oral_analysis_service_enabled")
+    private Boolean oralAnalysisServiceEnabled = false;
+
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "enum")
     private GenderType userGender;
@@ -119,6 +123,14 @@ public class User extends TimeEntity {
     public void modifyInfo(String userName, GenderType userGender){
         this.userName = userName;
         this.userGender = userGender; // 미선택으로 원복 가능
+    }
+
+    public boolean isOralAnalysisServiceEnabled() {
+        return Boolean.TRUE.equals(oralAnalysisServiceEnabled);
+    }
+
+    public void updateOralAnalysisServiceEnabled(boolean enabled) {
+        this.oralAnalysisServiceEnabled = enabled;
     }
 
     /**

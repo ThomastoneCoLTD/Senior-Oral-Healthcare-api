@@ -161,7 +161,7 @@ class DadaeguLoginServiceTest {
         when(userRepository.findByUserLoginIdentifier(anyString())).thenReturn(Optional.empty());
         when(userLoginService.createDadaeguUser(
                 anyString(), eq("신규사용자"), eq(GenderType.W), eq("01099998888"),
-                eq("1960-03-04"), eq("대구2"), eq(List.of(1L, 2L))
+                eq("1960-03-04"), eq("대구2"), eq(List.of(1L, 2L)), eq(true)
         )).thenReturn(user);
         when(dadaeguUserIdentityRepository.findByUserId(41L)).thenReturn(Optional.empty());
         when(userLoginService.completeAuthenticatedLogin(user)).thenReturn(expected);
@@ -170,6 +170,7 @@ class DadaeguLoginServiceTest {
                 .onboardingToken("onboarding-token")
                 .realOrganization("대구2")
                 .userServiceAgreementRequest(List.of(1L, 2L))
+                .oralAnalysisServiceEnabled(true)
                 .build());
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
@@ -233,7 +234,8 @@ class DadaeguLoginServiceTest {
         UserDto.DadaeguSignUpRequest request = UserDto.DadaeguSignUpRequest.builder()
                 .onboardingToken("secret-onboarding-token")
                 .realOrganization("대구1")
-                .userServiceAgreementRequest(List.of(1L)).build();
+                .userServiceAgreementRequest(List.of(1L))
+                .oralAnalysisServiceEnabled(false).build();
         assertThat(objectMapper.writeValueAsString(request))
                 .contains("\"onboardingToken\":\"********\"")
                 .doesNotContain("secret-onboarding-token");

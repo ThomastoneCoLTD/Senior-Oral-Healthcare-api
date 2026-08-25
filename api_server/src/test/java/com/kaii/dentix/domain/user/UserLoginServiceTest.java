@@ -292,11 +292,13 @@ class UserLoginServiceTest {
                 "01099998888",
                 "1960-03-04",
                 "대구2",
-                List.of(1L, 2L)
+                List.of(1L, 2L),
+                true
         );
 
         assertThat(user.getUserId()).isEqualTo(42L);
         assertThat(user.getDaeguDid()).isNull();
+        assertThat(user.isOralAnalysisServiceEnabled()).isTrue();
         verify(userDaeguProvisioningService, never()).provisionForSignUp(any(User.class));
         verify(serviceAgreementConsentService).saveUserServiceAgreements(42L, List.of(1L, 2L));
     }
@@ -326,6 +328,8 @@ class UserLoginServiceTest {
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
         assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
+        assertThat(response.isOralAnalysisServiceEnabled()).isFalse();
+        assertThat(response.getServices()).isEmpty();
         assertThat(user.getUserRefreshToken()).isEqualTo("refresh-token");
         verify(passwordEncoder).matches("password!", "encoded-password");
     }

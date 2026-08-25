@@ -104,6 +104,7 @@ public class UserControllerTest {
                 .userLoginIdentifier("dentix123")
                 .userGender(GenderType.W)
                 .realOrganization("대구1")
+                .oralAnalysisServiceEnabled(true)
                 .services(List.of(
                         new UserDto.ServiceInfo(1L, "구강 검진", ServiceType.PLAQUE_DETECTION)
                 ))
@@ -307,6 +308,7 @@ public class UserControllerTest {
         UserDto.ModifyInfoRequest requestDto = UserDto.ModifyInfoRequest.builder()
                 .userName("강덴티")
                 .userGender(GenderType.W)
+                .oralAnalysisServiceEnabled(true)
                 .build();
 
         // when
@@ -327,7 +329,8 @@ public class UserControllerTest {
                         getDocumentResponse(),
                         requestFields(
                                 fieldWithPath("userName").type(JsonFieldType.STRING).description("사용자 이름"),
-                                fieldWithPath("userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별")
+                                fieldWithPath("userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
+                                fieldWithPath("oralAnalysisServiceEnabled").type(JsonFieldType.BOOLEAN).optional().description("구강분석 서비스 신청 여부")
                         ),
                         // [수정] userInfoResponse()에 맞춰서 responseFields 보완 (에러 방지)
                         responseFields(
@@ -338,6 +341,7 @@ public class UserControllerTest {
                                 fieldWithPath("response.userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
                                 fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("response.realOrganization").type(JsonFieldType.STRING).optional().description("사용자가 선택한 실제 기관"),
+                                fieldWithPath("response.oralAnalysisServiceEnabled").type(JsonFieldType.BOOLEAN).description("구강분석 서비스 신청 여부"),
                                 fieldWithPath("response.services").type(JsonFieldType.ARRAY).optional().description("이용 중인 서비스 목록"),
                                 fieldWithPath("response.services[].serviceId").type(JsonFieldType.NUMBER).optional().description("서비스 고유 번호"),
                                 fieldWithPath("response.services[].name").type(JsonFieldType.STRING).optional().description("서비스 이름"),
@@ -560,6 +564,7 @@ public class UserControllerTest {
                                 fieldWithPath("response.userLoginIdentifier").type(JsonFieldType.STRING).description("사용자 아이디"),
                                 fieldWithPath("response.userGender").type(JsonFieldType.STRING).optional().attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("response.realOrganization").type(JsonFieldType.STRING).optional().description("사용자가 선택한 실제 기관"),
+                                fieldWithPath("response.oralAnalysisServiceEnabled").type(JsonFieldType.BOOLEAN).description("구강분석 서비스 신청 여부"),
                                 fieldWithPath("response.services").type(JsonFieldType.ARRAY).optional().description("이용 중인 서비스 목록"),
                                 fieldWithPath("response.services[].serviceId").type(JsonFieldType.NUMBER).optional().description("서비스 고유 번호"),
                                 fieldWithPath("response.services[].name").type(JsonFieldType.STRING).optional().description("서비스 이름"),

@@ -132,11 +132,19 @@ public class UserService {
     public UserDto.InfoResponse userModifyInfo(HttpServletRequest httpServletRequest, UserDto.ModifyInfoRequest request) {
         User user = this.getTokenUser(httpServletRequest);
         user.modifyInfo(request.getUserName(), request.getUserGender());
+        if (request.getOralAnalysisServiceEnabled() != null) {
+            user.updateOralAnalysisServiceEnabled(request.getOralAnalysisServiceEnabled());
+        }
 
         return UserDto.InfoResponse.builder()
                 .userName(user.getUserName())
+                .userLoginIdentifier(user.getUserLoginIdentifier())
                 .userGender(user.getUserGender())
                 .realOrganization(user.getRealOrganization())
+                .services(UserDto.serviceInfo(user.isOralAnalysisServiceEnabled()))
+                .oralAnalysisServiceEnabled(user.isOralAnalysisServiceEnabled())
+                .daeguDid(user.getDaeguDid())
+                .daeguDidStatus(user.getDaeguDidStatus())
                 .build();
     }
 
@@ -149,7 +157,8 @@ public class UserService {
                 .userLoginIdentifier(user.getUserLoginIdentifier())
                 .userGender(user.getUserGender())
                 .realOrganization(user.getRealOrganization())
-                .services(UserDto.defaultServiceInfo())
+                .services(UserDto.serviceInfo(user.isOralAnalysisServiceEnabled()))
+                .oralAnalysisServiceEnabled(user.isOralAnalysisServiceEnabled())
                 .daeguDid(user.getDaeguDid())
                 .daeguDidStatus(user.getDaeguDidStatus())
                 .build();

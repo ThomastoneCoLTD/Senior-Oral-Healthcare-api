@@ -9,6 +9,7 @@ import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.user.application.UserService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
+import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.error.exception.TokenExpiredException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
@@ -75,5 +77,36 @@ class UserServiceTest {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 
         org.assertj.core.api.Assertions.assertThat(userService.getTokenUser(request)).isEqualTo(user);
+    }
+
+    @Test
+    void userInfoAndModifyReflectOralAnalysisServiceSelection() {
+        HttpServletRequest request = org.mockito.Mockito.mock(HttpServletRequest.class);
+        User user = User.builder()
+                .userId(1L)
+                .userName("사용자")
+                .userLoginIdentifier("user1")
+                .oralAnalysisServiceEnabled(true)
+                .build();
+
+        given(jwtTokenUtil.getAccessToken(request)).willReturn("valid-token");
+        given(jwtTokenUtil.isExpired("valid-token", TokenType.AccessToken)).willReturn(false);
+        given(jwtTokenUtil.getRoles("valid-token", TokenType.AccessToken)).willReturn(UserRole.ROLE_USER);
+        given(jwtTokenUtil.getUserId("valid-token", TokenType.AccessToken)).willReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+
+        UserDto.InfoResponse enabled = userService.getUserInfo(request);
+        assertThat(enabled.isOralAnalysisServiceEnabled()).isTrue();
+        assertThat(enabled.getServices()).hasSize(2);
+
+        UserDto.InfoResponse disabled = userService.userModifyInfo(request,
+                UserDto.ModifyInfoRequest.builder()
+                        .userName("사용자")
+                        .oralAnalysisServiceEnabled(false)
+                        .build());
+
+        assertThat(disabled.isOralAnalysisServiceEnabled()).isFalse();
+        assertThat(disabled.getServices()).isEmpty();
+        assertThat(user.isOralAnalysisServiceEnabled()).isFalse();
     }
 }
