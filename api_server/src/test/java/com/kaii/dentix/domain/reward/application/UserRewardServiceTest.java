@@ -15,6 +15,7 @@ import com.kaii.dentix.domain.reward.config.UserRewardProperties;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
+import com.kaii.dentix.domain.reward.domain.UserRewardJourneyState;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
@@ -276,6 +277,45 @@ class UserRewardServiceTest {
                     assertThat(transaction.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED);
                     assertThat(transaction.getAmount()).isZero();
                 });
+        assertThat(response.getRewardJourney().getState()).isEqualTo(UserRewardJourneyState.COLLECTING);
+        assertThat(response.getRewardJourney().getEssentialReceivedCount()).isZero();
+    }
+
+    @Test
+    void rewardOralExerciseButtonClickRejectsNewTokenAfterJourneyCompletion() {
+        when(transactionRepository.findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
+                7L,
+                "essential_video_1",
+                UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                UserRewardTransactionStatus.CANCELED
+        )).thenReturn(Optional.empty());
+        when(transactionRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
+        List<UserRewardTransaction> transactions = new java.util.ArrayList<>();
+        for (int index = 1; index <= 5; index++) {
+            transactions.add(rewardTransaction(
+                    UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                    UserRewardTransactionStatus.TOKEN_TRANSFERRED,
+                    3L,
+                    "essential_video_" + index
+            ));
+            transactions.add(rewardTransaction(
+                    UserRewardTransactionType.ORAL_EXERCISE_RECLAIM,
+                    UserRewardTransactionStatus.TOKEN_TRANSFERRED,
+                    3L,
+                    "essential_video_" + index
+            ));
+        }
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(transactions);
+
+        assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
+                request,
+                new UserRewardDto.ButtonClickRequest(11L, "completed-session", 3, 3)
+        ))
+                .isInstanceOf(BadRequestApiException.class)
+                .hasMessageContaining("이미 완료");
+
+        verify(transactionRepository, never()).save(any());
+        verify(walletRepository, never()).save(any());
     }
 
     @Test

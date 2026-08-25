@@ -341,6 +341,37 @@ class OralExerciseServiceTest {
     }
 
     @Test
+    void getContentsDisablesNewTokenChallengesAfterRewardJourneyCompletion() {
+        User user = userCreatedDaysAgo(0);
+        OralExerciseContent optionalContent = content(7);
+        List<UserRewardTransaction> transactions = new java.util.ArrayList<>();
+        for (int index = 1; index <= 5; index++) {
+            transactions.add(rewardTransaction(
+                    UserRewardTransactionType.ORAL_EXERCISE_COIN,
+                    "essential_video_" + index
+            ));
+            transactions.add(rewardTransaction(
+                    UserRewardTransactionType.ORAL_EXERCISE_RECLAIM,
+                    "essential_video_" + index
+            ));
+        }
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(contentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of(optionalContent));
+        when(rewardTransactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(transactions);
+
+        OralExerciseDto.ListResponse response = service.getContents(request);
+
+        assertThat(response.isRewardJourneyCompleted()).isTrue();
+        assertThat(response.getContents()).singleElement()
+                .satisfies(content -> {
+                    assertThat(content.isAvailable()).isTrue();
+                    assertThat(content.isRewardReceived()).isFalse();
+                    assertThat(content.getButtonChallenge().isRewardAvailable()).isFalse();
+                    assertThat(content.getButtonChallenge().getPromptMessage()).contains("수령이 완료");
+                });
+    }
+
+    @Test
     void getContentsUnlocksOnlyTheNextCoreContentImmediatelyAfterPreviousCompletion() {
         User user = userCreatedDaysAgo(0);
         OralExerciseContent firstContent = content(2);
@@ -539,6 +570,18 @@ class OralExerciseServiceTest {
                 .completionRate(100)
                 .completed(true)
                 .viewCount(1)
+                .build();
+    }
+
+    private UserRewardTransaction rewardTransaction(UserRewardTransactionType type, String coinId) {
+        return UserRewardTransaction.builder()
+                .userId(7L)
+                .type(type)
+                .status(UserRewardTransactionStatus.TOKEN_TRANSFERRED)
+                .amount(1L)
+                .balanceAfter(0L)
+                .idempotencyKey(type + ":" + coinId)
+                .coinId(coinId)
                 .build();
     }
 }

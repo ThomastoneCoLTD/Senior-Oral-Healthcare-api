@@ -39,6 +39,7 @@ public class OralExerciseDto {
                 int currentWeek,
                 boolean available,
                 boolean rewardReceived,
+                boolean rewardJourneyCompleted,
                 String playableVideoUrl,
                 String playableThumbnailUrl
         ) {
@@ -64,13 +65,17 @@ public class OralExerciseDto {
                     .available(available)
                     .currentWeekContent(currentWeekContent)
                     .rewardReceived(rewardReceived)
-                    .buttonChallenge(ButtonChallengeResponse.forContent(rewardContent, rewardReceived))
+                    .buttonChallenge(ButtonChallengeResponse.forContent(
+                            rewardContent,
+                            rewardReceived,
+                            rewardJourneyCompleted
+                    ))
                     .progress(ProgressResponse.from(progress))
                     .build();
         }
 
         public static ContentResponse from(OralExerciseContent content, UserOralExerciseProgress progress) {
-            return from(content, progress, 0, true, false, content.getVideoUrl(), content.getThumbnailUrl());
+            return from(content, progress, 0, true, false, false, content.getVideoUrl(), content.getThumbnailUrl());
         }
     }
 
@@ -115,6 +120,7 @@ public class OralExerciseDto {
     @AllArgsConstructor
     public static class ListResponse {
         private int currentWeek;
+        private boolean rewardJourneyCompleted;
         private ContentResponse currentContent;
         private List<ContentResponse> previousContents;
         private List<ContentResponse> extraContents;
@@ -132,12 +138,22 @@ public class OralExerciseDto {
         private String promptMessage;
 
         public static ButtonChallengeResponse forContent(boolean rewardContent, boolean rewardReceived) {
-            boolean rewardAvailable = rewardContent && !rewardReceived;
+            return forContent(rewardContent, rewardReceived, false);
+        }
+
+        public static ButtonChallengeResponse forContent(
+                boolean rewardContent,
+                boolean rewardReceived,
+                boolean rewardJourneyCompleted
+        ) {
+            boolean rewardAvailable = rewardContent && !rewardReceived && !rewardJourneyCompleted;
             return ButtonChallengeResponse.builder()
                     .buttons(List.of(1, 2, 3, 4, 5))
                     .timeoutSeconds(30)
                     .rewardAvailable(rewardAvailable)
-                    .promptMessage("음성 안내에 맞는 번호를 누르면 토큰이 수령됩니다.")
+                    .promptMessage(rewardJourneyCompleted
+                            ? "리워드 수령이 완료되어 추가 토큰을 받을 수 없습니다."
+                            : "음성 안내에 맞는 번호를 누르면 토큰이 수령됩니다.")
                     .build();
         }
     }

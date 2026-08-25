@@ -12,6 +12,8 @@ import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.oralExercise.dto.OralExerciseDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.domain.OralExerciseRewardToken;
+import com.kaii.dentix.domain.reward.domain.UserRewardJourneySummary;
+import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.application.UserRewardService;
 import com.kaii.dentix.domain.user.dao.UserRepository;
@@ -70,16 +72,18 @@ public class OralExerciseService {
                         progress -> progress.getContent().getOralExerciseContentId(),
                         Function.identity()
                 ));
-        Set<String> rewardedTokenNames = userId == null
-                ? Set.of()
-                : userRewardTransactionRepository
-                .findByUserIdOrderByCreatedDesc(userId)
-                .stream()
+        List<UserRewardTransaction> rewardTransactions = userId == null
+                ? List.of()
+                : userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId);
+        Set<String> rewardedTokenNames = rewardTransactions.stream()
                 .filter(transaction -> transaction.getCoinId() != null)
                 .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
                 .filter(transaction -> transaction.isRewardReceived())
                 .map(transaction -> transaction.getCoinId().toLowerCase())
                 .collect(Collectors.toSet());
+        boolean rewardJourneyCompleted = UserRewardJourneySummary
+                .from(rewardTransactions)
+                .completed();
         int currentWeek = calculateCurrentWeek(userId);
         List<OralExerciseContent> activeContents = oralExerciseContentRepository
                 .findByActiveTrueOrderByContentSortAsc();
@@ -98,6 +102,7 @@ public class OralExerciseService {
                             currentWeek,
                             available,
                             rewardedTokenNames.contains(resolveRewardTokenName(content)),
+                            rewardJourneyCompleted,
                             available ? resolvePlayableAssetUrl(content.getVideoUrl()) : null,
                             resolvePlayableAssetUrl(content.getThumbnailUrl())
                     );
@@ -106,6 +111,7 @@ public class OralExerciseService {
 
         return OralExerciseDto.ListResponse.builder()
                 .currentWeek(Math.max(currentWeek, 1))
+                .rewardJourneyCompleted(rewardJourneyCompleted)
                 .currentContent(contents.stream()
                         .filter(OralExerciseDto.ContentResponse::isCoreContent)
                         .filter(OralExerciseDto.ContentResponse::isAvailable)

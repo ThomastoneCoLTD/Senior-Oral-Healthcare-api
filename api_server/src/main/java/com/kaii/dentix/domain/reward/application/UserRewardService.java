@@ -20,6 +20,7 @@ import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionType;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
+import com.kaii.dentix.domain.reward.domain.UserRewardJourneySummary;
 import com.kaii.dentix.domain.reward.dto.UserRewardDto;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
@@ -83,11 +84,15 @@ public class UserRewardService {
     @Transactional(readOnly = true)
     public UserRewardDto.TransactionListResponse getTransactions(HttpServletRequest request) {
         Long userId = getUserId(request);
+        List<UserRewardTransaction> transactions =
+                userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId);
         return UserRewardDto.TransactionListResponse.builder()
-                .transactions(userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId)
-                        .stream()
+                .transactions(transactions.stream()
                         .map(UserRewardDto.TransactionResponse::from)
                         .toList())
+                .rewardJourney(UserRewardDto.RewardJourneyResponse.from(
+                        UserRewardJourneySummary.from(transactions)
+                ))
                 .build();
     }
 
@@ -161,6 +166,15 @@ public class UserRewardService {
         var existingIdempotentTransaction = userRewardTransactionRepository.findByIdempotencyKey(idempotencyKey);
         if (existingIdempotentTransaction.isPresent() && existingIdempotentTransaction.get().isAlreadyApplied()) {
             return retryTokenTransferIfNeeded(userId, existingIdempotentTransaction.get(), rewardTokenName);
+        }
+
+        UserRewardJourneySummary rewardJourney = UserRewardJourneySummary.from(
+                userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId)
+        );
+        if (rewardJourney.completed()) {
+            throw new BadRequestApiException(
+                    "리워드 수령이 이미 완료되어 추가 토큰을 받을 수 없습니다."
+            );
         }
 
         UserRewardWallet wallet = getOrCreateRewardWallet(userId);

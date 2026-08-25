@@ -2,6 +2,8 @@ package com.kaii.dentix.domain.reward.dto;
 
 import com.kaii.dentix.domain.reward.domain.UserRewardTransaction;
 import com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus;
+import com.kaii.dentix.domain.reward.domain.UserRewardJourneyState;
+import com.kaii.dentix.domain.reward.domain.UserRewardJourneySummary;
 import lombok.*;
 
 import java.util.Date;
@@ -113,6 +115,31 @@ public class UserRewardDto {
     @AllArgsConstructor
     public static class TransactionListResponse {
         private List<TransactionResponse> transactions;
+        private RewardJourneyResponse rewardJourney;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RewardJourneyResponse {
+        private UserRewardJourneyState state;
+        private int essentialReceivedCount;
+        private int essentialReclaimedCount;
+        private int pendingReclaimCount;
+        private boolean canReclaim;
+        private boolean completed;
+
+        public static RewardJourneyResponse from(UserRewardJourneySummary summary) {
+            return RewardJourneyResponse.builder()
+                    .state(summary.state())
+                    .essentialReceivedCount(summary.essentialReceivedCount())
+                    .essentialReclaimedCount(summary.essentialReclaimedCount())
+                    .pendingReclaimCount(summary.pendingReclaimCount())
+                    .canReclaim(summary.canReclaim())
+                    .completed(summary.completed())
+                    .build();
+        }
     }
 
     @Getter
