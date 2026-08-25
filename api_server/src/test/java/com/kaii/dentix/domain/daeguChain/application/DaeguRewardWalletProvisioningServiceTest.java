@@ -75,6 +75,30 @@ class DaeguRewardWalletProvisioningServiceTest {
     }
 
     @Test
+    void normalizesRawHexSigningKeyBeforeEncryptingIt() {
+        String rawPrivateKey = "a".repeat(64);
+        when(accountService.createAccount(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
+                "OK",
+                Map.of(),
+                "",
+                new DaeguChainDto.KeyPairData(new DaeguChainDto.KeyPair(
+                        rawPrivateKey,
+                        "public-key",
+                        "0x-wallet"
+                )),
+                "cid-create"
+        ));
+        when(accountService.faucet(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
+                "OK", Map.of(), "", null, "cid-faucet"
+        ));
+
+        DaeguRewardWalletProvisioningService.ProvisionedWallet wallet = service.createActivatedWallet(7L);
+
+        assertThat(privateKeyCipher.decrypt(wallet.privateKeyCiphertext()))
+                .isEqualTo("0x" + rawPrivateKey);
+    }
+
+    @Test
     void doesNotApproveWhenWalletActivationFails() {
         when(accountService.createAccount(any())).thenReturn(new DaeguChainDto.ApiResponse<>(
                 "OK",
@@ -142,5 +166,24 @@ class DaeguRewardWalletProvisioningServiceTest {
         assertThat(captor.getValue().getHolder()).isEqualTo("0x-wallet");
         assertThat(captor.getValue().getHolderPkey()).isEqualTo("private-key");
         assertThat(captor.getValue().getApproved()).isEqualTo("0x-owner");
+    }
+
+    @Test
+    void normalizesAnExistingEncryptedRawHexKeyBeforeApproval() {
+        when(token20Service.approveToken(any()))
+                .thenReturn(new DaeguChainDto.ApiResponse<>("OK", Map.of(), "", null, "cid-approve"));
+        String rawPrivateKey = "a".repeat(64);
+
+        service.approveRewardContract(
+                7L,
+                "0x-contract",
+                "0x-wallet",
+                privateKeyCipher.encrypt(rawPrivateKey)
+        );
+
+        ArgumentCaptor<DaeguChainDto.TokenApproveRequest> captor =
+                ArgumentCaptor.forClass(DaeguChainDto.TokenApproveRequest.class);
+        verify(token20Service).approveToken(captor.capture());
+        assertThat(captor.getValue().getHolderPkey()).isEqualTo("0x" + rawPrivateKey);
     }
 }

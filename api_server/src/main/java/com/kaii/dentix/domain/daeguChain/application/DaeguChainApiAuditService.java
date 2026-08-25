@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -67,10 +69,31 @@ public class DaeguChainApiAuditService {
                 request,
                 Map.of(
                         "errorType", exception.getClass().getSimpleName(),
-                        "message", exception.getMessage() == null ? "" : exception.getMessage()
+                        "message", sanitizeErrorMessage(request, exception.getMessage())
                 ),
                 false
         );
+    }
+
+    public String sanitizeErrorMessage(Object request, String message) {
+        if (message == null || message.isBlank()) {
+            return "";
+        }
+        try {
+            Set<String> sensitiveValues = new LinkedHashSet<>();
+            collectSensitiveValues(objectMapper.valueToTree(request == null ? Map.of() : request), sensitiveValues);
+            String sanitized = message;
+            List<String> valuesByLength = sensitiveValues.stream()
+                    .filter(value -> value != null && !value.isBlank())
+                    .sorted((left, right) -> Integer.compare(right.length(), left.length()))
+                    .toList();
+            for (String sensitiveValue : valuesByLength) {
+                sanitized = sanitized.replace(sensitiveValue, "***");
+            }
+            return sanitized;
+        } catch (RuntimeException exception) {
+            return "DaeguChain upstream request failed";
+        }
     }
 
     private String toSafeJson(Object value) {
@@ -96,6 +119,25 @@ public class DaeguChainApiAuditService {
             }
         } else if (node instanceof ArrayNode arrayNode) {
             arrayNode.forEach(this::sanitize);
+        }
+    }
+
+    private void collectSensitiveValues(JsonNode node, Set<String> values) {
+        if (node instanceof ObjectNode objectNode) {
+            Iterator<Map.Entry<String, JsonNode>> fields = objectNode.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                if (isSensitive(field.getKey())) {
+                    JsonNode value = field.getValue();
+                    if (value != null && value.isValueNode()) {
+                        values.add(value.asText());
+                    }
+                } else {
+                    collectSensitiveValues(field.getValue(), values);
+                }
+            }
+        } else if (node instanceof ArrayNode arrayNode) {
+            arrayNode.forEach(child -> collectSensitiveValues(child, values));
         }
     }
 

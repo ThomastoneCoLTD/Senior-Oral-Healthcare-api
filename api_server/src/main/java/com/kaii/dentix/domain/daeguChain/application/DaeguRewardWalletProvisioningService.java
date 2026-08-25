@@ -7,11 +7,14 @@ import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.regex.Pattern;
+
 @Service
 @RequiredArgsConstructor
 public class DaeguRewardWalletProvisioningService {
 
     private static final String RECLAIM_ALLOWANCE = String.valueOf(Long.MAX_VALUE);
+    private static final Pattern RAW_HEX_PRIVATE_KEY = Pattern.compile("^[0-9a-fA-F]{64}$");
 
     private final DaeguChainAccountService accountService;
     private final DaeguChainToken20Service token20Service;
@@ -37,11 +40,11 @@ public class DaeguRewardWalletProvisioningService {
         }
 
         activateWallet(userId, walletAddress);
-        return new ProvisionedWallet(walletAddress, privateKeyCipher.encrypt(walletPrivateKey));
+        return new ProvisionedWallet(walletAddress, encryptWalletPrivateKey(walletPrivateKey));
     }
 
     public String encryptWalletPrivateKey(String walletPrivateKey) {
-        return privateKeyCipher.encrypt(walletPrivateKey);
+        return privateKeyCipher.encrypt(normalizeWalletPrivateKey(walletPrivateKey));
     }
 
     private void activateWallet(Long userId, String walletAddress) {
@@ -65,7 +68,7 @@ public class DaeguRewardWalletProvisioningService {
         if (isBlank(properties.getTokenOwnerAddress())) {
             throw new BadRequestApiException("token owner address is not configured");
         }
-        String walletPrivateKey = privateKeyCipher.decrypt(walletPrivateKeyCiphertext);
+        String walletPrivateKey = normalizeWalletPrivateKey(privateKeyCipher.decrypt(walletPrivateKeyCiphertext));
         DaeguChainDto.ApiResponse<JsonNode> response = DaeguChainApiLogContext.withUser(
                 userId,
                 "리워드 지갑 회수 권한 승인",
@@ -112,6 +115,16 @@ public class DaeguRewardWalletProvisioningService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String normalizeWalletPrivateKey(String walletPrivateKey) {
+        if (isBlank(walletPrivateKey)) {
+            return walletPrivateKey;
+        }
+        String normalized = walletPrivateKey.trim();
+        return RAW_HEX_PRIVATE_KEY.matcher(normalized).matches()
+                ? "0x" + normalized
+                : normalized;
     }
 
     public record ProvisionedWallet(String walletAddress, String privateKeyCiphertext) {

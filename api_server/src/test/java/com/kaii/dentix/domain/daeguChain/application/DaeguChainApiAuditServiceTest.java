@@ -68,4 +68,30 @@ class DaeguChainApiAuditServiceTest {
         assertThat(saved.getResponsePayload()).doesNotContain("secret-private-key");
         assertThat(saved.isSuccess()).isTrue();
     }
+
+    @Test
+    void removesSensitiveRequestValuesEchoedInsideFailureMessages() {
+        DaeguChainApiLogRepository repository = mock(DaeguChainApiLogRepository.class);
+        DaeguChainApiAuditService service = new DaeguChainApiAuditService(repository, new ObjectMapper());
+        String rawPrivateKey = "a".repeat(64);
+
+        DaeguChainApiLogContext.withUser(17L, "리워드 지갑 회수 권한 승인", () -> {
+            service.recordFailure(
+                    "https://chain.example/mitum/token/approve",
+                    Map.of("holder_pkey", rawPrivateKey, "holder", "0x123"),
+                    new IllegalArgumentException(
+                            "holder_pkey 입력값이 개인키 형식이 아닙니다. (" + rawPrivateKey + ")"
+                    )
+            );
+            return null;
+        });
+
+        ArgumentCaptor<DaeguChainApiLog> captor = ArgumentCaptor.forClass(DaeguChainApiLog.class);
+        verify(repository).save(captor.capture());
+        DaeguChainApiLog saved = captor.getValue();
+
+        assertThat(saved.getRequestPayload()).contains("\"holder_pkey\":\"***\"");
+        assertThat(saved.getResponsePayload()).contains("holder_pkey 입력값이 개인키 형식이 아닙니다. (***)");
+        assertThat(saved.getResponsePayload()).doesNotContain(rawPrivateKey);
+    }
 }

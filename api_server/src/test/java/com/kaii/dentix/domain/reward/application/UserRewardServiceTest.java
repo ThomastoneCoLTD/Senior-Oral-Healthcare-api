@@ -353,7 +353,7 @@ class UserRewardServiceTest {
     }
 
     @Test
-    void rewardOralExerciseButtonClickRepairsMissingDidAndWalletBeforeTransfer() throws Exception {
+    void rewardOralExerciseButtonClickRepairsMissingDidWithASeparateRewardWallet() throws Exception {
         UserRewardProperties properties = new UserRewardProperties();
         properties.setOralExerciseCoinAmount(1L);
         properties.setTokenTransferEnabled(true);
@@ -401,15 +401,20 @@ class UserRewardServiceTest {
                         """),
                 "cid-did"
         ));
+        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn(
+                new DaeguRewardWalletProvisioningService.ProvisionedWallet(
+                        "0x-reward-wallet", "encrypted-reward-wallet-private-key"
+                )
+        );
         when(externalTokenClient.transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-token-contract",
-                "0x-local-user-wallet",
+                "0x-reward-wallet",
                 1L
         )).thenReturn(new ObjectMapper().readTree("""
                 {
                   "Date": "2026-08-21T01:00:00Z",
-                  "Receiver": "0x-local-user-wallet",
+                  "Receiver": "0x-reward-wallet",
                   "Amount": "1"
                 }
                 """));
@@ -428,7 +433,10 @@ class UserRewardServiceTest {
         ));
         verify(walletRepository, atLeastOnce()).save(argThat(wallet ->
                 "did:key:z6MkLocalUser".equals(wallet.getDaeguDid())
-                        && "0x-local-user-wallet".equals(wallet.getWalletAddress())
+                        && "0x-reward-wallet".equals(wallet.getWalletAddress())
+                        && "encrypted-reward-wallet-private-key".equals(
+                                wallet.getWalletPrivateKeyCiphertext()
+                        )
         ));
     }
 
@@ -712,13 +720,19 @@ class UserRewardServiceTest {
                                 """),
                         "cid"
                 ));
+        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn(
+                new DaeguRewardWalletProvisioningService.ProvisionedWallet(
+                        "0x-reward-wallet", "encrypted-private-key"
+                )
+        );
         when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         UserRewardDto.WalletResponse response = service.connectWallet(request, null);
 
         assertThat(response.getDaeguDid()).isEqualTo("did:mitum:minic:0x-wallet");
-        assertThat(response.getWalletAddress()).isEqualTo("0x-wallet");
+        assertThat(response.getWalletAddress()).isEqualTo("0x-reward-wallet");
         verify(daeguChainDidService).createAccount(any());
+        verify(rewardWalletProvisioningService).createActivatedWallet(7L);
     }
 
     @Test
@@ -747,6 +761,37 @@ class UserRewardServiceTest {
 
         assertThat(response.getDaeguDid()).isEqualTo("did:key:z6MkUser");
         assertThat(response.getWalletAddress()).isEqualTo("0x-wallet");
+        verify(rewardWalletProvisioningService).createActivatedWallet(7L);
+    }
+
+    @Test
+    void getWalletReplacesAnExistingAddressWhenItsSigningKeyIsMissing() {
+        User user = User.builder()
+                .userId(7L)
+                .userLoginIdentifier("local-user")
+                .daeguDid("did:key:self-issued")
+                .daeguDidStatus(UserDaeguIdentityStatus.ISSUED)
+                .build();
+        UserRewardWallet wallet = UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(0L)
+                .daeguDid("did:key:self-issued")
+                .walletAddress("0x-wallet-without-key")
+                .build();
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(wallet));
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+        when(rewardWalletProvisioningService.createActivatedWallet(7L)).thenReturn(
+                new DaeguRewardWalletProvisioningService.ProvisionedWallet(
+                        "0x-repaired-wallet", "encrypted-repaired-private-key"
+                )
+        );
+        when(walletRepository.save(any(UserRewardWallet.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserRewardDto.WalletResponse response = service.getWallet(request);
+
+        assertThat(response.getDaeguDid()).isEqualTo("did:key:self-issued");
+        assertThat(response.getWalletAddress()).isEqualTo("0x-repaired-wallet");
+        assertThat(wallet.getWalletPrivateKeyCiphertext()).isEqualTo("encrypted-repaired-private-key");
         verify(rewardWalletProvisioningService).createActivatedWallet(7L);
     }
 

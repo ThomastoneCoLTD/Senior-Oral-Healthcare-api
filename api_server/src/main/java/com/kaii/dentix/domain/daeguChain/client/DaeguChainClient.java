@@ -361,8 +361,11 @@ public class DaeguChainClient {
             record(api, request, responseBody, true);
             return responseBody;
         } catch (RestClientException | NullPointerException exception) {
+            String safeMessage = auditService == null
+                    ? exception.getMessage()
+                    : auditService.sanitizeErrorMessage(request, exception.getMessage());
             BadRequestApiException apiException =
-                    new BadRequestApiException("DaeguChain API call failed: " + exception.getMessage());
+                    new BadRequestApiException("DaeguChain API call failed: " + safeMessage);
             recordFailure(api, request, apiException);
             throw apiException;
         }

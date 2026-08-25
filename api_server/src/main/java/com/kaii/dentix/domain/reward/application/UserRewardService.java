@@ -249,7 +249,9 @@ public class UserRewardService {
     }
 
     private void syncWalletFromUser(Long userId, UserRewardWallet wallet) {
-        if (!isBlank(wallet.getDaeguDid()) && !isBlank(wallet.getWalletAddress())) {
+        if (!isBlank(wallet.getDaeguDid())
+                && !isBlank(wallet.getWalletAddress())
+                && !isBlank(wallet.getWalletPrivateKeyCiphertext())) {
             return;
         }
         userRepository.findById(userId)
@@ -280,7 +282,7 @@ public class UserRewardService {
                     if (isBlank(walletAddress)) {
                         walletAddress = extractWalletAddress(user);
                     }
-                    if (isBlank(walletAddress)) {
+                    if (isBlank(walletAddress) || isBlank(walletPrivateKeyCiphertext)) {
                         DaeguRewardWalletProvisioningService.ProvisionedWallet provisionedWallet =
                                 rewardWalletProvisioningService.createActivatedWallet(userId);
                         walletAddress = provisionedWallet.walletAddress();
@@ -584,26 +586,10 @@ public class UserRewardService {
                     "key_id",
                     "keyId"
             );
-            String walletAddress = findFirstText(
-                    data,
-                    "walletAddress",
-                    "wallet_address",
-                    "accountAddress",
-                    "account_address",
-                    "address"
-            );
-            String walletPrivateKey = findFirstText(data, "privatekey", "private_key", "privateKey");
-            String walletPrivateKeyCiphertext =
-                    rewardWalletProvisioningService.encryptWalletPrivateKey(walletPrivateKey);
-            if (isBlank(walletAddress)) {
-                walletAddress = extractAddressFromDid(did);
-            }
-            if (isBlank(walletAddress)) {
-                DaeguRewardWalletProvisioningService.ProvisionedWallet provisionedWallet =
-                        rewardWalletProvisioningService.createActivatedWallet(userId);
-                walletAddress = provisionedWallet.walletAddress();
-                walletPrivateKeyCiphertext = provisionedWallet.privateKeyCiphertext();
-            }
+            DaeguRewardWalletProvisioningService.ProvisionedWallet provisionedWallet =
+                    rewardWalletProvisioningService.createActivatedWallet(userId);
+            String walletAddress = provisionedWallet.walletAddress();
+            String walletPrivateKeyCiphertext = provisionedWallet.privateKeyCiphertext();
             if (isBlank(walletAddress)) {
                 throw new BadRequestApiException("DaeguChain DID wallet address is empty");
             }
