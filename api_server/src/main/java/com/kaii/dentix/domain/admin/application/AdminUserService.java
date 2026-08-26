@@ -29,6 +29,7 @@ import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.domain.type.GenderType;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
+import com.kaii.dentix.domain.user.dao.DadaeguUserIdentityRepository;
 import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
@@ -107,6 +108,7 @@ public class AdminUserService {
     private final UserRewardTransactionRepository userRewardTransactionRepository;
     private final UserRewardWalletRepository userRewardWalletRepository;
     private final UserLoginHistoryRepository userLoginHistoryRepository;
+    private final DadaeguUserIdentityRepository dadaeguUserIdentityRepository;
     private final DaeguChainApiLogRepository daeguChainApiLogRepository;
     private final UserRewardReclaimService userRewardReclaimService;
 
@@ -251,6 +253,7 @@ public class AdminUserService {
     @Transactional
     public void userDelete(Long userId) {
         User user = getUser(userId);
+        dadaeguUserIdentityRepository.deleteByUserId(userId);
         user.revoke(); // 회원 탈퇴(삭제) 처리
     }
 

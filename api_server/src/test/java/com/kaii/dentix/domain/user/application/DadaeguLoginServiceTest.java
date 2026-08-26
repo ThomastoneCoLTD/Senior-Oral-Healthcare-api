@@ -141,6 +141,40 @@ class DadaeguLoginServiceTest {
     }
 
     @Test
+    void staleIdentityWithoutActiveUserIsRemovedAndContinuesToOnboarding() throws Exception {
+        DadaeguUserIdentity staleIdentity = DadaeguUserIdentity.builder()
+                .dadaeguUserIdentityId(71L)
+                .userId(61L)
+                .externalDid("did:daegu:rejoin-user")
+                .ciHash(hash("ci:rejoin-user"))
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
+        when(dadaeguUserIdentityRepository.findByExternalDid("did:daegu:rejoin-user"))
+                .thenReturn(Optional.of(staleIdentity));
+        when(dadaeguUserIdentityRepository.findByCiHash(hash("ci:rejoin-user")))
+                .thenReturn(Optional.of(staleIdentity));
+        when(userRepository.findById(61L)).thenReturn(Optional.empty());
+        when(userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
+                "01022223333", "재가입사용자", "1965-05-06"
+        )).thenReturn(Optional.empty());
+        when(signupSessionService.issue(
+                "did:daegu:rejoin-user", hash("ci:rejoin-user"), "재가입사용자",
+                "01022223333", "1965-05-06", GenderType.W
+        )).thenReturn(new DadaeguSignupSessionService.IssueResult("rejoin-token", 600));
+
+        UserDto.LoginResponse response = service.login(encryptedLoginRequest(
+                "did:daegu:rejoin-user", "ci:rejoin-user", "재가입사용자",
+                "19650506", "010-2222-3333", "F"
+        ));
+
+        assertThat(response.getDadaeguOnboardingRequired()).isTrue();
+        assertThat(response.getDadaeguOnboardingToken()).isEqualTo("rejoin-token");
+        verify(dadaeguUserIdentityRepository).delete(staleIdentity);
+        verify(dadaeguUserIdentityRepository).flush();
+        verify(userLoginService, never()).completeAuthenticatedLogin(any());
+    }
+
+    @Test
     void completeSignUpCreatesDadaeguOnlyUserAndLogsIn() {
         DadaeguSignupSession session = DadaeguSignupSession.builder()
                 .externalDid("did:daegu:new-user").ciHash(hash("ci:new-user")).userName("신규사용자")

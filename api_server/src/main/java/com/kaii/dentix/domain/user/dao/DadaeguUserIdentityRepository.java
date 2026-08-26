@@ -9,4 +9,5 @@ public interface DadaeguUserIdentityRepository extends JpaRepository<DadaeguUser
     Optional<DadaeguUserIdentity> findByExternalDid(String externalDid);
     Optional<DadaeguUserIdentity> findByCiHash(String ciHash);
     Optional<DadaeguUserIdentity> findByUserId(Long userId);
+    long deleteByUserId(Long userId);
 }

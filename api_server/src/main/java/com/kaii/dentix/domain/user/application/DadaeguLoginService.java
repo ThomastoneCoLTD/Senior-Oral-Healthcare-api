@@ -169,9 +169,15 @@ public class DadaeguLoginService {
 
         Optional<DadaeguUserIdentity> mappedIdentity = didIdentity.isPresent() ? didIdentity : ciIdentity;
         if (mappedIdentity.isPresent()) {
-            User mappedUser = userRepository.findById(mappedIdentity.get().getUserId())
-                    .orElseThrow(() -> new UnauthorizedException("연결된 SOH 계정을 찾을 수 없습니다."));
-            return Optional.of(mappedUser);
+            Optional<User> mappedUser = userRepository.findById(mappedIdentity.get().getUserId());
+            if (mappedUser.isPresent()) {
+                return mappedUser;
+            }
+
+            // 탈퇴·삭제된 사용자에 연결된 식별정보가 남아 있으면 신규 가입도 막히므로
+            // 고아 연결을 제거하고 본인정보 일치 계정 조회 또는 최초 가입을 계속한다.
+            dadaeguUserIdentityRepository.delete(mappedIdentity.get());
+            dadaeguUserIdentityRepository.flush();
         }
         return userRepository.findByUserPhoneNumberAndUserNameAndUserBirthDate(
                 claims.phoneNumber(),

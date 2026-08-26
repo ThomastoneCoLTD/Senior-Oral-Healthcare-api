@@ -22,6 +22,7 @@ import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.application.UserLoginService;
+import com.kaii.dentix.domain.user.dao.DadaeguUserIdentityRepository;
 import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
@@ -75,6 +76,7 @@ class AdminUserServiceTest {
     @Mock private UserRewardTransactionRepository userRewardTransactionRepository;
     @Mock private UserRewardWalletRepository userRewardWalletRepository;
     @Mock private UserLoginHistoryRepository userLoginHistoryRepository;
+    @Mock private DadaeguUserIdentityRepository dadaeguUserIdentityRepository;
     @Mock private DaeguChainApiLogRepository daeguChainApiLogRepository;
     @Mock private UserRewardReclaimService userRewardReclaimService;
 
@@ -101,6 +103,7 @@ class AdminUserServiceTest {
                 userRewardTransactionRepository,
                 userRewardWalletRepository,
                 userLoginHistoryRepository,
+                dadaeguUserIdentityRepository,
                 daeguChainApiLogRepository,
                 userRewardReclaimService
         );
@@ -205,6 +208,18 @@ class AdminUserServiceTest {
         verify(userRewardTransactionRepository).deleteByUserId(10L);
         verify(oralExerciseProgressRepository).deleteByUserId(10L);
         verify(userRewardWalletRepository).deleteByUserId(10L);
+    }
+
+    @Test
+    void userDeleteAlsoRemovesDadaeguIdentityMapping() {
+        User user = User.builder().userId(10L).build();
+        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+        when(dadaeguUserIdentityRepository.deleteByUserId(10L)).thenReturn(1L);
+
+        adminUserService.userDelete(10L);
+
+        verify(dadaeguUserIdentityRepository).deleteByUserId(10L);
+        assertThat(user.getDeleted()).isNotNull();
     }
 
     @Test
