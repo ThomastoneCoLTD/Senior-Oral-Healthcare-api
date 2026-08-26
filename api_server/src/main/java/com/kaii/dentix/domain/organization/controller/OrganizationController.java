@@ -11,8 +11,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/organizations")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
-
 public class OrganizationController {
     private final OrganizationService organizationService;
 

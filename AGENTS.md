@@ -116,6 +116,7 @@ DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_PROD
 - `SOH_TERRAFORM_TFVARS_DEV`, `SOH_TERRAFORM_TFVARS_PROD_HCL`에는 각 환경의 `terraform.tfvars.example` 형식인 Terraform HCL만 넣습니다. 운영 workflow는 기존 앱 `.env` Secret과의 이름 충돌을 피하기 위해 `SOH_TERRAFORM_TFVARS_PROD_HCL`을 사용합니다. `SOH_API_ENV_*`의 `.env` 내용이나 DB 비밀번호/JWT secret/token/private key를 넣지 않습니다. Terraform apply workflow는 tfvars 각 줄을 사전 마스킹하고 대문자 앱 환경변수 또는 민감 변수명이 섞이면 `terraform init` 전에 차단합니다. 앱 환경변수 검사는 정상 Terraform 변수 `spring_profile`을 오인하지 않도록 대소문자를 구분해야 합니다.
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 RDS 비밀번호를 넣지 않습니다. 특히 prod workflow는 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_DATASOURCE_DRIVER_CLASS_NAME`이 `SOH_API_ENV_PROD`에 있으면 배포를 차단합니다. EC2 launch template user-data만 Terraform의 `db_address`, `db_port`, `db_name`, `db_master_user_secret_arn` 값으로 datasource 설정을 생성합니다.
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`는 여러 줄 `KEY=VALUE` 텍스트로 저장합니다. 각 항목은 한 줄에 하나씩 들어가야 하며, 한 줄로 이어 붙이면 Spring이 `SERVER_PORT` 같은 값을 잘못 읽어 시작에 실패할 수 있습니다.
+- `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 서로 다른 `JWT_ACCESS_KEY`, `JWT_REFRESH_KEY`를 각각 32자 이상으로 저장합니다. 저장소에는 JWT 기본키가 없으며 두 값이 없거나 짧으면 배포 workflow가 업로드 전에 차단합니다. 소스나 로그에 한 번이라도 노출된 JWT/AWS 키는 삭제만 하지 말고 해당 서비스에서 즉시 폐기·교체합니다.
 - 배포 EC2는 AWS Secrets Manager JDBC driver(`com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`)를 사용합니다. `SPRING_DATASOURCE_URL`은 `jdbc-secretsmanager:mysql://...`, `SPRING_DATASOURCE_USERNAME`은 RDS managed secret ARN, `SPRING_DATASOURCE_PASSWORD`는 빈 값으로 설정됩니다.
 - `DAEGU_CHAIN_APP_KEY`와 `DAEGU_CHAIN_TOKEN`은 용도가 다릅니다. `TOKEN_SERVER_BASE_URL`의 지급·회수 프록시는 앱키를 사용하고, 계정 생성·DID·토큰 approve 같은 대구체인 `/mitum/...` 직접 API는 사용자 토큰을 사용합니다. dev/prod 배포 workflow는 두 값을 모두 요구하며 `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, `TOKEN_SERVER_BASE_URL_PROD` 별도 Secret이 있으면 `.env`의 같은 키를 덮어씁니다.
 - prod 배포 workflow는 운영 토큰 발행/전송 owner 변경을 위해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS_PROD`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY_PROD` 별도 Secret이 있으면 `.env`의 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`를 덮어씁니다.
@@ -231,6 +232,14 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 2026-08-25 이전 대구체인 승인 실패 감사 로그의 `response_payload`에 외부 API가 되돌려준 `holder_pkey` 원문이 남은 행이 있는지 운영 DB에서 확인하고, 발견 시 해당 지갑키를 노출된 키로 간주해 지갑 교체·잔액 이전 가능성을 검토한 뒤 보존 정책에 따라 과거 로그를 정리합니다. 실제 키는 문서나 작업 로그에 복사하지 않습니다.
 
 ## 최근 동기화 상태
+
+2026-08-27 OWASP 보안 기준에 맞춰 인증·인가 및 의존성을 보강했습니다.
+
+- 관리자 가입 `POST /admin/account`만 공개 상태를 유지하고 관리자 계정 목록·삭제·비밀번호 초기화는 슈퍼 관리자만, 청구서 엑셀·사용자 일괄등록 양식은 로그인한 관리자만 접근하도록 보안 체인을 정리했습니다.
+- 컨트롤러별 전체 허용 CORS를 제거하고 `CORS_ALLOWED_ORIGINS`의 명시적 origin 및 필요한 요청 헤더만 허용합니다.
+- Authorization은 RFC 6750 `Bearer <token>` 형식만 허용하고 요청 파싱·검증 예외의 내부 메시지 및 오류 로그 상세가 응답·DB 로그에 노출되지 않도록 정리했습니다.
+- Spring Boot 3.5.16, JJWT 0.13.0, Apache POI 5.5.1, org.json 20260814, Commons Codec 1.22.1로 갱신하고 사용하지 않는 지원 종료 AWS SDK for Java v1 의존성을 제거했습니다.
+- JWT 서명키의 저장소 기본값을 제거하고 `JWT_ACCESS_KEY`, `JWT_REFRESH_KEY`를 배포 필수값으로 검사합니다. 과거 이력에 존재했던 AWS/JWT 형식 키는 별도 폐기·교체 대상입니다.
 
 2026-08-26 양치질 기록 기능을 폐기했습니다.
 

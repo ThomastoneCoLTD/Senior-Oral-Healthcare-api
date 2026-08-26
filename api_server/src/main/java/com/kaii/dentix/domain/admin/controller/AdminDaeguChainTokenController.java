@@ -18,7 +18,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/daegu-chain/token")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AdminDaeguChainTokenController {
 
     private final AdminDaeguChainTokenService adminDaeguChainTokenService;

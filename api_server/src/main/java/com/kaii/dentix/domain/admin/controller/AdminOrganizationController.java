@@ -22,7 +22,6 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/organization")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AdminOrganizationController {
     private final AdminService adminService;
     private final OrganizationService organizationService;

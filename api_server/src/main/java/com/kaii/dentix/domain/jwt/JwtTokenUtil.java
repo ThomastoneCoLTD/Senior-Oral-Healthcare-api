@@ -97,11 +97,11 @@ public class JwtTokenUtil {
     public Claims getClaims(String token, TokenType tokenType) {
         SecretKey key = tokenType == TokenType.AccessToken ? accessTokenKey : refreshTokenKey;
 
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
+        return Jwts.parser()
+                .verifyWith(key)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     /** ------------------------------
@@ -133,10 +133,11 @@ public class JwtTokenUtil {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header == null) return null;
 
-        if (header.toLowerCase().startsWith("bearer")) {
-            return header.substring(6).trim();
+        if (header.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            String token = header.substring(7).trim();
+            return token.isEmpty() ? null : token;
         }
-        return header.trim();
+        return null;
     }
 
     public String getRefreshToken(HttpServletRequest request) {

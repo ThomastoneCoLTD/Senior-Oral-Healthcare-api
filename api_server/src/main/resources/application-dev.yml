@@ -64,9 +64,8 @@ spring:
       mail.debug: true
 
 jwt:
-  accessTokenKey: ${JWT_ACCESS_KEY:j39sd9f39sd9f39sd9f39sd9f39sd9fs}
-  refreshTokenKey: ${JWT_REFRESH_KEY:kx9d9d9kd9dk9d9dk9d9dk9d9dk9d9dk}
-  secret: ${JWT_SECRET:jwt}
+  accessTokenKey: ${JWT_ACCESS_KEY}
+  refreshTokenKey: ${JWT_REFRESH_KEY}
   expiration: 604800000
 
 server:

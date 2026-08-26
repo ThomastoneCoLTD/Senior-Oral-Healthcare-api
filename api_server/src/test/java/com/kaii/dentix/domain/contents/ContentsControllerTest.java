@@ -134,6 +134,7 @@ public class ContentsControllerTest {
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
+                                fieldWithPath("response.sections").type(JsonFieldType.ARRAY).optional().description("콘텐츠 섹션 목록"),
                                 fieldWithPath("response.menuTabs").type(JsonFieldType.ARRAY).description("헤더 메뉴 탭 목록"),
                                 fieldWithPath("response.menuTabs[].id").type(JsonFieldType.STRING).description("헤더 메뉴 탭 ID"),
                                 fieldWithPath("response.menuTabs[].name").type(JsonFieldType.STRING).description("헤더 메뉴 탭 이름"),
@@ -151,7 +152,10 @@ public class ContentsControllerTest {
                                 fieldWithPath("response.contents[].thumbnail").type(JsonFieldType.STRING).description("콘텐츠 썸네일"),
                                 fieldWithPath("response.contents[].videoURL").type(JsonFieldType.STRING).optional().description("콘텐츠 동영상 경로"),
                                 fieldWithPath("response.contents[].categoryIds").type(JsonFieldType.ARRAY).description("콘텐츠 카테고리"),
-                                fieldWithPath("response.contents[].categoryIds[]").type(JsonFieldType.ARRAY).description("콘텐츠 카테고리 고유 번호")
+                                fieldWithPath("response.contents[].categoryIds[]").type(JsonFieldType.ARRAY).description("콘텐츠 카테고리 고유 번호"),
+                                fieldWithPath("response.contents[].personalized").type(JsonFieldType.BOOLEAN).description("맞춤 콘텐츠 여부"),
+                                fieldWithPath("response.contents[].personalizationSource").type(JsonFieldType.STRING).optional().description("맞춤 추천 근거"),
+                                fieldWithPath("response.contents[].rank").type(JsonFieldType.NUMBER).optional().description("맞춤 추천 순위")
                         )
                 ));
 

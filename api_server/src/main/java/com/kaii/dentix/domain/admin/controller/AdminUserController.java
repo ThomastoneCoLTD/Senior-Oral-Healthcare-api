@@ -22,7 +22,6 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/user")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AdminUserController {
 
     private final AdminService adminService; //토큰/권한 처리용 서비스 추가

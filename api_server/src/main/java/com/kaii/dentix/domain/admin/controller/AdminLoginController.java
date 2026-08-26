@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AdminLoginController {
 
     private final AdminLoginService adminLoginService;

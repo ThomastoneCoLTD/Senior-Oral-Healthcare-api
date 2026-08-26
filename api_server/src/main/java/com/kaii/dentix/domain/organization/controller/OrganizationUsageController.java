@@ -11,7 +11,6 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/organizations")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class OrganizationUsageController {
     private final OrganizationUsageService organizationUsageService;
 

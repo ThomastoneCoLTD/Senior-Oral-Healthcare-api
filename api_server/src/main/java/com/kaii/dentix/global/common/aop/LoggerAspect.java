@@ -81,7 +81,7 @@ public class LoggerAspect {
 			.requestUrl(loggerDTO.getRequestUrl())
 			.header(loggerDTO.getHeader())
 			.requestBody(loggerDTO.getRequestBody())
-			.errorLogMessage(exception.toString())
+			.errorLogMessage(exception.getClass().getSimpleName())
 			.build());
 
 		log.info("::: AOP writeFailLog End :::");
@@ -105,14 +105,16 @@ public class LoggerAspect {
 		UserRole tokenUserRole = null;
 
 		try {
-			if (headers.containsKey("authorization")) {
-				String header = headers.get("authorization");
+			String header = jwtTokenUtil.getAccessToken(request);
+			if (header != null) {
 				tokenUserId = jwtTokenUtil.getUserId(header, TokenType.AccessToken);
 				tokenUserRole = jwtTokenUtil.getRoles(header, TokenType.AccessToken);
-			} else if (headers.containsKey("refreshtoken")) {
-				String header = headers.get("refreshtoken");
-				tokenUserId = jwtTokenUtil.getUserId(header, TokenType.RefreshToken);
-				tokenUserRole = jwtTokenUtil.getRoles(header, TokenType.RefreshToken);
+			} else {
+				String refreshToken = jwtTokenUtil.getRefreshToken(request);
+				if (refreshToken != null && !refreshToken.isBlank()) {
+					tokenUserId = jwtTokenUtil.getUserId(refreshToken, TokenType.RefreshToken);
+					tokenUserRole = jwtTokenUtil.getRoles(refreshToken, TokenType.RefreshToken);
+				}
 			}
 		} catch (Exception ignored) {}
 

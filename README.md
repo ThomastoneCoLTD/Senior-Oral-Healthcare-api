@@ -343,7 +343,8 @@ SPRING_PROFILES_ACTIVE=dev
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh-dev.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh-dev.thomabio.com
-JWT_SECRET=<DEV_JWT_SECRET>
+JWT_ACCESS_KEY=<DEV_JWT_ACCESS_SIGNING_KEY_AT_LEAST_32_CHARACTERS>
+JWT_REFRESH_KEY=<DEV_JWT_REFRESH_SIGNING_KEY_AT_LEAST_32_CHARACTERS>
 DAEGU_CHAIN_APP_KEY=<DEV_DAEGU_CHAIN_APP_KEY>
 DAEGU_CHAIN_ID=mitumt
 DID_SERVER_BASE_URL=http://43.201.125.82
@@ -365,7 +366,8 @@ SPRING_PROFILES_ACTIVE=prod
 SERVER_SERVLET_CONTEXT_PATH=/api
 FRONTEND_ORIGIN=https://soh.thomabio.com
 CORS_ALLOWED_ORIGINS=https://soh.thomabio.com
-JWT_SECRET=<PROD_JWT_SECRET>
+JWT_ACCESS_KEY=<PROD_JWT_ACCESS_SIGNING_KEY_AT_LEAST_32_CHARACTERS>
+JWT_REFRESH_KEY=<PROD_JWT_REFRESH_SIGNING_KEY_AT_LEAST_32_CHARACTERS>
 DAEGU_CHAIN_APP_KEY=<PROD_DAEGU_CHAIN_APP_KEY>
 DAEGU_CHAIN_ID=mitumt
 DID_SERVER_BASE_URL=<PROD_DID_SERVER_BASE_URL>
@@ -380,6 +382,7 @@ USER_REWARD_TOKEN_TRANSFER_ENABLED=true
 ```
 
 Do not commit real `.env` files. GitHub Actions creates `.env`, uploads it to S3, and EC2 downloads it through the instance profile.
+Both deploy workflows reject an environment file unless `JWT_ACCESS_KEY` and `JWT_REFRESH_KEY` are present and each contains at least 32 characters. These signing keys have no repository fallback; rotate any value that has ever appeared in source control or logs.
 Terraform passes `db_address`, `db_port`, `db_name`, and `db_master_user_secret_arn` to the launch template. EC2 rewrites `SPRING_DATASOURCE_URL` to `jdbc-secretsmanager:mysql://...`, sets `SPRING_DATASOURCE_USERNAME` to the secret ARN, clears `SPRING_DATASOURCE_PASSWORD`, and starts the app with `com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`. The launch template resource promotes its managed latest version to the default version, and the production deploy workflow requires the ASG's explicit version to match that default before refreshing instances. The EC2 instance profile must keep `secretsmanager:DescribeSecret` and `secretsmanager:GetSecretValue` on that RDS managed secret. When Secrets Manager rotates the RDS password, the JDBC driver refreshes cached credentials for new DB connections, so GitHub Secrets do not need to be edited.
 DaeguChain API requests use `DAEGU_CHAIN_APP_KEY` for every outbound request body field named `token`; keep app keys and any private keys only in environment secrets.
 Mobile/tablet DaDaegu login uses `DADAEGU_LOGIN_ENABLED`, `DADAEGU_LOGIN_SITE_ID`, `DADAEGU_LOGIN_RSA_PRIVATE_KEY`, and optional `DADAEGU_LOGIN_REQUIRED_VC` (default `DaeguMasterVC`). The public `/login/dadaegu/config` response exposes only readiness, site ID, and required VC; the PKCS#8 RSA private key must remain only in the backend environment secret. `/login/dadaegu` decrypts the encrypted master-VC claims and first resolves the external DaDaegu DID through `dadaegu_user_identity`; for a first-time binding it may match an existing SOH user by normalized phone/name/birth date. Existing users receive normal SOH login tokens immediately. New users receive a 10-minute, one-use onboarding token and complete `POST /login/dadaegu/signUp` with only `realOrganization` and all required service-agreement IDs. The server then creates the SOH-only account, internal DaeguChain DID, reward wallet, agreement consents, and external identity mapping in one transaction before issuing login tokens. Raw onboarding tokens are never stored, and encrypted callback payloads plus all token/private-key/password fields are masked in application logs.

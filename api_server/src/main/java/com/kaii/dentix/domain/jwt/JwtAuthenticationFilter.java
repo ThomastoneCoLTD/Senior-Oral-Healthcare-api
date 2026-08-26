@@ -10,41 +10,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
-
-import static com.kaii.dentix.global.config.WebSecurityConfig.EXCLUDE_URLS;
-
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenUtil jwtTokenUtil;
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
-
-    // [최적화] 로그인 등 인증이 필요 없는 경로는 필터 로직 자체를 실행하지 않음
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String requestURI = request.getRequestURI();
-
-        // Nginx 등 프록시 경로 제거 (필요한 경우 유지)
-        if (requestURI.startsWith("/dentix")) {
-            requestURI = requestURI.substring("/dentix".length());
-        }
-
-        String finalUri = requestURI;
-        return Arrays.stream(EXCLUDE_URLS)
-                .anyMatch(pattern -> pathMatcher.match(pattern, finalUri));
-    }
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-
-        // shouldNotFilter에서 걸러지지 않은 요청만 여기로 옴 (즉, 인증이 필요한 요청들)
 
         try {
             String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION);
@@ -55,8 +31,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            if (accessToken.startsWith("Bearer ")) {
-                accessToken = accessToken.substring(7);
+            if (!accessToken.startsWith("Bearer ")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+            accessToken = accessToken.substring(7).trim();
+            if (accessToken.isEmpty()) {
+                filterChain.doFilter(request, response);
+                return;
             }
 
             // 토큰 검증

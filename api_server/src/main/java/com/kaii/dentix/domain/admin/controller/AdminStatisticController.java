@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/statistic")
-@CrossOrigin(origins = "*", allowedHeaders = "*")
 public class AdminStatisticController {
 
     private final AdminStatisticService adminStatisticService;

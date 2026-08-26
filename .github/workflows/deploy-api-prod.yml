@@ -141,6 +141,10 @@ jobs:
             || (echo "DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY is required for token owner transfer/reclaim APIs" && exit 1)
           grep -Eq '^DAEGU_CHAIN_WALLET_ENCRYPTION_KEY=.+' "${ENV_FILE}" \
             || (echo "DAEGU_CHAIN_WALLET_ENCRYPTION_KEY is required for reward wallet signing key encryption" && exit 1)
+          grep -Eq '^JWT_ACCESS_KEY=.{32,}$' "${ENV_FILE}" \
+            || (echo "JWT_ACCESS_KEY with at least 32 characters is required" && exit 1)
+          grep -Eq '^JWT_REFRESH_KEY=.{32,}$' "${ENV_FILE}" \
+            || (echo "JWT_REFRESH_KEY with at least 32 characters is required" && exit 1)
 
           chmod 600 "${ENV_FILE}"
 

@@ -94,7 +94,10 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public ErrorResponse HttpMessageNotReadableException(HttpServletRequest request, HttpMessageNotReadableException e) {
         log.info("error : ", e);
-        return ErrorResponse.of(HttpStatus.METHOD_NOT_ALLOWED, ResponseMessage.HTTP_MESSAGE_NOT_READABLE_MSG.replace("{msg}", Objects.requireNonNull(e.getMessage())));
+        return ErrorResponse.of(
+                HttpStatus.BAD_REQUEST,
+                ResponseMessage.HTTP_MESSAGE_NOT_READABLE_MSG.replace("{msg}", "요청 본문의 형식이 올바르지 않습니다.")
+        );
     }
 
     /**
@@ -213,7 +216,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public ErrorResponse ConstraintViolationException(HttpServletRequest request, ConstraintViolationException e) {
         log.info("error : ", e);
-        return ErrorResponse.of(HttpStatus.EXPECTATION_FAILED, e.getMessage());
+        String message = e.getConstraintViolations().stream()
+                .map(violation -> violation.getMessage())
+                .filter(StringUtils::isNotBlank)
+                .findFirst()
+                .orElse("요청 값의 형식이 올바르지 않습니다.");
+        return ErrorResponse.of(HttpStatus.EXPECTATION_FAILED, message);
     }
     
     /**

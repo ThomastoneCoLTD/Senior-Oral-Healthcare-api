@@ -2,8 +2,6 @@ package com.kaii.dentix.domain.billing.dto;
 
 import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.billing.util.BillingDescriptionMapper;
-import com.sun.mail.imap.protocol.Item;
-import jakarta.mail.FetchProfile;
 import lombok.*;
 
 import java.time.LocalDateTime;

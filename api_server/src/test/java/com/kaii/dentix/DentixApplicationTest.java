@@ -16,7 +16,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.database=h2",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-        "spring.jpa.hibernate.ddl-auto=none"
+        "spring.jpa.hibernate.ddl-auto=none",
+        "JWT_ACCESS_KEY=test-only-access-signing-key-32-chars-minimum",
+        "JWT_REFRESH_KEY=test-only-refresh-signing-key-32-chars-minimum"
 })
 class DentixApplicationTest {
 

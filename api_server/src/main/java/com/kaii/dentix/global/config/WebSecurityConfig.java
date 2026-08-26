@@ -4,6 +4,7 @@ import com.kaii.dentix.domain.jwt.JwtAuthenticationFilter;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,10 +19,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -32,21 +35,19 @@ public class WebSecurityConfig {
 
     private final JwtTokenUtil jwtTokenUtil;
 
+    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:5173,https://soh-dev.thomabio.com,https://soh.thomabio.com,https://denti.thomabio.com}")
+    private String corsAllowedOrigins;
+
     public static String[] EXCLUDE_URLS = {
             "/actuator/health",
             "/api/actuator/health",
             "/docs/*",
             "/login", "/login/**",
-            "/admin/user/bulk-upload/template/*",
             "/password", "/password/*",
             "/service-agreement",
             "/contents", "/contents/*",
             "/organizations/check/**",
-            "/admin/login",
-            "/admin/register", "/admin/register/*",
-            "/admin/account", "/admin/account/*",
-            "/admin/password","/admin/find-password",
-            "/admin/auto-login"
+            "/admin/find-password"
     };
 
     @Bean
@@ -111,6 +112,10 @@ public class WebSecurityConfig {
                                         ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER
                                 )
                         )
+                        .addHeaderWriter(new StaticHeadersWriter(
+                                "Permissions-Policy",
+                                "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
+                        ))
                 )
 
                 /* =============================
@@ -123,11 +128,14 @@ public class WebSecurityConfig {
                                 "/actuator/health",
                                 "/actuator/health/**",
                                 "/api/actuator/health",
-                                "/api/actuator/health/**",
-                                "/admin/billing/export/excel/**",
-                                "/admin/user/bulk-upload/template/**"
+                                "/api/actuator/health/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/admin/account").permitAll()
                         .requestMatchers(EXCLUDE_URLS).permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/admin/account").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/admin/account/reset-password").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/admin/account/list").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/daegu-chain/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )
@@ -144,14 +152,20 @@ public class WebSecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "http://soh-api-dev.thomabio.com",
-                "https://denti.thomabio.com",
-                "https://*.thomabio.com"
-        ));
+        List<String> allowedOrigins = Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isBlank())
+                .toList();
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Accept-Language",
+                "RefreshToken",
+                "X-Requested-With"
+        ));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

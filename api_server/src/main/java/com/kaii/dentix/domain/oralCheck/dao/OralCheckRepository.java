@@ -16,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.TemporalAdjusters;
 
 @Repository
 public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
@@ -63,30 +67,38 @@ public interface OralCheckRepository extends JpaRepository<OralCheck, Long> {
     """)
     long countSuccessByOrganization(@Param("organizationId") Long organizationId);
 
-    @Query("""
-        SELECT COUNT(o)
-        FROM OralCheck o
-        WHERE o.user.organization.organizationId = :orgId
-          AND DATE(o.created) = CURRENT_DATE
-    """)
-    long countTodayUsage(@Param("orgId") Long orgId);
+    long countByUser_Organization_OrganizationIdAndCreatedGreaterThanEqualAndCreatedLessThan(
+            Long organizationId,
+            Date start,
+            Date end
+    );
 
-    @Query("""
-        SELECT COUNT(o)
-        FROM OralCheck o
-        WHERE o.user.organization.organizationId = :orgId
-          AND YEARWEEK(o.created, 1) = YEARWEEK(CURRENT_DATE, 1)
-    """)
-    long countThisWeekUsage(@Param("orgId") Long orgId);
+    default long countTodayUsage(Long organizationId) {
+        ZoneId zone = ZoneId.of("Asia/Seoul");
+        LocalDate today = LocalDate.now(zone);
+        return countInRange(organizationId, today, today.plusDays(1), zone);
+    }
 
-    @Query("""
-        SELECT COUNT(o)
-        FROM OralCheck o
-        WHERE o.user.organization.organizationId = :orgId
-          AND YEAR(o.created) = YEAR(CURRENT_DATE)
-          AND MONTH(o.created) = MONTH(CURRENT_DATE)
-    """)
-    long countThisMonthUsage(@Param("orgId") Long orgId);
+    default long countThisWeekUsage(Long organizationId) {
+        ZoneId zone = ZoneId.of("Asia/Seoul");
+        LocalDate weekStart = LocalDate.now(zone)
+                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        return countInRange(organizationId, weekStart, weekStart.plusWeeks(1), zone);
+    }
+
+    default long countThisMonthUsage(Long organizationId) {
+        ZoneId zone = ZoneId.of("Asia/Seoul");
+        LocalDate monthStart = LocalDate.now(zone).withDayOfMonth(1);
+        return countInRange(organizationId, monthStart, monthStart.plusMonths(1), zone);
+    }
+
+    private long countInRange(Long organizationId, LocalDate start, LocalDate end, ZoneId zone) {
+        return countByUser_Organization_OrganizationIdAndCreatedGreaterThanEqualAndCreatedLessThan(
+                organizationId,
+                Date.from(start.atStartOfDay(zone).toInstant()),
+                Date.from(end.atStartOfDay(zone).toInstant())
+        );
+    }
 
     @Query("""
         SELECT COUNT(oc)
