@@ -204,19 +204,19 @@ public class OralExerciseContentInitializer {
 
     private int durationSecondsForSort(int sort) {
         if (sort == 1) {
-            return 114;
+            return 113;
         }
         return switch (sort) {
-            case 2 -> 212;
+            case 2 -> 211;
             case 3 -> 176;
             case 4 -> 172;
-            case 5 -> 428;
+            case 5 -> 426;
             case 6 -> 232;
             case 7 -> 176;
-            case 8 -> 171;
+            case 8 -> 168;
             case 9 -> 163;
-            case 10 -> 133;
-            case 11 -> 172;
+            case 10 -> 130;
+            case 11 -> 171;
             case 12 -> 167;
             default -> 300;
         };

@@ -84,17 +84,17 @@ class OralExerciseContentInitializerTest {
         assertThat(findBySort(savedContents, 12).getVideoUrl())
                 .contains("%EC%A0%95%EA%B8%B0%EA%B2%80%EC%A7%84%EA%B3%BC");
 
-        assertThat(findBySort(savedContents, 1).getDurationSeconds()).isEqualTo(114);
-        assertThat(findBySort(savedContents, 2).getDurationSeconds()).isEqualTo(212);
+        assertThat(findBySort(savedContents, 1).getDurationSeconds()).isEqualTo(113);
+        assertThat(findBySort(savedContents, 2).getDurationSeconds()).isEqualTo(211);
         assertThat(findBySort(savedContents, 3).getDurationSeconds()).isEqualTo(176);
         assertThat(findBySort(savedContents, 4).getDurationSeconds()).isEqualTo(172);
-        assertThat(findBySort(savedContents, 5).getDurationSeconds()).isEqualTo(428);
+        assertThat(findBySort(savedContents, 5).getDurationSeconds()).isEqualTo(426);
         assertThat(findBySort(savedContents, 6).getDurationSeconds()).isEqualTo(232);
         assertThat(findBySort(savedContents, 7).getDurationSeconds()).isEqualTo(176);
-        assertThat(findBySort(savedContents, 8).getDurationSeconds()).isEqualTo(171);
+        assertThat(findBySort(savedContents, 8).getDurationSeconds()).isEqualTo(168);
         assertThat(findBySort(savedContents, 9).getDurationSeconds()).isEqualTo(163);
-        assertThat(findBySort(savedContents, 10).getDurationSeconds()).isEqualTo(133);
-        assertThat(findBySort(savedContents, 11).getDurationSeconds()).isEqualTo(172);
+        assertThat(findBySort(savedContents, 10).getDurationSeconds()).isEqualTo(130);
+        assertThat(findBySort(savedContents, 11).getDurationSeconds()).isEqualTo(171);
         assertThat(findBySort(savedContents, 12).getDurationSeconds()).isEqualTo(167);
     }
 
