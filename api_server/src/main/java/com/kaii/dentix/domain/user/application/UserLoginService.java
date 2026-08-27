@@ -18,7 +18,6 @@ import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.domain.user.dao.UserLoginHistoryRepository;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
-import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
 import com.kaii.dentix.domain.user.domain.UserLoginHistory;
 import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
@@ -289,26 +288,6 @@ public class UserLoginService {
         }
         if (user.getIsVerify() != YnType.Y) {
             throw new UnauthorizedException("User is not verified.");
-        }
-
-        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
-        String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
-        user.updateLogin(refreshToken);
-        recordLoginHistory(user);
-
-        return buildLoginResponse(user, accessToken, refreshToken);
-    }
-
-    @Transactional
-    public UserDto.LoginResponse userDidLogin(UserDto.DidLoginRequest request) {
-        User user = userRepository.findByUserLoginIdentifier(request.getUserLoginIdentifier())
-                .orElseThrow(() -> new UnauthorizedException("Invalid login identifier or DID."));
-
-        if (user.getIsVerify() != YnType.Y) {
-            throw new UnauthorizedException("User is not verified.");
-        }
-        if (user.getDaeguDidStatus() != UserDaeguIdentityStatus.ISSUED || StringUtils.isBlank(user.getDaeguDid())) {
-            throw new UnauthorizedException("DID is not issued.");
         }
 
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);

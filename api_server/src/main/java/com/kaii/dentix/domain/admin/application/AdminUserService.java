@@ -488,7 +488,7 @@ public class AdminUserService {
 
         if (!userIds.isEmpty()) {
             userLoginHistoryRepository.findByUserIdInOrderByCreatedDesc(userIds).stream()
-                    .map(history -> toDaeguChainUsageLog("DID 로그인", usersById.get(history.getUserId()), history.getCreated()))
+                    .map(history -> toDaeguChainUsageLog("사용자 로그인", usersById.get(history.getUserId()), history.getCreated()))
                     .filter(Objects::nonNull)
                     .forEach(logs::add);
 

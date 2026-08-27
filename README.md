@@ -644,9 +644,9 @@ If tests or REST Docs require external services, document the reason and use a d
 
 User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`) require `realOrganization` with one of `대구1`, `대구2`, or `대구3`. The selected value is stored in nullable `user.real_organization` so pre-existing users and administrator bulk-upload records remain compatible.
 
-The user login flows are separate: `POST /login` with `userType=user` verifies the login ID and BCrypt password without requiring an issued DID, while `POST /login/did` verifies the issued DID state using only the login ID. Administrator login behavior is unchanged.
+User login uses `POST /login` with `userType=user` and verifies the login ID and BCrypt password without requiring an issued DID. The legacy ID-only `POST /login/did` endpoint has been removed; mobile and tablet users can still use the separate DaDaegu integration at `POST /login/dadaegu`. Administrator login behavior is unchanged.
 
-Both user registration APIs require `userGender` (`M` or `W`) and `userBirthDate`. Standard user registration additionally requires `userPassword`, `findPwdQuestionId`, and `findPwdAnswer`; the question list is available from `GET /password/questions`. DID registration does not accept password-recovery question/answer input and stores inaccessible random credentials in the legacy non-null password/recovery columns, so the DID account remains DID-login-only. `POST /login/find-id` returns the login identifier only when name, normalized phone number, and birth date all match.
+Both user registration APIs require `userGender` (`M` or `W`) and `userBirthDate`. Standard user registration additionally requires `userPassword`, `findPwdQuestionId`, and `findPwdAnswer`; the question list is available from `GET /password/questions`. The legacy DID registration endpoint remains for compatibility but its former ID-only login endpoint is no longer available. `POST /login/find-id` returns the login identifier only when name, normalized phone number, and birth date all match.
 
 The `dev` and `prod` profiles upsert the nine legacy recovery questions with stable IDs `1` through `9` during application startup. This keeps existing `user.find_pwd_question_id` references usable and safely restores missing question rows in a newly provisioned database.
 

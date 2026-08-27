@@ -130,7 +130,7 @@ DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_PROD
 - 다대구 최초 가입 화면은 필수 약관 동의와 함께 구강분석 서비스 신청 여부를 받고 `user.oral_analysis_service_enabled`에 저장합니다. 이 값은 `/user/info` 조회·수정 및 로그인 응답에 포함되며, 기존 `null` 사용자는 미신청으로 해석합니다. 사용자가 구강분석 서비스를 신청한 경우에만 PLAQUE/PERIODONTAL 서비스 목록을 응답하고, 미신청이면 빈 목록을 반환합니다.
 - 다대구 성별은 추가 입력 없이 VC 값을 백엔드 `M`/`W`로 정규화합니다. 영문 `M/F/W`, `MALE/FEMALE`, `MAN/WOMAN`, 한글 `남/남성/남자`, `여/여성/여자`, 주민번호 성별 코드 `1~8`, 따옴표·공백·괄호가 포함된 표현을 지원합니다.
 - 개발 DID/token 서버는 현재 `DID_SERVER_BASE_URL=http://43.201.125.82`, `TOKEN_SERVER_BASE_URL=http://43.201.125.82`를 사용합니다. 배포 API에서 `TOKEN_SERVER_BASE_URL`이 `http://localhost:5000`이면 EC2 자기 자신을 호출해 token list/create/transfer가 connection refused로 실패합니다.
-- DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. DID 로그인은 SOH DB에 저장된 사용자 자체 DID 발급 상태와 DID 문자열만 확인하며, VC-JWT credential 발급/검증은 사용하지 않습니다.
+- DID 생성 경로 기본값은 `/did/create`이며 회원가입 DID 생성 요청은 `label`에 사용자 로그인 아이디를 넣어 호출합니다. 회원가입 시 DID 서버가 자체 생성한 DID를 내려주고, 지갑 주소는 DID 응답의 `walletAddress`, `wallet_address`, `accountAddress`, `account_address`, `address` 필드를 우선 사용합니다. DID 응답에 지갑 주소가 없으면 백엔드가 대구체인 계정 생성 API로 지갑 주소를 별도 생성해 저장합니다. 사용자가 입력한 지갑 주소나 DID 문자열 추정값으로 대체하지 않습니다. 아이디만 입력하는 기존 `POST /login/did`는 제거했으며 외부 DID 로그인은 다대구 `/login/dadaegu`만 사용합니다.
 - 일반 비밀번호 회원가입과 DID/다대구 회원가입은 모두 DID 연결·리워드 지갑 생성이 완료되어야 성공합니다. 외부 프로비저닝 실패를 `null`로 삼켜 불완전 계정을 남기지 않습니다. 로컬 회원가입은 SOH DID 서버 응답에서 DID와 공개키만 사용하고, DID 응답의 주소·private key를 리워드 지갑에 재사용하지 않습니다. 가입 경로와 무관하게 리워드 지갑은 `/mitum/com/acc_create`의 주소·private key 한 쌍으로 별도 생성하고 `/mitum/com/acc_faucet`으로 체인 계정을 활성화합니다. 기존 지갑 주소와 암호화된 대구체인 서명키가 모두 있으면 재사용하며, 서명키가 없거나 과거 Ed25519 DID private key 형식이면 새 주소·키로 멱등성 보정합니다. 토큰 balance state가 생기기 전 approve는 `P06D504`로 실패하므로 로그인에서는 승인하지 않고, 실제 토큰 지급 성공 직후 해당 contract만 승인하며 회수 직전에도 재확인합니다.
 - reward reclaim은 사용자 DID private key를 SOH에서 읽거나 저장하지 않고, token server의 `TOKEN_RECLAIM_PATH`(기본 `/token/retrieve`)로 요청합니다. 저장된 리워드 지갑 주소를 `holder`, 운영 owner 주소를 `sender`·`receiver`로 사용하고 운영 owner private key만 백엔드 Secret에서 읽습니다. 다대구 외부 DID는 회수 요청의 `user_DID`로 보내지 않으며 owner private key는 API 감사 로그에서 마스킹합니다.
 - SOH가 대구체인 raw 리워드 지갑을 생성할 때는 응답의 지갑 private key를 AES-256-GCM으로 암호화해 저장하고 평문은 즉시 폐기합니다. 기존 DID 서버가 반환한 64자리 raw hex/`0x` hex 키는 Ed25519 DID 키이므로 `/mitum/token/approve` 지갑키로 변환하거나 재사용하지 않고 새 대구체인 지갑을 생성합니다. `holder_pkey`는 API 감사 로그에서 마스킹합니다. 슈퍼 관리자는 사용자 관리 화면에서 정확한 대상 로그인 ID를 재입력한 경우에만 구강체조 진도·리워드 거래·리워드 지갑을 초기화할 수 있습니다. 계정·기본 인적정보·기관·다대구 연결은 유지되며 다음 로그인 또는 지갑 조회에서 승인 가능한 새 지갑을 생성합니다.
@@ -176,10 +176,10 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 - 개발/운영 API datasource 설정을 AWS Secrets Manager JDBC driver 기반으로 정리해 RDS 비밀번호 변경 시 GitHub Secret 수동 갱신이 필요 없도록 했습니다.
 - 2026-08-12 운영 RDS의 7일 자동 비밀번호 회전으로 정적 S3 `.env`와 실제 Secret이 불일치해 ASG 교체가 반복된 원인을 확인했습니다. `SOH_API_ENV_PROD`의 datasource 키를 금지하고, launch template 기본 버전과 Secrets Manager JDBC 설정을 배포 전에 검증하도록 보강했습니다.
-- 로그인 화면은 일반 사용자, DID, 관리자 3개 흐름으로 분리합니다. 일반 사용자 `POST /login`은 아이디와 BCrypt 비밀번호를 검증하며 DID 발급 상태를 요구하지 않고, `POST /login/did`만 아이디에 연결된 DID 발급 상태와 DID 문자열을 확인합니다. 관리자 로그인 흐름은 기존대로 유지합니다.
+- 로그인 화면은 일반 사용자, 다대구, 관리자 3개 흐름으로 분리합니다. 일반 사용자 `POST /login`은 아이디와 BCrypt 비밀번호를 검증하며 DID 발급 상태를 요구하지 않습니다. 아이디만 입력하는 기존 `POST /login/did`는 제거했고 다대구 로그인은 `POST /login/dadaegu`를 사용합니다. 관리자 로그인 흐름은 기존대로 유지합니다.
 - 일반 사용자 회원가입 `POST /login/signUp`은 비밀번호, 생년월일, 기존 비밀번호 찾기 질문/답변을 저장하면서 기존 DID·지갑 프로비저닝도 함께 수행합니다. 프론트에서는 비밀번호 확인 일치와 아이디 중복 확인을 완료해야 제출합니다.
 - 가입 경로별 DID를 분리합니다. 로컬 회원가입(`/login/signUp`, 기존 `/login/signUp/did`)은 SOH DID 서버에서 자체 DID를 생성하고, 다대구 최초 가입(`/login/dadaegu/signUp`)은 자체 DID를 추가 생성하지 않고 다대구 인증 결과의 DID를 리워드 지갑 활성 DID로 저장합니다. 리워드 지갑은 두 가입 경로 모두 DID 키와 분리해 대구체인 `/mitum/com/acc_create`로 생성합니다. 기존 로컬 사용자가 다대구 로그인하면 자체 DID와 서명키가 있는 기존 지갑 주소는 보존하고 리워드 지갑의 활성 DID만 다대구 DID로 전환합니다. 토큰 지급은 DID의 발급처와 무관하게 저장된 지갑 주소를 `/token/transfer`의 `receiver`로 직접 전송합니다. 다대구 DID를 `user_DID`로 보내면 토큰 서버의 로컬 DID DB 조회에서 `user_DID not found`로 체인 전송 전에 실패하므로 지급 요청에는 넣지 않습니다.
-- 일반/DID 회원가입은 성별(`M`/`W`)을 필수로 저장합니다. DID 회원가입 `POST /login/signUp/did`은 비밀번호 및 비밀번호 찾기 질문/답변을 입력받지 않으며, 기존 NOT NULL 컬럼 호환을 위해 외부에 노출되지 않는 임의 비밀번호와 복구 답변을 저장해 DID 로그인 전용 계정으로 유지합니다.
+- 일반/DID 회원가입은 성별(`M`/`W`)을 필수로 저장합니다. 기존 DID 회원가입 `POST /login/signUp/did`은 호환 목적으로 유지하지만 아이디 전용 로그인은 제공하지 않습니다. 일반 회원가입은 비밀번호 및 비밀번호 찾기 질문/답변을 저장합니다.
 - API health check 경로 `/api/actuator/health`를 허용했습니다.
 - dev 배포 workflow에서 단일 인스턴스 교체가 가능하도록 ASG instance refresh 설정을 보완했습니다.
 - 구강체조 콘텐츠 제목, 영상 URL, 실제 영상 길이를 초기 데이터에 반영했습니다.
@@ -205,7 +205,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 프론트에서 리워드 지급 후 버튼이 다시 보이는 문제를 보완했습니다.
 - 관리자 페이지에 기관별 사용자 구강체조 영상 진도 및 필수 영상 토큰 수령 현황 조회 탭을 추가했습니다. 관리자 API는 `/admin/user/exercise-progress`를 사용합니다.
 - 관리자 페이지에 사용자 DID 계정 발급, 리워드 지갑 생성, 로그인 이력, 필수 입 체조 5개 영상 리워드 지급, 리워드 회수 내역을 한 번에 보는 DID 리워드 현황 탭을 추가했습니다. 관리자 API는 `/admin/user/daegu-reward-status`를 사용합니다.
-- 관리자 페이지에 대구체인 기능 사용 로그(사용 기능, 사용자 아이디, 사용일시) 조회 화면을 추가했습니다. 관리자 API는 `/admin/user/daegu-chain-usage-logs`를 사용하며 기존 DID 로그인, DID 발급, 구강체조 리워드 지급·회수 이력을 통합해 보여줍니다.
+- 관리자 페이지에 대구체인 기능 사용 로그(사용 기능, 사용자 아이디, 사용일시) 조회 화면을 추가했습니다. 관리자 API는 `/admin/user/daegu-chain-usage-logs`를 사용하며 사용자 로그인, DID 발급, 구강체조 리워드 지급·회수 이력을 통합해 보여줍니다.
 - 대구체인 API 신규 호출은 `daegu_chain_api_log` 테이블에 API, 마스킹된 Request/Response, 성공 여부를 저장합니다. `token`, 앱키, private key, pkey, JWT, 비밀번호·secret 계열 필드는 실제 값이 로그에 남지 않아야 합니다. 외부 API가 오류 메시지 본문에 요청의 민감값을 되돌려 보내는 경우에도 저장·전파 전에 요청값 기준으로 다시 마스킹합니다. 배포 전 과거 통합 로그에는 API/Request/Response가 없을 수 있습니다.
 - 사용자 로그인 성공 시마다 `user_login_history` 테이블에 이력이 기록됩니다. 배포 이전 과거 로그인 이력은 소급 생성되지 않으며 기존 `userLastLoginDate`는 최근 로그인 일시로 함께 조회됩니다.
 - 사용자 구강체조 인트로 영상(`optional_video_1`, 1화)은 영상 내 번호 버튼 성공 시 토큰 수령 대상입니다. 단, 사용자 화면의 리워드 슬롯과 자동 리워드 회수 조건은 기존처럼 필수영상 5개(`essential_video_1~5`)만 반영합니다.

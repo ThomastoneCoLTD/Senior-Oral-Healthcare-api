@@ -46,12 +46,6 @@ public class UserLoginController {
         return new DataResponse<>(userLoginService.userDidSignUp(request));
     }
 
-    /** DID 로그인 */
-    @PostMapping("/did")
-    public DataResponse<UserDto.LoginResponse> userDidLogin(@Valid @RequestBody UserDto.DidLoginRequest request) {
-        return new DataResponse<>(userLoginService.userDidLogin(request));
-    }
-
     /** 모바일·태블릿 다대구 로그인용 공개 설정 */
     @GetMapping("/dadaegu/config")
     public DataResponse<UserDto.DadaeguLoginConfigResponse> dadaeguLoginConfig() {

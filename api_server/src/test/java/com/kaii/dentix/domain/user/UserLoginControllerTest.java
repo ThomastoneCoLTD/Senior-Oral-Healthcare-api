@@ -27,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import java.util.Arrays;
 import java.util.List;
@@ -39,6 +40,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.documentationConfiguration;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
@@ -62,6 +64,9 @@ public class UserLoginControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private RequestMappingHandlerMapping requestMappingHandlerMapping;
 
     @MockBean
     private PasswordEncoder passwordEncoder;
@@ -617,6 +622,15 @@ public class UserLoginControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(401))
                 .andExpect(jsonPath("rtMsg").value("Administrator approval is required before you can log in."));
+    }
+
+    @Test
+    void idOnlyDidLoginEndpointIsRemoved() {
+        boolean endpointExists = requestMappingHandlerMapping.getHandlerMethods().keySet().stream()
+                .flatMap(mapping -> mapping.getPatternValues().stream())
+                .anyMatch("/login/did"::equals);
+
+        assertFalse(endpointExists);
     }
 
     @Test

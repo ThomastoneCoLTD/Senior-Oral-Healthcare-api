@@ -50,13 +50,6 @@ public class UserDto {
 
     @Getter @Builder
     @NoArgsConstructor @AllArgsConstructor
-    public static class DidLoginRequest {
-        @NotBlank(message = "아이디는 필수입니다.")
-        private String userLoginIdentifier;
-    }
-
-    @Getter @Builder
-    @NoArgsConstructor @AllArgsConstructor
     public static class DadaeguLoginRequest {
         @NotNull(message = "다대구 인증 결과는 필수입니다.")
         @JsonSerialize(using = SensitiveJsonNodeSerializer.class)
