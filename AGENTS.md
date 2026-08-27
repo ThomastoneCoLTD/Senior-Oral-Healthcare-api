@@ -116,7 +116,7 @@ DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_PROD
 - `SOH_TERRAFORM_TFVARS_DEV`, `SOH_TERRAFORM_TFVARS_PROD_HCL`에는 각 환경의 `terraform.tfvars.example` 형식인 Terraform HCL만 넣습니다. 운영 workflow는 기존 앱 `.env` Secret과의 이름 충돌을 피하기 위해 `SOH_TERRAFORM_TFVARS_PROD_HCL`을 사용합니다. `SOH_API_ENV_*`의 `.env` 내용이나 DB 비밀번호/JWT secret/token/private key를 넣지 않습니다. Terraform apply workflow는 tfvars 각 줄을 사전 마스킹하고 대문자 앱 환경변수 또는 민감 변수명이 섞이면 `terraform init` 전에 차단합니다. 앱 환경변수 검사는 정상 Terraform 변수 `spring_profile`을 오인하지 않도록 대소문자를 구분해야 합니다.
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 RDS 비밀번호를 넣지 않습니다. 특히 prod workflow는 `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_DATASOURCE_DRIVER_CLASS_NAME`이 `SOH_API_ENV_PROD`에 있으면 배포를 차단합니다. EC2 launch template user-data만 Terraform의 `db_address`, `db_port`, `db_name`, `db_master_user_secret_arn` 값으로 datasource 설정을 생성합니다.
 - `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`는 여러 줄 `KEY=VALUE` 텍스트로 저장합니다. 각 항목은 한 줄에 하나씩 들어가야 하며, 한 줄로 이어 붙이면 Spring이 `SERVER_PORT` 같은 값을 잘못 읽어 시작에 실패할 수 있습니다.
-- `SOH_API_ENV_DEV`, `SOH_API_ENV_PROD`에는 서로 다른 `JWT_ACCESS_KEY`, `JWT_REFRESH_KEY`를 각각 32자 이상으로 저장합니다. 저장소에는 JWT 기본키가 없으며 두 값이 없거나 짧으면 배포 workflow가 업로드 전에 차단합니다. 소스나 로그에 한 번이라도 노출된 JWT/AWS 키는 삭제만 하지 말고 해당 서비스에서 즉시 폐기·교체합니다.
+- JWT 서명키는 환경별로 서로 다른 32자 이상의 값을 사용합니다. 운영은 `JWT_ACCESS_KEY_PROD`, `JWT_REFRESH_KEY_PROD` 전용 GitHub Secrets를 생성하면 workflow가 기존 `SOH_API_ENV_PROD`를 교체하지 않고 생성된 `.env`의 `JWT_ACCESS_KEY`, `JWT_REFRESH_KEY`로 덮어씁니다. 저장소에는 JWT 기본키가 없으며 두 값이 없거나 짧으면 배포 workflow가 업로드 전에 차단합니다. 소스나 로그에 한 번이라도 노출된 JWT/AWS 키는 삭제만 하지 말고 해당 서비스에서 즉시 폐기·교체합니다.
 - 배포 EC2는 AWS Secrets Manager JDBC driver(`com.amazonaws.secretsmanager.sql.AWSSecretsManagerMySQLDriver`)를 사용합니다. `SPRING_DATASOURCE_URL`은 `jdbc-secretsmanager:mysql://...`, `SPRING_DATASOURCE_USERNAME`은 RDS managed secret ARN, `SPRING_DATASOURCE_PASSWORD`는 빈 값으로 설정됩니다.
 - `DAEGU_CHAIN_APP_KEY`와 `DAEGU_CHAIN_TOKEN`은 용도가 다릅니다. `TOKEN_SERVER_BASE_URL`의 지급·회수 프록시는 앱키를 사용하고, 계정 생성·DID·토큰 approve 같은 대구체인 `/mitum/...` 직접 API는 사용자 토큰을 사용합니다. dev/prod 배포 workflow는 두 값을 모두 요구하며 `DAEGU_CHAIN_APP_KEY_DEV`, `DAEGU_CHAIN_APP_KEY_PROD`, `DAEGU_CHAIN_TOKEN_DEV`, `DAEGU_CHAIN_TOKEN_PROD`, `TOKEN_SERVER_BASE_URL_DEV`, `TOKEN_SERVER_BASE_URL_PROD` 별도 Secret이 있으면 `.env`의 같은 키를 덮어씁니다.
 - prod 배포 workflow는 운영 토큰 발행/전송 owner 변경을 위해 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS_PROD`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY_PROD` 별도 Secret이 있으면 `.env`의 `DAEGU_CHAIN_TOKEN_OWNER_ADDRESS`, `DAEGU_CHAIN_TOKEN_OWNER_PRIVATE_KEY`를 덮어씁니다.
@@ -235,6 +235,9 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 2026-08-27 OWASP 보안 기준에 맞춰 인증·인가 및 의존성을 보강했습니다.
 
+- refresh token은 로그인·다대구 자동가입·자동 로그인 성공 시 `SOH_REFRESH_TOKEN`이라는 `HttpOnly`, `Secure`, `SameSite=Lax` 쿠키로 발급하고 JSON 응답에서는 제외합니다. access token만 응답하며 프론트는 메모리에만 유지합니다. `/login/access-token`은 쿠키를 우선 사용하되 기존 `RefreshToken` 헤더도 호환하며, `/auth/session`은 로그인 역할·슈퍼관리자 여부와 최소 프로필을 반환하고 `/auth/logout`은 DB refresh token과 쿠키를 함께 폐기합니다.
+- 인증 쿠키 설정은 `AUTH_REFRESH_COOKIE_NAME`, `AUTH_COOKIE_PATH`, `AUTH_COOKIE_SECURE`, `AUTH_COOKIE_SAME_SITE`로 재정의할 수 있습니다. 기본 경로는 `/api`, Secure는 `true`, SameSite는 `Lax`이며 로컬 HTTP 테스트에서만 `AUTH_COOKIE_SECURE=false`를 명시합니다.
+- `/superadmin/**` API는 `ROLE_SUPER_ADMIN`만 접근할 수 있으며 `/admin/**` 일반 관리자 규칙보다 먼저 평가합니다.
 - 관리자 가입 `POST /admin/account`만 공개 상태를 유지하고 관리자 계정 목록·삭제·비밀번호 초기화는 슈퍼 관리자만, 청구서 엑셀·사용자 일괄등록 양식은 로그인한 관리자만 접근하도록 보안 체인을 정리했습니다.
 - 컨트롤러별 전체 허용 CORS를 제거하고 `CORS_ALLOWED_ORIGINS`의 명시적 origin 및 필요한 요청 헤더만 허용합니다.
 - Authorization은 RFC 6750 `Bearer <token>` 형식만 허용하고 요청 파싱·검증 예외의 내부 메시지 및 오류 로그 상세가 응답·DB 로그에 노출되지 않도록 정리했습니다.
