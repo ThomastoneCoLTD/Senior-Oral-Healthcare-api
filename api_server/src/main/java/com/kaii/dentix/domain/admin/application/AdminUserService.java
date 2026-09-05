@@ -64,6 +64,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -593,10 +594,18 @@ public class AdminUserService {
         Admin admin = adminService.getTokenAdmin(request);
         List<User> users;
         if (admin.isSuperAdmin()) {
-            users = userRepository.findAll(Sort.by(
-                    Sort.Order.asc("realOrganization").nullsLast(),
-                    Sort.Order.asc("userName").ignoreCase()
-            ));
+            users = new ArrayList<>(userRepository.findAll());
+            users.sort(Comparator
+                    .comparing(
+                            (User user) -> StringUtils.hasText(user.getRealOrganization())
+                                    ? user.getRealOrganization().trim()
+                                    : null,
+                            Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                    )
+                    .thenComparing(
+                            user -> user.getUserName() == null ? "" : user.getUserName(),
+                            String.CASE_INSENSITIVE_ORDER
+                    ));
         } else {
             if (admin.getOrganization() == null) {
                 throw new BadRequestApiException("소속 기관 정보가 없습니다.");

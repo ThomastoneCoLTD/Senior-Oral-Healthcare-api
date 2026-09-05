@@ -36,7 +36,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -156,26 +155,31 @@ class AdminUserServiceTest {
     }
 
     @Test
-    void getExerciseProgress_includesRealOrganizationForSuperAdmin() {
+    void getExerciseProgress_includesRealOrganizationAndSortsNullLastForSuperAdmin() {
         Admin superAdmin = Admin.builder().adminIsSuper(YnType.Y).build();
-        User user = User.builder()
+        User assignedUser = User.builder()
                 .userId(10L)
                 .userLoginIdentifier("user01")
                 .userName("홍길동")
                 .realOrganization("대구2")
                 .build();
+        User unassignedUser = User.builder()
+                .userId(11L)
+                .userLoginIdentifier("user02")
+                .userName("김미지정")
+                .build();
 
         when(adminService.getTokenAdmin(any())).thenReturn(superAdmin);
-        when(userRepository.findAll(any(Sort.class))).thenReturn(List.of(user));
+        when(userRepository.findAll()).thenReturn(List.of(unassignedUser, assignedUser));
         when(oralExerciseContentRepository.findByActiveTrueOrderByContentSortAsc()).thenReturn(List.of());
-        when(oralExerciseProgressRepository.findByUserIdIn(List.of(10L))).thenReturn(List.of());
+        when(oralExerciseProgressRepository.findByUserIdIn(List.of(10L, 11L))).thenReturn(List.of());
         when(userRewardTransactionRepository.findByUserIdInAndType(any(), any())).thenReturn(List.of());
 
         AdminUserDto.ExerciseProgressResponse response =
                 adminUserService.getExerciseProgress(new MockHttpServletRequest());
 
-        assertThat(response.getUsers()).hasSize(1);
-        assertThat(response.getUsers().get(0).getRealOrganization()).isEqualTo("대구2");
+        assertThat(response.getUsers()).extracting(AdminUserDto.ExerciseProgressUser::getRealOrganization)
+                .containsExactly("대구2", null);
     }
 
     @Test

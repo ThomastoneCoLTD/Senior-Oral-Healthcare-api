@@ -660,6 +660,7 @@ The `dev` and `prod` profiles upsert the nine legacy recovery questions with sta
 - The existing `user.organizationId` relationship is unchanged: newly registered users still belong to the organization managed by `tokenadmin`.
 - `GET /user/info` returns `realOrganization` for the user profile page.
 - `GET /admin/user` returns `realOrganization` in each user-list item for administrator and super-administrator views.
+- Super-administrator progress, DID reward, and DaeguChain log endpoints load visible users without Criteria Query null precedence, then sort by `realOrganization` with unassigned users last. This avoids a Hibernate `UnsupportedOperationException` that otherwise makes all three administrator pages appear empty even when production data exists.
 - Production and development profiles use Hibernate `ddl-auto: update`, so application startup adds the nullable column. Verify the generated schema change and the member-registration flow after deployment.
 
 ## Oral Analysis and Personalized Content
