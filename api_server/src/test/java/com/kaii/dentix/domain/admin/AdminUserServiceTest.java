@@ -216,14 +216,33 @@ class AdminUserServiceTest {
 
     @Test
     void userDeleteAlsoRemovesDadaeguIdentityMapping() {
-        User user = User.builder().userId(10L).build();
-        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+        User user = User.builder().userId(10L).userRefreshToken("refresh-token").build();
+        when(userRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(user));
+        when(userRewardReclaimService.reclaimTransferredTokensForDeletion(10L))
+                .thenReturn(new UserRewardReclaimService.ResetReclaimResult(3, 1, 0, 3L));
         when(dadaeguUserIdentityRepository.deleteByUserId(10L)).thenReturn(1L);
 
         adminUserService.userDelete(10L);
 
+        verify(userRewardReclaimService).reclaimTransferredTokensForDeletion(10L);
         verify(dadaeguUserIdentityRepository).deleteByUserId(10L);
         assertThat(user.getDeleted()).isNotNull();
+        assertThat(user.getUserRefreshToken()).isNull();
+    }
+
+    @Test
+    void userDeleteStopsWhenTokenReclaimFails() {
+        User user = User.builder().userId(10L).build();
+        when(userRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(user));
+        when(userRewardReclaimService.reclaimTransferredTokensForDeletion(10L))
+                .thenReturn(new UserRewardReclaimService.ResetReclaimResult(2, 0, 1, 2L));
+
+        assertThatThrownBy(() -> adminUserService.userDelete(10L))
+                .hasMessageContaining("토큰 회수에 실패")
+                .hasMessageContaining("1");
+
+        verify(dadaeguUserIdentityRepository, org.mockito.Mockito.never()).deleteByUserId(any());
+        assertThat(user.getDeleted()).isNull();
     }
 
     @Test

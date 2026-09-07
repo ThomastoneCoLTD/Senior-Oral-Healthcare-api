@@ -275,6 +275,7 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 - 체인 `transfer_from`이 요구하는 사전 allowance를 새 raw 지갑 생성 시 토큰별 `approve`로 설정하도록 보강했습니다. 사용자 지갑 private key는 저장하지 않고 승인 호출 중에만 사용하며 `holder_pkey` 감사 로그를 마스킹합니다.
 - 운영 다대구 재로그인 중 `B0701 유효하지 않은 사용자 토큰`이 발생한 원인은 직접 `/mitum/...` API에도 앱키를 우선 넣던 인증값 혼용이었습니다. 직접 API 서비스는 `DAEGU_CHAIN_TOKEN`을 우선 사용하고, 지급·회수 프록시 `ExternalTokenClient`만 `DAEGU_CHAIN_APP_KEY`를 우선 사용하도록 분리했습니다.
 - 슈퍼 관리자 사용자 관리 화면에 사용자 정보 초기화를 추가했습니다. `POST /admin/user/test-data/reset`은 로그인 ID 재입력을 검증하고 `TOKEN_TRANSFERRED` 리워드를 운영 owner 지갑으로 모두 회수한 뒤에만 구강체조 진도·SOH 리워드 거래·리워드 지갑을 삭제합니다. 한 건이라도 회수에 실패하면 DB 초기화를 중단하고 성공한 회수 이력을 보존해 재시도 시 중복 회수를 방지합니다. 계정·기본 인적정보·기관·다대구 연결은 보존합니다.
+- 관리자 회원 삭제 `DELETE /admin/user?userId=...`는 사용자의 미회수 `TOKEN_TRANSFERRED` 리워드를 운영 owner 지갑으로 모두 회수한 뒤에만 계정을 소프트 삭제하고 refresh token 및 다대구 연결을 제거합니다. 한 건이라도 회수에 실패하면 회원 삭제와 연결 제거를 중단하며, 성공한 회수 이력은 멱등 재시도를 위해 보존합니다.
 
 2026-08-25 사용자 정보 초기화 전 체인 토큰 회수를 추가했습니다.
 

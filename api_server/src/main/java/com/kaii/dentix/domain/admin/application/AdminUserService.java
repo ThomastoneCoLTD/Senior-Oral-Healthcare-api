@@ -253,9 +253,23 @@ public class AdminUserService {
      */
     @Transactional
     public void userDelete(Long userId) {
-        User user = getUser(userId);
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+        UserRewardReclaimService.ResetReclaimResult reclaimResult =
+                userRewardReclaimService.reclaimTransferredTokensForDeletion(userId);
+        if (reclaimResult.failedCount() > 0) {
+            throw new BadRequestApiException(
+                    "토큰 회수에 실패하여 회원 삭제를 중단했습니다. "
+                            + "실패 건수: " + reclaimResult.failedCount()
+            );
+        }
         dadaeguUserIdentityRepository.deleteByUserId(userId);
+        user.logout();
         user.revoke(); // 회원 탈퇴(삭제) 처리
+        log.warn(
+                "Admin deleted user after reward reclaim. userId={}, reclaimed={}, skipped={}, reclaimedAmount={}",
+                userId, reclaimResult.reclaimedCount(), reclaimResult.skippedCount(), reclaimResult.reclaimedAmount()
+        );
     }
 
     /**

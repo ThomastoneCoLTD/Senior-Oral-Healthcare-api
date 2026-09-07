@@ -68,6 +68,19 @@ public class UserRewardReclaimService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ResetReclaimResult reclaimTransferredTokensForReset(Long userId) {
+        return reclaimTransferredTokensBeforeRemoval(userId, "사용자 정보 초기화 전 리워드 회수", "reset");
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public ResetReclaimResult reclaimTransferredTokensForDeletion(Long userId) {
+        return reclaimTransferredTokensBeforeRemoval(userId, "회원 삭제 전 리워드 회수", "deletion");
+    }
+
+    private ResetReclaimResult reclaimTransferredTokensBeforeRemoval(
+            Long userId,
+            String auditFeature,
+            String operationName
+    ) {
         List<UserRewardTransaction> allTransactions =
                 userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId);
         List<UserRewardTransaction> transferredRewards = allTransactions.stream()
@@ -96,11 +109,11 @@ public class UserRewardReclaimService {
 
         UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
                 .orElseThrow(() -> new BadRequestApiException(
-                        "reward wallet is required to reclaim transferred tokens before reset"
+                        "reward wallet is required to reclaim transferred tokens before " + operationName
                 ));
         if (isBlank(wallet.getWalletAddress())) {
             throw new BadRequestApiException(
-                    "reward wallet address is required to reclaim transferred tokens before reset"
+                    "reward wallet address is required to reclaim transferred tokens before " + operationName
             );
         }
         if (isBlank(daeguChainProperties.getTokenOwnerAddress())) {
@@ -112,7 +125,7 @@ public class UserRewardReclaimService {
 
         Map<String, String> tokenContracts = DaeguChainApiLogContext.withUser(
                 userId,
-                "사용자 정보 초기화 전 리워드 회수",
+                auditFeature,
                 () -> getRewardTokenContractsIfNeeded(pendingRewards)
         );
         int reclaimedCount = 0;
@@ -150,7 +163,7 @@ public class UserRewardReclaimService {
             try {
                 JsonNode response = DaeguChainApiLogContext.withUser(
                         userId,
-                        "사용자 정보 초기화 전 리워드 회수",
+                        auditFeature,
                         () -> externalTokenClient.reclaimToken(
                                 normalizeTokenName(rewardTransaction.getCoinId()),
                                 tokenContractAddress,
@@ -169,7 +182,8 @@ public class UserRewardReclaimService {
                 reclaimTransaction.markTokenTransferFailed();
                 failedCount += 1;
                 log.warn(
-                        "Unable to reclaim reward before reset. userId={}, transactionId={}, message={}",
+                        "Unable to reclaim reward before {}. userId={}, transactionId={}, message={}",
+                        operationName,
                         userId,
                         rewardTransaction.getUserRewardTransactionId(),
                         exception.getMessage()
