@@ -234,6 +234,13 @@ $env:PATH="$env:JAVA_HOME\bin;$env:PATH"
 
 ## 최근 동기화 상태
 
+2026-09-07 로컬 회원가입 구강분석 선택값 저장을 추가했습니다.
+
+- `SignUpRequest`, 호환용 `DidSignUpRequest`의 선택 필드 `oralAnalysisServiceEnabled`를 `UserLoginService`에서 저장합니다. true만 신청이고 false/null/누락은 미신청입니다. 기존 `user.oral_analysis_service_enabled` 컬럼과 로그인·내 정보 응답을 재사용하므로 DB 마이그레이션·Secret 변경은 없습니다.
+- 프론트 `RegisterForm`은 기본 미선택 체크박스를 약관과 별도로 표시하며 사용자 최종 수령 문구는 `상품 수령`으로 변경합니다. 토큰 지급·회수 계약은 그대로입니다.
+- Java 17 관련 테스트 38개와 bootJar, 프론트 Vitest 22개·build·로컬 모의 가입 신청/미신청 전송을 검증했습니다. 운영 실가입으로 변경값 저장을 재검증하지는 않았습니다.
+- 운영 실사용 점검에서 최종 회수 요청이 Network Error를 표시했지만 토큰 6개 회수와 COMPLETED는 저장되는 현상을 확인했습니다. 이 응답/화면 갱신 문제는 이번 수정에 포함하지 않습니다.
+
 2026-08-27 OWASP 보안 기준에 맞춰 인증·인가 및 의존성을 보강했습니다.
 
 - refresh token은 로그인·다대구 자동가입·자동 로그인 성공 시 `SOH_REFRESH_TOKEN`이라는 `HttpOnly`, `Secure`, `SameSite=Lax` 쿠키로 발급하고 JSON 응답에서는 제외합니다. access token만 응답하며 프론트는 메모리에만 유지합니다. `/login/access-token`은 쿠키를 우선 사용하되 기존 `RefreshToken` 헤더도 호환하며, `/auth/session`은 로그인 역할·슈퍼관리자 여부와 최소 프로필을 반환하고 `/auth/logout`은 DB refresh token과 쿠키를 함께 폐기합니다.

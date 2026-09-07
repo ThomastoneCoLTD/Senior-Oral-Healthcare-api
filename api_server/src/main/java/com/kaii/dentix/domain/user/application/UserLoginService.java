@@ -121,6 +121,7 @@ public class UserLoginService {
                 .userPhoneNumber(userPhoneNumber)
                 .userBirthDate(request.getUserBirthDate())
                 .realOrganization(request.getRealOrganization())
+                .oralAnalysisServiceEnabled(Boolean.TRUE.equals(request.getOralAnalysisServiceEnabled()))
                 .organization(organization)
                 .isVerify(YnType.Y)
                 .build());
@@ -166,6 +167,7 @@ public class UserLoginService {
                 .userPhoneNumber(userPhoneNumber)
                 .userBirthDate(request.getUserBirthDate())
                 .realOrganization(request.getRealOrganization())
+                .oralAnalysisServiceEnabled(Boolean.TRUE.equals(request.getOralAnalysisServiceEnabled()))
                 .organization(organization)
                 .isVerify(YnType.Y)
                 .build());

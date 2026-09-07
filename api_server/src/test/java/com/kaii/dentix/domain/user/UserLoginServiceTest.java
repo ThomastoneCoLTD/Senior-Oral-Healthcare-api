@@ -25,6 +25,9 @@ import com.kaii.dentix.domain.user.dto.UserDto;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -98,8 +101,10 @@ class UserLoginServiceTest {
                 .hasMessage("이름과 전화번호가 일치하지 않습니다.");
     }
 
-    @Test
-    void userSignUpStoresSelectedRealOrganization() {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {true, false})
+    void userSignUpStoresSelectedRealOrganizationAndOralAnalysisChoice(Boolean enabled) {
         Organization organization = Organization.builder()
                 .organizationId(10L)
                 .organizationName("Token Admin Organization")
@@ -125,6 +130,7 @@ class UserLoginServiceTest {
                 .userPhoneNumber("01012345678")
                 .userBirthDate("1950-01-01")
                 .realOrganization("대구2")
+                .oralAnalysisServiceEnabled(enabled)
                 .findPwdQuestionId(1L)
                 .findPwdAnswer("답변")
                 .userServiceAgreementRequest(List.of(1L, 2L))
@@ -133,6 +139,7 @@ class UserLoginServiceTest {
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
         assertThat(userCaptor.getValue().getRealOrganization()).isEqualTo("대구2");
+        assertThat(userCaptor.getValue().isOralAnalysisServiceEnabled()).isEqualTo(Boolean.TRUE.equals(enabled));
         assertThat(userCaptor.getValue().getUserBirthDate()).isEqualTo("1950-01-01");
         assertThat(response.getRealOrganization()).isEqualTo("대구2");
     }
@@ -227,8 +234,10 @@ class UserLoginServiceTest {
         verify(userRepository).saveAndFlush(user);
     }
 
-    @Test
-    void userDidSignUpStoresSelectedGenderWithoutExposingPasswordRecovery() {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {true, false})
+    void userDidSignUpStoresSelectedGenderAndOralAnalysisChoiceWithoutExposingPasswordRecovery(Boolean enabled) {
         Organization organization = Organization.builder()
                 .organizationId(10L)
                 .organizationName("Token Admin Organization")
@@ -253,12 +262,14 @@ class UserLoginServiceTest {
                 .userPhoneNumber("010-1234-5678")
                 .userBirthDate("1950-01-01")
                 .realOrganization("대구1")
+                .oralAnalysisServiceEnabled(enabled)
                 .userServiceAgreementRequest(List.of(1L, 2L))
                 .build());
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
         assertThat(userCaptor.getValue().getUserGender()).isEqualTo(GenderType.W);
+        assertThat(userCaptor.getValue().isOralAnalysisServiceEnabled()).isEqualTo(Boolean.TRUE.equals(enabled));
         assertThat(userCaptor.getValue().getFindPwdQuestionId()).isEqualTo(1L);
         assertThat(userCaptor.getValue().getFindPwdAnswer()).isNotBlank();
         assertThat(userCaptor.getValue().getFindPwdAnswer()).doesNotContain("dentix123");

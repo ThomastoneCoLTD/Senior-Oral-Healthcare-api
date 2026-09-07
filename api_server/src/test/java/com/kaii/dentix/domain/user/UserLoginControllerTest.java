@@ -216,6 +216,7 @@ public class UserLoginControllerTest {
                 .findPwdAnswer("초록색")
                 .organizationId(1L)
                 .userServiceAgreementRequest(Arrays.asList(1L, 2L, 3L))
+                .oralAnalysisServiceEnabled(true)
                 .build();
 
         given(passwordEncoder.encode(any(String.class))).willReturn(password);
@@ -244,7 +245,8 @@ public class UserLoginControllerTest {
                                 fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
                                 fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변"),
                                 fieldWithPath("organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
-                                fieldWithPath("userServiceAgreementRequest").type(JsonFieldType.ARRAY).description("동의한 약관 ID 목록")
+                                fieldWithPath("userServiceAgreementRequest").type(JsonFieldType.ARRAY).description("동의한 약관 ID 목록"),
+                                fieldWithPath("oralAnalysisServiceEnabled").type(JsonFieldType.BOOLEAN).optional().description("구강분석 서비스 신청 여부. 누락 또는 null은 미신청")
                         ),
                         responseFields(
                                 fieldWithPath("rt").type(JsonFieldType.NUMBER).description("결과 코드"),

@@ -16,6 +16,9 @@ Artifact prefix: soh
 
 ## Oral Exercise Access Policy
 
+- Local signup (`POST /login/signUp`, compatibility `/login/signUp/did`) accepts optional `oralAnalysisServiceEnabled`. Only `true` opts in; omitted/null/false opts out. The existing user column and login/profile response contract are reused; no database migration or new secret is required.
+- Deploy the API before the frontend signup checkbox so the selected value is persisted. The frontend calls the final collection action `상품 수령`; reward API names and transfer/reclaim semantics are unchanged.
+
 - Only the intro is available before the user completes it. After intro completion, the first core video and all always-open videos become available.
 - Each later core video opens as soon as the immediately preceding core video is completed, without waiting for another signup week.
 - Locked responses keep thumbnail metadata but omit `videoUrl`.
