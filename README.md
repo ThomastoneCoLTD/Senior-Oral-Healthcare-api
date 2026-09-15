@@ -72,15 +72,17 @@ It also covers the manual RDS MySQL setup that Terraform normally creates.
 ```text
 main push -> no deploy
 
-dev push  -> development API artifact upload and dev ASG instance refresh
+dev push  -> no deploy (retired; do not re-enable dev workflows)
 prod push -> production API artifact upload and prod ASG instance refresh
 ```
 
 Do not add a main branch deployment workflow.
 
+AWS dev was retired on 2026-08-05. Remaining dev workflow/Terraform files are historical, not an instruction to deploy. Do not enable them or recreate dev resources. Production still uses shared networking, including the dev-named VPC; do not delete shared resources.
+
 ## Agent Handoff
 
-When working from another PC or with another Codex agent, read both files before changing deployment or infrastructure behavior:
+Read AGENTS.md and git status first on any PC. Locate the separate frontend repository before cross-repository work. Search only the relevant sections of the following documents:
 
 ```text
 README.md
@@ -88,7 +90,18 @@ AGENTS.md
 readme_수동.md
 ```
 
-Keep them aligned. Whenever CI/CD, Terraform, branch policy, AWS constants, GitHub Secrets, S3 paths, ASG names, CloudFront/API routing, manual AWS setup steps, or deployment commands change, update the relevant documentation in the same commit.
+Review README.md and AGENTS.md for each change, but edit them only when the relevant facts or rules change. Keep AGENTS.md around 80-120 lines with core rules and links, not cumulative history. Update affected setup, API contracts, CI/CD, Terraform, Secrets, routing, and manual procedures in the same commit.
+
+### Documentation Maintenance
+
+- Code, configuration, infrastructure, or operational changes: create a dated `docs/updates/YYYY-MM-DD_SOH_변경기록_<topic>.docx`.
+- Documentation-only changes or simple investigations may use a dated Markdown change record in the same directory.
+- Create a cumulative `docs/handover/YYYY-MM-DD_SOH_외부기업_인수인계_<topic>.docx` only at release sign-off or an explicit external handover request, not for every small fix or push. A release is a verified feature batch or operational handover, not every automatic prod deployment.
+- Merge change records since the previous snapshot into the full feature/code map and API, DB, integration, deployment, and operations guidance. Preserve existing development-information and dated DOCX files.
+- Record baseline commit, environment, changed locations, API/DB/Secret/deployment impact, verification, remaining risks, and rollback. Never include secret values.
+- Historical instructions are preserved in [the AGENTS archive](docs/history/2026-09-15_AGENTS_archive.md). Search it by topic only; its former rules and dated status do not override current AGENTS.md.
+- Use bounded file reads and focused tests. Documentation-only work needs link/path checks and `git diff --check`, not an application build or a full cross-repository audit.
+- When prod push starts a deployment, check its final result and distinguish workflow success from ASG refresh completion and actual health verification.
 
 After a successful update, commit and push when possible:
 
@@ -205,6 +218,8 @@ aws s3api get-bucket-location --bucket denti-backends
 DynamoDB lock table is optional and can be added to the backend later.
 
 ## Dev Infrastructure
+
+Historical reference only: dev was retired. Do not run the commands below to recreate it. Shared networking still used by prod must be preserved.
 
 ```bash
 cd infra/terraform/environments/dev
