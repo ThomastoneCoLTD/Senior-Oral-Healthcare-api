@@ -138,6 +138,7 @@ class UserLoginServiceTest {
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
+        assertThat(userCaptor.getValue().getOnboardingSurveyRequired()).isTrue();
         assertThat(userCaptor.getValue().getRealOrganization()).isEqualTo("대구2");
         assertThat(userCaptor.getValue().isOralAnalysisServiceEnabled()).isEqualTo(Boolean.TRUE.equals(enabled));
         assertThat(userCaptor.getValue().getUserBirthDate()).isEqualTo("1950-01-01");
@@ -268,6 +269,7 @@ class UserLoginServiceTest {
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
+        assertThat(userCaptor.getValue().getOnboardingSurveyRequired()).isTrue();
         assertThat(userCaptor.getValue().getUserGender()).isEqualTo(GenderType.W);
         assertThat(userCaptor.getValue().isOralAnalysisServiceEnabled()).isEqualTo(Boolean.TRUE.equals(enabled));
         assertThat(userCaptor.getValue().getFindPwdQuestionId()).isEqualTo(1L);
@@ -309,6 +311,7 @@ class UserLoginServiceTest {
 
         assertThat(user.getUserId()).isEqualTo(42L);
         assertThat(user.getDaeguDid()).isNull();
+        assertThat(user.getOnboardingSurveyRequired()).isTrue();
         assertThat(user.isOralAnalysisServiceEnabled()).isTrue();
         verify(userDaeguProvisioningService, never()).provisionForSignUp(any(User.class));
         verify(serviceAgreementConsentService).saveUserServiceAgreements(42L, List.of(1L, 2L));

@@ -44,6 +44,10 @@ public class User extends TimeEntity {
     @Column(name = "oral_analysis_service_enabled")
     private Boolean oralAnalysisServiceEnabled = false;
 
+    // NULL for members created before the onboarding survey was introduced.
+    @Column(name = "onboarding_survey_required")
+    private Boolean onboardingSurveyRequired;
+
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "enum")
     private GenderType userGender;

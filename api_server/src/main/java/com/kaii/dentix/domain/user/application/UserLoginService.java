@@ -112,6 +112,7 @@ public class UserLoginService {
 
         Organization organization = daeguDefaultOrganizationService.getTokenAdminOrganization();
         User user = userRepository.save(User.builder()
+                .onboardingSurveyRequired(true)
                 .userLoginIdentifier(request.getUserLoginIdentifier())
                 .userName(request.getUserName())
                 .userGender(request.getUserGender())
@@ -157,6 +158,7 @@ public class UserLoginService {
         String inaccessibleRecoveryAnswer = UUID.randomUUID().toString();
 
         User user = userRepository.save(User.builder()
+                .onboardingSurveyRequired(true)
                 .userLoginIdentifier(loginIdentifier)
                 .userName(request.getUserName())
                 .userGender(request.getUserGender())
@@ -206,6 +208,7 @@ public class UserLoginService {
 
         Organization organization = daeguDefaultOrganizationService.getTokenAdminOrganization();
         User user = userRepository.save(User.builder()
+                .onboardingSurveyRequired(true)
                 .userLoginIdentifier(loginIdentifier)
                 .userName(userName)
                 .userGender(userGender)
