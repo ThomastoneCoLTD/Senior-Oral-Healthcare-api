@@ -1,0 +1,994 @@
+{
+  "version": "2026-09-17-v1",
+  "sections": [
+    {
+      "number": 1,
+      "title": "연하 기능 평가 (EAT-10)",
+      "description": "지난 1개월간 본인의 상태에 해당하는 정도를 선택해 주세요. 0은 문제없음, 4는 심각함입니다.",
+      "questions": [
+        {
+          "key": "eat10_1",
+          "text": "삼킴 문제로 인해 체중이 감소하였다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        },
+        {
+          "key": "eat10_2",
+          "text": "삼킴 문제가 외식하는 것을 방해한다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        },
+        {
+          "key": "eat10_3",
+          "text": "액체(물 등)를 삼킬 때 더 많은 노력이 필요하다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        },
+        {
+          "key": "eat10_4",
+          "text": "고형식(밥, 반찬 등)을 삼킬 때 더 많은 노력이 필요하다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        },
+        {
+          "key": "eat10_5",
+          "text": "알약을 삼킬 때 더 많은 노력이 필요하다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        },
+        {
+          "key": "eat10_6",
+          "text": "삼킬 때 통증이 있다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        },
+        {
+          "key": "eat10_7",
+          "text": "삼킴 문제가 식사의 즐거움에 영향을 미친다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        },
+        {
+          "key": "eat10_8",
+          "text": "삼킬 때 음식이 목에 걸린다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        },
+        {
+          "key": "eat10_9",
+          "text": "식사 중 기침을 한다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        },
+        {
+          "key": "eat10_10",
+          "text": "삼키는 것이 스트레스가 된다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "0 · 문제없음"
+            },
+            {
+              "value": 1,
+              "label": "1"
+            },
+            {
+              "value": 2,
+              "label": "2 · 보통"
+            },
+            {
+              "value": 3,
+              "label": "3"
+            },
+            {
+              "value": 4,
+              "label": "4 · 심각함"
+            }
+          ]
+        }
+      ],
+      "source": "Belafsky PC, Mouadeb DA, Rees CJ, et al. Validity and reliability of the Eating Assessment Tool (EAT-10). Ann Otol Rhinol Laryngol. 2008;117(12):919-924."
+    },
+    {
+      "number": 2,
+      "title": "연하장애 간편 선별 (EDSQ)",
+      "description": "각 문항에 대해 '예' 또는 '아니오'로 응답해 주세요.",
+      "questions": [
+        {
+          "key": "edsq_1",
+          "text": "음식이나 물을 드실 때 삼키기가 어렵습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_2",
+          "text": "알약을 삼키기가 어렵습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_3",
+          "text": "음식이나 물을 드실 때 기침을 합니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_4",
+          "text": "음식이나 물을 드실 때 사레가 들리거나 숨이 막히는 느낌이 있습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_5",
+          "text": "삼킬 때 목에 무엇인가 걸려 있는 느낌이 있습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_6",
+          "text": "삼킬 때 통증이 있습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_7",
+          "text": "보통 한 끼 식사를 하는 데 30분 이상 걸립니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_8",
+          "text": "식사 중 침을 흘리거나 음식을 뱉는 경우가 있습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_9",
+          "text": "지금까지 폐렴을 진단받은 적이 있습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_10",
+          "text": "삼키기 어려워서 체중이 감소한 적이 있습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_11",
+          "text": "음식을 삼킨 후 목소리가 쉬거나 젖은 듯한 목소리가 납니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "edsq_12",
+          "text": "식사 후 가래가 생기거나 가래가 증가합니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        }
+      ],
+      "source": "Uhm KE, Kim M, Lee YM, et al. The Easy Dysphagia Symptom Questionnaire (EDSQ): A new dysphagia screening questionnaire for the older adults. Eur Geriatr Med. 2019;10:47-52."
+    },
+    {
+      "number": 3,
+      "title": "노쇠 간이 선별 (FRAIL scale)",
+      "description": "각 문항에 대해 '예' 또는 '아니오'로 응답해 주세요. (FRAIL scale 개념 기반 간이 문항)",
+      "questions": [
+        {
+          "key": "frail_1",
+          "text": "지난 4주간 대부분의 시간 또는 항상 피로감을 느꼈다 (Fatigue)",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "frail_2",
+          "text": "보조기구 없이 혼자서, 쉬지 않고 10계단을 오르는 데 어려움이 있다 (Resistance)",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "frail_3",
+          "text": "보조기구 없이 혼자서, 약 400m(수백 야드)를 걷는 데 어려움이 있다 (Ambulation)",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "frail_4",
+          "text": "다음 11개 질환 중 5개 이상 의사로부터 진단받은 적이 있다: 고혈압, 당뇨, 암, 만성폐질환, 심근경색, 울혈성심부전, 협심증, 천식, 관절염, 뇌졸중, 신장질환 (Illness)",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "frail_5",
+          "text": "지난 1년간 체중이 5% 이상 감소하였다 (Loss of weight)",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        }
+      ],
+      "source": "Morley JE, Malmstrom TK, Miller DK. A simple frailty questionnaire (FRAIL) predicts outcomes in middle aged African Americans. J Nutr Health Aging. 2012;16(7):601-608."
+    },
+    {
+      "number": 4,
+      "title": "흡인 위험 특이 문항",
+      "description": "아래 문항을 읽고 본인의 경험에 해당하는 답을 선택해 주세요.",
+      "questions": [
+        {
+          "key": "aspiration_1",
+          "text": "식사 중 또는 식사 후 목소리가 젖은 소리(gurgly voice)로 변한 적이 있다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "aspiration_2",
+          "text": "지난 6개월 내 폐렴으로 진단받거나 입원한 적이 있다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "aspiration_3",
+          "text": "평소 침을 흘리거나 입 안에 침이 고이는 느낌이 있다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "aspiration_4",
+          "text": "식사 중 사레(캑캑거림)가 주 1회 이상 발생한다",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        }
+      ],
+      "source": ""
+    },
+    {
+      "number": 5,
+      "title": "근감소증 간편 선별 (SARC-F)",
+      "description": "각 문항에 해당하는 항목을 선택해 주세요.",
+      "questions": [
+        {
+          "key": "sarcf_1",
+          "text": "무거운 물건 들기: 4.5kg(약 10파운드)의 물건을 들어 옮기는 데 어려움이 어느 정도입니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "전혀 어려움 없음"
+            },
+            {
+              "value": 1,
+              "label": "약간 어려움"
+            },
+            {
+              "value": 2,
+              "label": "매우 어렵거나 할 수 없음"
+            }
+          ]
+        },
+        {
+          "key": "sarcf_2",
+          "text": "걷기: 방을 가로질러 걷는 데 어려움이 어느 정도입니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "전혀 어려움 없음"
+            },
+            {
+              "value": 1,
+              "label": "약간 어려움"
+            },
+            {
+              "value": 2,
+              "label": "매우 어렵거나 보조기구 필요, 또는 할 수 없음"
+            }
+          ]
+        },
+        {
+          "key": "sarcf_3",
+          "text": "의자에서 일어나기: 의자나 침대에서 일어나는 데 어려움이 어느 정도입니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "전혀 어려움 없음"
+            },
+            {
+              "value": 1,
+              "label": "약간 어려움"
+            },
+            {
+              "value": 2,
+              "label": "매우 어렵거나 도움 없이는 할 수 없음"
+            }
+          ]
+        },
+        {
+          "key": "sarcf_4",
+          "text": "계단 오르기: 10계단을 오르는 데 어려움이 어느 정도입니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "전혀 어려움 없음"
+            },
+            {
+              "value": 1,
+              "label": "약간 어려움"
+            },
+            {
+              "value": 2,
+              "label": "매우 어렵거나 할 수 없음"
+            }
+          ]
+        },
+        {
+          "key": "sarcf_5",
+          "text": "낙상: 지난 1년간 몇 번 넘어지셨습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "없음"
+            },
+            {
+              "value": 1,
+              "label": "1~3회"
+            },
+            {
+              "value": 2,
+              "label": "4회 이상"
+            }
+          ]
+        }
+      ],
+      "source": "Malmstrom TK, Morley JE. SARC-F: a simple questionnaire to rapidly diagnose sarcopenia. J Am Med Dir Assoc. 2013;14(8):531-532."
+    },
+    {
+      "number": 6,
+      "title": "영양상태 간편 선별 (MNA-SF)",
+      "description": "각 문항에 해당하는 항목을 선택해 주세요.",
+      "questions": [
+        {
+          "key": "mna_a",
+          "text": "A. 지난 3개월간 식욕부진, 소화 문제, 씹기·삼키기 곤란 등으로 식사량이 감소하였습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "심하게 감소함"
+            },
+            {
+              "value": 1,
+              "label": "약간 감소함"
+            },
+            {
+              "value": 2,
+              "label": "변화 없음"
+            }
+          ]
+        },
+        {
+          "key": "mna_b",
+          "text": "B. 지난 3개월간 체중 감소가 있었습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "3kg 초과 감소"
+            },
+            {
+              "value": 1,
+              "label": "모름"
+            },
+            {
+              "value": 2,
+              "label": "1~3kg 감소"
+            },
+            {
+              "value": 3,
+              "label": "체중 감소 없음"
+            }
+          ]
+        },
+        {
+          "key": "mna_c",
+          "text": "C. 거동 능력은 어떻습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "침상 또는 의자에서 못 벗어남"
+            },
+            {
+              "value": 1,
+              "label": "침상·의자에서는 벗어나나 외출은 못함"
+            },
+            {
+              "value": 2,
+              "label": "외출 가능"
+            }
+          ]
+        },
+        {
+          "key": "mna_d",
+          "text": "D. 지난 3개월간 심리적 스트레스나 급성 질환을 겪었습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "예"
+            },
+            {
+              "value": 2,
+              "label": "아니오"
+            }
+          ]
+        },
+        {
+          "key": "mna_e",
+          "text": "E. 신경정신과적 문제가 있습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "중증 치매 또는 우울증"
+            },
+            {
+              "value": 1,
+              "label": "경증 치매"
+            },
+            {
+              "value": 2,
+              "label": "없음"
+            }
+          ]
+        },
+        {
+          "key": "mna_f",
+          "text": "F. 체질량지수(BMI, kg/㎡)는 어느 범위입니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "19 미만"
+            },
+            {
+              "value": 1,
+              "label": "19 이상 21 미만"
+            },
+            {
+              "value": 2,
+              "label": "21 이상 23 미만"
+            },
+            {
+              "value": 3,
+              "label": "23 이상"
+            }
+          ]
+        }
+      ],
+      "source": "Rubenstein LZ, Harker JO, Salva A, Guigoz Y, Vellas B. Screening for undernutrition in geriatric practice: developing the short-form mini-nutritional assessment (MNA-SF). J Gerontol A Biol Sci Med Sci. 2001;56(6):M366-372. MNA-SF © Nestlé Nutrition Institute."
+    },
+    {
+      "number": 7,
+      "title": "치과 이용 현황",
+      "description": "치과 이용 경험을 알려주세요. 해당하는 항목을 선택해 주세요.",
+      "questions": [
+        {
+          "key": "dental_1",
+          "text": "최근 1년간 치과에 방문하신 적이 있습니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "dental_2",
+          "text": "치과 방문 빈도는 어느 정도입니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "연 1회 미만"
+            },
+            {
+              "value": 1,
+              "label": "연 1~2회"
+            },
+            {
+              "value": 2,
+              "label": "연 3회 이상"
+            }
+          ],
+          "showWhen": {
+            "key": "dental_1",
+            "value": 1
+          }
+        },
+        {
+          "key": "dental_3",
+          "text": "가장 최근 치과를 방문하신 시기는 언제입니까?",
+          "type": "month",
+          "required": false,
+          "options": [],
+          "help": "방문한 적이 없거나 기억나지 않으면 비워 두셔도 됩니다."
+        },
+        {
+          "key": "dental_4",
+          "text": "정기적인 치과 검진(스케일링 등)을 받고 계십니까?",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 0,
+              "label": "아니오"
+            },
+            {
+              "value": 1,
+              "label": "예"
+            }
+          ]
+        },
+        {
+          "key": "dental_5",
+          "text": "치과 방문이 어려운 주된 이유는 무엇입니까?",
+          "type": "multiple",
+          "required": false,
+          "options": [
+            {
+              "value": 0,
+              "label": "이동의 어려움"
+            },
+            {
+              "value": 1,
+              "label": "비용 부담"
+            },
+            {
+              "value": 2,
+              "label": "필요성을 느끼지 못함"
+            },
+            {
+              "value": 3,
+              "label": "동반보호자 부재"
+            },
+            {
+              "value": 4,
+              "label": "기타"
+            }
+          ],
+          "help": "해당 항목을 모두 선택해 주세요. 어려움이 없다면 선택하지 않아도 됩니다."
+        }
+      ],
+      "source": ""
+    }
+  ]
+}

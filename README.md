@@ -2,6 +2,19 @@
 
 SOH API is a Spring Boot API server. The current project lives under `api_server` and uses Gradle Wrapper with Java 17.
 
+## First Login Health Survey
+
+All general users, including existing accounts and DaDaegu accounts, complete the separate seven-tab health survey once before entering user pages. This does not replace the existing oral questionnaire or depend on organization subscriptions or oral-analysis enrollment. Admin accounts are excluded.
+
+- `GET /user/intake-survey/status`: server-owned required/completed status; no row or an unfinished draft means required.
+- `GET /user/intake-survey`: versioned template, saved answers, current tab, revision, and completion state.
+- `PUT /user/intake-survey/draft`, `POST /user/intake-survey/submit`: `{version, surveyAnswers, currentTab, revision}`. The user is resolved from the authenticated `ROLE_USER` token, never from the payload. Submission validates all required visible questions.
+- Template: `api_server/src/main/resources/template/intake-survey.json`, transcribed from the supplied `SOH_항목추가.pdf` (47 questions across EAT-10, EDSQ, FRAIL, aspiration, SARC-F, MNA-SF, and dental visits). Dental frequency is required only for recent visitors; unknown last-visit month and no barriers may be left blank.
+- New table: `user_intake_survey`, one row per user, with draft answers, six separate score totals, template version, current tab, revision, update/completion timestamps. Production `ddl-auto=update` creates it; reference SQL is `docs/db/add-user-intake-survey.sql`. No existing user data is backfilled or deleted.
+- User-row locking serializes initial creation; revisions reject stale drafts. Completed responses are immutable and repeated submissions return the original completion. Health answers and scores are masked in API audit logs. No medical diagnosis is generated.
+
+Deploy the backend and confirm its workflow/health before deploying the frontend, which requires the new status API. Roll back the frontend first if needed and retain the survey table and its data. Secrets, AWS resources, and workflows do not change.
+
 ```text
 Build tool: Gradle Wrapper
 Java: 17

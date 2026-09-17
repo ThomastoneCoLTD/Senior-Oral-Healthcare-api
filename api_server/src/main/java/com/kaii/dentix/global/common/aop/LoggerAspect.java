@@ -192,6 +192,8 @@ public class LoggerAspect {
 	private boolean isSensitiveKey(String key) {
 		String normalized = key == null ? "" : key.replace("_", "").toLowerCase();
 		return normalized.equals("authorization")
+			|| normalized.equals("surveyanswers")
+			|| normalized.equals("surveyscores")
 			|| normalized.equals("credential")
 			|| normalized.equals("encrypteddata")
 			|| normalized.contains("password")
