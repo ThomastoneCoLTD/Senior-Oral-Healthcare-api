@@ -89,6 +89,7 @@
 - 최초 건강설문은 `domain/intakeSurvey`와 `template/intake-survey.json`입니다. 기존 사용자도 미제출이면 대상이며 신규 API 배포 후 프론트를 배포합니다. 완료·임시저장 데이터는 보존합니다.
 - 슈퍼관리자 기관별 설문 조회·수정은 `AdminIntakeSurveyService`와 `/admin/intake-surveys`입니다. 제출 상태·최초 제출일과 revision 충돌 보호를 유지합니다.
 - 기능 수정 전 잠금·진도·토큰 중복 방지·인증 계약을 관련 코드와 기록에서 확인합니다.
+- 영상 시청·실패 이력은 `OralExerciseHistoryService`와 `/admin/oral-exercise-history`입니다. 완료 회차 집계와 레거시 `viewCount`를 구분하고 실패 중복 방지·수령 후 안내 제외를 유지합니다.
 - 사용자 삭제 시 토큰 회수 실패를 무시하지 않으며, 지갑 초기화·리워드 상태 변경의 기존 보호 조건을 유지합니다.
 
 ## 완료와 Git

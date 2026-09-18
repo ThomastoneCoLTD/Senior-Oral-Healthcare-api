@@ -9,7 +9,9 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "oral_exercise_interaction_log")
+@Table(name = "oral_exercise_interaction_log", indexes = {
+        @Index(name = "idx_exercise_log_user_content_session", columnList = "user_id,oral_exercise_content_id,session_id")
+})
 public class OralExerciseInteractionLog extends TimeEntity {
 
     @Id

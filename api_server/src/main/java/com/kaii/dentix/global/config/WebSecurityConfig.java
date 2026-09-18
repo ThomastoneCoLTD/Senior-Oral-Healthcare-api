@@ -138,6 +138,8 @@ public class WebSecurityConfig {
                         .requestMatchers("/daegu-chain/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/user/intake-survey", "/user/intake-survey/**").hasRole("USER")
                         .requestMatchers("/admin/intake-surveys", "/admin/intake-surveys/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/admin/oral-exercise-history/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/oral-exercise/**").hasRole("USER")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )

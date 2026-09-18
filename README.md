@@ -36,6 +36,17 @@ Artifact prefix: soh
 
 ## Oral Exercise Access Policy
 
+### Viewing history and token failure follow-up
+
+- `GET /oral-exercise/history` returns the authenticated user's per-video completed session count, failure reasons, receipt state and `retryRequired`. `POST /oral-exercise/failures` accepts `{contentId, sessionId, reason}` for `TOKEN_WRONG` or `TOKEN_TIMEOUT`; `TOKEN_FAILED` is recorded by the reward controller after a failed server call.
+- A failure requires a previously accepted VIEW/PLAY in the same user/content/session. User-row locking makes duplicate failure reports idempotent. Failures do not change viewing progress or token balances.
+- Completion counts use distinct session IDs with a completed COMPLETE event, never the legacy `viewCount` (which counts progress updates). A new player opening creates a new session; pause/resume and duplicate requests do not create extra completed views.
+- Three or more failed sessions for the same active video prompt replay on the next login. Receipt of that video's token or completion of the reward journey suppresses the reminder while preserving history. Three or more completed views show sourced topic-specific health information in the frontend.
+- Super administrators alone can access `GET /admin/oral-exercise-history/users?keyword=&page=0&size=20`, `/users/{userId}` and paginated `/users/{userId}/{contentId}?page=0`. Search supports name, login ID and registered institution; member and event pages are bounded.
+- Existing `oral_exercise_interaction_log` is retained with three new event values and index `idx_exercise_log_user_content_session`. Production `ddl-auto=update` applies the additive schema change. No secrets or infrastructure resources change.
+- Old sessions are counted only where recorded; repeated playback within one historical page may be undercounted. Historical failure reasons cannot be reconstructed. Existing completed progress still identifies watched videos without token receipt.
+- Deploy and verify the backend before the frontend. Roll back the frontend first and retain history rows and the additive index. Actual token transfer and iPad Safari playback require separate authorized operational checks.
+
 - Local signup (`POST /login/signUp`, compatibility `/login/signUp/did`) accepts optional `oralAnalysisServiceEnabled`. Only `true` opts in; omitted/null/false opts out. The existing user column and login/profile response contract are reused; no database migration or new secret is required.
 - Deploy the API before the frontend signup checkbox so the selected value is persisted. The frontend calls the final collection action `상품 수령`; reward API names and transfer/reclaim semantics are unchanged.
 
