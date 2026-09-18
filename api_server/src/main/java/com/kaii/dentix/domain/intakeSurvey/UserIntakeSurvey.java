@@ -34,6 +34,6 @@ public class UserIntakeSurvey {
         this.scoresJson = scores;
         this.currentTab = tab;
         this.updatedAt = Instant.now();
-        if (complete) this.completedAt = this.updatedAt;
+        if (complete && this.completedAt == null) this.completedAt = this.updatedAt;
     }
 }

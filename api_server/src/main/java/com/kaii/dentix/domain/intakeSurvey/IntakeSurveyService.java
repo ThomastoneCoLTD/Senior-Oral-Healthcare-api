@@ -53,7 +53,7 @@ public class IntakeSurveyService {
         }
     }
 
-    private State state(UserIntakeSurvey survey) {
+    State state(UserIntakeSurvey survey) {
         if (survey == null) return new State(template.get(), false, null, 1, Map.of(), Map.of(), null);
         try {
             return new State(template.get(), survey.getCompletedAt() != null, survey.getCompletedAt(), survey.getCurrentTab(),

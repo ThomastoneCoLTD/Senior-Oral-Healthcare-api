@@ -11,7 +11,14 @@ All general users, including existing accounts and DaDaegu accounts, complete th
 - `PUT /user/intake-survey/draft`, `POST /user/intake-survey/submit`: `{version, surveyAnswers, currentTab, revision}`. The user is resolved from the authenticated `ROLE_USER` token, never from the payload. Submission validates all required visible questions.
 - Template: `api_server/src/main/resources/template/intake-survey.json`, transcribed from the supplied `SOH_항목추가.pdf` (47 questions across EAT-10, EDSQ, FRAIL, aspiration, SARC-F, MNA-SF, and dental visits). Dental frequency is required only for recent visitors; unknown last-visit month and no barriers may be left blank.
 - New table: `user_intake_survey`, one row per user, with draft answers, six separate score totals, template version, current tab, revision, update/completion timestamps. Production `ddl-auto=update` creates it; reference SQL is `docs/db/add-user-intake-survey.sql`. No existing user data is backfilled or deleted.
-- User-row locking serializes initial creation; revisions reject stale drafts. Completed responses are immutable and repeated submissions return the original completion. Health answers and scores are masked in API audit logs. No medical diagnosis is generated.
+- User-row locking serializes initial creation; revisions reject stale drafts. Completed responses cannot be changed through user endpoints and repeated submissions return the original completion. Health answers and scores are masked in API audit logs. No medical diagnosis is generated.
+
+### Super-admin survey management
+
+- `GET /admin/intake-surveys`: paginated general-user list, including users without a survey. Query parameters: `organization` (exact trimmed `realOrganization`; omitted = all, empty = unassigned), `keyword` (name/login ID), `status` (`ALL`, `NOT_STARTED`, `DRAFT`, `COMPLETED`), zero-based `page`, `size` (1–100, default 20). Response contains `users`, institution options, and page totals. Deleted users are excluded.
+- `GET /admin/intake-surveys/{userId}` returns the same seven-section template and saved state. `PUT` accepts the existing `{version, surveyAnswers, currentTab, revision}` contract. All three endpoints require `ROLE_SUPER_ADMIN`; normal admins and users are denied.
+- Administrator edits preserve submission state and original completion time. Completed surveys require all visible mandatory answers and recalculate six scores; unfinished surveys remain required for the user. User-row locks and revisions prevent stale overwrites. Request/response health answers remain masked by the existing audit logger.
+- No schema, Secret, or infrastructure changes. Deploy API before the `/superadmin/intake-surveys` frontend page. Tests: `gradlew test --tests '*IntakeSurvey*'` (query integration uses an isolated H2-compatible test schema).
 
 Deploy the backend and confirm its workflow/health before deploying the frontend, which requires the new status API. Roll back the frontend first if needed and retain the survey table and its data. Secrets, AWS resources, and workflows do not change.
 

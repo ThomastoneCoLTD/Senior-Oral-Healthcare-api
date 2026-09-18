@@ -137,6 +137,7 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/admin/account/list").hasRole("SUPER_ADMIN")
                         .requestMatchers("/daegu-chain/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/user/intake-survey", "/user/intake-survey/**").hasRole("USER")
+                        .requestMatchers("/admin/intake-surveys", "/admin/intake-surveys/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )
