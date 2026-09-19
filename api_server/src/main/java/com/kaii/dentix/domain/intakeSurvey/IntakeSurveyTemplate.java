@@ -24,7 +24,7 @@ public class IntakeSurveyTemplate {
     public Template get() { return template; }
 
     public Map<String, JsonNode> validate(SaveRequest request, boolean complete) {
-        if (!template.version().equals(request.version()) || request.currentTab() < 1 || request.currentTab() > 7
+        if ((!template.version().equals(request.version()) && !"2026-09-17-v1".equals(request.version())) || request.currentTab() < 1 || request.currentTab() > 7
                 || request.surveyAnswers() == null || request.surveyAnswers().size() > 47) {
             throw new FormValidationException("설문 양식을 다시 불러와 주세요.");
         }
@@ -44,7 +44,11 @@ public class IntakeSurveyTemplate {
                     continue;
                 }
                 switch (question.type()) {
-                    case "single" -> { if (!isOption(question, value)) invalid(section, question); }
+                    case "single" -> {
+                        // Preserve saved v1 visit months without converting them to a moving time range.
+                        if ("dental_3".equals(question.key()) && value.isTextual()) validateMonth(value, section, question);
+                        else if (!isOption(question, value)) invalid(section, question);
+                    }
                     case "multiple" -> {
                         if (!value.isArray() || value.size() > question.options().size()) invalid(section, question);
                         Set<Integer> selected = new HashSet<>();
@@ -52,11 +56,7 @@ public class IntakeSurveyTemplate {
                             if (!isOption(question, option) || !selected.add(option.intValue())) invalid(section, question);
                         }
                     }
-                    case "month" -> {
-                        if (!value.isTextual() || !value.textValue().matches("\\d{4}-(0[1-9]|1[0-2])")) invalid(section, question);
-                        YearMonth month = YearMonth.parse(value.textValue());
-                        if (month.getYear() < 1900 || month.isAfter(YearMonth.now(ZoneId.of("Asia/Seoul")))) invalid(section, question);
-                    }
+                    case "month" -> validateMonth(value, section, question);
                     default -> throw new IllegalStateException("Unknown survey question type");
                 }
             }
@@ -75,6 +75,12 @@ public class IntakeSurveyTemplate {
             }
         }
         return scores;
+    }
+
+    private void validateMonth(JsonNode value, Section section, Question question) {
+        if (!value.isTextual() || !value.textValue().matches("\\d{4}-(0[1-9]|1[0-2])")) invalid(section, question);
+        YearMonth month = YearMonth.parse(value.textValue());
+        if (month.getYear() < 1900 || month.isAfter(YearMonth.now(ZoneId.of("Asia/Seoul")))) invalid(section, question);
     }
 
     private boolean matches(Condition condition, Map<String, JsonNode> answers) {

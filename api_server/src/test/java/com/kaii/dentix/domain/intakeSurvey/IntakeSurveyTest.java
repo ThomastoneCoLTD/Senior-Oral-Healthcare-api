@@ -116,6 +116,29 @@ class IntakeSurveyTest {
         assertThatThrownBy(() -> template.validate(body(answers, null), true)).isInstanceOf(FormValidationException.class);
         assertThatThrownBy(() -> template.validate(new SaveRequest("old", Map.of(),1,null), false)).isInstanceOf(FormValidationException.class);
     }
+    @Test void eatDisplayChangesWithoutChangingStoredScores() {
+        var options = template.get().sections().get(0).questions().get(0).options();
+        assertThat(options.stream().map(Option::value)).containsExactly(0, 1, 2, 3, 4);
+        assertThat(options.stream().map(Option::label)).containsExactly("1 · 문제없음", "2", "3 · 보통", "4", "5 · 심각함");
+    }
+    @ParameterizedTest @ValueSource(ints = {1, 2, 3, 4, 5, 6})
+    void acceptsDentalVisitPeriods(int value) {
+        var answers = fullAnswers(); answers.put("dental_3", mapper.valueToTree(value));
+        assertThat(template.validate(body(answers, null), true)).containsEntry("dental_3", mapper.valueToTree(value));
+    }
+    @ParameterizedTest @ValueSource(strings = {"0", "7", "1.5", "true", "\"1\""})
+    void refusesInvalidDentalVisitPeriods(String value) throws Exception {
+        var answers = fullAnswers(); answers.put("dental_3", mapper.readTree(value));
+        assertThatThrownBy(() -> template.validate(body(answers, null), true)).isInstanceOf(FormValidationException.class);
+    }
+    @Test void oldDraftAndOpenV1ClientRetainVisitMonthAndScores() {
+        var answers = fullAnswers(); answers.put("dental_3", mapper.valueToTree("2026-08"));
+        var saved = service.save(http, new SaveRequest("2026-09-17-v1", answers, 7, null), false);
+        assertThat(saved.surveyAnswers()).containsEntry("dental_3", mapper.valueToTree("2026-08"));
+        var completed = service.save(http, body(saved.surveyAnswers(), saved.revision()), true);
+        assertThat(completed.surveyAnswers()).containsEntry("dental_3", mapper.valueToTree("2026-08"));
+        assertThat(completed.surveyScores()).containsEntry("1", 0);
+    }
     @Test void duplicateSubmissionAndLateDraftCannotOverwriteCompletion() {
         var first = service.save(http, body(fullAnswers(), null), true);
         assertThat(service.save(http, body(Map.of(), null), true).completedAt()).isEqualTo(first.completedAt());

@@ -1,10 +1,10 @@
 {
-  "version": "2026-09-17-v1",
+  "version": "2026-09-19-v2",
   "sections": [
     {
       "number": 1,
-      "title": "연하 기능 평가 (EAT-10)",
-      "description": "지난 1개월간 본인의 상태에 해당하는 정도를 선택해 주세요. 0은 문제없음, 4는 심각함입니다.",
+      "title": "연하 기능 평가",
+      "description": "지난 1개월간 본인의 상태에 해당하는 정도를 선택해 주세요. 1은 문제없음, 5는 심각함입니다.",
       "questions": [
         {
           "key": "eat10_1",
@@ -14,23 +14,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         },
@@ -42,23 +42,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         },
@@ -70,23 +70,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         },
@@ -98,23 +98,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         },
@@ -126,23 +126,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         },
@@ -154,23 +154,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         },
@@ -182,23 +182,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         },
@@ -210,23 +210,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         },
@@ -238,23 +238,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         },
@@ -266,23 +266,23 @@
           "options": [
             {
               "value": 0,
-              "label": "0 · 문제없음"
+              "label": "1 · 문제없음"
             },
             {
               "value": 1,
-              "label": "1"
+              "label": "2"
             },
             {
               "value": 2,
-              "label": "2 · 보통"
+              "label": "3 · 보통"
             },
             {
               "value": 3,
-              "label": "3"
+              "label": "4"
             },
             {
               "value": 4,
-              "label": "4 · 심각함"
+              "label": "5 · 심각함"
             }
           ]
         }
@@ -291,7 +291,7 @@
     },
     {
       "number": 2,
-      "title": "연하장애 간편 선별 (EDSQ)",
+      "title": "연하장애 간편 선별",
       "description": "각 문항에 대해 '예' 또는 '아니오'로 응답해 주세요.",
       "questions": [
         {
@@ -491,12 +491,12 @@
     },
     {
       "number": 3,
-      "title": "노쇠 간이 선별 (FRAIL scale)",
-      "description": "각 문항에 대해 '예' 또는 '아니오'로 응답해 주세요. (FRAIL scale 개념 기반 간이 문항)",
+      "title": "노쇠 간이 선별",
+      "description": "각 문항에 대해 '예' 또는 '아니오'로 응답해 주세요.",
       "questions": [
         {
           "key": "frail_1",
-          "text": "지난 4주간 대부분의 시간 또는 항상 피로감을 느꼈다 (Fatigue)",
+          "text": "지난 4주간 대부분의 시간 또는 항상 피로감을 느꼈다",
           "type": "single",
           "required": true,
           "options": [
@@ -512,7 +512,7 @@
         },
         {
           "key": "frail_2",
-          "text": "보조기구 없이 혼자서, 쉬지 않고 10계단을 오르는 데 어려움이 있다 (Resistance)",
+          "text": "보조기구 없이 혼자서, 쉬지 않고 10계단을 오르는 데 어려움이 있다",
           "type": "single",
           "required": true,
           "options": [
@@ -528,7 +528,7 @@
         },
         {
           "key": "frail_3",
-          "text": "보조기구 없이 혼자서, 약 400m(수백 야드)를 걷는 데 어려움이 있다 (Ambulation)",
+          "text": "보조기구 없이 혼자서, 약 400m(수백 야드)를 걷는 데 어려움이 있다",
           "type": "single",
           "required": true,
           "options": [
@@ -544,7 +544,7 @@
         },
         {
           "key": "frail_4",
-          "text": "다음 11개 질환 중 5개 이상 의사로부터 진단받은 적이 있다: 고혈압, 당뇨, 암, 만성폐질환, 심근경색, 울혈성심부전, 협심증, 천식, 관절염, 뇌졸중, 신장질환 (Illness)",
+          "text": "다음 11개 질환 중 5개 이상 의사로부터 진단받은 적이 있다",
           "type": "single",
           "required": true,
           "options": [
@@ -556,11 +556,12 @@
               "value": 1,
               "label": "예"
             }
-          ]
+          ],
+          "help": "고혈압, 당뇨, 암, 만성폐질환, 심근경색, 울혈성심부전, 협심증, 천식, 관절염, 뇌졸중, 신장질환"
         },
         {
           "key": "frail_5",
-          "text": "지난 1년간 체중이 5% 이상 감소하였다 (Loss of weight)",
+          "text": "지난 1년간 체중이 5% 이상 감소하였다",
           "type": "single",
           "required": true,
           "options": [
@@ -584,7 +585,7 @@
       "questions": [
         {
           "key": "aspiration_1",
-          "text": "식사 중 또는 식사 후 목소리가 젖은 소리(gurgly voice)로 변한 적이 있다",
+          "text": "식사 중 또는 식사 후 목소리가 젖은 소리로 변한 적이 있다",
           "type": "single",
           "required": true,
           "options": [
@@ -651,7 +652,7 @@
     },
     {
       "number": 5,
-      "title": "근감소증 간편 선별 (SARC-F)",
+      "title": "근감소증 간편 선별",
       "description": "각 문항에 해당하는 항목을 선택해 주세요.",
       "questions": [
         {
@@ -759,7 +760,7 @@
     },
     {
       "number": 6,
-      "title": "영양상태 간편 선별 (MNA-SF)",
+      "title": "영양상태 간편 선별",
       "description": "각 문항에 해당하는 항목을 선택해 주세요.",
       "questions": [
         {
@@ -864,7 +865,7 @@
         },
         {
           "key": "mna_f",
-          "text": "F. 체질량지수(BMI, kg/㎡)는 어느 범위입니까?",
+          "text": "F. 체질량지수는 어느 범위입니까?",
           "type": "single",
           "required": true,
           "options": [
@@ -937,10 +938,35 @@
         {
           "key": "dental_3",
           "text": "가장 최근 치과를 방문하신 시기는 언제입니까?",
-          "type": "month",
+          "type": "single",
           "required": false,
-          "options": [],
-          "help": "방문한 적이 없거나 기억나지 않으면 비워 두셔도 됩니다."
+          "options": [
+            {
+              "value": 1,
+              "label": "1. 1개월 미만"
+            },
+            {
+              "value": 2,
+              "label": "2. 6개월 미만"
+            },
+            {
+              "value": 3,
+              "label": "3. 1년 미만"
+            },
+            {
+              "value": 4,
+              "label": "4. 1년 6개월 미만"
+            },
+            {
+              "value": 5,
+              "label": "5. 2년 이상"
+            },
+            {
+              "value": 6,
+              "label": "6. 기타"
+            }
+          ],
+          "help": "해당하는 기간 중 가장 짧은 기간을 선택해 주세요. 1년 6개월 이상 2년 미만이거나 방문한 적이 없으면 기타를 선택해 주세요. 기억나지 않으면 비워 두셔도 됩니다."
         },
         {
           "key": "dental_4",
