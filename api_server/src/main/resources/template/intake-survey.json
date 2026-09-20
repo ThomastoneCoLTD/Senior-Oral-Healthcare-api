@@ -528,7 +528,7 @@
         },
         {
           "key": "frail_3",
-          "text": "보조기구 없이 혼자서, 약 400m(수백 야드)를 걷는 데 어려움이 있다",
+          "text": "보조기구 없이 혼자서, 약 400m를 걷는 데 어려움이 있다",
           "type": "single",
           "required": true,
           "options": [
@@ -657,7 +657,7 @@
       "questions": [
         {
           "key": "sarcf_1",
-          "text": "무거운 물건 들기: 4.5kg(약 10파운드)의 물건을 들어 옮기는 데 어려움이 어느 정도입니까?",
+          "text": "무거운 물건 들기: 4.5kg의 물건을 들어 옮기는 데 어려움이 어느 정도입니까?",
           "type": "single",
           "required": true,
           "options": [

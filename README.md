@@ -4,6 +4,8 @@ SOH API is a Spring Boot API server. The current project lives under `api_server
 
 ## First Login Health Survey
 
+FRAIL question 3 displays the distance in metres without the parenthesized yards; SARC-F question 1 displays kilograms without the parenthesized pounds. Question keys, options, scoring and template version are unchanged. User section clearing uses the existing draft replacement API and does not alter completed surveys.
+
 All general users, including existing accounts and DaDaegu accounts, complete the separate seven-tab health survey once before entering user pages. This does not replace the existing oral questionnaire or depend on organization subscriptions or oral-analysis enrollment. Admin accounts are excluded.
 
 - `GET /user/intake-survey/status`: server-owned required/completed status; no row or an unfinished draft means required.
