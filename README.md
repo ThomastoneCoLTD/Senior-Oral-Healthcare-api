@@ -2,6 +2,29 @@
 
 SOH API is a Spring Boot API server. The current project lives under `api_server` and uses Gradle Wrapper with Java 17.
 
+## First Login Health Survey
+
+FRAIL question 3 displays the distance in metres without the parenthesized yards; SARC-F question 1 displays kilograms without the parenthesized pounds. Question keys, options, scoring and template version are unchanged. User section clearing uses the existing draft replacement API and does not alter completed surveys.
+
+All general users, including existing accounts and DaDaegu accounts, complete the separate seven-tab health survey once before entering user pages. This does not replace the existing oral questionnaire or depend on organization subscriptions or oral-analysis enrollment. Admin accounts are excluded.
+
+- `GET /user/intake-survey/status`: server-owned required/completed status; no row or an unfinished draft means required.
+- `GET /user/intake-survey`: versioned template, saved answers, current tab, revision, and completion state.
+- `PUT /user/intake-survey/draft`, `POST /user/intake-survey/submit`: `{version, surveyAnswers, currentTab, revision}`. The user is resolved from the authenticated `ROLE_USER` token, never from the payload. Submission validates all required visible questions.
+- Template: `api_server/src/main/resources/template/intake-survey.json`, transcribed from the supplied `SOH_항목추가.pdf` (47 questions across EAT-10, EDSQ, FRAIL, aspiration, SARC-F, MNA-SF, and dental visits). Dental frequency is required only for recent visitors; last-visit period and no barriers may be left blank.
+- Template `2026-09-19-v2` displays EAT-10 choices as 1–5 while preserving stored values 0–4 and score totals. Parenthesized English in titles/questions is removed; the FRAIL disease list is supplied separately in `help`. Dental `dental_3` now accepts period values 1–6 (1 month, 6 months, 1 year, 18 months, 2+ years, other); valid legacy `YYYY-MM` answers and v1 clients remain accepted without automatic time-based conversion. Completed answers are not migrated.
+- New table: `user_intake_survey`, one row per user, with draft answers, six separate score totals, template version, current tab, revision, update/completion timestamps. Production `ddl-auto=update` creates it; reference SQL is `docs/db/add-user-intake-survey.sql`. No existing user data is backfilled or deleted.
+- User-row locking serializes initial creation; revisions reject stale drafts. Completed responses cannot be changed through user endpoints and repeated submissions return the original completion. Health answers and scores are masked in API audit logs. No medical diagnosis is generated.
+
+### Super-admin survey management
+
+- `GET /admin/intake-surveys`: paginated general-user list, including users without a survey. Query parameters: `organization` (exact trimmed `realOrganization`; omitted = all, empty = unassigned), `keyword` (name/login ID), `status` (`ALL`, `NOT_STARTED`, `DRAFT`, `COMPLETED`), zero-based `page`, `size` (1–100, default 20). Response contains `users`, institution options, and page totals. Deleted users are excluded.
+- `GET /admin/intake-surveys/{userId}` returns the same seven-section template and saved state. `PUT` accepts the existing `{version, surveyAnswers, currentTab, revision}` contract. All three endpoints require `ROLE_SUPER_ADMIN`; normal admins and users are denied.
+- Administrator edits preserve submission state and original completion time. Completed surveys require all visible mandatory answers and recalculate six scores; unfinished surveys remain required for the user. User-row locks and revisions prevent stale overwrites. Request/response health answers remain masked by the existing audit logger.
+- No schema, Secret, or infrastructure changes. Deploy API before the `/superadmin/intake-surveys` frontend page. Tests: `gradlew test --tests '*IntakeSurvey*'` (query integration uses an isolated H2-compatible test schema).
+
+Deploy the backend and confirm its workflow/health before deploying the frontend, which requires the new status API. Roll back the frontend first if needed and retain the survey table and its data. Secrets, AWS resources, and workflows do not change.
+
 ```text
 Build tool: Gradle Wrapper
 Java: 17
@@ -15,6 +38,17 @@ Artifact prefix: soh
 `main` is not a deployment branch. It is only for final reviewed code.
 
 ## Oral Exercise Access Policy
+
+### Viewing history and token failure follow-up
+
+- `GET /oral-exercise/history` returns the authenticated user's per-video completed session count, failure reasons, receipt state and `retryRequired`. `POST /oral-exercise/failures` accepts `{contentId, sessionId, reason}` for `TOKEN_WRONG` or `TOKEN_TIMEOUT`; `TOKEN_FAILED` is recorded by the reward controller after a failed server call.
+- A failure requires a previously accepted VIEW/PLAY in the same user/content/session. User-row locking makes duplicate failure reports idempotent. Failures do not change viewing progress or token balances.
+- Completion counts use distinct session IDs with a completed COMPLETE event, never the legacy `viewCount` (which counts progress updates). A new player opening creates a new session; pause/resume and duplicate requests do not create extra completed views.
+- Three or more failed sessions for the same active video prompt replay on the next login. Receipt of that video's token or completion of the reward journey suppresses the reminder while preserving history. Three or more completed views show sourced topic-specific health information in the frontend.
+- Super administrators alone can access `GET /admin/oral-exercise-history/users?keyword=&page=0&size=20`, `/users/{userId}` and paginated `/users/{userId}/{contentId}?page=0`. Search supports name, login ID and registered institution; member and event pages are bounded.
+- Existing `oral_exercise_interaction_log` is retained with three new event values and index `idx_exercise_log_user_content_session`. Production `ddl-auto=update` applies the additive schema change. No secrets or infrastructure resources change.
+- Old sessions are counted only where recorded; repeated playback within one historical page may be undercounted. Historical failure reasons cannot be reconstructed. Existing completed progress still identifies watched videos without token receipt.
+- Deploy and verify the backend before the frontend. Roll back the frontend first and retain history rows and the additive index. Actual token transfer and iPad Safari playback require separate authorized operational checks.
 
 - Local signup (`POST /login/signUp`, compatibility `/login/signUp/did`) accepts optional `oralAnalysisServiceEnabled`. Only `true` opts in; omitted/null/false opts out. The existing user column and login/profile response contract are reused; no database migration or new secret is required.
 - Deploy the API before the frontend signup checkbox so the selected value is persisted. The frontend calls the final collection action `상품 수령`; reward API names and transfer/reclaim semantics are unchanged.

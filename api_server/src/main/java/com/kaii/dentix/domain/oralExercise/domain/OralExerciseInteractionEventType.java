@@ -5,5 +5,8 @@ public enum OralExerciseInteractionEventType {
     PLAY,
     PROGRESS,
     PAUSE,
-    COMPLETE
+    COMPLETE,
+    TOKEN_WRONG,
+    TOKEN_TIMEOUT,
+    TOKEN_FAILED
 }

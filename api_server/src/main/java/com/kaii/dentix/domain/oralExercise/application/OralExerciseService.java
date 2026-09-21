@@ -141,6 +141,13 @@ public class OralExerciseService {
                 .findById(interactionRequest.getContentId())
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강체조 콘텐츠입니다."));
         validateContentAccess(userId, content);
+        if (!content.isActive()) {
+            throw new BadRequestApiException("비활성 콘텐츠입니다.");
+        }
+        String sessionId = interactionRequest.getSessionId();
+        if (sessionId != null && sessionId.length() > 100) {
+            throw new BadRequestApiException("시청 회차 식별자가 너무 깁니다.");
+        }
 
         int durationSeconds = valueOrDefault(interactionRequest.getDurationSeconds(), content.getDurationSeconds());
         int watchedSeconds = valueOrDefault(interactionRequest.getWatchedSeconds(), 0);
@@ -150,6 +157,12 @@ public class OralExerciseService {
         OralExerciseInteractionEventType eventType = interactionRequest.getEventType() == null
                 ? OralExerciseInteractionEventType.PROGRESS
                 : interactionRequest.getEventType();
+
+        if (List.of(OralExerciseInteractionEventType.TOKEN_WRONG,
+                OralExerciseInteractionEventType.TOKEN_TIMEOUT,
+                OralExerciseInteractionEventType.TOKEN_FAILED).contains(eventType)) {
+            throw new BadRequestApiException("토큰 실패는 전용 API로 기록해 주세요.");
+        }
 
         oralExerciseInteractionLogRepository.save(OralExerciseInteractionLog.builder()
                 .userId(userId)
