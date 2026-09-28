@@ -357,7 +357,7 @@ public class UserLoginControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(417))
-                .andExpect(jsonPath("rtMsg").value("기관은 대구1, 대구2, 대구3 중에서 선택해 주세요."));
+                .andExpect(jsonPath("rtMsg").value("기관은 대구1, 대구2, 대구3, 기타_천안 중에서 선택해 주세요."));
     }
 
     @Test

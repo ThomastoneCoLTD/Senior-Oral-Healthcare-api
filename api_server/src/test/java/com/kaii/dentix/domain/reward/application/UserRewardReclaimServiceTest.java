@@ -134,6 +134,8 @@ class UserRewardReclaimServiceTest {
 
     @Test
     void reclaimTransferredTokensForResetUsesTokenServerForLegacyWalletWithoutDirectApproval() throws Exception {
+        when(rewardWalletProvisioningService.requiresWalletReplacement("encrypted-legacy-did-key"))
+                .thenReturn(true);
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
         when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
         when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
@@ -158,6 +160,71 @@ class UserRewardReclaimServiceTest {
                 eq("0x-token-owner"),
                 eq(1L)
         );
+        verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any());
+    }
+
+    @Test
+    void deletionApprovesEachContractBeforeReclaimingIncludingOptionalRewards() throws Exception {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialAndOptionalRewards());
+        when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(objectMapper.readTree("{\"tx_hash\":\"reclaimed\"}"));
+
+        UserRewardReclaimService.ResetReclaimResult result = service.reclaimTransferredTokensForDeletion(7L);
+
+        assertThat(result.reclaimedCount()).isEqualTo(7);
+        assertThat(result.failedCount()).isZero();
+        var order = inOrder(rewardWalletProvisioningService, externalTokenClient);
+        for (UserRewardTransaction reward : essentialAndOptionalRewards()) {
+            order.verify(rewardWalletProvisioningService).approveRewardContract(
+                    7L, reward.getTokenContractAddress(), "0x-legacy-wallet", "encrypted-legacy-did-key");
+            order.verify(externalTokenClient).reclaimToken(
+                    reward.getCoinId().toUpperCase(java.util.Locale.ROOT), reward.getTokenContractAddress(),
+                    "0x-legacy-wallet", "0x-token-owner", reward.getAmount());
+        }
+    }
+
+    @Test
+    void deletionKeepsApprovalFailuresPendingWithoutAttemptingTransfer() {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
+        doThrow(new IllegalStateException("approval failed")).when(rewardWalletProvisioningService)
+                .approveRewardContract(any(), any(), any(), any());
+
+        UserRewardReclaimService.ResetReclaimResult result = service.reclaimTransferredTokensForDeletion(7L);
+
+        assertThat(result.reclaimedCount()).isZero();
+        assertThat(result.failedCount()).isEqualTo(5);
+        verify(externalTokenClient, never()).reclaimToken(any(), any(), any(), any(), anyLong());
+        verify(transactionRepository, atLeastOnce()).save(argThat(transaction ->
+                transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED));
+    }
+
+    @Test
+    void deletionRetryDoesNotApproveOrTransferAlreadyReclaimedRewards() {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
+        when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.of(
+                UserRewardTransaction.builder().status(UserRewardTransactionStatus.TOKEN_TRANSFERRED).build()));
+
+        UserRewardReclaimService.ResetReclaimResult result = service.reclaimTransferredTokensForDeletion(7L);
+
+        assertThat(result.reclaimedCount()).isZero();
+        assertThat(result.skippedCount()).isEqualTo(5);
+        assertThat(result.failedCount()).isZero();
+        verifyNoInteractions(rewardWalletProvisioningService, externalTokenClient);
+    }
+
+    @Test
+    void deletionPreservesLegacyReclaimFailuresInsteadOfSkippingOutstandingTokens() {
+        when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
+        when(rewardWalletProvisioningService.requiresWalletReplacement("encrypted-legacy-did-key"))
+                .thenReturn(true);
+        when(externalTokenClient.reclaimToken(any(), any(), any(), any(), anyLong()))
+                .thenThrow(new IllegalStateException("Account not authorized"));
+
+        UserRewardReclaimService.ResetReclaimResult result = service.reclaimTransferredTokensForDeletion(7L);
+
+        assertThat(result.failedCount()).isEqualTo(5);
+        assertThat(result.reclaimedCount()).isZero();
+        assertThat(result.skippedCount()).isZero();
         verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any());
     }
 

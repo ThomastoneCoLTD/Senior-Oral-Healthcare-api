@@ -232,7 +232,7 @@ class AdminUserServiceTest {
 
     @Test
     void userDeleteStopsWhenTokenReclaimFails() {
-        User user = User.builder().userId(10L).build();
+        User user = User.builder().userId(10L).userRefreshToken("existing-session").build();
         when(userRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(user));
         when(userRewardReclaimService.reclaimTransferredTokensForDeletion(10L))
                 .thenReturn(new UserRewardReclaimService.ResetReclaimResult(2, 0, 1, 2L));
@@ -243,6 +243,21 @@ class AdminUserServiceTest {
 
         verify(dadaeguUserIdentityRepository, org.mockito.Mockito.never()).deleteByUserId(any());
         assertThat(user.getDeleted()).isNull();
+        assertThat(user.getUserRefreshToken()).isEqualTo("existing-session");
+    }
+
+    @Test
+    void userDeleteKeepsMemberAndIdentityWhenReclaimThrows() {
+        User user = User.builder().userId(10L).userRefreshToken("existing-session").build();
+        when(userRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(user));
+        when(userRewardReclaimService.reclaimTransferredTokensForDeletion(10L))
+                .thenThrow(new IllegalStateException("reclaim unavailable"));
+
+        assertThatThrownBy(() -> adminUserService.userDelete(10L)).hasMessage("reclaim unavailable");
+
+        verify(dadaeguUserIdentityRepository, org.mockito.Mockito.never()).deleteByUserId(any());
+        assertThat(user.getDeleted()).isNull();
+        assertThat(user.getUserRefreshToken()).isEqualTo("existing-session");
     }
 
     @Test

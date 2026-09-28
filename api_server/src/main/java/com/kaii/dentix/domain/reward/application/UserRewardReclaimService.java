@@ -63,8 +63,9 @@ public class UserRewardReclaimService {
 
     /**
      * Reclaims every token that was actually transferred before an administrator deletes
-     * the user's reward records. The token server resolves the holder signing key by wallet
-     * address, so this path also supports legacy wallets whose stored SOH key is a DID key.
+     * the user's reward records. Current wallets must approve the token owner first.
+     * Legacy DID-key wallets rely on the token server's wallet-key lookup; a failed
+     * approval or reclaim must keep the member and reward records intact.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ResetReclaimResult reclaimTransferredTokensForReset(Long userId) {
@@ -161,6 +162,14 @@ public class UserRewardReclaimService {
             }
 
             try {
+                if (!rewardWalletProvisioningService.requiresWalletReplacement(wallet.getWalletPrivateKeyCiphertext())) {
+                    rewardWalletProvisioningService.approveRewardContract(
+                            userId,
+                            tokenContractAddress,
+                            wallet.getWalletAddress(),
+                            wallet.getWalletPrivateKeyCiphertext()
+                    );
+                }
                 JsonNode response = DaeguChainApiLogContext.withUser(
                         userId,
                         auditFeature,
