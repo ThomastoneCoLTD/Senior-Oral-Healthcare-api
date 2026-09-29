@@ -646,11 +646,13 @@ function handler(event) {
 
 ### Temporary backend in another AWS account
 
-The temporary manual service on `54.180.133.42` is `soh-api-temp`, with files in `/home/ec2-user/soh-api-temp`. It is not enabled at boot and has no automatic restart. Internal health is `/api/actuator/health` on port 8080; this does not confirm that the production frontend can reach it. The public API domain must have a working HTTPS path before login can work.
+The temporary manual service on `54.180.133.42` is `soh-api-temp`, with files in `/home/ec2-user/soh-api-temp`. It is not enabled at boot and has no automatic restart. The existing API domain now resolves to this server. Nginx configuration `/etc/nginx/conf.d/soh-api-temp.conf` terminates HTTPS and forwards `/api/` requests to port 8080 without removing the prefix. HTTP redirects to HTTPS except for the ACME challenge path. External HTTPS health and login CORS are verified, and the user confirmed successful login through the production frontend. Frontend configuration remains unchanged.
+
+The Let's Encrypt certificate is stored under `/etc/letsencrypt/live/api.soh.thomabio.com/`. `soh-certbot-renew.timer` checks renewal daily and reloads Nginx after successful renewal. Do not copy the certificate private key into the repository. Check the timer and service state separately from the manually started API service.
 
 For this user-approved temporary run only, protected server-local configuration uses ordinary MySQL JDBC with TLS and a credential copied from the existing RDS managed secret. No AWS access keys were deployed. Regular production continues to require Secrets Manager JDBC, and static datasource settings must not be added to GitHub/S3 environment artifacts. AWS-dependent uploads, Polly, and CloudWatch are limited in the temporary runtime.
 
-The temporary DB route and security-group rule are restricted to `54.180.133.42/32`; remove both when this runtime is retired. Configuration, verification, remaining DNS/HTTPS work, and rollback identifiers are recorded in [the temporary deployment record](docs/updates/2026-09-29_SOH_변경기록_임시서버_수동배포준비.docx).
+The temporary DB route and security-group rule are restricted to `54.180.133.42/32`; remove both when this runtime is retired. Base configuration and rollback identifiers are recorded in [the temporary deployment record](docs/updates/2026-09-29_SOH_변경기록_임시서버_수동배포준비.docx), with the completed HTTPS setup and current verification in [the HTTPS connection record](docs/updates/2026-09-29_SOH_변경기록_임시서버_HTTPS연결.docx).
 
 S3 artifact check:
 
