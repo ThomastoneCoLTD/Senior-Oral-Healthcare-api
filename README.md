@@ -644,6 +644,14 @@ function handler(event) {
 
 ## Operations Commands
 
+### Temporary backend in another AWS account
+
+The temporary manual service on `54.180.133.42` is `soh-api-temp`, with files in `/home/ec2-user/soh-api-temp`. It is not enabled at boot and has no automatic restart. Internal health is `/api/actuator/health` on port 8080; this does not confirm that the production frontend can reach it. The public API domain must have a working HTTPS path before login can work.
+
+For this user-approved temporary run only, protected server-local configuration uses ordinary MySQL JDBC with TLS and a credential copied from the existing RDS managed secret. No AWS access keys were deployed. Regular production continues to require Secrets Manager JDBC, and static datasource settings must not be added to GitHub/S3 environment artifacts. AWS-dependent uploads, Polly, and CloudWatch are limited in the temporary runtime.
+
+The temporary DB route and security-group rule are restricted to `54.180.133.42/32`; remove both when this runtime is retired. Configuration, verification, remaining DNS/HTTPS work, and rollback identifiers are recorded in [the temporary deployment record](docs/updates/2026-09-29_SOH_변경기록_임시서버_수동배포준비.docx).
+
 S3 artifact check:
 
 ```bash
