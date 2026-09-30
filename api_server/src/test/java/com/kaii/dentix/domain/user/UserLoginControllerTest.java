@@ -241,7 +241,7 @@ public class UserLoginControllerTest {
                                 fieldWithPath("userGender").type(JsonFieldType.STRING).attributes(genderFormat()).description("사용자 성별"),
                                 fieldWithPath("userPhoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("사용자 휴대폰 번호"),
                                 fieldWithPath("userBirthDate").type(JsonFieldType.STRING).description("사용자 생년월일(YYYY-MM-DD)"),
-                                fieldWithPath("realOrganization").type(JsonFieldType.STRING).description("사용자가 선택한 실제 기관(대구1, 대구2, 대구3)"),
+                                fieldWithPath("realOrganization").type(JsonFieldType.STRING).description("사용자가 선택한 실제 기관(소하성당, 대구1, 대구2, 대구3, 기타_천안)"),
                                 fieldWithPath("findPwdQuestionId").type(JsonFieldType.NUMBER).description("비밀번호 찾기 질문 ID"),
                                 fieldWithPath("findPwdAnswer").type(JsonFieldType.STRING).description("비밀번호 찾기 답변"),
                                 fieldWithPath("organizationId").type(JsonFieldType.NUMBER).description("소속 기관 ID"),
@@ -357,7 +357,7 @@ public class UserLoginControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("rt").value(417))
-                .andExpect(jsonPath("rtMsg").value("기관은 대구1, 대구2, 대구3, 기타_천안 중에서 선택해 주세요."));
+                .andExpect(jsonPath("rtMsg").value("기관은 소하성당, 대구1, 대구2, 대구3, 기타_천안 중에서 선택해 주세요."));
     }
 
     @Test

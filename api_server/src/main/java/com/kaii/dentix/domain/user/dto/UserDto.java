@@ -102,7 +102,7 @@ public class UserDto {
         private String onboardingToken;
 
         @NotBlank(message = "기관 선택은 필수입니다.")
-        @Pattern(regexp = "^(대구1|대구2|대구3|기타_천안)$", message = "기관은 대구1, 대구2, 대구3, 기타_천안 중에서 선택해 주세요.")
+        @Pattern(regexp = "^(소하성당|대구1|대구2|대구3|기타_천안)$", message = "기관은 소하성당, 대구1, 대구2, 대구3, 기타_천안 중에서 선택해 주세요.")
         private String realOrganization;
 
         @NotNull(message = "필수 약관 동의는 필수입니다.")
@@ -244,7 +244,7 @@ public class UserDto {
         private String userBirthDate;
 
         @NotBlank(message = "기관 선택은 필수입니다.")
-        @Pattern(regexp = "^(대구1|대구2|대구3|기타_천안)$", message = "기관은 대구1, 대구2, 대구3, 기타_천안 중에서 선택해 주세요.")
+        @Pattern(regexp = "^(소하성당|대구1|대구2|대구3|기타_천안)$", message = "기관은 소하성당, 대구1, 대구2, 대구3, 기타_천안 중에서 선택해 주세요.")
         private String realOrganization;
 
         @NotNull(message = "비밀번호 찾기 질문 선택은 필수입니다.")
@@ -302,7 +302,7 @@ public class UserDto {
         private String userBirthDate;
 
         @NotBlank(message = "기관 선택은 필수입니다.")
-        @Pattern(regexp = "^(대구1|대구2|대구3|기타_천안)$", message = "기관은 대구1, 대구2, 대구3, 기타_천안 중에서 선택해 주세요.")
+        @Pattern(regexp = "^(소하성당|대구1|대구2|대구3|기타_천안)$", message = "기관은 소하성당, 대구1, 대구2, 대구3, 기타_천안 중에서 선택해 주세요.")
         private String realOrganization;
 
         @NotNull(message = "서비스 이용 동의는 필수입니다.")

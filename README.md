@@ -713,7 +713,7 @@ If tests or REST Docs require external services, document the reason and use a d
 
 ## Member Real Organization
 
-User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`, `POST /login/dadaegu/signUp`) require `realOrganization` with one of `대구1`, `대구2`, `대구3`, or `기타_천안`. The selected value is stored in nullable `user.real_organization` so pre-existing users and administrator bulk-upload records remain compatible. Deploy this API before the frontend that offers `기타_천안`; no schema or Secret change is required.
+User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`, `POST /login/dadaegu/signUp`) require `realOrganization` with one of `소하성당`, `대구1`, `대구2`, `대구3`, or `기타_천안`. The selected value is stored in nullable `user.real_organization` so pre-existing users and administrator bulk-upload records remain compatible. Deploy this API before the frontend that offers `소하성당` as the first institution; no schema or Secret change is required.
 
 ### Member deletion and token reclaim
 
