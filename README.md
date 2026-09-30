@@ -644,15 +644,17 @@ function handler(event) {
 
 ## Operations Commands
 
-### Temporary backend in another AWS account
+### Production restored and temporary backend stopped
 
-The temporary manual service on `54.180.133.42` is `soh-api-temp`, with files in `/home/ec2-user/soh-api-temp`. It is not enabled at boot and has no automatic restart. The existing API domain now resolves to this server. Nginx configuration `/etc/nginx/conf.d/soh-api-temp.conf` terminates HTTPS and forwards `/api/` requests to port 8080 without removing the prefix. HTTP redirects to HTTPS except for the ACME challenge path. External HTTPS health and login CORS are verified, and the user confirmed successful login through the production frontend. Frontend configuration remains unchanged.
+The API domain resolves to the original `soh-api-prod-alb` in account `160885266674`. The production workflow and ASG instance refresh completed successfully, with external HTTPS health `200 / UP` and login CORS verified. Actual authenticated login was not retested during restoration. The refresh briefly returned HTTP 502 while the new application started; this was not a zero-downtime deployment. See the [production restoration record](docs/updates/2026-09-30_SOH_변경기록_기존AWS운영재배포.docx).
 
-The Let's Encrypt certificate is stored under `/etc/letsencrypt/live/api.soh.thomabio.com/`. `soh-certbot-renew.timer` checks renewal daily and reloads Nginx after successful renewal. Do not copy the certificate private key into the repository. Check the timer and service state separately from the manually started API service.
+The temporary manual service on `54.180.133.42`, `soh-api-temp`, is stopped to prevent duplicate scheduled jobs and remains disabled at boot. Files in `/home/ec2-user/soh-api-temp` are retained for recovery. Nginx configuration `/etc/nginx/conf.d/soh-api-temp.conf` still provides HTTPS and forwards `/api/` requests to port 8080 without removing the prefix, but the temporary API process is no longer running. Frontend configuration remains unchanged.
 
-For this user-approved temporary run only, protected server-local configuration uses ordinary MySQL JDBC with TLS and a credential copied from the existing RDS managed secret. No AWS access keys were deployed. Regular production continues to require Secrets Manager JDBC, and static datasource settings must not be added to GitHub/S3 environment artifacts. AWS-dependent uploads, Polly, and CloudWatch are limited in the temporary runtime.
+The temporary server's Let's Encrypt certificate is retained under `/etc/letsencrypt/live/api.soh.thomabio.com/`. `soh-certbot-renew.timer` remains active and checks renewal daily, but successful renewal must not be assumed now that DNS points to the production ALB. Do not copy the certificate private key into the repository. Stop the timer and remove temporary secrets when retiring the temporary server.
 
-The temporary DB route and security-group rule are restricted to `54.180.133.42/32`; remove both when this runtime is retired. Base configuration and rollback identifiers are recorded in [the temporary deployment record](docs/updates/2026-09-29_SOH_변경기록_임시서버_수동배포준비.docx), with the completed HTTPS setup and current verification in [the HTTPS connection record](docs/updates/2026-09-29_SOH_변경기록_임시서버_HTTPS연결.docx).
+The retained protected temporary configuration uses ordinary MySQL JDBC with TLS and a credential copied from the existing RDS managed secret, as approved only for that temporary run. No AWS access keys were deployed there. Restored production uses Secrets Manager JDBC; static datasource settings must not be added to GitHub/S3 environment artifacts. Before restarting the temporary runtime, verify its DB credential, network access, and known AWS upload, Polly, and CloudWatch limitations.
+
+The temporary DB route and security-group rule restricted to `54.180.133.42/32` were not changed during restoration; remove both when this runtime is permanently retired. Base configuration and rollback identifiers are recorded in [the temporary deployment record](docs/updates/2026-09-29_SOH_변경기록_임시서버_수동배포준비.docx), with the earlier HTTPS setup in [the HTTPS connection record](docs/updates/2026-09-29_SOH_변경기록_임시서버_HTTPS연결.docx). Coordinate scheduled jobs before any temporary-server failback.
 
 S3 artifact check:
 
