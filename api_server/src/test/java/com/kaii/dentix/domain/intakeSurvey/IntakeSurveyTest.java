@@ -65,6 +65,26 @@ class IntakeSurveyTest {
         assertThatThrownBy(() -> service.save(http, body(Map.of(), null), true)).isInstanceOf(FormValidationException.class);
         verify(repository, never()).saveAndFlush(any());
     }
+    @Test void draftPersistsIndependentPartialTotalsAndRecalculatesChangedOrClearedAnswers() {
+        var answers = new LinkedHashMap<String, JsonNode>();
+        answers.put("eat10_1", mapper.valueToTree(4));
+        answers.put("eat10_2", mapper.valueToTree(2));
+        answers.put("edsq_1", mapper.valueToTree(1));
+        answers.put("mna_f", mapper.valueToTree(3));
+        var draft = service.save(http, body(answers, null), false);
+        assertThat(draft.surveyScores()).containsExactlyInAnyOrderEntriesOf(
+                Map.of("1", 6, "2", 1, "3", 0, "4", 0, "5", 0, "6", 3));
+        assertThat(service.get(http).surveyScores()).isEqualTo(draft.surveyScores());
+        assertThat(draft.completed()).isFalse();
+        assertThat(draft.completedAt()).isNull();
+        answers.put("eat10_1", mapper.valueToTree(0));
+        answers.remove("eat10_2");
+        var updated = service.save(http, body(answers, draft.revision()), false);
+        assertThat(updated.surveyScores()).containsEntry("1", 0).containsEntry("2", 1).containsEntry("6", 3);
+        var cleared = service.save(http, body(Map.of(), updated.revision()), false);
+        assertThat(cleared.surveyScores()).hasSize(6).allSatisfy((section, score) -> assertThat(score).isZero());
+        assertThat(service.status(http).required()).isTrue();
+    }
     @Test void zeroAnswersAreValidAndNoDentalVisitSkipsFrequency() {
         var result = service.save(http, body(fullAnswers(), null), true);
         assertThat(result.completed()).isTrue();

@@ -51,7 +51,7 @@ public class AdminIntakeSurveyService {
         var answers = template.validate(body, completed);
         try {
             survey.save(template.get().version(), mapper.writeValueAsString(answers),
-                    mapper.writeValueAsString(completed ? template.scores(answers) : Map.of()), body.currentTab(), completed);
+                    mapper.writeValueAsString(template.scores(answers)), body.currentTab(), completed);
             return reader.state(surveys.saveAndFlush(survey));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Unable to serialize intake survey", e);

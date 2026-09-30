@@ -14,7 +14,7 @@ class IntakeSurveyPersistenceTest {
             try (var session = factory.openSession()) {
                 var transaction = session.beginTransaction();
                 var survey = new UserIntakeSurvey(42L);
-                survey.save("2026-09-17-v1", "{\"eat10_1\":0}", "{}", 2, false);
+                survey.save("2026-09-17-v1", "{\"eat10_1\":4}", "{\"1\":4}", 2, false);
                 session.persist(survey);
                 transaction.commit();
                 assertThat(survey.getRevision()).isZero();
@@ -24,6 +24,7 @@ class IntakeSurveyPersistenceTest {
                 var survey = session.find(UserIntakeSurvey.class, 42L);
                 assertThat(survey.getAnswersJson()).contains("eat10_1");
                 assertThat(survey.getCurrentTab()).isEqualTo(2);
+                assertThat(survey.getScoresJson()).isEqualTo("{\"1\":4}");
                 assertThat(survey.getCompletedAt()).isNull();
                 survey.save("2026-09-17-v1", "{\"eat10_1\":0}", "{\"1\":0}", 7, true);
                 transaction.commit();

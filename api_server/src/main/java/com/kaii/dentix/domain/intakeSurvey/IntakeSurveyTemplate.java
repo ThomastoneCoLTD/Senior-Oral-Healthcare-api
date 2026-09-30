@@ -67,11 +67,15 @@ public class IntakeSurveyTemplate {
 
     public Map<String, Integer> scores(Map<String, JsonNode> answers) {
         Map<String, Integer> scores = new LinkedHashMap<>();
-        // Preserve the source's option scores; do not generate a medical diagnosis.
+        // Draft totals include answered items only; completed=false distinguishes partial scores.
+        // Preserve the source's option scores; dental option IDs are not a scoring scale.
         for (Section section : template.sections()) {
             if (section.number() <= 6) {
                 scores.put(String.valueOf(section.number()), section.questions().stream()
-                        .mapToInt(question -> answers.get(question.key()).intValue()).sum());
+                        .filter(question -> question.showWhen() == null || matches(question.showWhen(), answers))
+                        .map(question -> answers.get(question.key()))
+                        .filter(Objects::nonNull)
+                        .mapToInt(JsonNode::intValue).sum());
             }
         }
         return scores;

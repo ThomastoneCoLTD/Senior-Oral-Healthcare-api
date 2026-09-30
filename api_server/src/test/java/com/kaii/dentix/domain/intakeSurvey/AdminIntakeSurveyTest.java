@@ -40,7 +40,7 @@ class AdminIntakeSurveyTest {
     @Test void newDraftStaysRequiredAndDoesNotCreateOtherUsers() {
         var state = service.update(42L, request(Map.of("eat10_1", mapper.valueToTree(2)), null));
         assertThat(state.completed()).isFalse();
-        assertThat(state.surveyScores()).isEmpty();
+        assertThat(state.surveyScores()).containsEntry("1", 2).containsEntry("2", 0).doesNotContainKey("7");
         assertThat(state.revision()).isZero();
         assertThatThrownBy(() -> service.update(99L, request(Map.of(), null))).isInstanceOf(FormValidationException.class);
     }
