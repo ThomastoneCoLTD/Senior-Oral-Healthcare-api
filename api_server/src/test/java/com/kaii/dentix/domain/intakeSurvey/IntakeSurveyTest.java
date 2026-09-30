@@ -45,10 +45,10 @@ class IntakeSurveyTest {
         return new SaveRequest(template.get().version(), answers, 7, revision);
     }
 
-    @Test void sourceHasSevenSectionsAndAll47Questions() {
-        assertThat(template.get().sections()).hasSize(7);
+    @Test void sourceHasElevenSectionsAndAll72Questions() {
+        assertThat(template.get().sections()).hasSize(11);
         assertThat(template.get().sections().stream().map(section -> section.questions().size()).toList())
-                .containsExactly(10, 12, 5, 4, 5, 6, 5);
+                .containsExactly(10, 12, 5, 4, 5, 6, 5, 6, 6, 6, 7);
     }
     @Test void newAndExistingUsersWithoutSubmissionAreRequired() {
         assertThat(service.status(http).required()).isTrue();
@@ -73,7 +73,7 @@ class IntakeSurveyTest {
         answers.put("mna_f", mapper.valueToTree(3));
         var draft = service.save(http, body(answers, null), false);
         assertThat(draft.surveyScores()).containsExactlyInAnyOrderEntriesOf(
-                Map.of("1", 6, "2", 1, "3", 0, "4", 0, "5", 0, "6", 3));
+                Map.of("1", 6, "2", 1, "3", 0, "4", 0, "5", 0, "6", 3, "8", 0, "9", 0, "10", 0, "11", 0));
         assertThat(service.get(http).surveyScores()).isEqualTo(draft.surveyScores());
         assertThat(draft.completed()).isFalse();
         assertThat(draft.completedAt()).isNull();
@@ -82,7 +82,7 @@ class IntakeSurveyTest {
         var updated = service.save(http, body(answers, draft.revision()), false);
         assertThat(updated.surveyScores()).containsEntry("1", 0).containsEntry("2", 1).containsEntry("6", 3);
         var cleared = service.save(http, body(Map.of(), updated.revision()), false);
-        assertThat(cleared.surveyScores()).hasSize(6).allSatisfy((section, score) -> assertThat(score).isZero());
+        assertThat(cleared.surveyScores()).hasSize(10).allSatisfy((section, score) -> assertThat(score).isZero());
         assertThat(service.status(http).required()).isTrue();
     }
     @Test void zeroAnswersAreValidAndNoDentalVisitSkipsFrequency() {
@@ -114,7 +114,7 @@ class IntakeSurveyTest {
         template.get().sections().forEach(section -> section.questions().stream().filter(q -> q.type().equals("single"))
                 .forEach(q -> answers.put(q.key(), mapper.valueToTree(q.options().get(q.options().size() - 1).value()))));
         assertThat(template.scores(template.validate(body(answers, null), true)))
-                .containsExactlyInAnyOrderEntriesOf(Map.of("1",40,"2",12,"3",5,"4",4,"5",10,"6",14));
+                .containsExactlyInAnyOrderEntriesOf(Map.of("1",40,"2",12,"3",5,"4",4,"5",10,"6",14,"8",30,"9",30,"10",30,"11",35));
     }
     @ParameterizedTest @ValueSource(strings = {"\"2026-13\"", "\"2999-01\"", "\"1899-01\"", "[]"})
     void refusesInvalidDentalMonth(String value) throws Exception {
@@ -140,6 +140,74 @@ class IntakeSurveyTest {
         var options = template.get().sections().get(0).questions().get(0).options();
         assertThat(options.stream().map(Option::value)).containsExactly(0, 1, 2, 3, 4);
         assertThat(options.stream().map(Option::label)).containsExactly("1 · 문제없음", "2", "3 · 보통", "4", "5 · 심각함");
+    }
+    @Test void supplementalSourceSectionsKeepOneToFiveScoresAndIndependentMaximums() {
+        var added = template.get().sections().subList(7, 11);
+        assertThat(added.stream().map(Section::scoreMax)).containsExactly(30, 30, 30, 35);
+        assertThat(added.get(0).questions().get(0).text()).isEqualTo("음식을 삼키기 위해 여러 번 삼켜야 할 때가 있다.");
+        assertThat(added.get(3).questions().get(6).text()).isEqualTo("구강건강 교육이나 정보를 활용하는 것이 구강건강관리에 도움이 된다고 생각한다.");
+        added.forEach(section -> section.questions().forEach(question -> {
+            assertThat(question.required()).isTrue();
+            assertThat(question.options().stream().map(Option::value)).containsExactly(1, 2, 3, 4, 5);
+        }));
+        assertThat(template.scores(fullAnswers())).containsEntry("8", 6).containsEntry("9", 6)
+                .containsEntry("10", 6).containsEntry("11", 7).doesNotContainKey("7");
+    }
+    @ParameterizedTest @ValueSource(strings = {"0", "6", "1.5", "true", "\"1\""})
+    void supplementalScoresRejectValuesOutsideTheSourceScale(String value) throws Exception {
+        var answers = fullAnswers(); answers.put("swallow_symptoms_1", mapper.readTree(value));
+        assertThatThrownBy(() -> template.validate(body(answers, null), false)).isInstanceOf(FormValidationException.class);
+    }
+    @Test void supplementalPartialTotalsSurviveReloadAndClearing() {
+        Map<String, JsonNode> answers = Map.of("swallow_symptoms_1", mapper.valueToTree(1), "swallow_symptoms_6", mapper.valueToTree(5),
+                "repeated_swallow_2", mapper.valueToTree(3), "tongue_function_4", mapper.valueToTree(2), "oral_awareness_7", mapper.valueToTree(4));
+        var draft = service.save(http, new SaveRequest(template.get().version(), answers, 11, null), false);
+        assertThat(draft.surveyScores()).containsEntry("8", 6).containsEntry("9", 3).containsEntry("10", 2).containsEntry("11", 4);
+        assertThat(service.get(http).currentTab()).isEqualTo(11);
+        assertThat(service.get(http).surveyScores()).isEqualTo(draft.surveyScores());
+        var cleared = service.save(http, new SaveRequest(template.get().version(), Map.of(), 11, draft.revision()), false);
+        assertThat(cleared.surveyScores()).containsEntry("8", 0).containsEntry("9", 0).containsEntry("10", 0).containsEntry("11", 0);
+    }
+    @ParameterizedTest @ValueSource(strings = {"2026-09-17-v1", "2026-09-19-v2"})
+    void legacyClientsMaySaveDraftsButMustReloadBeforeSubmission(String version) {
+        var legacy = fullAnswers();
+        template.get().sections().subList(7, 11).forEach(section -> section.questions().forEach(q -> legacy.remove(q.key())));
+        var draft = service.save(http, new SaveRequest(version, legacy, 7, null), false);
+        assertThat(draft.surveyAnswers()).containsKey("eat10_1").doesNotContainKey("swallow_symptoms_1");
+        assertThat(draft.template().version()).isEqualTo("2026-09-30-v3");
+        assertThatThrownBy(() -> service.save(http, new SaveRequest(version, legacy, 7, draft.revision()), true))
+                .isInstanceOf(FormValidationException.class).hasMessageContaining("새 문항");
+        assertThatThrownBy(() -> service.save(http, body(legacy, draft.revision()), true)).isInstanceOf(FormValidationException.class);
+        assertThat(service.status(http).required()).isTrue();
+    }
+    @Test void legacyCompletionRemainsCompleteUntilNewAnswersAreExplicitlySaved() throws Exception {
+        var legacy = fullAnswers();
+        template.get().sections().subList(7, 11).forEach(section -> section.questions().forEach(q -> legacy.remove(q.key())));
+        var survey = new UserIntakeSurvey(42L);
+        survey.save("2026-09-19-v2", mapper.writeValueAsString(legacy), "{\"1\":0}", 7, true);
+        ReflectionTestUtils.setField(survey, "revision", 3L);
+        when(repository.findById(42L)).thenReturn(Optional.of(survey));
+        var original = service.get(http);
+        assertThat(original.completed()).isTrue();
+        assertThat(service.status(http).required()).isFalse();
+        assertThat(original.surveyAnswers()).isEqualTo(legacy);
+        assertThat(original.surveyScores()).containsOnlyKeys("1");
+        assertThatThrownBy(() -> service.updateCompleted(http, body(legacy, 3L))).isInstanceOf(FormValidationException.class);
+        var updated = service.updateCompleted(http, body(fullAnswers(), 3L));
+        assertThat(updated.completedAt()).isEqualTo(original.completedAt());
+        assertThat(updated.surveyScores()).containsEntry("8", 6).containsEntry("11", 7);
+        assertThat(updated.surveyAnswers()).containsEntry("swallow_symptoms_1", mapper.valueToTree(1));
+    }
+    @Test void requestLimitsAllow72AnswersAndElevenSectionsButRejectLargerPayloads() {
+        try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            var validator = factory.getValidator();
+            var answers = fullAnswers(); answers.put("dental_5", mapper.createArrayNode());
+            assertThat(answers).hasSize(72);
+            assertThat(validator.validate(new SaveRequest(template.get().version(), answers, 11, null))).isEmpty();
+            assertThat(validator.validate(new SaveRequest(template.get().version(), answers, 12, null))).isNotEmpty();
+            answers.put("extra", mapper.valueToTree(1));
+            assertThat(validator.validate(new SaveRequest(template.get().version(), answers, 11, null))).isNotEmpty();
+        }
     }
     @ParameterizedTest @ValueSource(ints = {1, 2, 3, 4, 5, 6})
     void acceptsDentalVisitPeriods(int value) {

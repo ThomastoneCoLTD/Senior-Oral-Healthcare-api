@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-19-v2",
+  "version": "2026-09-30-v3",
   "sections": [
     {
       "number": 1,
@@ -287,7 +287,8 @@
           ]
         }
       ],
-      "source": "Belafsky PC, Mouadeb DA, Rees CJ, et al. Validity and reliability of the Eating Assessment Tool (EAT-10). Ann Otol Rhinol Laryngol. 2008;117(12):919-924."
+      "source": "Belafsky PC, Mouadeb DA, Rees CJ, et al. Validity and reliability of the Eating Assessment Tool (EAT-10). Ann Otol Rhinol Laryngol. 2008;117(12):919-924.",
+      "scoreMax": 40
     },
     {
       "number": 2,
@@ -487,7 +488,8 @@
           ]
         }
       ],
-      "source": "Uhm KE, Kim M, Lee YM, et al. The Easy Dysphagia Symptom Questionnaire (EDSQ): A new dysphagia screening questionnaire for the older adults. Eur Geriatr Med. 2019;10:47-52."
+      "source": "Uhm KE, Kim M, Lee YM, et al. The Easy Dysphagia Symptom Questionnaire (EDSQ): A new dysphagia screening questionnaire for the older adults. Eur Geriatr Med. 2019;10:47-52.",
+      "scoreMax": 12
     },
     {
       "number": 3,
@@ -576,7 +578,8 @@
           ]
         }
       ],
-      "source": "Morley JE, Malmstrom TK, Miller DK. A simple frailty questionnaire (FRAIL) predicts outcomes in middle aged African Americans. J Nutr Health Aging. 2012;16(7):601-608."
+      "source": "Morley JE, Malmstrom TK, Miller DK. A simple frailty questionnaire (FRAIL) predicts outcomes in middle aged African Americans. J Nutr Health Aging. 2012;16(7):601-608.",
+      "scoreMax": 5
     },
     {
       "number": 4,
@@ -648,7 +651,8 @@
           ]
         }
       ],
-      "source": ""
+      "source": "",
+      "scoreMax": 4
     },
     {
       "number": 5,
@@ -756,7 +760,8 @@
           ]
         }
       ],
-      "source": "Malmstrom TK, Morley JE. SARC-F: a simple questionnaire to rapidly diagnose sarcopenia. J Am Med Dir Assoc. 2013;14(8):531-532."
+      "source": "Malmstrom TK, Morley JE. SARC-F: a simple questionnaire to rapidly diagnose sarcopenia. J Am Med Dir Assoc. 2013;14(8):531-532.",
+      "scoreMax": 10
     },
     {
       "number": 6,
@@ -888,7 +893,8 @@
           ]
         }
       ],
-      "source": "Rubenstein LZ, Harker JO, Salva A, Guigoz Y, Vellas B. Screening for undernutrition in geriatric practice: developing the short-form mini-nutritional assessment (MNA-SF). J Gerontol A Biol Sci Med Sci. 2001;56(6):M366-372. MNA-SF © Nestlé Nutrition Institute."
+      "source": "Rubenstein LZ, Harker JO, Salva A, Guigoz Y, Vellas B. Screening for undernutrition in geriatric practice: developing the short-form mini-nutritional assessment (MNA-SF). J Gerontol A Biol Sci Med Sci. 2001;56(6):M366-372. MNA-SF © Nestlé Nutrition Institute.",
+      "scoreMax": 14
     },
     {
       "number": 7,
@@ -1015,6 +1021,742 @@
         }
       ],
       "source": ""
+    },
+    {
+      "number": 8,
+      "title": "삼킴 관련 보완 증상 평가",
+      "description": "최근 1주일의 식사 및 삼킴 상태를 기준으로 응답해 주십시오. 1점=전혀 그렇지 않다, 2점=그렇지 않다, 3점=보통이다, 4점=그렇다, 5점=매우 그렇다.",
+      "questions": [
+        {
+          "key": "swallow_symptoms_1",
+          "text": "음식을 삼키기 위해 여러 번 삼켜야 할 때가 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "swallow_symptoms_2",
+          "text": "삼킴 문제 때문에 먹기 어려운 음식이 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "swallow_symptoms_3",
+          "text": "입안이 말라 음식을 삼키기 어렵다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "swallow_symptoms_4",
+          "text": "딱딱하거나 질긴 음식을 씹기 어렵다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "swallow_symptoms_5",
+          "text": "음식이나 물이 코로 넘어온 적이 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "swallow_symptoms_6",
+          "text": "삼키기 쉽도록 음식을 잘게 썰거나 부드럽게 만들어 먹는다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        }
+      ],
+      "source": "삼킴기능 사전-사후 통합 자가평가문진표 v2(중복제거), 1번 영역",
+      "scoreMax": 30
+    },
+    {
+      "number": 9,
+      "title": "반복 삼킴능력 자가평가",
+      "description": "최근 1주일의 상태를 기준으로 응답해 주십시오. 1점=전혀 그렇지 않다, 2점=그렇지 않다, 3점=보통이다, 4점=그렇다, 5점=매우 그렇다.",
+      "questions": [
+        {
+          "key": "repeated_swallow_1",
+          "text": "입안에 고인 침을 어려움 없이 삼킬 수 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "repeated_swallow_2",
+          "text": "침을 삼키려고 마음먹으면 바로 삼킬 수 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "repeated_swallow_3",
+          "text": "짧은 시간(약 30초) 동안 침을 여러 번 연달아 삼킬 수 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "repeated_swallow_4",
+          "text": "침을 삼킬 때 목울대(후두)가 충분히 올라갔다 내려오는 느낌이 든다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "repeated_swallow_5",
+          "text": "침을 삼킬 때 입술을 다문 채로 삼킬 수 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "repeated_swallow_6",
+          "text": "전반적으로 침을 삼키는 능력이 좋다고 느낀다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        }
+      ],
+      "source": "삼킴기능 사전-사후 통합 자가평가문진표 v2(중복제거), 2번 영역",
+      "scoreMax": 30
+    },
+    {
+      "number": 10,
+      "title": "혀 기능(혀 근력) 자가평가",
+      "description": "최근 1주일의 상태를 기준으로 응답해 주십시오. 1점=전혀 그렇지 않다, 2점=그렇지 않다, 3점=보통이다, 4점=그렇다, 5점=매우 그렇다.",
+      "questions": [
+        {
+          "key": "tongue_function_1",
+          "text": "혀로 부드러운 음식(두부, 바나나 등)을 입천장에 눌러 으깰 수 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "tongue_function_2",
+          "text": "씹은 음식을 혀로 한데 모아 목 쪽으로 넘길 수 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "tongue_function_3",
+          "text": "혀를 앞으로 내밀거나 좌우로 충분히 움직일 수 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "tongue_function_4",
+          "text": "말할 때 발음(‘파’, '타', '카', '라' 등)이 또렷하다고 느낀다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "tongue_function_5",
+          "text": "식사 후 볼과 잇몸 사이에 남은 음식을 혀로 정리할 수 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "tongue_function_6",
+          "text": "전반적으로 혀에 힘이 충분하다고 느낀다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        }
+      ],
+      "source": "삼킴기능 사전-사후 통합 자가평가문진표 v2(중복제거), 3번 영역",
+      "scoreMax": 30
+    },
+    {
+      "number": 11,
+      "title": "구강건강관리 인식 평가",
+      "description": "1점=전혀 그렇지 않다, 2점=그렇지 않다, 3점=보통이다, 4점=그렇다, 5점=매우 그렇다.",
+      "questions": [
+        {
+          "key": "oral_awareness_1",
+          "text": "구강건강을 관리하는 것은 건강을 유지하는 데 중요하다고 생각한다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "oral_awareness_2",
+          "text": "평소 구강관리를 통해 구강질환을 예방할 수 있다고 생각한다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "oral_awareness_3",
+          "text": "매일 올바른 방법으로 구강을 관리하는 것이 중요하다고 생각한다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "oral_awareness_4",
+          "text": "증상이 없어도 정기적인 구강검진이 필요하다고 생각한다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "oral_awareness_5",
+          "text": "나의 구강상태를 지속적으로 확인하고 관리할 필요가 있다고 생각한다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "oral_awareness_6",
+          "text": "앞으로 구강건강을 적극적으로 관리할 의향이 있다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        },
+        {
+          "key": "oral_awareness_7",
+          "text": "구강건강 교육이나 정보를 활용하는 것이 구강건강관리에 도움이 된다고 생각한다.",
+          "type": "single",
+          "required": true,
+          "options": [
+            {
+              "value": 1,
+              "label": "1 · 전혀 그렇지 않다"
+            },
+            {
+              "value": 2,
+              "label": "2 · 그렇지 않다"
+            },
+            {
+              "value": 3,
+              "label": "3 · 보통이다"
+            },
+            {
+              "value": 4,
+              "label": "4 · 그렇다"
+            },
+            {
+              "value": 5,
+              "label": "5 · 매우 그렇다"
+            }
+          ]
+        }
+      ],
+      "source": "삼킴기능 사전-사후 통합 자가평가문진표 v2(중복제거), 4번 영역",
+      "scoreMax": 35
     }
   ]
 }

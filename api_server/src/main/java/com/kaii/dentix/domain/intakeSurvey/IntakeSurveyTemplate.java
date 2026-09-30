@@ -24,9 +24,15 @@ public class IntakeSurveyTemplate {
     public Template get() { return template; }
 
     public Map<String, JsonNode> validate(SaveRequest request, boolean complete) {
-        if ((!template.version().equals(request.version()) && !"2026-09-17-v1".equals(request.version())) || request.currentTab() < 1 || request.currentTab() > 7
-                || request.surveyAnswers() == null || request.surveyAnswers().size() > 47) {
+        boolean currentVersion = template.version().equals(request.version());
+        boolean legacyVersion = "2026-09-17-v1".equals(request.version()) || "2026-09-19-v2".equals(request.version());
+        int questionCount = template.sections().stream().mapToInt(section -> section.questions().size()).sum();
+        if ((!currentVersion && !legacyVersion) || request.currentTab() < 1 || request.currentTab() > template.sections().size()
+                || request.surveyAnswers() == null || request.surveyAnswers().size() > questionCount) {
             throw new FormValidationException("설문 양식을 다시 불러와 주세요.");
+        }
+        if (complete && !currentVersion) {
+            throw new FormValidationException("문진표에 새 문항이 추가되었습니다. 작성 중인 답변을 임시저장한 뒤 문진표를 다시 열어 주세요.");
         }
         Map<String, JsonNode> answers = new LinkedHashMap<>(request.surveyAnswers());
         Set<String> keys = new HashSet<>();
@@ -70,7 +76,7 @@ public class IntakeSurveyTemplate {
         // Draft totals include answered items only; completed=false distinguishes partial scores.
         // Preserve the source's option scores; dental option IDs are not a scoring scale.
         for (Section section : template.sections()) {
-            if (section.number() <= 6) {
+            if (section.scoreMax() != null) {
                 scores.put(String.valueOf(section.number()), section.questions().stream()
                         .filter(question -> question.showWhen() == null || matches(question.showWhen(), answers))
                         .map(question -> answers.get(question.key()))
