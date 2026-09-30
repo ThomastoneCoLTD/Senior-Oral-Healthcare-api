@@ -20,6 +20,11 @@ public class IntakeSurveyController {
     @GetMapping(name = "최초 설문 양식과 임시저장 조회")
     public DataResponse<State> get(HttpServletRequest request) { return new DataResponse<>(service.get(request)); }
 
+    @PutMapping(name = "제출한 문진표 수정")
+    public DataResponse<State> update(HttpServletRequest request, @Valid @RequestBody SaveRequest body) {
+        return new DataResponse<>(service.updateCompleted(request, body));
+    }
+
     @PutMapping(value = "/draft", name = "최초 설문 임시저장")
     public DataResponse<State> draft(HttpServletRequest request, @Valid @RequestBody SaveRequest body) {
         return new DataResponse<>(service.save(request, body, false));

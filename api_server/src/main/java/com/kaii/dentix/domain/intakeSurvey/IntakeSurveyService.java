@@ -53,6 +53,27 @@ public class IntakeSurveyService {
         }
     }
 
+    @Transactional
+    public State updateCompleted(HttpServletRequest request, SaveRequest body) {
+        Long userId = userService.getTokenUser(request).getUserId();
+        repository.lockUser(userId);
+        var survey = repository.findById(userId).orElse(null);
+        if (survey == null || survey.getCompletedAt() == null) {
+            throw new FormValidationException("아직 제출하지 않은 문진표입니다. 설문 제출을 이용해 주세요.");
+        }
+        if (!Objects.equals(body.revision(), survey.getRevision())) {
+            throw new FormValidationException("다른 화면에서 설문이 변경되었습니다. 새로고침 후 다시 수정해 주세요.");
+        }
+        var answers = template.validate(body, true);
+        try {
+            survey.save(template.get().version(), mapper.writeValueAsString(answers),
+                    mapper.writeValueAsString(template.scores(answers)), body.currentTab(), true);
+            return state(repository.saveAndFlush(survey));
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to serialize intake survey", exception);
+        }
+    }
+
     State state(UserIntakeSurvey survey) {
         if (survey == null) return new State(template.get(), false, null, 1, Map.of(), Map.of(), null);
         try {

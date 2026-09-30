@@ -145,6 +145,40 @@ class IntakeSurveyTest {
         assertThat(service.save(http, body(Map.of(), null), false).surveyAnswers()).isEqualTo(first.surveyAnswers());
         verify(repository, times(1)).saveAndFlush(any());
     }
+    @Test void completedSurveyCanBeEditedWithoutChangingFirstSubmissionTime() {
+        var first = service.save(http, body(fullAnswers(), null), true);
+        var answers = fullAnswers();
+        answers.put("eat10_1", mapper.valueToTree(4));
+        var updated = service.updateCompleted(http, body(answers, first.revision()));
+        assertThat(updated.completed()).isTrue();
+        assertThat(updated.completedAt()).isEqualTo(first.completedAt());
+        assertThat(updated.revision()).isEqualTo(first.revision() + 1);
+        assertThat(updated.surveyAnswers()).containsEntry("eat10_1", mapper.valueToTree(4));
+        assertThat(updated.surveyScores()).containsEntry("1", 4);
+        assertThat(service.status(http).required()).isFalse();
+        verify(repository, times(2)).lockUser(42L);
+    }
+    @Test void completedEditRejectsMissingAnswersAndStaleRevision() {
+        var first = service.save(http, body(fullAnswers(), null), true);
+        assertThatThrownBy(() -> service.updateCompleted(http, body(Map.of(), first.revision())))
+                .isInstanceOf(FormValidationException.class);
+        service.updateCompleted(http, body(fullAnswers(), first.revision()));
+        assertThatThrownBy(() -> service.updateCompleted(http, body(fullAnswers(), first.revision())))
+                .isInstanceOf(FormValidationException.class);
+        verify(repository, times(2)).saveAndFlush(any());
+    }
+    @Test void completedEditCannotSubmitDraftOrAccessAnotherUsersSurvey() {
+        assertThatThrownBy(() -> service.updateCompleted(http, body(fullAnswers(), null)))
+                .isInstanceOf(FormValidationException.class);
+        var draft = service.save(http, body(Map.of(), null), false);
+        assertThatThrownBy(() -> service.updateCompleted(http, body(fullAnswers(), draft.revision())))
+                .isInstanceOf(FormValidationException.class);
+        service.save(http, body(fullAnswers(), draft.revision()), true);
+        when(users.getTokenUser(http)).thenReturn(User.builder().userId(99L).build());
+        assertThatThrownBy(() -> service.updateCompleted(http, body(fullAnswers(), null)))
+                .isInstanceOf(FormValidationException.class);
+        verify(repository, times(2)).saveAndFlush(any());
+    }
     @Test void staleDraftCannotOverwriteAnotherTab() {
         service.save(http, body(Map.of(), null), false);
         assertThatThrownBy(() -> service.save(http, body(Map.of(), null), false)).isInstanceOf(FormValidationException.class);

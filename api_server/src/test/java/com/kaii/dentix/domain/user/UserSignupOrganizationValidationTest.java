@@ -15,7 +15,7 @@ class UserSignupOrganizationValidationTest {
     };
 
     @ParameterizedTest
-    @ValueSource(strings = {"소하성당", "대구1", "대구2", "대구3", "기타_천안"})
+    @ValueSource(strings = {"소화성당", "소하성당", "대구1", "대구2", "대구3", "기타_천안"})
     void acceptsSupportedOrganizationsForEverySignupPath(String organization) {
         try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
             for (Class<?> type : SIGNUP_TYPES) {

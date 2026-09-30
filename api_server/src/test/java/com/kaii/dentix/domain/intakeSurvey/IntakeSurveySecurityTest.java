@@ -37,4 +37,17 @@ class IntakeSurveySecurityTest {
         mvc.perform(get("/user/intake-survey/status").with(user("user").roles("USER")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.response.required").value(true));
     }
+    @Test void completedEditRequiresGeneralUserRole() throws Exception {
+        String body = "{\"version\":\"v1\",\"surveyAnswers\":{},\"currentTab\":1,\"revision\":0}";
+        mvc.perform(put("/user/intake-survey").contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        for (String role : new String[]{"ADMIN", "SUPER_ADMIN"}) {
+            mvc.perform(put("/user/intake-survey").with(user("admin").roles(role))
+                    .contentType("application/json").content(body)).andExpect(status().isForbidden());
+        }
+        verifyNoInteractions(service);
+        mvc.perform(put("/user/intake-survey").with(user("user").roles("USER"))
+                .contentType("application/json").content(body)).andExpect(status().isOk());
+        verify(service).updateCompleted(any(), any());
+    }
 }

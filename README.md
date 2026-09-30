@@ -4,9 +4,9 @@ SOH API is a Spring Boot API server. The current project lives under `api_server
 
 ## First Login Health Survey
 
-FRAIL question 3 displays the distance in metres without the parenthesized yards; SARC-F question 1 displays kilograms without the parenthesized pounds. Question keys, options, scoring and template version are unchanged. User section clearing uses the existing draft replacement API and does not alter completed surveys.
+FRAIL question 3 displays the distance in metres without the parenthesized yards; SARC-F question 1 displays kilograms without the parenthesized pounds. Question keys, options, scoring and template version are unchanged. User section clearing uses draft replacement for unfinished surveys; completed edits are saved explicitly after required-answer validation.
 
-All general users, including existing accounts and DaDaegu accounts, complete the separate seven-tab health survey once before entering user pages. This does not replace the existing oral questionnaire or depend on organization subscriptions or oral-analysis enrollment. Admin accounts are excluded.
+General users, including existing and DaDaegu accounts, see the separate seven-tab health survey when they have not submitted it. They may skip it for the current browser-tab login and enter user pages without answering; this does not mark the survey completed. The user menu includes 문진표 after 토큰 현황 for reopening drafts or viewing and editing completed answers. This does not replace the existing oral questionnaire or depend on organization subscriptions or oral-analysis enrollment. Admin accounts are excluded.
 
 - `GET /user/intake-survey/status`: server-owned required/completed status; no row or an unfinished draft means required.
 - `GET /user/intake-survey`: versioned template, saved answers, current tab, revision, and completion state.
@@ -14,7 +14,7 @@ All general users, including existing accounts and DaDaegu accounts, complete th
 - Template: `api_server/src/main/resources/template/intake-survey.json`, transcribed from the supplied `SOH_항목추가.pdf` (47 questions across EAT-10, EDSQ, FRAIL, aspiration, SARC-F, MNA-SF, and dental visits). Dental frequency is required only for recent visitors; last-visit period and no barriers may be left blank.
 - Template `2026-09-19-v2` displays EAT-10 choices as 1–5 while preserving stored values 0–4 and score totals. Parenthesized English in titles/questions is removed; the FRAIL disease list is supplied separately in `help`. Dental `dental_3` now accepts period values 1–6 (1 month, 6 months, 1 year, 18 months, 2+ years, other); valid legacy `YYYY-MM` answers and v1 clients remain accepted without automatic time-based conversion. Completed answers are not migrated.
 - New table: `user_intake_survey`, one row per user, with draft answers, six separate score totals, template version, current tab, revision, update/completion timestamps. Production `ddl-auto=update` creates it; reference SQL is `docs/db/add-user-intake-survey.sql`. No existing user data is backfilled or deleted.
-- User-row locking serializes initial creation; revisions reject stale drafts. Completed responses cannot be changed through user endpoints and repeated submissions return the original completion. Health answers and scores are masked in API audit logs. No medical diagnosis is generated.
+- `PUT /user/intake-survey` edits an already completed survey using the same payload. All visible required answers are validated, scores are recalculated, and the first `completedAt` is preserved. Incomplete surveys use draft/submit instead. User-row locking serializes writes; revisions reject stale drafts and completed edits. Existing draft/submit endpoints retain their protection against late drafts and repeated submissions. Health answers and scores are masked in API audit logs. No medical diagnosis is generated.
 
 ### Super-admin survey management
 
@@ -713,7 +713,7 @@ If tests or REST Docs require external services, document the reason and use a d
 
 ## Member Real Organization
 
-User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`, `POST /login/dadaegu/signUp`) require `realOrganization` with one of `소하성당`, `대구1`, `대구2`, `대구3`, or `기타_천안`. The selected value is stored in nullable `user.real_organization` so pre-existing users and administrator bulk-upload records remain compatible. Deploy this API before the frontend that offers `소하성당` as the first institution; no schema or Secret change is required.
+User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`, `POST /login/dadaegu/signUp`) require `realOrganization` with one of `소화성당`, `대구1`, `대구2`, `대구3`, or `기타_천안`. The selected value is stored in nullable `user.real_organization` so pre-existing users and administrator bulk-upload records remain compatible. Deploy this API before the frontend that offers `소화성당` as the first institution; the previous `소하성당` spelling remains accepted for already-open signup clients during rollout, and existing institution records are preserved; no schema or Secret change is required.
 
 ### Member deletion and token reclaim
 

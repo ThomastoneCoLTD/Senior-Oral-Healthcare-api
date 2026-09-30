@@ -86,7 +86,7 @@
 - 과거 구현 이유·미확인 항목: [이전 지침 보관본](docs/history/2026-09-15_AGENTS_archive.md)에서 관련 키워드만 검색합니다.
 - 최근 변경은 `docs/updates/`, 외부 인계는 `docs/handover/`의 관련 파일과 이후 변경기록을 참조합니다.
 - 코드 진입점은 `api_server/src/main`, 테스트는 `api_server/src/test`에서 관련 Controller/Service/DTO를 찾습니다.
-- 최초 건강설문은 `domain/intakeSurvey`와 `template/intake-survey.json`입니다. 기존 사용자도 미제출이면 대상이며 신규 API 배포 후 프론트를 배포합니다. 완료·임시저장 데이터는 보존합니다.
+- 최초 건강설문은 `domain/intakeSurvey`와 `template/intake-survey.json`입니다. 미제출 사용자는 로그인 시 안내하되 건너뛰기로 해당 탭 로그인에서 이용 가능합니다. 문진표 메뉴에서 완료 후에도 조회·수정하며 최초 제출일·필수 검증·revision을 보존합니다. 신규 API 배포 후 프론트를 배포합니다.
 - 슈퍼관리자 기관별 설문 조회·수정은 `AdminIntakeSurveyService`와 `/admin/intake-surveys`입니다. 제출 상태·최초 제출일과 revision 충돌 보호를 유지합니다.
 - 기능 수정 전 잠금·진도·토큰 중복 방지·인증 계약을 관련 코드와 기록에서 확인합니다.
 - 영상 시청·실패 이력은 `OralExerciseHistoryService`와 `/admin/oral-exercise-history`입니다. 완료 회차 집계와 레거시 `viewCount`를 구분하고 실패 중복 방지·수령 후 안내 제외를 유지합니다.
