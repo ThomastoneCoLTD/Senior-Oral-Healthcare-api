@@ -46,11 +46,6 @@ import java.util.Objects;
 @Slf4j
 public class UserRewardService {
 
-    private static final EnumSet<UserRewardTransactionStatus> NON_REWARDED_STATUSES = EnumSet.of(
-            UserRewardTransactionStatus.CANCELED,
-            UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED,
-            UserRewardTransactionStatus.POINT_MINT_FAILED
-    );
     private static final EnumSet<UserRewardTransactionStatus> COMPLETED_RECLAIM_STATUSES = EnumSet.of(
             UserRewardTransactionStatus.LOCAL_RECORDED,
             UserRewardTransactionStatus.POINT_MINTED,
@@ -102,12 +97,14 @@ public class UserRewardService {
             UserRewardDto.WalletConnectRequest connectRequest
     ) {
         Long userId = getUserId(request);
+        userRepository.findByIdForUpdate(userId);
         UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
                 .orElseGet(() -> UserRewardWallet.builder()
                         .userId(userId)
                         .pointBalance(0L)
                         .build());
 
+        assertNoUnresolvedTransfer(userId);
         String daeguDid = connectRequest == null ? null : connectRequest.getDaeguDid();
         String walletAddress = connectRequest == null ? null : connectRequest.getWalletAddress();
 
@@ -146,6 +143,9 @@ public class UserRewardService {
     ) {
         Long userId = getUserId(request);
         validateButtonClickRequest(buttonClickRequest);
+        if (userRewardProperties.isTokenTransferEnabled() && !buttonClickRequest.isAcceptsDeferred())
+            throw new DeferredRewardClientRequiredException();
+        userRepository.findByIdForUpdate(userId);
         OralExerciseContent content = oralExerciseContentRepository
                 .findById(buttonClickRequest.getContentId())
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 구강체조 콘텐츠입니다."));
@@ -180,7 +180,7 @@ public class UserRewardService {
         UserRewardWallet wallet = getOrCreateRewardWallet(userId);
         long amount = userRewardProperties.getOralExerciseCoinAmount();
 
-        UserRewardTransaction transaction = userRewardTransactionRepository.save(UserRewardTransaction.builder()
+        UserRewardTransaction transaction = UserRewardTransaction.builder()
                 .userId(userId)
                 .oralExerciseContent(content)
                 .type(UserRewardTransactionType.ORAL_EXERCISE_COIN)
@@ -190,14 +190,18 @@ public class UserRewardService {
                 .idempotencyKey(idempotencyKey)
                 .sessionId(buttonClickRequest.getSessionId())
                 .coinId(rewardTokenName)
-                .build());
+                .build();
 
         if (userRewardProperties.isTokenTransferEnabled()) {
-            transferTokenIfConfigured(transaction, wallet, rewardTokenName);
-        } else {
+            // Resolve configuration before persisting; a lookup failure must never leave LOCAL_RECORDED.
+            queueTokenTransfer(transaction, wallet, rewardTokenName);
+        }
+        transaction = userRewardTransactionRepository.save(transaction);
+        if (!userRewardProperties.isTokenTransferEnabled()) {
             mintPointIfConfigured(transaction, wallet);
         }
 
+        if (transaction.isTransferUnresolved()) return UserRewardDto.RewardResponse.from(transaction, false, wallet.getPointBalance());
         assertRewardSucceeded(transaction);
         creditReward(wallet, transaction);
         return UserRewardDto.RewardResponse.from(transaction, false, wallet.getPointBalance());
@@ -211,11 +215,16 @@ public class UserRewardService {
         UserRewardWallet wallet = getOrCreateRewardWallet(userId);
         if (userRewardProperties.isTokenTransferEnabled()
                 && transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED) {
-            transferTokenIfConfigured(transaction, wallet, rewardTokenName);
-            assertRewardSucceeded(transaction);
-            creditReward(wallet, transaction);
+            if ("NOT_SUBMITTED".equals(transaction.getTransferFailureCode())
+                    || "CHAIN_REJECTED".equals(transaction.getTransferFailureCode())) {
+                queueTokenTransfer(transaction, wallet, rewardTokenName);
+            } else {
+                // Historical failures did not persist evidence of non-submission.
+                transaction.requireTransferReview("LEGACY_UNCONFIRMED");
+            }
             return UserRewardDto.RewardResponse.from(transaction, true, wallet.getPointBalance());
         }
+        if (transaction.isTransferUnresolved()) return UserRewardDto.RewardResponse.from(transaction, true, wallet.getPointBalance());
         assertRewardSucceeded(transaction);
         return UserRewardDto.RewardResponse.from(transaction, true, wallet.getPointBalance());
     }
@@ -242,7 +251,7 @@ public class UserRewardService {
         }
         long rewardedAmount = transactions.stream()
                 .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
-                .filter(transaction -> !NON_REWARDED_STATUSES.contains(transaction.getStatus()))
+                .filter(UserRewardTransaction::isRewardReceived)
                 .mapToLong(UserRewardTransaction::getAmount)
                 .sum();
         long reclaimedAmount = transactions.stream()
@@ -273,6 +282,7 @@ public class UserRewardService {
         }
         userRepository.findById(userId)
                 .ifPresent(user -> {
+                    assertNoUnresolvedTransfer(userId);
                     String daeguDid = isBlank(wallet.getDaeguDid())
                             ? user.getDaeguDid()
                             : wallet.getDaeguDid();
@@ -328,6 +338,13 @@ public class UserRewardService {
         return extractAddressFromDid(user.getDaeguDidKey());
     }
 
+    private void assertNoUnresolvedTransfer(Long userId) {
+        if (userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId).stream()
+                .anyMatch(UserRewardTransaction::isTransferUnresolved)) {
+            throw new BadRequestApiException("토큰 지급 결과 확인 중에는 지갑을 변경할 수 없습니다.");
+        }
+    }
+
     private Long getUserId(HttpServletRequest request) {
         String accessToken = jwtTokenUtil.getAccessToken(request);
         if (accessToken == null) {
@@ -370,50 +387,10 @@ public class UserRewardService {
         return tokenName;
     }
 
-    private void transferTokenIfConfigured(UserRewardTransaction transaction, UserRewardWallet wallet, String rewardTokenName) {
-        if (isBlank(wallet.getDaeguDid())
-                || isBlank(wallet.getWalletAddress())) {
-            transaction.markTokenTransferFailed();
-            throwRewardFailure();
-            return;
-        }
-
-        try {
-            RewardTokenRef rewardToken = resolveRewardTokenRef(transaction, rewardTokenName);
-            transaction.updateTokenContractAddress(rewardToken.contractAddress());
-            JsonNode response = DaeguChainApiLogContext.withUser(
-                    transaction.getUserId(),
-                    "구강체조 리워드 지급",
-                    () -> externalTokenClient.transferTokenToWallet(
-                            rewardToken.tokenName(),
-                            rewardToken.contractAddress(),
-                            wallet.getWalletAddress(),
-                            transaction.getAmount()
-                    )
-            );
-            transaction.markTokenTransferred(
-                    findFirstText(response, "tx_hash", "transaction_hash", "hash", "Date"),
-                    findFirstText(response, "fact_hash")
-            );
-            try {
-                rewardWalletProvisioningService.approveRewardContract(
-                        transaction.getUserId(),
-                        rewardToken.contractAddress(),
-                        wallet.getWalletAddress(),
-                        wallet.getWalletPrivateKeyCiphertext()
-                );
-            } catch (RuntimeException exception) {
-                log.warn(
-                        "Reward token was transferred but reclaim approval is pending. userId={}, contract={}",
-                        transaction.getUserId(),
-                        rewardToken.contractAddress(),
-                        exception
-                );
-            }
-        } catch (RuntimeException exception) {
-            transaction.markTokenTransferFailed();
-            throwRewardFailure(exception);
-        }
+    private void queueTokenTransfer(UserRewardTransaction transaction, UserRewardWallet wallet, String rewardTokenName) {
+        if (isBlank(wallet.getWalletAddress())) throw new BadRequestApiException("reward wallet is required");
+        RewardTokenRef rewardToken = resolveRewardTokenRef(transaction, rewardTokenName);
+        transaction.queueTransfer(wallet.getWalletAddress(), rewardToken.contractAddress());
     }
 
     private RewardTokenRef resolveRewardTokenRef(UserRewardTransaction transaction, String rewardTokenName) {

@@ -82,8 +82,10 @@ public class UserRewardReclaimService {
             String auditFeature,
             String operationName
     ) {
+        userRewardWalletRepository.findByUserIdForUpdate(userId);
         List<UserRewardTransaction> allTransactions =
                 userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId);
+        assertNoUnresolvedTransfers(allTransactions);
         List<UserRewardTransaction> transferredRewards = allTransactions.stream()
                 .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
                 .filter(transaction -> transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFERRED)
@@ -207,10 +209,11 @@ public class UserRewardReclaimService {
     @Transactional
     public UserRewardDto.ReclaimResponse reclaimOralExerciseTokens(HttpServletRequest request) {
         Long userId = getUserId(request);
-        UserRewardWallet wallet = userRewardWalletRepository.findByUserId(userId)
+        UserRewardWallet wallet = userRewardWalletRepository.findByUserIdForUpdate(userId)
                 .orElseThrow(() -> new BadRequestApiException("reward wallet is not found"));
 
         List<UserRewardTransaction> allTransactions = userRewardTransactionRepository.findByUserIdOrderByCreatedDesc(userId);
+        assertNoUnresolvedTransfers(allTransactions);
         Set<String> receivedRewardCoinIds = allTransactions.stream()
                 .filter(this::isReceivedOralExerciseReward)
                 .map(UserRewardTransaction::getCoinId)
@@ -410,6 +413,12 @@ public class UserRewardReclaimService {
         }
         return transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFERRED
                 || transaction.getStatus() == UserRewardTransactionStatus.LOCAL_RECORDED;
+    }
+
+    private void assertNoUnresolvedTransfers(List<UserRewardTransaction> transactions) {
+        if (transactions.stream().anyMatch(UserRewardTransaction::isTransferUnresolved)) {
+            throw new BadRequestApiException("토큰 지급 결과 확인 중에는 상품 수령, 회원 삭제, 초기화를 진행할 수 없습니다.");
+        }
     }
 
     private boolean isReceivedOralExerciseReward(UserRewardTransaction transaction) {

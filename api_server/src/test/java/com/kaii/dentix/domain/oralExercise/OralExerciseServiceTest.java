@@ -7,6 +7,7 @@ import com.kaii.dentix.domain.oralExercise.dao.OralExerciseContentRepository;
 import com.kaii.dentix.domain.oralExercise.dao.OralExerciseInteractionLogRepository;
 import com.kaii.dentix.domain.oralExercise.dao.UserOralExerciseProgressRepository;
 import com.kaii.dentix.domain.oralExercise.domain.OralExerciseContent;
+import com.kaii.dentix.domain.oralExercise.domain.OralExerciseInteractionEventType;
 import com.kaii.dentix.domain.oralExercise.domain.UserOralExerciseProgress;
 import com.kaii.dentix.domain.oralExercise.dto.OralExerciseDto;
 import com.kaii.dentix.domain.reward.dao.UserRewardTransactionRepository;
@@ -31,6 +32,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.times;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
@@ -315,7 +320,7 @@ class OralExerciseServiceTest {
     }
 
     @Test
-    void getContentsKeepsButtonRewardAvailableWhenTokenTransferFailed() {
+    void getContentsSuppressesRepeatChallengeWhileLegacyTransferNeedsConfirmation() {
         User user = userCreatedDaysAgo(0);
         OralExerciseContent firstContent = content(2);
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
@@ -337,7 +342,8 @@ class OralExerciseServiceTest {
 
         OralExerciseDto.ContentResponse content = response.getContents().get(0);
         assertThat(content.isRewardReceived()).isFalse();
-        assertThat(content.getButtonChallenge().isRewardAvailable()).isTrue();
+        assertThat(content.getButtonChallenge().isRewardAvailable()).isFalse();
+        assertThat(content.isRewardRecoveryPending()).isTrue();
     }
 
     @Test
@@ -520,6 +526,30 @@ class OralExerciseServiceTest {
 
         verify(interactionLogRepository, never()).save(any());
         verify(progressRepository, never()).save(any());
+    }
+
+    @Test
+    void ninetyPercentCompletesAndCountsTheSessionWhileEightyNineDoesNot() {
+        OralExerciseContent intro = content(1);
+        when(userRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(userCreatedDaysAgo(0)));
+        when(contentRepository.findById(1L)).thenReturn(Optional.of(intro));
+        when(progressRepository.findByUserIdAndContent_OralExerciseContentId(7L, 1L)).thenReturn(Optional.empty());
+        when(progressRepository.save(any(UserOralExerciseProgress.class))).thenAnswer(i -> i.getArgument(0));
+        var before = service.recordInteraction(request, new OralExerciseDto.InteractionRequest(
+                1L, OralExerciseInteractionEventType.PROGRESS, 89, 89, 100, null, false, "ninety-session"));
+        assertThat(before.isCompleted()).isFalse();
+        var at = service.recordInteraction(request, new OralExerciseDto.InteractionRequest(
+                1L, OralExerciseInteractionEventType.PROGRESS, 1, 90, 100, null, false, "ninety-session"));
+        assertThat(at.isCompleted()).isTrue();
+        assertThat(at.getCompletionRate()).isEqualTo(90);
+        verify(interactionLogRepository).save(argThat(log -> log.getEventType() == OralExerciseInteractionEventType.COMPLETE
+                && log.getSessionId().equals("ninety-session") && log.isCompleted()));
+        when(interactionLogRepository.existsByUserIdAndContent_OralExerciseContentIdAndSessionIdAndEventTypeIn(
+                eq(7L), eq(1L), eq("ninety-session"), anyList())).thenReturn(true);
+        service.recordInteraction(request, new OralExerciseDto.InteractionRequest(
+                1L, OralExerciseInteractionEventType.PROGRESS, 1, 91, 100, null, false, "ninety-session"));
+        verify(interactionLogRepository, times(1)).save(argThat(log -> log.getEventType() == OralExerciseInteractionEventType.COMPLETE));
+        assertThat(UserOralExerciseProgress.builder().completionRate(90).completed(false).build().isCompleted()).isTrue();
     }
 
     private User userCreatedDaysAgo(int daysAgo) {

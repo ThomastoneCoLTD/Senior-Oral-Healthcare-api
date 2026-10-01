@@ -60,7 +60,8 @@ class OralExerciseHistoryServiceTest {
                 .status(UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED).build()));
         when(progress.findByUserId(1L)).thenReturn(List.of(UserOralExerciseProgress.builder().content(content).completed(true).viewCount(300).build()));
         var result = service.summary(1L).get(0);
-        assertThat(result.retryRequired()).isTrue();
+        assertThat(result.retryRequired()).isFalse();
+        assertThat(result.rewardRecoveryPending()).isTrue();
         assertThat(result.watched()).isTrue();
         assertThat(result.completedViews()).isZero(); // Never use request count as watch count.
     }

@@ -19,6 +19,11 @@ public class UserRewardDto {
         private String sessionId;
         private Integer selectedButtonNumber;
         private Integer targetButtonNumber;
+        private boolean acceptsDeferred;
+
+        public ButtonClickRequest(Long contentId, String sessionId, Integer selectedButtonNumber, Integer targetButtonNumber) {
+            this(contentId, sessionId, selectedButtonNumber, targetButtonNumber, false);
+        }
     }
 
     @Getter
@@ -38,10 +43,10 @@ public class UserRewardDto {
 
         public static RewardResponse from(UserRewardTransaction transaction, boolean duplicated, long pointBalance) {
             return RewardResponse.builder()
-                    .amount(transaction.getAmount())
+                    .amount(transaction.isRewardReceived() ? transaction.getAmount() : 0L)
                     .pointBalance(pointBalance)
                     .duplicated(duplicated)
-                    .status(transaction.getStatus())
+                    .status(transaction.displayStatus())
                     .transactionId(transaction.getUserRewardTransactionId())
                     .build();
         }
@@ -88,12 +93,14 @@ public class UserRewardDto {
         private String daeguChainTxHash;
         private String daeguChainFactHash;
         private Date created;
+        private Date transferRecoveredAt;
+        private String transferFailureCode;
 
         public static TransactionResponse from(UserRewardTransaction transaction) {
             return TransactionResponse.builder()
                     .id(transaction.getUserRewardTransactionId())
                     .type(transaction.getType().name())
-                    .status(transaction.getStatus())
+                    .status(transaction.displayStatus())
                     .amount(transaction.isRewardReceived() ? transaction.getAmount() : 0L)
                     .balanceAfter(transaction.getBalanceAfter())
                     .contentTitle(transaction.getOralExerciseContent() == null
@@ -105,6 +112,8 @@ public class UserRewardDto {
                     .daeguChainTxHash(transaction.getDaeguChainTxHash())
                     .daeguChainFactHash(transaction.getDaeguChainFactHash())
                     .created(transaction.getCreated())
+                    .transferRecoveredAt(transaction.getTransferRecoveredAt())
+                    .transferFailureCode(transaction.getTransferFailureCode())
                     .build();
         }
     }

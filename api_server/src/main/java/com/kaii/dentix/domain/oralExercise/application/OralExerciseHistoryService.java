@@ -37,7 +37,8 @@ public class OralExerciseHistoryService {
 
     public record Summary(Long contentId, int sort, String title, boolean active, boolean watched,
                           long completedViews, long failureCount, long wrongCount, long timeoutCount,
-                          long errorCount, boolean rewardReceived, boolean retryRequired, Date lastViewedAt) {}
+                          long errorCount, boolean rewardReceived, boolean retryRequired, Date lastViewedAt,
+                          String rewardStatus, boolean rewardRecoveryPending, Date transferRecoveredAt) {}
     public record Member(Long userId, String name, String loginId, String organization) {}
     public record Event(Long id, String eventType, Date occurredAt, int completionRate) {}
     public record FailureRequest(Long contentId, String sessionId, OralExerciseInteractionEventType reason) {}
@@ -65,14 +66,20 @@ public class OralExerciseHistoryService {
                     var p = progressMap.get(c.getOralExerciseContentId());
                     String token = OralExerciseRewardToken.tokenNameForContentSort(c.getContentSort());
                     boolean rewarded = token != null && received.contains(token.toLowerCase(Locale.ROOT));
+                    var reward = transactions.stream().filter(t -> t.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN
+                            && token != null && token.equalsIgnoreCase(t.getCoinId())
+                            && t.getStatus() != com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus.CANCELED).findFirst().orElse(null);
+                    boolean recoveryPending = reward != null && reward.isTransferUnresolved();
                     long failures = count == null ? 0 : count.getFailures();
                     boolean watched = p != null && p.isCompleted() || count != null && count.getCompletedViews() > 0;
                     return new Summary(c.getOralExerciseContentId(), c.getContentSort(), c.getTitle(), c.isActive(), watched,
                             count == null ? 0 : count.getCompletedViews(), failures,
                             count == null ? 0 : count.getWrongCount(), count == null ? 0 : count.getTimeoutCount(),
                             count == null ? 0 : count.getErrorCount(), rewarded,
-                            c.isActive() && token != null && failures >= 3 && !rewarded && !journeyCompleted,
-                            count == null ? p.getLastViewedAt() : count.getLastViewedAt());
+                            c.isActive() && token != null && failures >= 3 && !rewarded && !journeyCompleted && !recoveryPending,
+                            count == null ? p.getLastViewedAt() : count.getLastViewedAt(),
+                            reward == null ? null : reward.displayStatus().name(), recoveryPending,
+                            reward == null ? null : reward.getTransferRecoveredAt());
                 }).toList();
     }
 

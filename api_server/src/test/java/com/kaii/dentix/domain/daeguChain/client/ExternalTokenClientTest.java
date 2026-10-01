@@ -56,6 +56,26 @@ class ExternalTokenClientTest {
     }
 
     @Test
+    void connectionFailureBeforeSubmissionIsSafeToRetry() {
+        server.expect(once(), requestTo("https://token.example.com/token/transfer"))
+                .andRespond(request -> { throw new java.net.ConnectException("test connection refused"); });
+        assertThatThrownBy(() -> client.transferTokenToWallet("ESSENTIAL_VIDEO_1", "contract", "wallet", 1))
+                .isInstanceOfSatisfying(TokenTransferException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.isNotSubmitted()).isTrue());
+        server.verify();
+    }
+
+    @Test
+    void readTimeoutMustNeverBeClassifiedAsNotSubmitted() {
+        server.expect(once(), requestTo("https://token.example.com/token/transfer"))
+                .andRespond(request -> { throw new java.net.SocketTimeoutException("test read timeout"); });
+        assertThatThrownBy(() -> client.transferTokenToWallet("ESSENTIAL_VIDEO_1", "contract", "wallet", 1))
+                .isInstanceOfSatisfying(TokenTransferException.class, failure ->
+                        org.assertj.core.api.Assertions.assertThat(failure.isNotSubmitted()).isFalse());
+        server.verify();
+    }
+
+    @Test
     void createTokenPostsConfiguredAppToken() {
         server.expect(once(), requestTo("https://token.example.com/token/create"))
                 .andExpect(method(POST))

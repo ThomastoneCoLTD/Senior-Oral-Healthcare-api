@@ -44,7 +44,8 @@ public class DaeguChainClient {
             DaeguChainApiAuditService auditService
     ) {
         this.properties = properties;
-        this.restTemplate = restTemplateBuilder.build();
+        this.restTemplate = restTemplateBuilder.connectTimeout(java.time.Duration.ofSeconds(10))
+                .readTimeout(java.time.Duration.ofSeconds(25)).build();
         this.auditService = auditService;
     }
 

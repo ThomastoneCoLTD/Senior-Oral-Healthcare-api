@@ -93,6 +93,31 @@ class UserRewardServiceTest {
     }
 
     @Test
+    void legacyClientIsRejectedBeforeAnyRewardOrWalletWrites() {
+        ((UserRewardProperties) org.springframework.test.util.ReflectionTestUtils.getField(service, "userRewardProperties"))
+                .setTokenTransferEnabled(true);
+        assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(request,
+                new UserRewardDto.ButtonClickRequest(11L, "legacy", 1, 1)))
+                .isInstanceOf(DeferredRewardClientRequiredException.class);
+        verifyNoInteractions(walletRepository, transactionRepository, externalTokenClient);
+    }
+
+    @Test
+    void contractLookupFailureDoesNotPersistAnApparentlyReceivedLocalReward() {
+        ((UserRewardProperties) org.springframework.test.util.ReflectionTestUtils.getField(service, "userRewardProperties"))
+                .setTokenTransferEnabled(true);
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L).walletAddress("wallet").daeguDid("did").walletPrivateKeyCiphertext("encrypted").build()));
+        when(walletRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(externalTokenClient.getTokenList()).thenThrow(new BadRequestApiException("test lookup unavailable"));
+        assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(request,
+                new UserRewardDto.ButtonClickRequest(11L, "lookup", 1, 1, true)))
+                .isInstanceOf(BadRequestApiException.class);
+        verify(transactionRepository, never()).save(any());
+        verify(externalTokenClient, never()).transferTokenToWallet(any(),any(),any(),anyLong());
+    }
+
+    @Test
     void rewardOralExerciseButtonClickCreatesWalletAndTransaction() {
         when(transactionRepository.findFirstByUserIdAndCoinIdAndTypeAndStatusNot(
                 7L,
@@ -107,7 +132,7 @@ class UserRewardServiceTest {
 
         UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3, true)
         );
 
         assertThat(response.getAmount()).isEqualTo(3L);
@@ -162,7 +187,7 @@ class UserRewardServiceTest {
 
         UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-2", 4, 4)
+                new UserRewardDto.ButtonClickRequest(11L, "session-2", 4, 4, true)
         );
 
         assertThat(response.isDuplicated()).isTrue();
@@ -214,7 +239,7 @@ class UserRewardServiceTest {
 
         UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "rewatch-session", 2, 2)
+                new UserRewardDto.ButtonClickRequest(11L, "rewatch-session", 2, 2, true)
         );
 
         assertThat(response.isDuplicated()).isTrue();
@@ -274,7 +299,7 @@ class UserRewardServiceTest {
 
         assertThat(response.getTransactions()).singleElement()
                 .satisfies(transaction -> {
-                    assertThat(transaction.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED);
+                    assertThat(transaction.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFER_REVIEW);
                     assertThat(transaction.getAmount()).isZero();
                 });
         assertThat(response.getRewardJourney().getState()).isEqualTo(UserRewardJourneyState.COLLECTING);
@@ -309,7 +334,7 @@ class UserRewardServiceTest {
 
         assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "completed-session", 3, 3)
+                new UserRewardDto.ButtonClickRequest(11L, "completed-session", 3, 3, true)
         ))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessageContaining("이미 완료");
@@ -370,17 +395,18 @@ class UserRewardServiceTest {
 
         UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3, true)
         );
 
-        assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
-        verify(externalTokenClient).transferTokenToWallet(
+        assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFER_PENDING);
+        assertThat(response.getAmount()).isZero();
+        verify(externalTokenClient, never()).transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-token-contract",
                 "0x-user-wallet",
                 1L
         );
-        verify(rewardWalletProvisioningService).approveRewardContract(
+        verify(rewardWalletProvisioningService, never()).approveRewardContract(
                 7L,
                 "0x-token-contract",
                 "0x-user-wallet",
@@ -461,10 +487,11 @@ class UserRewardServiceTest {
 
         UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-local", 3, 3)
+                new UserRewardDto.ButtonClickRequest(11L, "session-local", 3, 3, true)
         );
 
-        assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
+        assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFER_PENDING);
+        assertThat(response.getAmount()).isZero();
         assertThat(user.getDaeguDid()).isEqualTo("did:key:z6MkLocalUser");
         assertThat(user.getDaeguDidKey()).isEqualTo("public-key");
         assertThat(user.getDaeguDidStatus()).isEqualTo(UserDaeguIdentityStatus.ISSUED);
@@ -528,11 +555,11 @@ class UserRewardServiceTest {
 
         service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3, true)
         );
 
         verify(externalTokenClient, never()).getTokenList();
-        verify(externalTokenClient).transferTokenToWallet(
+        verify(externalTokenClient, never()).transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-allowed-contract",
                 "0x-user-wallet",
@@ -545,7 +572,7 @@ class UserRewardServiceTest {
     }
 
     @Test
-    void rewardOralExerciseButtonClickThrowsWhenTokenTransferFails() throws Exception {
+    void rewardOralExerciseButtonClickQueuesBeforeCallingExternalTransfer() throws Exception {
         UserRewardProperties properties = new UserRewardProperties();
         properties.setOralExerciseCoinAmount(1L);
         properties.setTokenTransferEnabled(true);
@@ -586,21 +613,19 @@ class UserRewardServiceTest {
                 1L
         )).thenThrow(new BadRequestApiException("token transfer failed"));
 
-        assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
-                request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
-        ))
-                .isInstanceOf(BadRequestApiException.class)
-                .hasMessage("토큰 지급에 실패했습니다. 원인: token transfer failed");
+        var queued = service.rewardOralExerciseButtonClick(request,
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3, true));
+        assertThat(queued.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFER_PENDING);
+        verify(externalTokenClient, never()).transferTokenToWallet(anyString(), anyString(), anyString(), anyLong());
         verify(transactionRepository).save(argThat(transaction ->
-                transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFER_FAILED
+                transaction.getStatus() == UserRewardTransactionStatus.TOKEN_TRANSFER_PENDING
                         && transaction.getCoinId().equals("essential_video_1")
         ));
         verify(walletRepository, never()).save(argThat(wallet -> wallet.getPointBalance() > 0));
     }
 
     @Test
-    void rewardOralExerciseButtonClickThrowsWhenExistingTokenTransferStillFailed() throws Exception {
+    void rewardOralExerciseButtonClickHoldsLegacyFailureForReview() throws Exception {
         UserRewardProperties properties = new UserRewardProperties();
         properties.setOralExerciseCoinAmount(1L);
         properties.setTokenTransferEnabled(true);
@@ -645,16 +670,14 @@ class UserRewardServiceTest {
         when(externalTokenClient.transferTokenToWallet(any(), any(), any(), anyLong()))
                 .thenThrow(new BadRequestApiException("token transfer failed"));
 
-        assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
-                request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
-        ))
-                .isInstanceOf(BadRequestApiException.class)
-                .hasMessage("토큰 지급에 실패했습니다. 원인: token transfer failed");
+        var queued = service.rewardOralExerciseButtonClick(request,
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3, true));
+        assertThat(queued.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFER_REVIEW);
+        verify(externalTokenClient, never()).transferTokenToWallet(anyString(), anyString(), anyString(), anyLong());
     }
 
     @Test
-    void rewardOralExerciseButtonClickRetriesExistingFailedTokenTransfer() throws Exception {
+    void rewardOralExerciseButtonClickDoesNotResendUnconfirmedLegacyTransfer() throws Exception {
         UserRewardProperties properties = new UserRewardProperties();
         properties.setOralExerciseCoinAmount(1L);
         properties.setTokenTransferEnabled(true);
@@ -710,12 +733,13 @@ class UserRewardServiceTest {
 
         UserRewardDto.RewardResponse response = service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3)
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 3, 3, true)
         );
 
         assertThat(response.isDuplicated()).isTrue();
-        assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
-        verify(externalTokenClient).transferTokenToWallet(
+        assertThat(response.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFER_REVIEW);
+        assertThat(response.getAmount()).isZero();
+        verify(externalTokenClient, never()).transferTokenToWallet(
                 "ESSENTIAL_VIDEO_1",
                 "0x-token-contract",
                 "0x-user-wallet",
@@ -728,7 +752,7 @@ class UserRewardServiceTest {
     void rewardOralExerciseButtonClickRequiresSelectedButtonNumber() {
         assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-1", null, null)
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", null, null, true)
         ))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("selectedButtonNumber is required");
@@ -738,7 +762,7 @@ class UserRewardServiceTest {
     void rewardOralExerciseButtonClickRejectsMismatchedTargetButtonNumber() {
         assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(
                 request,
-                new UserRewardDto.ButtonClickRequest(11L, "session-1", 2, 4)
+                new UserRewardDto.ButtonClickRequest(11L, "session-1", 2, 4, true)
         ))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessage("selectedButtonNumber does not match targetButtonNumber");

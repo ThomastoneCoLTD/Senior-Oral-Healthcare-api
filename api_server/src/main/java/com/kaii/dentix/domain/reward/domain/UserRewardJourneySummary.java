@@ -36,7 +36,7 @@ public record UserRewardJourneySummary(
         List<UserRewardTransaction> safeTransactions = transactions == null ? List.of() : transactions;
         Set<String> receivedCoinIds = safeTransactions.stream()
                 .filter(transaction -> transaction.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN)
-                .filter(transaction -> !NON_REWARDED_STATUSES.contains(transaction.getStatus()))
+                .filter(UserRewardTransaction::isRewardReceived)
                 .map(UserRewardTransaction::getCoinId)
                 .filter(UserRewardJourneySummary::hasText)
                 .map(UserRewardJourneySummary::normalize)
@@ -59,10 +59,11 @@ public record UserRewardJourneySummary(
                 .filter(coinId -> !reclaimedCoinIds.contains(coinId))
                 .count();
         boolean essentialCollectionCompleted = essentialReceivedCount == ESSENTIAL_REWARD_COUNT;
-        boolean completed = essentialCollectionCompleted
+        boolean unresolved = safeTransactions.stream().anyMatch(UserRewardTransaction::isTransferUnresolved);
+        boolean completed = !unresolved && essentialCollectionCompleted
                 && essentialReclaimedCount == ESSENTIAL_REWARD_COUNT
                 && pendingReclaimCount == 0;
-        boolean canReclaim = essentialCollectionCompleted && pendingReclaimCount > 0;
+        boolean canReclaim = essentialCollectionCompleted && pendingReclaimCount > 0 && !unresolved;
 
         UserRewardJourneyState state;
         if (completed) {

@@ -43,8 +43,16 @@ public class OralExerciseController {
             @RequestBody UserRewardDto.ButtonClickRequest buttonClickRequest
     ) {
         try {
-            return new DataResponse<>(userRewardService.rewardOralExerciseButtonClick(request, buttonClickRequest));
+            var reward = userRewardService.rewardOralExerciseButtonClick(request, buttonClickRequest);
+            if (!buttonClickRequest.isAcceptsDeferred() &&
+                    (reward.getStatus() == com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus.TOKEN_TRANSFER_PENDING
+                    || reward.getStatus() == com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus.TOKEN_TRANSFER_CHECKING
+                    || reward.getStatus() == com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus.TOKEN_TRANSFER_REVIEW)) {
+                throw new DeferredRewardException();
+            }
+            return new DataResponse<>(reward);
         } catch (RuntimeException failure) {
+            if (failure instanceof DeferredRewardException || failure instanceof com.kaii.dentix.domain.reward.application.DeferredRewardClientRequiredException) throw failure;
             // Reward service transaction has finished; preserve the observation even if it rolled back.
             if (buttonClickRequest.getSelectedButtonNumber() != null
                     && buttonClickRequest.getSelectedButtonNumber().equals(buttonClickRequest.getTargetButtonNumber())
@@ -60,6 +68,10 @@ public class OralExerciseController {
             }
             throw failure;
         }
+    }
+
+    private static class DeferredRewardException extends com.kaii.dentix.global.common.error.exception.BadRequestApiException {
+        DeferredRewardException() { super("토큰 지급 결과를 확인하고 있습니다. 토큰 현황에서 확인해 주세요."); }
     }
 
     @PostMapping("/rewards/reclaim")

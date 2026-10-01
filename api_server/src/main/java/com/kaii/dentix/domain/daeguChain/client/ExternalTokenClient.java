@@ -41,7 +41,11 @@ public class ExternalTokenClient {
             DaeguChainApiAuditService auditService
     ) {
         this.properties = properties;
-        this.restTemplate = restTemplateBuilder.build();
+        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(
+                java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NEVER)
+                        .connectTimeout(java.time.Duration.ofSeconds(10)).build());
+        factory.setReadTimeout(java.time.Duration.ofSeconds(25));
+        this.restTemplate = restTemplateBuilder.requestFactory(() -> factory).build();
         this.auditService = auditService;
     }
 
@@ -62,7 +66,7 @@ public class ExternalTokenClient {
 
     public JsonNode transferTokenToWallet(String tokenName, String contractAddress, String receiver, long amount) {
         validateTransferPath();
-        return post(properties.getTokenTransferPath(), transferBody(tokenName, contractAddress, receiver, amount));
+        return post(properties.getTokenTransferPath(), transferBody(tokenName, contractAddress, receiver, amount), true);
     }
 
     public JsonNode reclaimToken(
@@ -141,6 +145,10 @@ public class ExternalTokenClient {
     }
 
     private JsonNode post(String path, Object body) {
+        return post(path, body, false);
+    }
+
+    private JsonNode post(String path, Object body, boolean walletTransfer) {
         String api = getTokenServerUrl(path);
         try {
             ResponseEntity<JsonNode> response = restTemplate.exchange(
@@ -150,9 +158,12 @@ public class ExternalTokenClient {
                     JsonNode.class
             );
             JsonNode responseBody = Objects.requireNonNull(response.getBody(), "Token server response body is empty");
-            if (isFailedResponse(responseBody)) {
+            if (isFailedResponse(responseBody) || walletTransfer &&
+                    !("OK".equalsIgnoreCase(responseBody.path("state").asText())
+                      || responseBody.path("res").isBoolean() && responseBody.path("res").asBoolean())) {
                 BadRequestApiException exception = new BadRequestApiException(extractErrorMessage(responseBody));
                 record(api, body, responseBody, false);
+                if (walletTransfer) throw new TokenTransferException(false, receiptHash(responseBody));
                 throw exception;
             }
             record(api, body, responseBody, true);
@@ -162,13 +173,32 @@ public class ExternalTokenClient {
                     "Token server API call failed: " + extractErrorMessage(exception.getResponseBodyAsString())
             );
             record(api, body, exception.getResponseBodyAsString(), false);
+            if (walletTransfer) throw new TokenTransferException(false, null);
             throw apiException;
         } catch (RestClientException | NullPointerException exception) {
             BadRequestApiException apiException =
                     new BadRequestApiException("Token server API call failed: " + exception.getMessage());
             recordFailure(api, body, apiException);
+            if (walletTransfer) {
+                Throwable cause = exception;
+                boolean notSubmitted = false;
+                while (cause != null) {
+                    if (cause instanceof java.net.ConnectException || cause instanceof java.net.UnknownHostException
+                            || cause instanceof java.net.NoRouteToHostException) notSubmitted = true;
+                    cause = cause.getCause();
+                }
+                throw new TokenTransferException(notSubmitted, null);
+            }
             throw apiException;
         }
+    }
+
+    private String receiptHash(JsonNode response) {
+        String hash = response.path("fact_hash").asText(null);
+        if (hash == null) hash = response.path("data").path("fact_hash").asText(null);
+        if (hash == null) hash = response.path("data").path("tx").path("fact_hash").asText(null);
+        if (hash == null) hash = response.path("data").path("receipt").path("operation").path("fact").path("hash").asText(null);
+        return hash != null && hash.matches("[A-Za-z0-9]{32,100}") ? hash : null;
     }
 
     private void record(String api, Object request, Object response, boolean success) {

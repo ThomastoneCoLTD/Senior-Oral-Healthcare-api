@@ -7,12 +7,30 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
+import java.util.Date;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface UserRewardTransactionRepository extends JpaRepository<UserRewardTransaction, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from UserRewardTransaction t where t.userRewardTransactionId = :id")
+    Optional<UserRewardTransaction> findByIdForUpdate(Long id);
+
+    @Query("select t.userId from UserRewardTransaction t where t.userRewardTransactionId = :id")
+    Optional<Long> findTransferUserId(Long id);
+
+    @Query("""
+            select t.userRewardTransactionId from UserRewardTransaction t
+            where t.type = com.kaii.dentix.domain.reward.domain.UserRewardTransactionType.ORAL_EXERCISE_COIN
+            and t.status in :statuses and (t.nextTransferCheckAt is null or t.nextTransferCheckAt <= :now)
+            order by t.userRewardTransactionId
+            """)
+    List<Long> findDueTransfers(Collection<UserRewardTransactionStatus> statuses, Date now, Pageable pageable);
 
     Optional<UserRewardTransaction> findByIdempotencyKey(String idempotencyKey);
 

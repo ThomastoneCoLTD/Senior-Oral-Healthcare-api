@@ -54,6 +54,10 @@ public class UserOralExerciseProgress extends TimeEntity {
     @Temporal(TemporalType.TIMESTAMP)
     private Date lastViewedAt;
 
+    public boolean isCompleted() {
+        return completed || completionRate >= 90;
+    }
+
     public void updateProgress(
             int watchedSeconds,
             int currentPositionSeconds,
@@ -65,7 +69,7 @@ public class UserOralExerciseProgress extends TimeEntity {
         this.maxWatchedSeconds = Math.max(this.maxWatchedSeconds, Math.max(currentPositionSeconds, 0));
         this.lastPositionSeconds = Math.max(currentPositionSeconds, 0);
         this.completionRate = Math.max(this.completionRate, Math.max(completionRate, 0));
-        this.completed = this.completed || completed || this.completionRate >= 95;
+        this.completed = this.completed || completed || this.completionRate >= 90;
         this.viewCount += 1;
         this.lastViewedAt = new Date();
 

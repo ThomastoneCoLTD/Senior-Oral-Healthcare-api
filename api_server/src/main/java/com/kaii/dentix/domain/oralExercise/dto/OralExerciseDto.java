@@ -30,6 +30,8 @@ public class OralExerciseDto {
         private boolean available;
         private boolean currentWeekContent;
         private boolean rewardReceived;
+        @Setter private boolean rewardRecoveryPending;
+        @Setter private String rewardStatus;
         private ButtonChallengeResponse buttonChallenge;
         private ProgressResponse progress;
 
@@ -134,7 +136,7 @@ public class OralExerciseDto {
     public static class ButtonChallengeResponse {
         private List<Integer> buttons;
         private int timeoutSeconds;
-        private boolean rewardAvailable;
+        @Setter private boolean rewardAvailable;
         private String promptMessage;
 
         public static ButtonChallengeResponse forContent(boolean rewardContent, boolean rewardReceived) {
@@ -148,7 +150,7 @@ public class OralExerciseDto {
         ) {
             boolean rewardAvailable = rewardContent && !rewardReceived && !rewardJourneyCompleted;
             return ButtonChallengeResponse.builder()
-                    .buttons(List.of(1, 2, 3, 4, 5))
+                    .buttons(List.of(1, 2))
                     .timeoutSeconds(30)
                     .rewardAvailable(rewardAvailable)
                     .promptMessage(rewardJourneyCompleted

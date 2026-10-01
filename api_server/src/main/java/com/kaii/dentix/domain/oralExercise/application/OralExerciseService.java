@@ -96,7 +96,7 @@ public class OralExerciseService {
                 .stream()
                 .map(content -> {
                     boolean available = isContentAvailable(content, progressMap, introCompleted);
-                    return OralExerciseDto.ContentResponse.from(
+                    var response = OralExerciseDto.ContentResponse.from(
                             content,
                             progressMap.get(content.getOralExerciseContentId()),
                             currentWeek,
@@ -106,6 +106,15 @@ public class OralExerciseService {
                             available ? resolvePlayableAssetUrl(content.getVideoUrl()) : null,
                             resolvePlayableAssetUrl(content.getThumbnailUrl())
                     );
+                    rewardTransactions.stream().filter(t -> t.getType() == UserRewardTransactionType.ORAL_EXERCISE_COIN
+                            && resolveRewardTokenName(content) != null && resolveRewardTokenName(content).equalsIgnoreCase(t.getCoinId())
+                            && t.getStatus() != com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus.CANCELED)
+                            .findFirst().ifPresent(t -> {
+                                response.setRewardRecoveryPending(t.isTransferUnresolved());
+                                response.setRewardStatus(t.displayStatus().name());
+                                if (t.isTransferUnresolved()) response.getButtonChallenge().setRewardAvailable(false);
+                            });
+                    return response;
                 })
                 .toList();
 
@@ -153,7 +162,7 @@ public class OralExerciseService {
         int watchedSeconds = valueOrDefault(interactionRequest.getWatchedSeconds(), 0);
         int currentPositionSeconds = valueOrDefault(interactionRequest.getCurrentPositionSeconds(), 0);
         int completionRate = calculateCompletionRate(interactionRequest, currentPositionSeconds, durationSeconds);
-        boolean completed = Boolean.TRUE.equals(interactionRequest.getCompleted()) || completionRate >= 95;
+        boolean completed = Boolean.TRUE.equals(interactionRequest.getCompleted()) || completionRate >= 90;
         OralExerciseInteractionEventType eventType = interactionRequest.getEventType() == null
                 ? OralExerciseInteractionEventType.PROGRESS
                 : interactionRequest.getEventType();
@@ -162,6 +171,15 @@ public class OralExerciseService {
                 OralExerciseInteractionEventType.TOKEN_TIMEOUT,
                 OralExerciseInteractionEventType.TOKEN_FAILED).contains(eventType)) {
             throw new BadRequestApiException("토큰 실패는 전용 API로 기록해 주세요.");
+        }
+
+        // Count the 90% threshold as a completed session even when the player closes before ended.
+        // Existing distinct-session aggregation keeps a later COMPLETE from increasing the count.
+        if (completed && sessionId != null && !sessionId.isBlank()
+                && (eventType == OralExerciseInteractionEventType.PROGRESS || eventType == OralExerciseInteractionEventType.PAUSE)
+                && !oralExerciseInteractionLogRepository.existsByUserIdAndContent_OralExerciseContentIdAndSessionIdAndEventTypeIn(
+                        userId, content.getOralExerciseContentId(), sessionId, List.of(OralExerciseInteractionEventType.COMPLETE))) {
+            eventType = OralExerciseInteractionEventType.COMPLETE;
         }
 
         oralExerciseInteractionLogRepository.save(OralExerciseInteractionLog.builder()
@@ -358,7 +376,7 @@ public class OralExerciseService {
         if (durationSeconds <= 0) {
             return 0;
         }
-        return clamp((int) Math.round((currentPositionSeconds * 100.0) / durationSeconds), 0, 100);
+        return clamp((int) Math.floor((currentPositionSeconds * 100.0) / durationSeconds), 0, 100);
     }
 
     private int valueOrDefault(Integer value, int defaultValue) {

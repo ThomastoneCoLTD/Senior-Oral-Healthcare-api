@@ -31,6 +31,8 @@ class OralExerciseRewardFailureTest {
   var rewards = mock(UserRewardService.class);
   var history = mock(OralExerciseHistoryService.class);
   var controller = new OralExerciseController(mock(OralExerciseService.class),rewards,mock(UserRewardReclaimService.class),history);
+  when(rewards.rewardOralExerciseButtonClick(any(),any())).thenReturn(UserRewardDto.RewardResponse.builder()
+    .status(com.kaii.dentix.domain.reward.domain.UserRewardTransactionStatus.TOKEN_TRANSFERRED).build());
   controller.rewardButtonClick(mock(HttpServletRequest.class),mock(UserRewardDto.ButtonClickRequest.class));
   verifyNoInteractions(history);
  }

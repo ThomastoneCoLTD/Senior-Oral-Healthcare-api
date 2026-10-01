@@ -67,19 +67,12 @@ class UserRewardReclaimServiceTest {
 
         when(jwtTokenUtil.getAccessToken(request)).thenReturn("access-token");
         when(jwtTokenUtil.getUserId("access-token", TokenType.AccessToken)).thenReturn(7L);
-        when(walletRepository.findByUserId(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
                 .userId(7L)
                 .pointBalance(5L)
                 .daeguDid("did:key:z6Mk-dadaegu-external")
                 .walletAddress("0x-user-wallet")
                 .walletPrivateKeyCiphertext("encrypted-private-key")
-                .build()));
-        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
-                .userId(7L)
-                .pointBalance(5L)
-                .daeguDid("did:key:z6Mk-local")
-                .walletAddress("0x-legacy-wallet")
-                .walletPrivateKeyCiphertext("encrypted-legacy-did-key")
                 .build()));
         when(transactionRepository.save(any(UserRewardTransaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -134,6 +127,7 @@ class UserRewardReclaimServiceTest {
 
     @Test
     void reclaimTransferredTokensForResetUsesTokenServerForLegacyWalletWithoutDirectApproval() throws Exception {
+        useLegacyWallet();
         when(rewardWalletProvisioningService.requiresWalletReplacement("encrypted-legacy-did-key"))
                 .thenReturn(true);
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
@@ -165,6 +159,7 @@ class UserRewardReclaimServiceTest {
 
     @Test
     void deletionApprovesEachContractBeforeReclaimingIncludingOptionalRewards() throws Exception {
+        useLegacyWallet();
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialAndOptionalRewards());
         when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
                 .thenReturn(objectMapper.readTree("{\"tx_hash\":\"reclaimed\"}"));
@@ -185,6 +180,7 @@ class UserRewardReclaimServiceTest {
 
     @Test
     void deletionKeepsApprovalFailuresPendingWithoutAttemptingTransfer() {
+        useLegacyWallet();
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
         doThrow(new IllegalStateException("approval failed")).when(rewardWalletProvisioningService)
                 .approveRewardContract(any(), any(), any(), any());
@@ -200,6 +196,7 @@ class UserRewardReclaimServiceTest {
 
     @Test
     void deletionRetryDoesNotApproveOrTransferAlreadyReclaimedRewards() {
+        useLegacyWallet();
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
         when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.of(
                 UserRewardTransaction.builder().status(UserRewardTransactionStatus.TOKEN_TRANSFERRED).build()));
@@ -214,6 +211,7 @@ class UserRewardReclaimServiceTest {
 
     @Test
     void deletionPreservesLegacyReclaimFailuresInsteadOfSkippingOutstandingTokens() {
+        useLegacyWallet();
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
         when(rewardWalletProvisioningService.requiresWalletReplacement("encrypted-legacy-did-key"))
                 .thenReturn(true);
@@ -230,6 +228,7 @@ class UserRewardReclaimServiceTest {
 
     @Test
     void reclaimTransferredTokensForResetReturnsFailureForAdminToAbortDeletion() {
+        useLegacyWallet();
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
         when(transactionRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
         when(externalTokenClient.reclaimToken(anyString(), anyString(), anyString(), anyString(), anyLong()))
@@ -364,6 +363,31 @@ class UserRewardReclaimServiceTest {
                 eq("0x-token-owner"),
                 eq(1L)
         );
+    }
+
+    @Test
+    void unresolvedTransfersBlockProductCollectionResetAndDeletionBeforeAnyTokenMovement() {
+        for (var status : List.of(UserRewardTransactionStatus.TOKEN_TRANSFER_PENDING,
+                UserRewardTransactionStatus.TOKEN_TRANSFER_CHECKING, UserRewardTransactionStatus.TOKEN_TRANSFER_REVIEW)) {
+            var all = new java.util.ArrayList<>(essentialRewards());
+            all.add(UserRewardTransaction.builder().userId(7L).coinId("optional_video_1")
+                    .type(UserRewardTransactionType.ORAL_EXERCISE_COIN).status(status).build());
+            when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(all);
+            assertThatThrownBy(() -> service.reclaimOralExerciseTokens(request)).hasMessageContaining("확인 중");
+            assertThatThrownBy(() -> service.reclaimTransferredTokensForReset(7L)).hasMessageContaining("확인 중");
+            assertThatThrownBy(() -> service.reclaimTransferredTokensForDeletion(7L)).hasMessageContaining("확인 중");
+        }
+        verifyNoInteractions(externalTokenClient, rewardWalletProvisioningService);
+    }
+
+    private void useLegacyWallet() {
+        when(walletRepository.findByUserIdForUpdate(7L)).thenReturn(Optional.of(UserRewardWallet.builder()
+                .userId(7L)
+                .pointBalance(5L)
+                .daeguDid("did:key:z6Mk-local")
+                .walletAddress("0x-legacy-wallet")
+                .walletPrivateKeyCiphertext("encrypted-legacy-did-key")
+                .build()));
     }
 
     private List<UserRewardTransaction> essentialRewards() {
