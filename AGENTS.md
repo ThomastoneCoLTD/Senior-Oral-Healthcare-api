@@ -89,7 +89,7 @@
 - 최초 건강설문은 `domain/intakeSurvey`와 `template/intake-survey.json`입니다. 미제출 사용자는 로그인 시 안내하되 건너뛰기로 해당 탭 로그인에서 이용 가능합니다. 문진표 메뉴에서 완료 후에도 조회·수정하며 최초 제출일·필수 검증·revision을 보존합니다. 신규 API 배포 후 프론트를 배포합니다.
 - 슈퍼관리자 기관별 설문 조회·수정은 `AdminIntakeSurveyService`와 `/admin/intake-surveys`입니다. 제출 상태·최초 제출일과 revision 충돌 보호를 유지합니다.
 - 기능 수정 전 잠금·진도·토큰 중복 방지·인증 계약을 관련 코드와 기록에서 확인합니다.
-- 영상 시청·실패 이력은 `OralExerciseHistoryService`와 `/admin/oral-exercise-history`입니다. 완료 회차 집계와 레거시 `viewCount`를 구분하고 실패 중복 방지·수령 후 안내 제외를 유지합니다.
+- 영상 시청·실패 이력은 `OralExerciseHistoryService`와 `/admin/oral-exercise-history`입니다. 두 메뉴의 기관 정확 일치·기관 미지정·페이지 이전 실패 필터와 슈퍼관리자 권한을 유지합니다. 완료 회차 집계와 레거시 `viewCount`를 구분하고 실패 중복 방지·수령 후 안내 제외를 유지합니다.
 - 사용자 삭제 시 토큰 회수 실패를 무시하지 않으며, 지갑 초기화·리워드 상태 변경의 기존 보호 조건을 유지합니다.
 
 - 문진표 v3는 11영역·72문항이며 새 8~11영역은 첨부 DOCX 1~4의 1~5점 척도입니다. 기존 키·완료일·답변을 보존하고 점수 합산에서 치과 선택지 번호를 제외합니다.

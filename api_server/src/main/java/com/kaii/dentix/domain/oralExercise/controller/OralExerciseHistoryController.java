@@ -27,8 +27,15 @@ public class OralExerciseHistoryController {
 
     @GetMapping("/admin/oral-exercise-history/users")
     public DataResponse<Page<Member>> members(@RequestParam(defaultValue = "") String keyword,
+            @RequestParam(required = false) String organization,
+            @RequestParam(defaultValue = "ALL") HistoryKind kind,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return new DataResponse<>(service.members(keyword, page, size));
+        return new DataResponse<>(service.members(keyword, organization, kind, page, size));
+    }
+
+    @GetMapping("/admin/oral-exercise-history/organizations")
+    public DataResponse<List<String>> organizations() {
+        return new DataResponse<>(service.organizations());
     }
 
     @GetMapping("/admin/oral-exercise-history/users/{userId}")
@@ -38,7 +45,8 @@ public class OralExerciseHistoryController {
 
     @GetMapping("/admin/oral-exercise-history/users/{userId}/{contentId}")
     public DataResponse<Page<Event>> events(@PathVariable Long userId, @PathVariable Long contentId,
+            @RequestParam(defaultValue = "ALL") HistoryKind kind,
             @RequestParam(defaultValue = "0") int page) {
-        return new DataResponse<>(service.events(userId, contentId, page));
+        return new DataResponse<>(service.events(userId, contentId, kind, page));
     }
 }

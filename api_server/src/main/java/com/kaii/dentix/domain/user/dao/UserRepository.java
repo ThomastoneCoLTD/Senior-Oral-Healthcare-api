@@ -20,12 +20,24 @@ public interface UserRepository extends JpaRepository<User, Long> {
         (lower(u.userName) like lower(concat('%', :keyword, '%'))
           or lower(u.userLoginIdentifier) like lower(concat('%', :keyword, '%'))
           or lower(u.realOrganization) like lower(concat('%', :keyword, '%')))
-        and (exists (select l from OralExerciseInteractionLog l where l.userId = u.userId)
-          or exists (select p from UserOralExerciseProgress p where p.userId = u.userId))
+        and (:organization is null or coalesce(trim(u.realOrganization), '') = :organization)
+        and (exists (select l from OralExerciseInteractionLog l where l.userId = u.userId
+          and (:failuresOnly = false or l.eventType in :failureTypes))
+          or (:failuresOnly = false and exists (select p from UserOralExerciseProgress p where p.userId = u.userId)))
         order by u.userId desc
         """)
     org.springframework.data.domain.Page<User> findExerciseHistoryMembers(
-            String keyword, org.springframework.data.domain.Pageable pageable);
+            String keyword, String organization, boolean failuresOnly,
+            List<com.kaii.dentix.domain.oralExercise.domain.OralExerciseInteractionEventType> failureTypes,
+            org.springframework.data.domain.Pageable pageable);
+
+    @Query("""
+        select distinct coalesce(trim(u.realOrganization), '') from User u
+        where (exists (select l from OralExerciseInteractionLog l where l.userId = u.userId)
+          or exists (select p from UserOralExerciseProgress p where p.userId = u.userId))
+        order by coalesce(trim(u.realOrganization), '')
+        """)
+    List<String> findExerciseHistoryOrganizations();
 
     Optional<User> findByUserLoginIdentifier(String userLoginIdentifier);
     Optional<User> findByDaeguDid(String daeguDid);

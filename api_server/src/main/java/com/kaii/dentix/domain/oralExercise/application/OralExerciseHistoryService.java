@@ -33,6 +33,8 @@ public class OralExerciseHistoryService {
     private final UserRepository users;
     private final JwtTokenUtil jwt;
 
+    public enum HistoryKind { ALL, VIEWING, FAILURES }
+
     public record Summary(Long contentId, int sort, String title, boolean active, boolean watched,
                           long completedViews, long failureCount, long wrongCount, long timeoutCount,
                           long errorCount, boolean rewardReceived, boolean retryRequired, Date lastViewedAt) {}
@@ -96,15 +98,27 @@ public class OralExerciseHistoryService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Member> members(String keyword, int page, int size) {
-        return users.findExerciseHistoryMembers(keyword.trim(), PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, 50))))
+    public Page<Member> members(String keyword, String organization, HistoryKind kind, int page, int size) {
+        return users.findExerciseHistoryMembers(keyword.trim(), organization == null ? null : organization.trim(),
+                        kind == HistoryKind.FAILURES, FAILURES,
+                        PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, 50))))
                 .map(u -> new Member(u.getUserId(), u.getUserName(), u.getUserLoginIdentifier(), u.getRealOrganization()));
     }
 
     @Transactional(readOnly = true)
-    public Page<Event> events(Long userId, Long contentId, int page) {
+    public List<String> organizations() {
+        return users.findExerciseHistoryOrganizations();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Event> events(Long userId, Long contentId, HistoryKind kind, int page) {
+        var types = switch (kind) {
+            case ALL -> HISTORY;
+            case VIEWING -> List.of(OralExerciseInteractionEventType.VIEW, OralExerciseInteractionEventType.COMPLETE);
+            case FAILURES -> FAILURES;
+        };
         return logs.findByUserIdAndContent_OralExerciseContentIdAndEventTypeInOrderByCreatedDescOralExerciseInteractionLogIdDesc(
-                userId, contentId, HISTORY, PageRequest.of(Math.max(0, page), 20))
+                userId, contentId, types, PageRequest.of(Math.max(0, page), 20))
                 .map(l -> new Event(l.getOralExerciseInteractionLogId(), l.getEventType().name(), l.getCreated(), l.getCompletionRate()));
     }
 }

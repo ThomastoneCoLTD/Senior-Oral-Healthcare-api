@@ -30,6 +30,16 @@ class OralExerciseHistoryServiceTest {
         when(rewards.findByUserIdOrderByCreatedDesc(1L)).thenReturn(List.of());
         when(progress.findByUserId(1L)).thenReturn(List.of());
     }
+    @Test void eventPagesSeparateViewingAndFailuresBeforePagination() {
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+        var viewing = List.of(OralExerciseInteractionEventType.VIEW, OralExerciseInteractionEventType.COMPLETE);
+        when(logs.findByUserIdAndContent_OralExerciseContentIdAndEventTypeInOrderByCreatedDescOralExerciseInteractionLogIdDesc(
+                eq(1L), eq(7L), anyList(), eq(pageable))).thenReturn(org.springframework.data.domain.Page.empty());
+        service.events(1L, 7L, OralExerciseHistoryService.HistoryKind.VIEWING, 0);
+        verify(logs).findByUserIdAndContent_OralExerciseContentIdAndEventTypeInOrderByCreatedDescOralExerciseInteractionLogIdDesc(1L,7L,viewing,pageable);
+        service.events(1L, 7L, OralExerciseHistoryService.HistoryKind.FAILURES, 0);
+        verify(logs).findByUserIdAndContent_OralExerciseContentIdAndEventTypeInOrderByCreatedDescOralExerciseInteractionLogIdDesc(1L,7L,OralExerciseHistoryService.FAILURES,pageable);
+    }
     @Test void thresholdIsPerVideoAndSuccessRemovesReminderWithoutErasingFailures() {
         when(counts.getFailures()).thenReturn(2L);
         assertThat(service.summary(1L).get(0).retryRequired()).isFalse();
