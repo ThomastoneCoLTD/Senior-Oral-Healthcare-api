@@ -4,12 +4,14 @@ import com.kaii.dentix.domain.billing.domain.Billing;
 import com.kaii.dentix.domain.organization.domain.Organization;
 import com.kaii.dentix.global.common.mail.EmailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "soh.mail", name = "enabled", havingValue = "true")
 public class OveruseBillingEventListener {
 
     private final EmailService emailService;

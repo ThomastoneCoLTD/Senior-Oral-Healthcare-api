@@ -6,6 +6,15 @@ security:
   password-reset:
     ttl-seconds: ${PASSWORD_RESET_TTL_SECONDS:600}
 
+soh:
+  mail:
+    enabled: ${SOH_MAIL_ENABLED:false}
+
+management:
+  health:
+    mail:
+      enabled: ${soh.mail.enabled:false}
+
 dadaegu:
   login:
     enabled: ${DADAEGU_LOGIN_ENABLED:false}

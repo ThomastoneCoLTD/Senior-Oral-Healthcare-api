@@ -26,8 +26,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,7 +40,6 @@ import java.time.LocalDateTime;
 public class BillingService {
 
     private final AdminAccessGuard accessGuard;
-    private final JavaMailSender mailSender;
     private final BillingRepository billingRepository;
     private final OrganizationRepository organizationRepository;
     private final BillingHistoryRepository billingHistoryRepository;

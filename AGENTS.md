@@ -32,6 +32,7 @@
 - JWT 운영 Secret은 `JWT_ACCESS_KEY_PROD`, `JWT_REFRESH_KEY_PROD`이며 각각 32자 이상, 기본값 없이 유지합니다.
 - `DAEGU_CHAIN_WALLET_ENCRYPTION_KEY_PROD`는 32바이트 Base64 AES-256-GCM 키입니다. 기존 지갑 복호화에 필요하므로 임의 교체·분실하지 않습니다.
 - 다대구 RSA 키는 backend에만 두고 인증 callback 원문·지갑 `holder_pkey` 등 민감 필드는 마스킹합니다.
+- 메일은 `SOH_MAIL_ENABLED` 미설정 또는 false이면 발송·SMTP health 검사를 하지 않습니다. 청구 처리는 유지하며 true로 활성화할 때만 SMTP 키를 준비합니다.
 - 과거 문서의 인스턴스 수·Secret 회전·장애 해결 상태는 현재 사실이 아닐 수 있으므로 해당 운영 작업 때 재확인합니다.
 
 ## 인프라 안전 규칙

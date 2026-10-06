@@ -13,7 +13,6 @@ import com.kaii.dentix.global.security.AdminAccessGuard;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,7 +25,7 @@ class BillingAccessTest {
     private final BillingRepository billings = mock(BillingRepository.class);
     private final OrganizationRepository organizations = mock(OrganizationRepository.class);
     private final AdminRepository admins = mock(AdminRepository.class);
-    private final BillingService service = new BillingService(new AdminAccessGuard(admins), mock(JavaMailSender.class), billings,
+    private final BillingService service = new BillingService(new AdminAccessGuard(admins), billings,
             organizations, mock(BillingHistoryRepository.class), mock(ApplicationEventPublisher.class), mock(OrganizationSubscriptionHistoryRepository.class));
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
     private void login() {
