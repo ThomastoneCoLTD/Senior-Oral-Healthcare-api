@@ -83,7 +83,6 @@ dependencies {
 
     // --- JAXB (Java 9+ 호환성) ---
     implementation 'org.glassfish.jaxb:jaxb-runtime:4.0.2'
-    implementation 'org.springframework.security:spring-security-rsa:1.0.11.RELEASE'
 
     // --- Excel Export ---
     implementation 'org.apache.poi:poi:5.5.1'

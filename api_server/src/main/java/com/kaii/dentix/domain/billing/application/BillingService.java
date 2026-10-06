@@ -18,6 +18,7 @@ import com.kaii.dentix.global.common.dto.PagingDTO;
 import com.kaii.dentix.global.common.dto.PagingRequest;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import com.kaii.dentix.global.security.AdminAccessGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -40,6 +41,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class BillingService {
 
+    private final AdminAccessGuard accessGuard;
     private final JavaMailSender mailSender;
     private final BillingRepository billingRepository;
     private final OrganizationRepository organizationRepository;
@@ -50,8 +52,11 @@ public class BillingService {
     /** 일반관리자 - 본인 기관의 미납 청구 목록 조회 */
     @Transactional
     public List<BillingDto.Summary> findAllUnpaidBillings() {
+        Admin admin = accessGuard.currentAdmin();
         return billingRepository.findAllByBillingStatus(BillingStatus.PENDING)
                 .stream()
+                .filter(b -> admin.isSuperAdmin() || (admin.getOrganization() != null &&
+                        Objects.equals(admin.getOrganization().getOrganizationId(), b.getOrganization().getOrganizationId())))
                 .map(BillingDto.Summary::from)
                 .toList();
     }
@@ -81,6 +86,7 @@ public class BillingService {
     public BillingDto.OveruseResponse getOveruseDetails(Long billingId) {
         Billing billing = billingRepository.findById(billingId)
                 .orElseThrow(() -> new EntityNotFoundException("Billing not found"));
+        accessGuard.requireOrganization(billing.getOrganization());
 
         if (billing.getBillingType() != BillingType.SUBSCRIPTION &&
                 billing.getBillingType() != BillingType.REGULAR) {
@@ -113,8 +119,10 @@ public class BillingService {
     /** 결제 완료 처리 (markPaid) */
     @Transactional
     public BillingDto.Detail markBillingAsPaid(Long billingId, String paymentRef) {
+        accessGuard.requireSuperAdmin();
         Billing billing = billingRepository.findById(billingId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 청구 내역입니다."));
+        accessGuard.requireOrganization(billing.getOrganization());
 
         if (billing.getBillingStatus() == BillingStatus.PAID) {
             throw new IllegalStateException("이미 결제 완료된 청구 내역입니다.");
@@ -211,8 +219,10 @@ public class BillingService {
     /** 빌링 상태 변경 + 로그 기록 */
     @Transactional
     public BillingDto.StatusHistoryResponse updateBillingStatus(Long billingId, BillingDto.StatusUpdateRequest request, String changedBy) {
+        accessGuard.requireSuperAdmin();
         Billing billing = billingRepository.findById(billingId)
                 .orElseThrow(() -> new EntityNotFoundException("Billing not found"));
+        accessGuard.requireOrganization(billing.getOrganization());
 
         BillingStatus oldStatus = billing.getBillingStatus();
         BillingStatus newStatus = BillingStatus.valueOf(request.getBillingStatus().toUpperCase());
@@ -232,6 +242,7 @@ public class BillingService {
 
     /** 기관별 Billing 내역 조회 */
     public List<BillingDto.Detail> getBillingsByOrganization(Long organizationId) {
+        accessGuard.requireOrganization(organizationId);
         return billingRepository.findAllByOrganization_OrganizationIdOrderByBilledAtDesc(organizationId)
                 .stream()
                 .map(BillingDto.Detail::from)
@@ -243,12 +254,14 @@ public class BillingService {
     public BillingDto.Detail getBillingDetail(Long billingId) {
         Billing billing = billingRepository.findById(billingId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 청구 내역입니다."));
+        accessGuard.requireOrganization(billing.getOrganization());
         return BillingDto.Detail.from(billing);
     }
 
     /** 엑셀 데이터 번들 조회 */
     @Transactional(readOnly = true)
     public BillingDto.ExcelData getBillingExcelBundle(Long organizationId) {
+        accessGuard.requireOrganization(organizationId);
         Organization org = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new IllegalArgumentException("기관을 찾을 수 없습니다."));
 
@@ -274,6 +287,7 @@ public class BillingService {
      */
     @Transactional(readOnly = true)
     public BillingDto.ListResponse getBillingListByOrganization(Long organizationId) {
+        accessGuard.requireOrganization(organizationId);
         Organization org = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new EntityNotFoundException("기관을 찾을 수 없습니다."));
 
@@ -294,12 +308,13 @@ public class BillingService {
      */
     @Transactional(readOnly = true)
     public BillingDto.PagedResponse getBillingList(Long orgId, String status, String sort, PagingRequest pagingRequest) {
+        accessGuard.requireOrganization(orgId);
         //정렬 조건 설정 (기간 시작일 기준)
         Sort pageableSort = "ASC".equalsIgnoreCase(sort)
                 ? Sort.by("periodStart").ascending()
                 : Sort.by("periodStart").descending();
 
-        Pageable pageable = PageRequest.of(pagingRequest.getPage() - 1, pagingRequest.getSize(), pageableSort);
+        Pageable pageable = PageRequest.of(pagingRequest.of().getPageNumber(), pagingRequest.of().getPageSize(), pageableSort);
 
         //검색 조건(Status)에 따라 조회
         Organization org = organizationRepository.findById(orgId)
@@ -340,6 +355,8 @@ public class BillingService {
      */
     @Transactional(readOnly = true)
     public List<BillingDto.StatusHistoryResponse> getBillingStatusHistories(Long billingId) {
+        Billing billing = billingRepository.findById(billingId).orElseThrow(() -> new EntityNotFoundException("Billing not found"));
+        accessGuard.requireOrganization(billing.getOrganization());
         return billingHistoryRepository
                 .findAllByBilling_IdOrderByCreatedDesc(billingId)
                 .stream()

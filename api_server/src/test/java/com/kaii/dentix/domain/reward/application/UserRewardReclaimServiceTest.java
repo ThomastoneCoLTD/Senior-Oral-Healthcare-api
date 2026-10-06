@@ -107,8 +107,7 @@ class UserRewardReclaimServiceTest {
                 eq(7L),
                 anyString(),
                 eq("0x-user-wallet"),
-                eq("encrypted-private-key")
-        );
+                eq("encrypted-private-key"), eq(1L));
     }
 
     @Test
@@ -122,7 +121,7 @@ class UserRewardReclaimServiceTest {
                 .hasMessageContaining("reset and reissue rewards");
 
         verifyNoInteractions(externalTokenClient);
-        verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any());
+        verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any(), anyLong());
     }
 
     @Test
@@ -154,7 +153,7 @@ class UserRewardReclaimServiceTest {
                 eq("0x-token-owner"),
                 eq(1L)
         );
-        verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any());
+        verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any(), anyLong());
     }
 
     @Test
@@ -171,7 +170,7 @@ class UserRewardReclaimServiceTest {
         var order = inOrder(rewardWalletProvisioningService, externalTokenClient);
         for (UserRewardTransaction reward : essentialAndOptionalRewards()) {
             order.verify(rewardWalletProvisioningService).approveRewardContract(
-                    7L, reward.getTokenContractAddress(), "0x-legacy-wallet", "encrypted-legacy-did-key");
+                    7L, reward.getTokenContractAddress(), "0x-legacy-wallet", "encrypted-legacy-did-key", reward.getAmount());
             order.verify(externalTokenClient).reclaimToken(
                     reward.getCoinId().toUpperCase(java.util.Locale.ROOT), reward.getTokenContractAddress(),
                     "0x-legacy-wallet", "0x-token-owner", reward.getAmount());
@@ -183,7 +182,7 @@ class UserRewardReclaimServiceTest {
         useLegacyWallet();
         when(transactionRepository.findByUserIdOrderByCreatedDesc(7L)).thenReturn(essentialRewards());
         doThrow(new IllegalStateException("approval failed")).when(rewardWalletProvisioningService)
-                .approveRewardContract(any(), any(), any(), any());
+                .approveRewardContract(any(), any(), any(), any(), anyLong());
 
         UserRewardReclaimService.ResetReclaimResult result = service.reclaimTransferredTokensForDeletion(7L);
 
@@ -223,7 +222,7 @@ class UserRewardReclaimServiceTest {
         assertThat(result.failedCount()).isEqualTo(5);
         assertThat(result.reclaimedCount()).isZero();
         assertThat(result.skippedCount()).isZero();
-        verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any());
+        verify(rewardWalletProvisioningService, never()).approveRewardContract(any(), any(), any(), any(), anyLong());
     }
 
     @Test

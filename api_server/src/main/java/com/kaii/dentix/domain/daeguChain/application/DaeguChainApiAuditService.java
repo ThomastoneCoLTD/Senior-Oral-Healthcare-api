@@ -145,7 +145,9 @@ public class DaeguChainApiAuditService {
         String normalized = key == null
                 ? ""
                 : key.toLowerCase(Locale.ROOT).replace("_", "").replace("-", "");
-        return SENSITIVE_KEYS.contains(normalized);
+        return SENSITIVE_KEYS.contains(normalized) || normalized.contains("pkey")
+                || normalized.contains("privatekey") || normalized.contains("mnemonic")
+                || normalized.contains("seed") || normalized.endsWith("secret") || normalized.endsWith("token");
     }
 
     private String truncate(String value) {

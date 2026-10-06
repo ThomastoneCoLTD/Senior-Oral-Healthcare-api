@@ -117,7 +117,7 @@ public class AdminControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, "account.고유경.AccessToken")
-                        .with(user("user").roles("ADMIN"))
+                        .with(user("user").roles("SUPER_ADMIN"))
         );
 
         // then
@@ -234,7 +234,7 @@ public class AdminControllerTest {
 
         // given
         // 리턴 타입 변경: AdminPasswordResetDto -> AdminAuthDto.ModifyPasswordRequest
-        given(adminService.adminPasswordReset(any(Long.class))).willReturn(modifyPasswordRequest());
+        given(adminService.adminPasswordReset(any(Long.class))).willReturn(new AdminAuthDto.ResetPasswordResponse("test-reset-password!"));
 
         // when
         ResultActions resultActions = mockMvc.perform(
@@ -242,7 +242,7 @@ public class AdminControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, "reset-password.고유경.AccessToken")
-                        .with(user("user").roles("ADMIN"))
+                        .with(user("user").roles("SUPER_ADMIN"))
         );
 
         // then
@@ -259,7 +259,7 @@ public class AdminControllerTest {
                                 fieldWithPath("rtMsg").type(JsonFieldType.STRING).description("결과 메세지"),
                                 fieldWithPath("response").type(JsonFieldType.OBJECT).description("결과 데이터"),
                                 // 필드명 변경: adminPassword -> password
-                                fieldWithPath("response.password").type(JsonFieldType.NULL).optional().description("초기화된 비밀번호")
+                                fieldWithPath("response.password").type(JsonFieldType.STRING).description("슈퍼관리자에게 반환되는 임의 생성 비밀번호")
                         )
                 ));
 
@@ -308,7 +308,7 @@ public class AdminControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .header(HttpHeaders.AUTHORIZATION, "account-list.고유경.AccessToken")
-                        .with(user("user").roles("ADMIN"))
+                        .with(user("user").roles("SUPER_ADMIN"))
         );
 
         // then

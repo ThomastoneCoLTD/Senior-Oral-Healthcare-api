@@ -52,10 +52,9 @@ public class AdminController {
      * 관리자 비밀번호 초기화
      */
     @PutMapping(value = "/reset-password", name = "관리자 비밀번호 초기화")
-    public DataResponse<AdminAuthDto.ModifyPasswordRequest> adminPasswordReset(
+    public DataResponse<AdminAuthDto.ResetPasswordResponse> adminPasswordReset(
             @RequestParam Long adminId
     ) {
-        // Service에서 초기화된 비밀번호를 담은 객체(ModifyPasswordRequest)를 반환함
         return new DataResponse<>(adminService.adminPasswordReset(adminId));
     }
 

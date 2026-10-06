@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('SUPER_ADMIN')")
 @RestController
 @RequestMapping("/superadmin/organization")
 @RequiredArgsConstructor

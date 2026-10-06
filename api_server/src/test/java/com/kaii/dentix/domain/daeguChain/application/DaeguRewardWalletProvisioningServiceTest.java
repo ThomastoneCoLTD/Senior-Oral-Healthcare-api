@@ -115,8 +115,7 @@ class DaeguRewardWalletProvisioningServiceTest {
 
         String ciphertext = privateKeyCipher.encrypt("private-key");
         assertThatThrownBy(() -> service.approveRewardContract(
-                7L, "0x-contract", "0x-wallet", ciphertext
-        ))
+                7L, "0x-contract", "0x-wallet", ciphertext, 3L))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessageContaining("DaeguChain reward reclaim approval failed")
                 .hasMessageContaining("approval operation failed")
@@ -132,8 +131,7 @@ class DaeguRewardWalletProvisioningServiceTest {
                 7L,
                 "0x-contract",
                 "0x-wallet",
-                privateKeyCipher.encrypt("private-key")
-        );
+                privateKeyCipher.encrypt("private-key"), 3L);
 
         ArgumentCaptor<DaeguChainDto.TokenApproveRequest> captor =
                 ArgumentCaptor.forClass(DaeguChainDto.TokenApproveRequest.class);
@@ -142,6 +140,7 @@ class DaeguRewardWalletProvisioningServiceTest {
         assertThat(captor.getValue().getHolder()).isEqualTo("0x-wallet");
         assertThat(captor.getValue().getHolderPkey()).isEqualTo("private-key");
         assertThat(captor.getValue().getApproved()).isEqualTo("0x-owner");
+        assertThat(captor.getValue().getAmount()).isEqualTo("3");
     }
 
     @Test
@@ -162,8 +161,7 @@ class DaeguRewardWalletProvisioningServiceTest {
                 7L,
                 "0x-contract",
                 "0x-legacy-wallet",
-                privateKeyCipher.encrypt(rawPrivateKey)
-        ))
+                privateKeyCipher.encrypt(rawPrivateKey), 3L))
                 .isInstanceOf(BadRequestApiException.class)
                 .hasMessageContaining("reward wallet replacement is required");
 

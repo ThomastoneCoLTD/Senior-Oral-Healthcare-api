@@ -134,6 +134,11 @@ public class QuestionnaireService {
         Questionnaire questionnaire = questionnaireRepository.findById(questionnaireId)
                 .orElseThrow(() -> new NotFoundDataException("문진표가 존재하지 않습니다."));
 
+        User requester = userService.getTokenUser(request);
+        if (!java.util.Objects.equals(questionnaire.getUserId(), requester.getUserId())) {
+            throw new com.kaii.dentix.global.common.error.exception.UnauthorizedException();
+        }
+
         // 언어 감지
         String lang = Optional.ofNullable(request.getHeader("Accept-Language"))
                 .map(l -> l.split(",")[0].toLowerCase())

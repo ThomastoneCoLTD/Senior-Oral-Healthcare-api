@@ -52,11 +52,11 @@ public class AdminLoginService {
         }
 
         // 4. 토큰 생성
-        String accessToken = jwtTokenUtil.createToken(admin, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(admin, TokenType.RefreshToken);
 
         // 5. 리프레시 토큰 저장
         admin.updateAdminLogin(refreshToken);
+        String accessToken = jwtTokenUtil.createToken(admin, TokenType.AccessToken);
 
         // 6. 기관 및 구독 정보 조회
         Organization org = admin.getOrganization();

@@ -43,6 +43,7 @@ import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import com.kaii.dentix.global.security.AdminAccessGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -91,6 +92,7 @@ public class AdminUserService {
     private static final Pattern PHONE_PATTERN = Pattern.compile("^[0-9]{10,11}$");
     private static final Pattern NAME_PATTERN = Pattern.compile("^[ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z\\s]+$");
 
+    private final AdminAccessGuard accessGuard;
     private final ModelMapper modelMapper;
     private final AdminService adminService;
     private final UserRepository userRepository;
@@ -196,6 +198,7 @@ public class AdminUserService {
      */
     @Transactional(readOnly = true)
     public Page<AdminUserDto.Info> getUsersByOrganization(AdminUserDto.SearchRequest request) {
+        accessGuard.requireSuperAdmin();
         return adminUserRepository.findAllByOrganization(request);
     }
 
@@ -255,6 +258,7 @@ public class AdminUserService {
     public void userDelete(Long userId) {
         User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+        accessGuard.requireOrganization(user.getOrganization());
         UserRewardReclaimService.ResetReclaimResult reclaimResult =
                 userRewardReclaimService.reclaimTransferredTokensForDeletion(userId);
         if (reclaimResult.failedCount() > 0) {
@@ -658,6 +662,7 @@ public class AdminUserService {
         if (org == null) throw new BadRequestApiException("관리자에 연결된 기관이 없습니다.");
         if (file == null || file.isEmpty()) throw new BadRequestApiException("업로드할 엑셀 파일을 선택해 주세요.");
 
+        if (file.getSize() > 5 * 1024 * 1024) throw new BadRequestApiException("엑셀 파일은 5MB 이하여야 합니다.");
         BulkUploadReference reference = getBulkUploadReference();
         Set<String> fileLoginIdSet = new HashSet<>();
         List<AdminUserDto.FailInfo> failList = new ArrayList<>();
@@ -667,6 +672,7 @@ public class AdminUserService {
         try (InputStream inputStream = file.getInputStream();
              Workbook workbook = new XSSFWorkbook(inputStream)) {
             Sheet sheet = workbook.getSheetAt(0);
+            if (sheet.getLastRowNum() > 1000) throw new BadRequestApiException("한 번에 최대 1000행까지 등록할 수 있습니다.");
             DataFormatter formatter = new DataFormatter();
 
             for (Row row : sheet) {
@@ -707,8 +713,10 @@ public class AdminUserService {
 
     // 사용자 조회 헬퍼
     private User getUser(Long userId) {
-        return userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 사용자입니다."));
+        accessGuard.requireOrganization(user.getOrganization());
+        return user;
     }
 
     // LocalDateTime -> Date 변환 헬퍼

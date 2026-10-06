@@ -26,6 +26,18 @@ import java.util.Objects;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse accessDenied(org.springframework.security.access.AccessDeniedException exception) {
+        return ErrorResponse.of(HttpStatus.FORBIDDEN, "해당 기능에 대한 접근 권한이 없습니다.");
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    public ErrorResponse uploadTooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException exception) {
+        return ErrorResponse.of(HttpStatus.PAYLOAD_TOO_LARGE, "파일은 10MB 이하여야 합니다.");
+    }
+
     /**
      * 잘못된 요청
      * HttpStatus 400

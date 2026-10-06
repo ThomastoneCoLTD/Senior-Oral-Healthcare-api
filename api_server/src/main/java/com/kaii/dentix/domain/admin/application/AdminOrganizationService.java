@@ -9,6 +9,7 @@ import com.kaii.dentix.domain.organizationSubscriptionHistory.dao.OrganizationSu
 import com.kaii.dentix.domain.organizationSubscriptionHistory.domain.OrganizationSubscriptionHistory;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import com.kaii.dentix.global.security.AdminAccessGuard;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminOrganizationService {
 
+    private final AdminAccessGuard accessGuard;
     private final OrganizationHistoryRepository organizationHistoryRepository;
     private final OrganizationSubscriptionHistoryRepository organizationSubscriptionHistoryRepository;
 
@@ -52,6 +54,7 @@ public class AdminOrganizationService {
     /** 일반관리자 - 본인 기관 수정 이력 조회 */
     @Transactional
     public List<OrganizationDto.HistoryResponse> getOrganizationHistory(Long organizationId) {
+        accessGuard.requireOrganization(organizationId);
 
         List<OrganizationHistory> historyList =
                 organizationHistoryRepository

@@ -11,6 +11,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -29,6 +30,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 @Slf4j
 public class WebSecurityConfig {
@@ -130,7 +132,8 @@ public class WebSecurityConfig {
                                 "/api/actuator/health",
                                 "/api/actuator/health/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/admin/account").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/admin/account").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/superadmin/**", "/admin/daegu-chain/**", "/admin/organization/super", "/api/aws/**", "/aws/**", "/cloudwatch/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(EXCLUDE_URLS).permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/admin/account").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/admin/account/reset-password").hasRole("SUPER_ADMIN")
@@ -149,6 +152,7 @@ public class WebSecurityConfig {
                         UsernamePasswordAuthenticationFilter.class
                 );
 
+        http.addFilterAfter(new com.kaii.dentix.global.security.RequestRateLimitFilter(), JwtAuthenticationFilter.class);
         return http.build();
     }
 

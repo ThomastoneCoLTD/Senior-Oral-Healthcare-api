@@ -41,7 +41,7 @@ public class UserService {
         }
 
         try {
-            if (jwtTokenUtil.isExpired(token, TokenType.AccessToken)) {
+            if (jwtTokenUtil.isExpired(token, TokenType.AccessToken) || jwtTokenUtil.isUnauthorized(token, TokenType.AccessToken)) {
                 throw new TokenExpiredException();
             }
 
@@ -64,7 +64,10 @@ public class UserService {
         User user = this.getTokenUser(request);
 
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
-        String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
+        String refreshToken = user.getUserRefreshToken();
+        if (refreshToken == null || jwtTokenUtil.isExpired(refreshToken, TokenType.RefreshToken)) {
+            throw new UnauthorizedException("다시 로그인해 주세요.");
+        }
         userRepository.updateLoginInfo(user.getUserId(), refreshToken, new Date());
 
         publisher.publishEvent(new UserModifyDeviceInfoEvent(user.getUserId(), request));
@@ -74,13 +77,12 @@ public class UserService {
 
     public User getTokenUserNullable(HttpServletRequest servletRequest) {
         String token = jwtTokenUtil.getAccessToken(servletRequest);
-        log.info("Authorization header = {}", servletRequest.getHeader("Authorization"));
 
         if (StringUtils.isBlank(token)) {
             return null;
         }
 
-        if (jwtTokenUtil.isExpired(token, TokenType.AccessToken)) {
+        if (jwtTokenUtil.isExpired(token, TokenType.AccessToken) || jwtTokenUtil.isUnauthorized(token, TokenType.AccessToken)) {
             throw new TokenExpiredException();
         }
 
@@ -99,7 +101,10 @@ public class UserService {
         User user = this.getTokenUser(httpServletRequest);
 
         String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
-        String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
+        String refreshToken = user.getUserRefreshToken();
+        if (refreshToken == null || jwtTokenUtil.isExpired(refreshToken, TokenType.RefreshToken)) {
+            throw new UnauthorizedException("다시 로그인해 주세요.");
+        }
 
         user.updateLogin(refreshToken);
         publisher.publishEvent(new UserModifyDeviceInfoEvent(user.getUserId(), httpServletRequest));

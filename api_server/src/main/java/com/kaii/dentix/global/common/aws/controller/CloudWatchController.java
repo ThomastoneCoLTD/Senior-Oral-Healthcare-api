@@ -12,6 +12,7 @@ import com.kaii.dentix.global.common.aws.dto.ResourceMetric;
 import com.kaii.dentix.global.common.aws.application.CloudWatchService;
 import com.kaii.dentix.global.common.aws.dto.AwsMetricsSummaryResponse;
 
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('SUPER_ADMIN')")
 @RestController
 @RequestMapping("/api/aws/metrics")
 @RequiredArgsConstructor

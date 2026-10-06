@@ -26,8 +26,8 @@ spring:
     timeout-per-shutdown-phase: 30s
   servlet:
     multipart:
-      max-file-size: 500MB
-      max-request-size: 500MB
+      max-file-size: 10MB
+      max-request-size: 12MB
       enabled: true
   mvc:
     view:
@@ -36,7 +36,7 @@ spring:
   jpa:
     database: mysql
     database-platform: org.hibernate.dialect.MySQLDialect
-    show-sql: true
+    show-sql: false
     generate-ddl: false
     open-in-view: false
     hibernate:
@@ -54,14 +54,14 @@ spring:
     port: 587
     username: cs@thomastone.co.kr
     # [보안 권고] 메일 비밀번호 환경변수 처리
-    password: ${MAIL_PASSWORD:bkaxfipbjjjwbyow}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
-      mail.debug: true
+      mail.debug: false
 
 jwt:
   accessTokenKey: ${JWT_ACCESS_KEY}
@@ -80,8 +80,8 @@ server:
     max-connections: 8192
     accept-count: 100
 
-    max-swallow-size: 500MB
-    max-http-form-post-size: 500MB
+    max-swallow-size: 12MB
+    max-http-form-post-size: 12MB
   forward-headers-strategy: native
   servlet:
     context-path: ${SERVER_SERVLET_CONTEXT_PATH:/api}
@@ -96,8 +96,8 @@ server:
         secure: true       # Sniffing 방지: HTTPS에서만 전송
         same-site: lax     # CSRF 방지: Cross-Site 요청 제한
     multipart:
-      max-file-size: 500MB
-      max-request-size: 500MB
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 # [보안 권고] 운영 환경에서는 에러 스택 트레이스 노출 금지
 # error:
@@ -130,15 +130,6 @@ daegu-chain:
   token-transfer-path: ${TOKEN_TRANSFER_PATH:/token/transfer}
   token-reclaim-path: ${TOKEN_RECLAIM_PATH:/token/retrieve}
   token-list-path: ${TOKEN_LIST_PATH:/token/token_list}
-
-did-db:
-  url: ${DID_DB_URL:}
-  username: ${DID_DB_USERNAME:}
-  password: ${DID_DB_PASSWORD:}
-  table-name: ${DID_DB_TABLE:DID}
-  did-column: ${DID_DB_DID_COLUMN:DID}
-  private-key-column: ${DID_DB_PRIVATE_KEY_COLUMN:private_key}
-  account-address-column: ${DID_DB_ACCOUNT_ADDRESS_COLUMN:account_address}
 
 user-reward:
   oral-exercise-coin-amount: ${ORAL_EXERCISE_COIN_REWARD_AMOUNT:1}

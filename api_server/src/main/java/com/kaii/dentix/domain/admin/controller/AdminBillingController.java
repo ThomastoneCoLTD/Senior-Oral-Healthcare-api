@@ -90,8 +90,10 @@ public class AdminBillingController {
                 billingExcelGenerator.generateExcel(bundle, out);
                 out.flush();
             }
+        } catch (com.kaii.dentix.global.common.error.exception.UnauthorizedException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Billing excel export failed", e);
+            throw new IllegalStateException("청구 내역을 내려받지 못했습니다.", e);
         }
     }
 }

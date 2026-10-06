@@ -24,8 +24,8 @@ spring:
         useServerPrepStmts: true
   servlet:
     multipart:
-      max-file-size: 500MB
-      max-request-size: 500MB
+      max-file-size: 10MB
+      max-request-size: 12MB
       enabled: true
   mvc:
     view:
@@ -34,7 +34,7 @@ spring:
   jpa:
     database: mysql
     database-platform: org.hibernate.dialect.MySQLDialect
-    show-sql: true
+    show-sql: false
     generate-ddl: false
     open-in-view: false
     hibernate:
@@ -52,14 +52,14 @@ spring:
     host: smtp.sendgrid.net
     port: 587                      # STARTTLS
     username: apikey
-    password: ${SENDGRID_API_KEY}
+    password: ${SENDGRID_API_KEY:}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
-      mail.debug: true
+      mail.debug: false
 jwt:
   accessTokenKey: ${JWT_ACCESS_KEY}
   refreshTokenKey: ${JWT_REFRESH_KEY}
@@ -69,8 +69,8 @@ server:
   tomcat:
     connection-timeout: 120000ms  # 요청 대기 시간 (기본 20000ms = 20초)
     keep-alive-timeout: 120000ms  # KeepAlive 연결 유지 시간
-    max-swallow-size: 500MB
-    max-http-form-post-size: 500MB
+    max-swallow-size: 12MB
+    max-http-form-post-size: 12MB
   forward-headers-strategy: native
   servlet:
     context-path: ${SERVER_SERVLET_CONTEXT_PATH:/api}
@@ -84,8 +84,8 @@ server:
         secure: true       # [cite: 346] 쿠키 속성 검사(Secure) 해결 - HTTPS에서만 전송
         same-site: lax     # [cite: 299] 쿠키 속성 검사(SameSite) 해결 - CSRF 방지 (Strict 또는 Lax 권장)
     multipart:
-      max-file-size: 500MB
-      max-request-size: 500MB
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 aiModel:
   apiUrl:
@@ -127,15 +127,6 @@ daegu-chain:
     OPTIONAL_VIDEO_5: "0x30AceB0A74B493f1E8e0f8e9cDEd85e74753363afca"
     OPTIONAL_VIDEO_6: "0x420d891609056eFb76c374E4800742Ef91de65Cbfca"
     OPTIONAL_VIDEO_7: "0xa0491a55318374684202DaBEfbC0603010419424fca"
-did-db:
-  url: ${DID_DB_URL:}
-  username: ${DID_DB_USERNAME:}
-  password: ${DID_DB_PASSWORD:}
-  table-name: ${DID_DB_TABLE:DID}
-  did-column: ${DID_DB_DID_COLUMN:DID}
-  private-key-column: ${DID_DB_PRIVATE_KEY_COLUMN:private_key}
-  account-address-column: ${DID_DB_ACCOUNT_ADDRESS_COLUMN:account_address}
-
 user-reward:
   oral-exercise-coin-amount: ${ORAL_EXERCISE_COIN_REWARD_AMOUNT:1}
   point-mint-enabled: ${USER_REWARD_POINT_MINT_ENABLED:false}

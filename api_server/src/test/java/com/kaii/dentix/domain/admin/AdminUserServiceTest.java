@@ -58,6 +58,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AdminUserServiceTest {
 
+    @Mock private com.kaii.dentix.global.security.AdminAccessGuard accessGuard;
+
     @Mock private ModelMapper modelMapper;
     @Mock private AdminService adminService;
     @Mock private UserRepository userRepository;
@@ -84,6 +86,7 @@ class AdminUserServiceTest {
     @BeforeEach
     void setUp() {
         adminUserService = new AdminUserService(
+                accessGuard,
                 modelMapper,
                 adminService,
                 userRepository,
@@ -228,6 +231,18 @@ class AdminUserServiceTest {
         verify(dadaeguUserIdentityRepository).deleteByUserId(10L);
         assertThat(user.getDeleted()).isNotNull();
         assertThat(user.getUserRefreshToken()).isNull();
+    }
+
+    @Test
+    void crossOrganizationDeletionStopsBeforeTokenReclaimOrIdentityRemoval() {
+        Organization organization = Organization.builder().organizationId(3L).build();
+        User user = User.builder().userId(10L).organization(organization).build();
+        when(userRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(user));
+        org.mockito.Mockito.doThrow(new com.kaii.dentix.global.common.error.exception.UnauthorizedException())
+                .when(accessGuard).requireOrganization(organization);
+        assertThatThrownBy(() -> adminUserService.userDelete(10L))
+                .isInstanceOf(com.kaii.dentix.global.common.error.exception.UnauthorizedException.class);
+        org.mockito.Mockito.verifyNoInteractions(userRewardReclaimService, dadaeguUserIdentityRepository);
     }
 
     @Test

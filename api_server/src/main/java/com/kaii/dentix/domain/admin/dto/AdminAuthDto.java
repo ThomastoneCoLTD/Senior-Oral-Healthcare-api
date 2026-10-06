@@ -16,6 +16,9 @@ import lombok.experimental.SuperBuilder;
 
 public class AdminAuthDto {
 
+    /** Only returned to the authorized super administrator; audit logs redact the password field. */
+    public record ResetPasswordResponse(String password) {}
+
     // =================================================================
     // 1. 로그인 (Login)
     // =================================================================

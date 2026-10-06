@@ -177,7 +177,7 @@ public class ExternalTokenClient {
             throw apiException;
         } catch (RestClientException | NullPointerException exception) {
             BadRequestApiException apiException =
-                    new BadRequestApiException("Token server API call failed: " + exception.getMessage());
+                    new BadRequestApiException("Token server API call failed");
             recordFailure(api, body, apiException);
             if (walletTransfer) {
                 Throwable cause = exception;

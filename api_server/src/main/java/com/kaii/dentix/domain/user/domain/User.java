@@ -111,6 +111,7 @@ public class User extends TimeEntity {
      */
     public void modifyUserPassword(PasswordEncoder passwordEncoder, String userPassword) {
         this.userPassword = passwordEncoder.encode(userPassword);
+        this.userRefreshToken = null;
     }
 
     /**

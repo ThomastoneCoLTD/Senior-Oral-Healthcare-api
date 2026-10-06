@@ -170,7 +170,7 @@ public class RewardTransferRecoveryService {
     }
 
     private void finishReceived(Work work, String hash, String factHash, boolean recovered) {
-        Boolean completed = tx().execute(ignored -> {
+        tx().execute(ignored -> {
             if (users.findByIdForUpdate(work.userId()).isEmpty()) return false;
             var wallet = wallets.findByUserIdForUpdate(work.userId()).orElse(null);
             var reward = rewards.findByIdForUpdate(work.id()).orElse(null);
@@ -182,11 +182,8 @@ public class RewardTransferRecoveryService {
             reward.updateBalanceAfter(wallet.getPointBalance());
             return true;
         });
-        if (Boolean.TRUE.equals(completed)) {
-            // Reclaim authorization can be retried during reclaim; it must not undo a confirmed receipt.
-            try { provisioning.approveRewardContract(work.userId(), work.contract(), work.recipient(), work.keyCiphertext()); }
-            catch (RuntimeException e) { log.warn("Reward reclaim approval pending. transactionId={}", work.id()); }
-        }
+        // Approval is performed only when an administrator actually reclaims the exact amount.
+
     }
 
     private void update(Work work, Consumer<UserRewardTransaction> change) {

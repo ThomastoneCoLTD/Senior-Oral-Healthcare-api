@@ -13,7 +13,6 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class DaeguRewardWalletProvisioningService {
 
-    private static final String RECLAIM_ALLOWANCE = String.valueOf(Long.MAX_VALUE);
     private static final Pattern LEGACY_DID_PRIVATE_KEY = Pattern.compile("^(?:0x)?[0-9a-fA-F]{64}$");
 
     private final DaeguChainAccountService accountService;
@@ -68,8 +67,10 @@ public class DaeguRewardWalletProvisioningService {
             Long userId,
             String contractAddress,
             String walletAddress,
-            String walletPrivateKeyCiphertext
+            String walletPrivateKeyCiphertext,
+            long reclaimAmount
     ) {
+        if (reclaimAmount <= 0) throw new BadRequestApiException("회수 승인 수량은 양수여야 합니다.");
         if (isBlank(contractAddress) || isBlank(walletAddress)) {
             throw new BadRequestApiException("reward token contract and wallet address are required");
         }
@@ -92,7 +93,7 @@ public class DaeguRewardWalletProvisioningService {
                         walletAddress,
                         walletPrivateKey,
                         properties.getTokenOwnerAddress(),
-                        RECLAIM_ALLOWANCE
+                        Long.toString(reclaimAmount)
                 ))
         );
         assertSuccessful("DaeguChain reward reclaim approval failed", response);

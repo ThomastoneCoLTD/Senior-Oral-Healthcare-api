@@ -35,21 +35,20 @@ public class AWSS3Service {
 
     // 업로드
     public String upload(MultipartFile file, String path, boolean isTime) throws IOException {
-        String originFileName = file.getOriginalFilename();
-        String fileName = isTime
-                ? originFileName.substring(0, originFileName.lastIndexOf('.')) + "_" + System.currentTimeMillis() +
-                "." + originFileName.substring(originFileName.lastIndexOf('.') + 1)
-                : originFileName;
+        var imageType = com.kaii.dentix.global.security.ImageUploadValidator.validate(file);
+        String fileName = java.util.UUID.randomUUID() + "." + imageType.extension();
         String filePath = path + fileName;
 
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(filePath)
-                .contentType(file.getContentType())
+                .contentType(imageType.contentType())
 //                .acl(ObjectCannedACL.PUBLIC_READ)
                 .build();
 
-        s3.putObject(putObjectRequest, software.amazon.awssdk.core.sync.RequestBody.fromBytes(file.getBytes()));
+        try (var input = file.getInputStream()) {
+            s3.putObject(putObjectRequest, RequestBody.fromInputStream(input, file.getSize()));
+        }
 
         // 업로드 결과 경로 (공개 버킷 기준)
         return "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + filePath;
@@ -66,7 +65,7 @@ public class AWSS3Service {
             ResponseBytes<GetObjectResponse> objectBytes = s3.getObjectAsBytes(getObjectRequest);
             return objectBytes.asByteArray();
         } catch (SdkException e) {
-            throw new IOException("S3 파일 다운로드 중 오류 발생: " + e.getMessage(), e);
+            throw new IOException("S3 파일 다운로드 중 오류 발생", e);
         }
     }
 
@@ -91,39 +90,6 @@ public class AWSS3Service {
         String url = presigner.presignGetObject(presignRequest).url().toString();
         presigner.close(); // presigner 리소스 닫기
         return url;
-    }
-
-    /**
-     * S3 파일 업로드 및 삭제
-     * @param file - 업로드 파일 정보
-     * @param key - 파일 경로
-     * @return
-     * @throws IOException
-     * @throws NoSuchAlgorithmException
-     * @throws InvalidKeyException
-     */
-    public String uploadAndDelete(byte[] file, String path, String key) throws IOException, InterruptedException {
-        // 1. 기존 파일 삭제 (key가 null 아니면)
-        if (key != null) {
-            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(key)
-                    .build();
-            s3.deleteObject(deleteRequest);
-        }
-
-        // 2. 새 파일 업로드
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(path)
-                .contentType("application/octet-stream") // 필요시 contentType 수정
-                .acl("public-read") // 공개 버킷이면 (v2는 String으로 세팅)
-                .build();
-
-        s3.putObject(putObjectRequest, RequestBody.fromBytes(file));
-
-        // 3. 업로드 결과 경로
-        return "https://" + bucketName + ".s3." + region + ".amazonaws.com/" + path;
     }
 
     /**

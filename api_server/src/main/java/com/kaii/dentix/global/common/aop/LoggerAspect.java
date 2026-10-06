@@ -62,7 +62,7 @@ public class LoggerAspect {
 			.requestUrl(loggerDTO.getRequestUrl())
 			.header(loggerDTO.getHeader())
 			.requestBody(loggerDTO.getRequestBody())
-			.responseBody(serializeForLog(returnObj))
+			.responseBody(isChainRequest() ? "[chain payload omitted]" : serializeForLog(returnObj))
 			.build());
 
 		log.info("::: AOP writeSuccessLog End :::");
@@ -163,7 +163,7 @@ public class LoggerAspect {
 			.requestName(requestName)
 			.requestUrl(request.getRequestURL().toString())
 			.header(serializeForLog(headers))
-			.requestBody(serializeForLog(requestBody))
+			.requestBody(isChainRequest() ? "[chain payload omitted]" : serializeForLog(requestBody))
 			.build();
 	}
 
@@ -171,6 +171,12 @@ public class LoggerAspect {
 		JsonNode node = objectMapper.valueToTree(value);
 		maskSensitiveFields(node);
 		return objectMapper.writeValueAsString(node);
+	}
+
+	private boolean isChainRequest() {
+		HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+		String path = request.getRequestURI().substring(request.getContextPath().length());
+		return path.startsWith("/daegu-chain/") || path.startsWith("/admin/daegu-chain/");
 	}
 
 	private void maskSensitiveFields(JsonNode node) {
@@ -192,6 +198,16 @@ public class LoggerAspect {
 	private boolean isSensitiveKey(String key) {
 		String normalized = key == null ? "" : key.replace("_", "").toLowerCase();
 		return normalized.equals("authorization")
+			|| normalized.equals("cookie")
+			|| normalized.equals("set-cookie")
+			|| normalized.contains("pkey")
+			|| normalized.contains("mnemonic")
+			|| normalized.contains("seed")
+			|| normalized.contains("answer")
+			|| normalized.contains("phone")
+			|| normalized.contains("birth")
+			|| normalized.contains("email")
+			|| normalized.endsWith("name")
 			|| normalized.equals("surveyanswers")
 			|| normalized.equals("surveyscores")
 			|| normalized.equals("credential")

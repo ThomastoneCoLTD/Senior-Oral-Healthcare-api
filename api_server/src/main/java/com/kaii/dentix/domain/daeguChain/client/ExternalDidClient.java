@@ -35,7 +35,11 @@ public class ExternalDidClient {
             DaeguChainApiAuditService auditService
     ) {
         this.properties = properties;
-        this.restTemplate = restTemplateBuilder.build();
+        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(
+                java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NEVER)
+                        .connectTimeout(java.time.Duration.ofSeconds(10)).build());
+        factory.setReadTimeout(java.time.Duration.ofSeconds(25));
+        this.restTemplate = restTemplateBuilder.requestFactory(() -> factory).build();
         this.auditService = auditService;
     }
 
@@ -66,7 +70,7 @@ public class ExternalDidClient {
             return responseBody;
         } catch (RestClientException | NullPointerException exception) {
             BadRequestApiException apiException =
-                    new BadRequestApiException("DID server API call failed: " + exception.getMessage());
+                    new BadRequestApiException("DID server API call failed");
             recordFailure(api, body, apiException);
             throw apiException;
         }

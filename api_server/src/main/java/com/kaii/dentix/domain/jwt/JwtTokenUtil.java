@@ -54,6 +54,7 @@ public class JwtTokenUtil {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", UserRole.ROLE_ADMIN.name());
+        if (tokenType == TokenType.AccessToken) claims.put("session", sessionHash(admin.getAdminRefreshToken()));
         claims.put("adminIsSuper", admin.getAdminIsSuper().name());
 
         if (admin.getOrganization() != null) {
@@ -64,6 +65,7 @@ public class JwtTokenUtil {
 
         return Jwts.builder()
                 .setClaims(claims)
+                .setId(UUID.randomUUID().toString())
                 .setSubject(String.valueOf(admin.getAdminId()))
                 .setIssuedAt(now)
                 .setExpiration(new Date(now.getTime() + tokenType.getValidTime()))
@@ -79,11 +81,13 @@ public class JwtTokenUtil {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", UserRole.ROLE_USER.name());
+        if (tokenType == TokenType.AccessToken) claims.put("session", sessionHash(user.getUserRefreshToken()));
 
         Date now = new Date();
 
         return Jwts.builder()
                 .setClaims(claims)
+                .setId(UUID.randomUUID().toString())
                 .setSubject(String.valueOf(user.getUserId()))
                 .setIssuedAt(now)
                 .setExpiration(new Date(now.getTime() + tokenType.getValidTime()))
@@ -110,7 +114,14 @@ public class JwtTokenUtil {
     public UsernamePasswordAuthenticationToken getAuthentication(String token, TokenType tokenType) {
         Claims claims = getClaims(token, tokenType);
         String role = claims.get("roles", String.class);
-        String isSuper = claims.get("adminIsSuper", String.class);
+        String isSuper = "N";
+        if (UserRole.ROLE_ADMIN.name().equals(role)) {
+            Admin admin = adminRepository.findById(Long.valueOf(claims.getSubject()))
+                    .orElseThrow(com.kaii.dentix.global.common.error.exception.UnauthorizedException::new);
+            isSuper = admin.isSuperAdmin() ? "Y" : "N";
+        } else if (!UserRole.ROLE_USER.name().equals(role)) {
+            throw new com.kaii.dentix.global.common.error.exception.UnauthorizedException();
+        }
 
         List<GrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority(role)); // ROLE_ADMIN
@@ -165,13 +176,36 @@ public class JwtTokenUtil {
         UserRole role = getRoles(token, tokenType);
 
         if (role == UserRole.ROLE_USER) {
-            return userRepository.findById(id).isEmpty();
+            return userRepository.findById(id).map(user -> !validSession(token, tokenType, user.getUserRefreshToken(), user.getUserLastLoginDate())).orElse(true);
         }
         if (role == UserRole.ROLE_ADMIN) {
-            return adminRepository.findById(id).isEmpty();
+            return adminRepository.findById(id).map(admin -> !validSession(token, tokenType, admin.getAdminRefreshToken(), admin.getAdminLastLoginDate())).orElse(true);
         }
 
         return true;
+    }
+
+    private boolean validSession(String token, TokenType tokenType, String storedRefresh, Date lastLogin) {
+        if (storedRefresh == null || storedRefresh.isBlank()) return false;
+        if (isExpired(storedRefresh, TokenType.RefreshToken)) return false;
+        if (tokenType == TokenType.RefreshToken) return java.security.MessageDigest.isEqual(
+                token.getBytes(StandardCharsets.UTF_8), storedRefresh.getBytes(StandardCharsets.UTF_8));
+        Claims claims = getClaims(token, tokenType);
+        String session = claims.get("session", String.class);
+        if (session != null) return java.security.MessageDigest.isEqual(
+                session.getBytes(StandardCharsets.UTF_8), sessionHash(storedRefresh).getBytes(StandardCharsets.UTF_8));
+        // Preserve already-issued sessions during rollout. Legacy tokens cannot outlive their refresh token.
+        return lastLogin == null || claims.getIssuedAt().getTime() / 1000 >= lastLogin.getTime() / 1000;
+    }
+
+    private String sessionHash(String refreshToken) {
+        try {
+            byte[] bytes = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest((refreshToken == null ? "" : refreshToken).getBytes(StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(bytes);
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("Session hashing is unavailable.", exception);
+        }
     }
 
     public Long getCurrentAdminId() {
@@ -184,20 +218,17 @@ public class JwtTokenUtil {
         String token = getAccessToken(request);
         if (token == null) return false;
 
-        Claims claims = getClaims(token, TokenType.AccessToken);
-        return "Y".equalsIgnoreCase(claims.get("adminIsSuper", String.class));
+        if (getRoles(token, TokenType.AccessToken) != UserRole.ROLE_ADMIN) return false;
+        return adminRepository.findById(getUserId(token, TokenType.AccessToken)).map(Admin::isSuperAdmin).orElse(false);
     }
 
     public Long getOrganizationIdFromToken(HttpServletRequest request) {
         String token = getAccessToken(request);
         if (token == null) return null;
 
-        Object orgId = getClaims(token, TokenType.AccessToken).get("organizationId");
-        if (orgId == null) return null;
-
-        if (orgId instanceof Integer) return ((Integer) orgId).longValue();
-        if (orgId instanceof Long) return (Long) orgId;
-
-        return Long.valueOf(orgId.toString());
+        if (getRoles(token, TokenType.AccessToken) != UserRole.ROLE_ADMIN) return null;
+        return adminRepository.findByIdWithOrganization(getUserId(token, TokenType.AccessToken))
+                .map(Admin::getOrganization).map(com.kaii.dentix.domain.organization.domain.Organization::getOrganizationId)
+                .orElse(null);
     }
 }

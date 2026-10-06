@@ -1,4 +1,4 @@
-FROM amazoncorretto:17.0.7-alpine3.17
+FROM amazoncorretto:17-alpine-jdk
 LABEL maintainer="hana0142@thomastone.co.kr"
 
 # 빌드 타임 ARG (기본값 dev)
@@ -7,7 +7,10 @@ ARG SPRING_PROFILES_ACTIVE=dev
 ENV SPRING_PROFILES_ACTIVE=$SPRING_PROFILES_ACTIVE
 
 # JAR 복사
-COPY ./build/libs/*.jar application.jar
+RUN addgroup -S soh && adduser -S -G soh soh
+WORKDIR /app
+COPY --chown=soh:soh ./build/libs/*.jar application.jar
+USER soh
 
 # 실행
 CMD ["java", "-jar", "./application.jar"]

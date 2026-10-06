@@ -105,27 +105,16 @@ public class UserRewardService {
                         .build());
 
         assertNoUnresolvedTransfer(userId);
-        String daeguDid = connectRequest == null ? null : connectRequest.getDaeguDid();
-        String walletAddress = connectRequest == null ? null : connectRequest.getWalletAddress();
-
-        if (isBlank(walletAddress) && !isBlank(daeguDid)) {
-            walletAddress = extractAddressFromDid(daeguDid);
+        if (connectRequest != null && (!isBlank(connectRequest.getWalletAddress()) || !isBlank(connectRequest.getDaeguDid()))) {
+            throw new BadRequestApiException("지갑 주소는 서버에서 생성한 계정으로만 연결할 수 있습니다.");
         }
-
-        if (isBlank(wallet.getWalletAddress()) && isBlank(walletAddress)) {
+        // Retain an existing wallet. Never accept an address or DID chosen by a caller.
+        syncWalletFromUser(userId, wallet);
+        if (isBlank(wallet.getWalletAddress())) {
             DidWallet didWallet = createDidWallet(userId);
-            if (isBlank(daeguDid)) {
-                daeguDid = didWallet.did();
-            }
-            walletAddress = didWallet.walletAddress();
+            wallet.updateDaeguWallet(didWallet.did(), didWallet.walletAddress());
             wallet.updateWalletPrivateKeyCiphertext(didWallet.privateKeyCiphertext());
         }
-
-        if (isBlank(walletAddress) && isBlank(wallet.getWalletAddress())) {
-            throw new BadRequestApiException("walletAddress is required");
-        }
-
-        wallet.updateDaeguWallet(daeguDid, walletAddress);
         resetWalletToRewardedPointBalance(userId, wallet);
         UserRewardWallet savedWallet = userRewardWalletRepository.save(wallet);
 

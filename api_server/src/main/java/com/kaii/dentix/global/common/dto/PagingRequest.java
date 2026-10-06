@@ -14,7 +14,7 @@ public class PagingRequest {
     public PageRequest of() {
 
         int safePage = (page == null || page < 1) ? 1 : page;
-        int safeSize = (size == null || size < 1) ? 10 : size;
+        int safeSize = (size == null || size < 1) ? 10 : Math.min(size, 100);
 
         // 1-based → 0-based
         return PageRequest.of(safePage - 1, safeSize);

@@ -16,9 +16,9 @@ import com.kaii.dentix.global.common.error.exception.AlreadyDataException;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
-import com.kaii.dentix.global.common.util.SecurityUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import com.kaii.dentix.global.security.AdminAccessGuard;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +32,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AdminService {
 
+    private static final java.security.SecureRandom PASSWORD_RANDOM = new java.security.SecureRandom();
+
+    private final AdminAccessGuard accessGuard;
     private final ModelMapper modelMapper;
     private final JwtTokenUtil jwtTokenUtil;
     private final AdminRepository adminRepository;
@@ -44,6 +47,9 @@ public class AdminService {
     @Transactional(readOnly = true)
     public Admin getTokenAdmin(HttpServletRequest servletRequest) {
         String token = jwtTokenUtil.getAccessToken(servletRequest);
+        if (token == null || jwtTokenUtil.isExpired(token, TokenType.AccessToken) || jwtTokenUtil.isUnauthorized(token, TokenType.AccessToken)) {
+            throw new UnauthorizedException("유효한 관리자 로그인이 필요합니다.");
+        }
         UserRole role = jwtTokenUtil.getRoles(token, TokenType.AccessToken);
 
         // 관리자 또는 슈퍼관리자만 접근 가능
@@ -72,6 +78,7 @@ public class AdminService {
      */
     @Transactional
     public AdminAuthDto.SignUpResponse adminSignUp(AdminAuthDto.SignUpRequest request) {
+        accessGuard.requireSuperAdmin();
         // 연락처 중복 확인
         Optional<Admin> existAdmin = adminRepository.findByAdminPhoneNumber(request.getPhoneNumber());
         if (existAdmin.isPresent()) {
@@ -121,6 +128,7 @@ public class AdminService {
      */
     @Transactional
     public void adminDelete(Long adminId) {
+        accessGuard.requireSuperAdmin();
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
         admin.deleteAdmin();
@@ -130,17 +138,16 @@ public class AdminService {
      * 관리자 비밀번호 초기화
      */
     @Transactional
-    public AdminAuthDto.ModifyPasswordRequest adminPasswordReset(Long adminId) {
+    public AdminAuthDto.ResetPasswordResponse adminPasswordReset(Long adminId) {
+        accessGuard.requireSuperAdmin();
         Admin admin = adminRepository.findById(adminId)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
 
-        // 기본 비밀번호로 초기화
-        admin.updatePassword(passwordEncoder, SecurityUtil.defaultPassword);
-
-        // 초기화된 비밀번호 반환 (임시로 ModifyPasswordRequest 활용하거나 별도 Response 생성 권장)
-        AdminAuthDto.ModifyPasswordRequest response = new AdminAuthDto.ModifyPasswordRequest();
-        response.setPassword(SecurityUtil.defaultPassword);
-        return response;
+        String alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+        StringBuilder password = new StringBuilder("Aa9!");
+        for (int i = 0; i < 12; i++) password.append(alphabet.charAt(PASSWORD_RANDOM.nextInt(alphabet.length())));
+        admin.updatePassword(passwordEncoder, password.toString());
+        return new AdminAuthDto.ResetPasswordResponse(password.toString());
     }
 
     /**
@@ -149,6 +156,7 @@ public class AdminService {
      */
     @Transactional(readOnly = true)
     public AdminDto.ListResponse adminList(AdminDto.SearchRequest request) {
+        accessGuard.requireSuperAdmin();
         Page<AdminAccountDto> pageResult = adminRepository.findAllByNotSuper(request);
         List<AdminDto.Summary> summaryList = pageResult.getContent().stream()
                 .map(a -> AdminDto.Summary.builder()
@@ -168,10 +176,14 @@ public class AdminService {
     /**
      * 관리자 자동 로그인
      */
+    @Transactional
     public AdminAuthDto.AutoLoginResponse adminAutoLogin(HttpServletRequest httpServletRequest) {
         Admin admin = this.getTokenAdmin(httpServletRequest);
         String accessToken = jwtTokenUtil.createToken(admin, TokenType.AccessToken);
-        String refreshToken = jwtTokenUtil.createToken(admin, TokenType.RefreshToken);
+        String refreshToken = admin.getAdminRefreshToken();
+        if (refreshToken == null || jwtTokenUtil.isExpired(refreshToken, TokenType.RefreshToken)) {
+            throw new UnauthorizedException("다시 로그인해 주세요.");
+        }
         admin.updateAdminLogin(refreshToken);
 
         return AdminAuthDto.AutoLoginResponse.from(admin, accessToken, refreshToken);

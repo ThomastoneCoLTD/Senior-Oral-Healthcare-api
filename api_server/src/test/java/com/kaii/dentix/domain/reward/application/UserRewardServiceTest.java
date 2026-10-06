@@ -103,6 +103,14 @@ class UserRewardServiceTest {
     }
 
     @Test
+    void callerSelectedWalletIsRejectedBeforeSavingOrProvisioning() {
+        var connect = new UserRewardDto.WalletConnectRequest("did:attacker", "attacker-wallet");
+        assertThatThrownBy(() -> service.connectWallet(request, connect)).isInstanceOf(BadRequestApiException.class);
+        verify(walletRepository, never()).save(any());
+        verifyNoInteractions(rewardWalletProvisioningService, daeguChainDidService, externalTokenClient);
+    }
+
+    @Test
     void contractLookupFailureDoesNotPersistAnApparentlyReceivedLocalReward() {
         ((UserRewardProperties) org.springframework.test.util.ReflectionTestUtils.getField(service, "userRewardProperties"))
                 .setTokenTransferEnabled(true);
@@ -410,7 +418,7 @@ class UserRewardServiceTest {
                 7L,
                 "0x-token-contract",
                 "0x-user-wallet",
-                "encrypted-private-key"
+                "encrypted-private-key", 1L
         );
         verify(transactionRepository).save(argThat(transaction ->
                 transaction.getCoinId().equals("essential_video_1")

@@ -30,9 +30,23 @@ class WebSecurityConfigTest {
     private JwtTokenUtil jwtTokenUtil;
 
     @Test
-    void administratorRegistrationRemainsPublic() throws Exception {
+    void administratorRegistrationRequiresSuperAdministrator() throws Exception {
         mockMvc.perform(post("/admin/account"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/admin/account").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/admin/account").with(user("super").roles("SUPER_ADMIN")))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void superAdminAndChainAdministrationRejectOtherRoles() throws Exception {
+        for (String path : new String[]{"/superadmin/probe", "/admin/daegu-chain/probe", "/api/aws/metrics/probe"}) {
+            mockMvc.perform(get(path)).andExpect(status().isForbidden());
+            mockMvc.perform(get(path).with(user("user").roles("USER"))).andExpect(status().isForbidden());
+            mockMvc.perform(get(path).with(user("admin").roles("ADMIN"))).andExpect(status().isForbidden());
+            mockMvc.perform(get(path).with(user("super").roles("SUPER_ADMIN"))).andExpect(status().isOk());
+        }
     }
 
     @Test
@@ -85,6 +99,9 @@ class WebSecurityConfigTest {
 
     @RestController
     static class SecurityProbeController {
+
+        @GetMapping({"/superadmin/probe", "/admin/daegu-chain/probe", "/api/aws/metrics/probe"})
+        void restrictedAdministration() {}
 
         @PostMapping("/admin/account")
         void registerAdministrator() {

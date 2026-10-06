@@ -11,6 +11,7 @@ import com.kaii.dentix.global.common.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.kaii.dentix.global.security.AdminAccessGuard;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @RequestMapping("/admin/organization")
 public class AdminOrganizationController {
+    private final AdminAccessGuard accessGuard;
     private final AdminService adminService;
     private final OrganizationService organizationService;
     private final AdminOrganizationService adminOrganizationService;
@@ -55,6 +57,7 @@ public class AdminOrganizationController {
             @Valid @RequestBody OrganizationDto.UpdateRequest request
     ) {
         Admin admin = adminService.getTokenAdmin(httpServletRequest);
+        accessGuard.requireOrganization(organizationId);
         organizationService.updateOrganization(organizationId, request, admin.getAdminId());
 
         return new SuccessResponse(200, "기관 정보 수정 완료");
@@ -75,6 +78,7 @@ public class AdminOrganizationController {
     /** SUPER_ADMIN 기관 단건 조회 */
     @GetMapping("/{organizationId}")
     public ResponseEntity<OrganizationDto.Response> getOrganization(@PathVariable Long organizationId) {
+        accessGuard.requireOrganization(organizationId);
         OrganizationDto.Response response = organizationService.getOrganizationById(organizationId);
         return ResponseEntity.ok(response);
     }
@@ -83,6 +87,7 @@ public class AdminOrganizationController {
     @GetMapping("/super")
     public ResponseEntity<List<OrganizationDto.Response>> getAllOrganizations() {
         log.info("[슈퍼관리자] 전체 기관 정보 조회 요청");
+        accessGuard.requireSuperAdmin();
         List<OrganizationDto.Response> organizations = organizationService.getAllOrganizations();
 
         return ResponseEntity.ok(organizations);

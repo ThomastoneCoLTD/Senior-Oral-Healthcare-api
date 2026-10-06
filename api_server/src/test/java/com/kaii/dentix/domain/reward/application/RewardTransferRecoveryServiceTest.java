@@ -97,18 +97,17 @@ class RewardTransferRecoveryServiceTest {
         verifyNoInteractions(token);
     }
 
-    @Test void exactConfirmedReceiptRestoresPointsOnceAndApprovalFailureDoesNotUndoIt() throws Exception {
+    @Test void exactConfirmedReceiptRestoresPointsOnceWithoutProactiveApproval() throws Exception {
         reward.claimTransfer(new Date(0));reward.awaitConfirmation(hash,"UPSTREAM_UNCONFIRMED");due();
         when(chain.getTransaction(any())).thenReturn(new DaeguChainDto.ApiResponse<>("OK",null,"",mapper.readTree("""
                 {"height":100,"in_state":true,"operation":{"fact":{"hash":"%s","sender":"owner",
                  "items":[{"receiver":"wallet","contract":"contract","amount":"1"}]}}}
                 """.formatted(hash)),null));
-        doThrow(new RuntimeException("approval unavailable")).when(provisioning).approveRewardContract(anyLong(),anyString(),anyString(),any());
         service.process(10L);service.process(10L);
         assertThat(reward.getStatus()).isEqualTo(UserRewardTransactionStatus.TOKEN_TRANSFERRED);
         assertThat(reward.getTransferRecoveredAt()).isNotNull();
         assertThat(wallet.getPointBalance()).isEqualTo(1);
-        verifyNoInteractions(token);
+        verifyNoInteractions(token, provisioning);
     }
 
     @Test void malformedReceiptOrReceiptForAnotherWalletCannotCreditOrTriggerRetry() throws Exception {

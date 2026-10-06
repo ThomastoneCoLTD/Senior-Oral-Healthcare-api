@@ -110,7 +110,10 @@ public class OrganizationService {
     public OrganizationDto.Response findByPhoneNumber(String phoneNumber) {
         Organization organization = organizationRepository.findByPhoneWithPlan(phoneNumber)
                 .orElseThrow(() -> new IllegalArgumentException("해당 전화번호로 등록된 기관이 없습니다."));
-        return OrganizationDto.Response.from(organization);
+        return OrganizationDto.Response.builder()
+                .organizationId(organization.getOrganizationId())
+                .organizationName(organization.getOrganizationName())
+                .build();
     }
 
     private void saveHistory(Organization org, String field, String beforeValue, String afterValue, Long adminId) {

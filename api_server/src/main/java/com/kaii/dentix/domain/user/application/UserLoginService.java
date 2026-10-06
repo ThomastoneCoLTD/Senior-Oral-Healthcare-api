@@ -129,9 +129,9 @@ public class UserLoginService {
 
         String walletAddress = userDaeguProvisioningService.provisionForSignUp(user);
 
-        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
+        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
 
         serviceAgreementConsentService.saveUserServiceAgreements(
                 user.getUserId(),
@@ -181,9 +181,9 @@ public class UserLoginService {
                 request.getUserServiceAgreementRequest()
         );
 
-        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
+        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
 
         return buildSignUpResponse(user, organization, accessToken, refreshToken, walletAddress);
     }
@@ -295,9 +295,9 @@ public class UserLoginService {
             throw new UnauthorizedException("User is not verified.");
         }
 
-        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
+        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         recordLoginHistory(user);
 
         return buildLoginResponse(user, accessToken, refreshToken);
@@ -305,9 +305,9 @@ public class UserLoginService {
 
     @Transactional
     public UserDto.LoginResponse completeAuthenticatedLogin(User user) {
-        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         String refreshToken = jwtTokenUtil.createToken(user, TokenType.RefreshToken);
         user.updateLogin(refreshToken);
+        String accessToken = jwtTokenUtil.createToken(user, TokenType.AccessToken);
         recordLoginHistory(user);
         return buildLoginResponse(user, accessToken, refreshToken);
     }

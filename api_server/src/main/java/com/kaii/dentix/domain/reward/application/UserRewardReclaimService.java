@@ -169,7 +169,8 @@ public class UserRewardReclaimService {
                             userId,
                             tokenContractAddress,
                             wallet.getWalletAddress(),
-                            wallet.getWalletPrivateKeyCiphertext()
+                            wallet.getWalletPrivateKeyCiphertext(),
+                            rewardTransaction.getAmount()
                     );
                 }
                 JsonNode response = DaeguChainApiLogContext.withUser(
@@ -307,7 +308,8 @@ public class UserRewardReclaimService {
                         userId,
                         transferContractAddress,
                         wallet.getWalletAddress(),
-                        wallet.getWalletPrivateKeyCiphertext()
+                        wallet.getWalletPrivateKeyCiphertext(),
+                        rewardTransaction.getAmount()
                 );
                 JsonNode response = DaeguChainApiLogContext.withUser(
                         userId,

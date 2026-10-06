@@ -37,7 +37,8 @@ public class AiModelService {
     private final ObjectMapper objectMapper;
 
     public AiModelService(RestTemplateBuilder restTemplateBuilder, ObjectMapper objectMapper) {
-        this.restTemplate = restTemplateBuilder.build();
+        this.restTemplate = restTemplateBuilder.connectTimeout(java.time.Duration.ofSeconds(10))
+                .readTimeout(java.time.Duration.ofSeconds(90)).build();
         this.objectMapper = objectMapper;
     }
 

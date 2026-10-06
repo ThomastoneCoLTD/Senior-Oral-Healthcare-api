@@ -73,6 +73,7 @@ public class Admin extends TimeEntity {
      */
     public void updatePassword(PasswordEncoder passwordEncoder, String adminPassword) {
         this.adminPassword = passwordEncoder.encode(adminPassword);
+        this.adminRefreshToken = null;
     }
 
     /**
