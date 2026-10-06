@@ -9,6 +9,7 @@ import org.hibernate.annotations.Where;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Date;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -34,6 +35,31 @@ public class Admin extends TimeEntity {
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "ENUM('Y','N') DEFAULT 'N'", nullable = false)
     private YnType adminIsSuper;
+
+    // NULL denotes an account created before the approval workflow was introduced.
+    // Public registration always explicitly stores PENDING.
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20, columnDefinition = "varchar(20)")
+    private AdminApprovalStatus approvalStatus;
+
+    private LocalDateTime approvedAt;
+    private Long approvedByAdminId;
+
+    public AdminApprovalStatus effectiveApprovalStatus() {
+        return approvalStatus == null ? AdminApprovalStatus.APPROVED : approvalStatus;
+    }
+
+    public boolean isApproved() {
+        return effectiveApprovalStatus() == AdminApprovalStatus.APPROVED;
+    }
+
+    public void approve(Long approvingAdminId) {
+        if (isApproved()) return;
+        approvalStatus = AdminApprovalStatus.APPROVED;
+        approvedAt = LocalDateTime.now();
+        approvedByAdminId = approvingAdminId;
+        adminRefreshToken = null;
+    }
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date adminLastLoginDate;

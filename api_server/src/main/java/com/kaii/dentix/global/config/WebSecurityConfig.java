@@ -132,7 +132,8 @@ public class WebSecurityConfig {
                                 "/api/actuator/health",
                                 "/api/actuator/health/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/admin/account").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/admin/account").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/admin/account/*/approve").hasRole("SUPER_ADMIN")
                         .requestMatchers("/superadmin/**", "/admin/daegu-chain/**", "/admin/organization/super", "/api/aws/**", "/aws/**", "/cloudwatch/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(EXCLUDE_URLS).permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/admin/account").hasRole("SUPER_ADMIN")

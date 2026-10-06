@@ -337,7 +337,10 @@ public class AdminControllerTest {
                                 fieldWithPath("response.adminList[].name").type(JsonFieldType.STRING).description("관리자 이름"),   // 변경됨
                                 fieldWithPath("response.adminList[].phoneNumber").type(JsonFieldType.STRING).attributes(userNumberFormat()).description("관리자 연락처"), // 변경됨
                                 fieldWithPath("response.adminList[].createdDate").type(JsonFieldType.STRING).description("관리자 가입일"), // 변경됨
-                                fieldWithPath("response.adminList[].isSuper").type(JsonFieldType.STRING).attributes(yesNoFormat()).description("슈퍼 관리자 여부")
+                                fieldWithPath("response.adminList[].isSuper").type(JsonFieldType.STRING).attributes(yesNoFormat()).description("슈퍼 관리자 여부"),
+                                fieldWithPath("response.adminList[].approvalStatus").optional().description("PENDING 또는 APPROVED"),
+                                fieldWithPath("response.adminList[].organizationId").optional().description("기관 ID, 미등록이면 null"),
+                                fieldWithPath("response.adminList[].organizationName").optional().description("기관 이름, 미등록이면 null")
                         )
                 ));
 

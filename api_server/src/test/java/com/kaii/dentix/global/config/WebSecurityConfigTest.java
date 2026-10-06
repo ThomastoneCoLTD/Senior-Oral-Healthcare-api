@@ -30,13 +30,21 @@ class WebSecurityConfigTest {
     private JwtTokenUtil jwtTokenUtil;
 
     @Test
-    void administratorRegistrationRequiresSuperAdministrator() throws Exception {
+    void administratorRegistrationAcceptsPublicApplications() throws Exception {
         mockMvc.perform(post("/admin/account"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
         mockMvc.perform(post("/admin/account").with(user("admin").roles("ADMIN")))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
         mockMvc.perform(post("/admin/account").with(user("super").roles("SUPER_ADMIN")))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void approvalRequiresSuperAdministrator() throws Exception {
+        mockMvc.perform(post("/admin/account/7/approve")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/admin/account/7/approve").with(user("user").roles("USER"))).andExpect(status().isForbidden());
+        mockMvc.perform(post("/admin/account/7/approve").with(user("admin").roles("ADMIN"))).andExpect(status().isForbidden());
+        mockMvc.perform(post("/admin/account/7/approve").with(user("super").roles("SUPER_ADMIN"))).andExpect(status().isOk());
     }
 
     @Test
@@ -106,6 +114,9 @@ class WebSecurityConfigTest {
         @PostMapping("/admin/account")
         void registerAdministrator() {
         }
+
+        @PostMapping("/admin/account/{adminId}/approve")
+        void approveAdministrator() {}
 
         @GetMapping("/admin/account/list")
         void listAdministrators() {

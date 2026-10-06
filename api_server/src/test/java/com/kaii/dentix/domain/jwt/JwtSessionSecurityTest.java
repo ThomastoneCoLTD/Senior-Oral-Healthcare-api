@@ -65,4 +65,21 @@ class JwtSessionSecurityTest {
         assertThat(jwt.isUnauthorized(access, TokenType.AccessToken)).isTrue();
         assertThat(jwt.isUnauthorized(refresh, TokenType.RefreshToken)).isTrue();
     }
+
+    @Test void pendingAdminCannotUseExistingTokensOrMintNewTokens() {
+        Admin admin = Admin.builder().adminId(9L).adminIsSuper(YnType.N).build();
+        when(admins.findById(9L)).thenReturn(Optional.of(admin));
+        String refresh = jwt.createToken(admin, TokenType.RefreshToken);
+        admin.updateAdminLogin(refresh);
+        String access = jwt.createToken(admin, TokenType.AccessToken);
+        admin.setApprovalStatus(com.kaii.dentix.domain.admin.domain.AdminApprovalStatus.PENDING);
+        assertThat(jwt.isUnauthorized(access, TokenType.AccessToken)).isTrue();
+        assertThat(jwt.isUnauthorized(refresh, TokenType.RefreshToken)).isTrue();
+        assertThatThrownBy(() -> jwt.getAuthentication(access, TokenType.AccessToken))
+                .isInstanceOf(com.kaii.dentix.global.common.error.exception.UnauthorizedException.class);
+        for (TokenType type : TokenType.values()) {
+            assertThatThrownBy(() -> jwt.createToken(admin, type))
+                    .isInstanceOf(com.kaii.dentix.global.common.error.exception.UnauthorizedException.class);
+        }
+    }
 }

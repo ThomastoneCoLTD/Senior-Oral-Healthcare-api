@@ -1,6 +1,9 @@
 package com.kaii.dentix.domain.admin.dao;
 
 import com.kaii.dentix.domain.admin.domain.QAdmin;
+import com.kaii.dentix.domain.admin.domain.AdminApprovalStatus;
+import com.kaii.dentix.domain.organization.domain.QOrganization;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.kaii.dentix.domain.admin.dto.AdminAccountDto;
 import com.kaii.dentix.domain.type.YnType;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
@@ -24,6 +27,7 @@ public class AdminRepositoryImpl implements AdminCustomRepository {
 
     private final JPAQueryFactory queryFactory;
     private final QAdmin admin = QAdmin.admin;
+    private final QOrganization organization = QOrganization.organization;
 
     /**
      *  관리자 페이징 목록
@@ -34,18 +38,21 @@ public class AdminRepositoryImpl implements AdminCustomRepository {
         Pageable paging = new PagingRequest(request.getPage(), request.getSize()).of();
 
         // fetchCount Deprecated 로 인해 count 쿼리 구현
-        long total = Optional.ofNullable(queryFactory.select(admin.count()).from(admin).where(admin.adminIsSuper.eq(YnType.N)).fetchOne())
+        long total = Optional.ofNullable(queryFactory.select(admin.count()).from(admin).where(admin.adminIsSuper.eq(YnType.N), admin.deleted.isNull()).fetchOne())
                 .orElse(0L);
 
         // total 이 0보다 크면 조건에 맞게 페이징 처리 , 0 이면 빈 리스트 반환
         List<AdminAccountDto> result = total > 0 ? queryFactory
                 .select(Projections.constructor(AdminAccountDto.class,
                         admin.adminId, admin.adminLoginIdentifier, admin.adminName, admin.adminPhoneNumber,
-                        Expressions.stringTemplate("DATE_FORMAT({0}, {1})", admin.created, "%Y-%m-%d")
+                        Expressions.stringTemplate("DATE_FORMAT({0}, {1})", admin.created, "%Y-%m-%d"),
+                        admin.approvalStatus, organization.organizationId, organization.organizationName
                 ))
                 .from(admin)
-                .where(admin.adminIsSuper.eq(YnType.N))
-                .orderBy(admin.created.desc())
+                .leftJoin(admin.organization, organization)
+                .where(admin.adminIsSuper.eq(YnType.N), admin.deleted.isNull())
+                .orderBy(new CaseBuilder().when(admin.approvalStatus.eq(AdminApprovalStatus.PENDING)).then(0).otherwise(1).asc(),
+                        admin.created.desc(), admin.adminId.desc())
                 .offset(paging.getOffset())
                 .limit(paging.getPageSize())
                 .fetch() : new ArrayList<>();

@@ -51,6 +51,10 @@ public class AdminLoginService {
             throw new UnauthorizedException("입력하신 정보가 일치하지 않습니다. 다시 확인해주세요.");
         }
 
+        if (!admin.isApproved()) {
+            throw new UnauthorizedException("슈퍼관리자 승인 대기 중입니다. 승인 후 로그인할 수 있습니다.");
+        }
+
         // 4. 토큰 생성
         String refreshToken = jwtTokenUtil.createToken(admin, TokenType.RefreshToken);
 

@@ -27,6 +27,11 @@ public class AdminController {
         return new DataResponse<>(adminService.adminSignUp(request));
     }
 
+    @PostMapping(value = "/{adminId}/approve", name = "기관 관리자 승인")
+    public DataResponse<AdminDto.Summary> approveAdmin(@PathVariable Long adminId) {
+        return new DataResponse<>(adminService.approveAdmin(adminId));
+    }
+
     /**
      * 관리자 비밀번호 변경
      */

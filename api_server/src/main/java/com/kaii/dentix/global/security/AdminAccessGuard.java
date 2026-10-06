@@ -26,8 +26,10 @@ public class AdminAccessGuard {
             throw new UnauthorizedException("관리자 권한이 필요합니다.");
         }
         try {
-            return adminRepository.findByIdWithOrganization(Long.valueOf(auth.getName()))
+            Admin admin = adminRepository.findByIdWithOrganization(Long.valueOf(auth.getName()))
                     .orElseThrow(UnauthorizedException::new);
+            if (!admin.isApproved()) throw new UnauthorizedException("슈퍼관리자 승인이 필요합니다.");
+            return admin;
         } catch (NumberFormatException exception) {
             throw new UnauthorizedException();
         }

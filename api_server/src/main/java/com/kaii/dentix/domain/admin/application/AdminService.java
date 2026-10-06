@@ -60,6 +60,7 @@ public class AdminService {
         Long adminId = jwtTokenUtil.getUserId(token, TokenType.AccessToken);
 
         return adminRepository.findByIdWithOrganizationAndPlan(adminId)
+                .filter(Admin::isApproved)
                 .orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
     }
 
@@ -78,7 +79,6 @@ public class AdminService {
      */
     @Transactional
     public AdminAuthDto.SignUpResponse adminSignUp(AdminAuthDto.SignUpRequest request) {
-        accessGuard.requireSuperAdmin();
         // 연락처 중복 확인
         Optional<Admin> existAdmin = adminRepository.findByAdminPhoneNumber(request.getPhoneNumber());
         if (existAdmin.isPresent()) {
@@ -107,11 +107,23 @@ public class AdminService {
                 .findPwdQuestionId(request.getFindPwdQuestionId())
                 .findPwdAnswer(request.getFindPwdAnswer())
                 .adminIsSuper(YnType.N)
+                .approvalStatus(com.kaii.dentix.domain.admin.domain.AdminApprovalStatus.PENDING)
                 .organization(null)
                 .build());
 
         // DTO의 정적 팩토리 메서드 사용
         return AdminAuthDto.SignUpResponse.of(admin);
+    }
+
+    @Transactional
+    public AdminDto.Summary approveAdmin(Long adminId) {
+        accessGuard.requireSuperAdmin();
+        Long approvingAdminId = accessGuard.currentAdmin().getAdminId();
+        Admin admin = adminRepository.findByIdForApproval(adminId)
+                .orElseThrow(() -> new NotFoundDataException("존재하지 않는 관리자입니다."));
+        if (admin.isSuperAdmin()) throw new BadRequestApiException("기관 관리자만 승인할 수 있습니다.");
+        admin.approve(approvingAdminId);
+        return AdminDto.Summary.from(admin);
     }
 
     /**
@@ -165,6 +177,10 @@ public class AdminService {
                         .name(a.getAdminName())
                         .phoneNumber(a.getAdminPhoneNumber())
                         .createdDate(a.getCreated())
+                        .approvalStatus(a.getApprovalStatus() == null
+                                ? com.kaii.dentix.domain.admin.domain.AdminApprovalStatus.APPROVED : a.getApprovalStatus())
+                        .organizationId(a.getOrganizationId())
+                        .organizationName(a.getOrganizationName())
                         .build())
                 .toList();
 

@@ -48,4 +48,11 @@ class AdminAccessGuardTest {
         assertThatThrownBy(guard::currentAdmin).isInstanceOf(UnauthorizedException.class);
         verifyNoInteractions(repository);
     }
+
+    @Test void pendingAccountCannotUseAnOldAdminAuthority() {
+        login("ROLE_ADMIN");
+        when(repository.findByIdWithOrganization(7L)).thenReturn(Optional.of(Admin.builder().adminId(7L)
+                .adminIsSuper(YnType.N).approvalStatus(com.kaii.dentix.domain.admin.domain.AdminApprovalStatus.PENDING).build()));
+        assertThatThrownBy(guard::currentAdmin).isInstanceOf(UnauthorizedException.class);
+    }
 }

@@ -38,6 +38,8 @@ public class RequestRateLimitFilter extends OncePerRequestFilter {
         if ("POST".equals(request.getMethod()) && path.equals("/login")) {
             // Institutions can share an IP. Account-specific lockout needs shared storage.
             key = "login:" + request.getRemoteAddr(); limit = 240;
+        } else if ("POST".equals(request.getMethod()) && path.equals("/admin/account")) {
+            key = "admin-signup:" + request.getRemoteAddr(); limit = 30;
         } else if ("POST".equals(request.getMethod()) && (path.startsWith("/oralCheck/") || path.equals("/tts/speech"))) {
             var auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {

@@ -1,6 +1,8 @@
 package com.kaii.dentix.domain.admin.dto;
 
 import com.kaii.dentix.domain.type.YnType;
+import com.kaii.dentix.domain.admin.domain.Admin;
+import com.kaii.dentix.domain.admin.domain.AdminApprovalStatus;
 import com.kaii.dentix.global.common.dto.PageAndSizeRequest;
 import com.kaii.dentix.global.common.dto.PagingDTO;
 import lombok.*;
@@ -46,6 +48,19 @@ public class AdminDto {
         private String name;         // adminName -> name
         private String phoneNumber;  // adminPhoneNumber -> phoneNumber
         private String createdDate;  // 가입일 (String or Date)
+
+        private AdminApprovalStatus approvalStatus;
+        private Long organizationId;
+        private String organizationName;
+
+        public static Summary from(Admin admin) {
+            return Summary.builder().adminId(admin.getAdminId())
+                    .loginId(admin.getAdminLoginIdentifier()).name(admin.getAdminName())
+                    .phoneNumber(admin.getAdminPhoneNumber()).approvalStatus(admin.effectiveApprovalStatus())
+                    .organizationId(admin.getOrganization() == null ? null : admin.getOrganization().getOrganizationId())
+                    .organizationName(admin.getOrganization() == null ? null : admin.getOrganization().getOrganizationName())
+                    .isSuper(admin.getAdminIsSuper()).build();
+        }
 
         // 필요하다면 슈퍼관리자 여부 등 추가
          private YnType isSuper;

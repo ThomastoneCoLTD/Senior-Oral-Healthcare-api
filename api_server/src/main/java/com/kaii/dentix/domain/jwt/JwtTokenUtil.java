@@ -50,6 +50,7 @@ public class JwtTokenUtil {
      *  토큰 생성 (Admin)
      * ------------------------------ */
     public String createToken(Admin admin, TokenType tokenType) {
+        if (!admin.isApproved()) throw new com.kaii.dentix.global.common.error.exception.UnauthorizedException("슈퍼관리자 승인이 필요합니다.");
         SecretKey key = tokenType == TokenType.AccessToken ? accessTokenKey : refreshTokenKey;
 
         Map<String, Object> claims = new HashMap<>();
@@ -118,6 +119,7 @@ public class JwtTokenUtil {
         if (UserRole.ROLE_ADMIN.name().equals(role)) {
             Admin admin = adminRepository.findById(Long.valueOf(claims.getSubject()))
                     .orElseThrow(com.kaii.dentix.global.common.error.exception.UnauthorizedException::new);
+            if (!admin.isApproved()) throw new com.kaii.dentix.global.common.error.exception.UnauthorizedException("슈퍼관리자 승인이 필요합니다.");
             isSuper = admin.isSuperAdmin() ? "Y" : "N";
         } else if (!UserRole.ROLE_USER.name().equals(role)) {
             throw new com.kaii.dentix.global.common.error.exception.UnauthorizedException();
@@ -179,7 +181,8 @@ public class JwtTokenUtil {
             return userRepository.findById(id).map(user -> !validSession(token, tokenType, user.getUserRefreshToken(), user.getUserLastLoginDate())).orElse(true);
         }
         if (role == UserRole.ROLE_ADMIN) {
-            return adminRepository.findById(id).map(admin -> !validSession(token, tokenType, admin.getAdminRefreshToken(), admin.getAdminLastLoginDate())).orElse(true);
+            return adminRepository.findById(id).map(admin -> !admin.isApproved()
+                    || !validSession(token, tokenType, admin.getAdminRefreshToken(), admin.getAdminLastLoginDate())).orElse(true);
         }
 
         return true;
@@ -219,7 +222,8 @@ public class JwtTokenUtil {
         if (token == null) return false;
 
         if (getRoles(token, TokenType.AccessToken) != UserRole.ROLE_ADMIN) return false;
-        return adminRepository.findById(getUserId(token, TokenType.AccessToken)).map(Admin::isSuperAdmin).orElse(false);
+        return adminRepository.findById(getUserId(token, TokenType.AccessToken))
+                .filter(Admin::isApproved).map(Admin::isSuperAdmin).orElse(false);
     }
 
     public Long getOrganizationIdFromToken(HttpServletRequest request) {
@@ -228,6 +232,7 @@ public class JwtTokenUtil {
 
         if (getRoles(token, TokenType.AccessToken) != UserRole.ROLE_ADMIN) return null;
         return adminRepository.findByIdWithOrganization(getUserId(token, TokenType.AccessToken))
+                .filter(Admin::isApproved)
                 .map(Admin::getOrganization).map(com.kaii.dentix.domain.organization.domain.Organization::getOrganizationId)
                 .orElse(null);
     }
