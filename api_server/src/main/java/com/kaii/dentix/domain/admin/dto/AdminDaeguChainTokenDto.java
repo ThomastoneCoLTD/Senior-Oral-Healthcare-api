@@ -65,6 +65,7 @@ public class AdminDaeguChainTokenDto {
         private String sessionId;
         private String txHash;
         private String factHash;
+        private Date recoveredAt;
         private Date created;
 
         public static RewardTransfer from(UserRewardTransaction transaction, User user) {
@@ -77,12 +78,13 @@ public class AdminDaeguChainTokenDto {
                     .contentTitle(content == null ? null : content.getTitle())
                     .tokenName(transaction.getCoinId())
                     .tokenContractAddress(transaction.getTokenContractAddress())
-                    .status(transaction.getStatus())
+                    .status(transaction.displayStatus())
                     .amount(transaction.getAmount())
                     .balanceAfter(transaction.getBalanceAfter())
                     .sessionId(transaction.getSessionId())
                     .txHash(transaction.getDaeguChainTxHash())
                     .factHash(transaction.getDaeguChainFactHash())
+                    .recoveredAt(transaction.getTransferRecoveredAt())
                     .created(transaction.getCreated())
                     .build();
         }

@@ -45,6 +45,7 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.Date;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -331,6 +332,61 @@ class AdminUserServiceTest {
         verify(userRewardTransactionRepository, org.mockito.Mockito.never()).deleteByUserId(any());
         verify(oralExerciseProgressRepository, org.mockito.Mockito.never()).deleteByUserId(any());
         verify(userRewardWalletRepository, org.mockito.Mockito.never()).deleteByUserId(any());
+    }
+
+    @Test
+    void institutionFacetRejectsOrdinaryAndPendingAdministrators() {
+        var admins = org.mockito.Mockito.mock(com.kaii.dentix.domain.admin.dao.AdminRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(adminUserService, "accessGuard",
+                new com.kaii.dentix.global.security.AdminAccessGuard(admins));
+        var context = org.springframework.security.core.context.SecurityContextHolder.getContext();
+        context.setAuthentication(new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "1", "", List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_ADMIN"))));
+        try {
+            given(admins.findByIdWithOrganization(1L)).willReturn(Optional.of(Admin.builder().adminId(1L).adminIsSuper(YnType.N).build()));
+            assertThatThrownBy(adminUserService::getRealOrganizations)
+                    .isInstanceOf(com.kaii.dentix.global.common.error.exception.UnauthorizedException.class);
+            given(admins.findByIdWithOrganization(1L)).willReturn(Optional.of(Admin.builder().adminId(1L).adminIsSuper(YnType.Y)
+                    .approvalStatus(com.kaii.dentix.domain.admin.domain.AdminApprovalStatus.PENDING).build()));
+            assertThatThrownBy(adminUserService::getRealOrganizations)
+                    .isInstanceOf(com.kaii.dentix.global.common.error.exception.UnauthorizedException.class);
+            verify(userRepository, org.mockito.Mockito.never()).findRealOrganizations();
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void institutionFacetAllowsApprovedSuperAdministrator() {
+        var admins = org.mockito.Mockito.mock(com.kaii.dentix.domain.admin.dao.AdminRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(adminUserService, "accessGuard",
+                new com.kaii.dentix.global.security.AdminAccessGuard(admins));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken("1", "",
+                    List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_SUPER_ADMIN"))));
+        try {
+            given(admins.findByIdWithOrganization(1L)).willReturn(Optional.of(Admin.builder().adminId(1L).adminIsSuper(YnType.Y).build()));
+            given(userRepository.findRealOrganizations()).willReturn(List.of("", "대구1", "대구10"));
+            assertThat(adminUserService.getRealOrganizations()).containsExactly("", "대구1", "대구10");
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void currentAndLegacyUsageLogsCarryTheUsersRegisteredInstitution() {
+        var request = new MockHttpServletRequest();
+        given(adminService.getTokenAdmin(request)).willReturn(Admin.builder().adminIsSuper(YnType.Y).build());
+        var user = User.builder().userId(1L).userLoginIdentifier("alpha").realOrganization("대구1")
+                .daeguDidStatus(com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus.ISSUED).build();
+        user.setCreated(new Date(1000));
+        var apiLog = com.kaii.dentix.domain.daeguChain.domain.DaeguChainApiLog.builder()
+                .daeguChainApiLogId(10L).userId(1L).feature("조회").api("/test").success(true).build();
+        apiLog.setCreated(new Date(2000));
+        given(userRepository.findAll()).willReturn(List.of(user));
+        given(daeguChainApiLogRepository.findByUserIdInOrderByCreatedDesc(List.of(1L))).willReturn(List.of(apiLog));
+        assertThat(adminUserService.getDaeguChainUsageLogs(request).getLogs())
+                .extracting(AdminUserDto.DaeguChainUsageLog::getRealOrganization).containsExactly("대구1", "대구1");
     }
 
     private byte[] createWorkbookBytes() throws Exception {

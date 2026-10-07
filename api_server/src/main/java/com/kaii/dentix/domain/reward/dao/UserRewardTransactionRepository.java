@@ -34,6 +34,8 @@ public interface UserRewardTransactionRepository extends JpaRepository<UserRewar
 
     Optional<UserRewardTransaction> findByIdempotencyKey(String idempotencyKey);
 
+    List<UserRewardTransaction> findByDaeguChainFactHash(String factHash);
+
     Optional<UserRewardTransaction> findFirstByUserIdAndOralExerciseContent_OralExerciseContentIdAndTypeAndStatusNot(
             Long userId,
             Long oralExerciseContentId,

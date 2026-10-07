@@ -27,6 +27,8 @@ public class AdminUserDto {
     @NoArgsConstructor @AllArgsConstructor
     public static class SearchRequest extends PageAndSizeRequest {
         private Long organizationId;
+        // null: all institutions, empty string: unassigned.
+        private String realOrganization;
         private String keyword;       // userIdentifierOrName -> keyword (단축)
         private OralCheckResultType oralCheckResultTotalType;
         private String oralStatus;
@@ -306,6 +308,7 @@ public class AdminUserDto {
         private Long logId;
         private String feature;
         private String userLoginIdentifier;
+        private String realOrganization;
         private String api;
         private String requestPayload;
         private String responsePayload;

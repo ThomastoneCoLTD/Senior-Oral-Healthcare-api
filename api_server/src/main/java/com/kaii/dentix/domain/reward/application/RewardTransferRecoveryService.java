@@ -43,6 +43,7 @@ public class RewardTransferRecoveryService {
     private final DaeguRewardWalletProvisioningService provisioning;
     private final OralExerciseHistoryService history;
     private final PlatformTransactionManager transactionManager;
+    private final RewardTransferRecoveryEvidenceRepository evidence;
     // Keep upstream waits off the shared Spring scheduler and bound per-instance load.
     private final Semaphore capacity = new Semaphore(4);
     private final ExecutorService workers = Executors.newFixedThreadPool(4, task -> {
@@ -88,7 +89,7 @@ public class RewardTransferRecoveryService {
             var result = RewardTransferReceipt.verify(response.path("data"), factHash,
                     properties.getTokenOwnerAddress(), work.recipient(), work.contract(), work.amount());
             if (result == RewardTransferReceipt.Result.RECEIVED) {
-                finishReceived(work, text(response, "tx_hash"), factHash, false);
+                finishReceived(work, text(response, "tx_hash"), factHash, receiptHeight(response.path("data")), false);
             } else if (result == RewardTransferReceipt.Result.REJECTED) {
                 retryRejected(work);
                 recordFailure(work);
@@ -148,7 +149,7 @@ public class RewardTransferRecoveryService {
             var result = response != null && "OK".equalsIgnoreCase(response.getState())
                     ? RewardTransferReceipt.verify(response.getData(), work.factHash(), properties.getTokenOwnerAddress(),
                         work.recipient(), work.contract(), work.amount()) : RewardTransferReceipt.Result.UNKNOWN;
-            if (result == RewardTransferReceipt.Result.RECEIVED) finishReceived(work, null, work.factHash(), true);
+            if (result == RewardTransferReceipt.Result.RECEIVED) finishReceived(work, null, work.factHash(), receiptHeight(response.getData()), true);
             else if (result == RewardTransferReceipt.Result.REJECTED) {
                 retryRejected(work);
             } else postpone(work);
@@ -169,19 +170,30 @@ public class RewardTransferRecoveryService {
         });
     }
 
-    private void finishReceived(Work work, String hash, String factHash, boolean recovered) {
-        tx().execute(ignored -> {
+    private void finishReceived(Work work, String hash, String factHash, long height, boolean recovered) {
+        try { tx().execute(ignored -> {
             if (users.findByIdForUpdate(work.userId()).isEmpty()) return false;
             var wallet = wallets.findByUserIdForUpdate(work.userId()).orElse(null);
             var reward = rewards.findByIdForUpdate(work.id()).orElse(null);
             if (wallet == null || reward == null || reward.getStatus() != UserRewardTransactionStatus.TOKEN_TRANSFER_CHECKING
                     || reward.transferAttempts() != work.attempt() || !work.recipient().equals(wallet.getWalletAddress())) return false;
+            if (evidence.findById(factHash).isPresent() || rewards.findByDaeguChainFactHash(factHash).stream()
+                    .anyMatch(other -> !work.id().equals(other.getUserRewardTransactionId()))) {
+                reward.requireTransferReview("RECEIPT_ALREADY_CLAIMED");
+                return false;
+            }
+            // Same INSERT-only claim as manual recovery: one chain receipt can credit one reward.
+            evidence.saveAndFlush(RewardTransferRecoveryEvidence.builder().factHash(factHash).transactionId(work.id())
+                    .recoveredAt(new Date()).blockHeight(height).build());
             reward.markTokenTransferred(hash, factHash);
             if (recovered) reward.markTransferRecovered(hash);
             wallet.addPoints(reward.getAmount());
             reward.updateBalanceAfter(wallet.getPointBalance());
             return true;
-        });
+        }); } catch (org.springframework.dao.DataIntegrityViolationException conflict) {
+            // Unique-key failure rolls back before points/status change; never retry the transfer.
+            update(work, reward -> reward.requireTransferReview("RECEIPT_ALREADY_CLAIMED"));
+        }
         // Approval is performed only when an administrator actually reclaims the exact amount.
 
     }
@@ -216,6 +228,13 @@ public class RewardTransferRecoveryService {
         if (value == null && field.equals("fact_hash"))
             value = node.path("data").path("receipt").path("operation").path("fact").path("hash").asText(null);
         return value != null && value.matches("[A-Za-z0-9]{32,100}") ? value : null;
+    }
+
+    private static long receiptHeight(JsonNode data) {
+        // Called only after RewardTransferReceipt has validated the receipt.
+        if (data.has("receipt")) data = data.path("receipt");
+        else if (data.has("trx_info")) data = data.path("trx_info");
+        return data.path("height").asLong();
     }
 
     private record Work(Long id, Long userId, String coinId, String contract, String recipient, long amount,

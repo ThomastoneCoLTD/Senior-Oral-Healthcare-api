@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.*;
 class RewardTransferRecoveryServiceTest {
     UserRewardTransactionRepository rewards = mock(UserRewardTransactionRepository.class);
     UserRewardWalletRepository wallets = mock(UserRewardWalletRepository.class);
+    RewardTransferRecoveryEvidenceRepository evidence = mock(RewardTransferRecoveryEvidenceRepository.class);
     UserRepository users = mock(UserRepository.class);
     ExternalTokenClient token = mock(ExternalTokenClient.class);
     DaeguChainClient chain = mock(DaeguChainClient.class);
@@ -49,7 +50,7 @@ class RewardTransferRecoveryServiceTest {
         when(wallets.findByUserIdForUpdate(1L)).thenReturn(Optional.of(wallet));
         when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(User.builder().userId(1L).build()));
         when(manager.getTransaction(any())).thenAnswer(i -> new SimpleTransactionStatus());
-        service = new RewardTransferRecoveryService(rewards, wallets, users, token, chain, properties, provisioning, history, manager);
+        service = new RewardTransferRecoveryService(rewards, wallets, users, token, chain, properties, provisioning, history, manager,evidence);
     }
 
     void due() { org.springframework.test.util.ReflectionTestUtils.setField(reward, "nextTransferCheckAt", new Date(0)); }

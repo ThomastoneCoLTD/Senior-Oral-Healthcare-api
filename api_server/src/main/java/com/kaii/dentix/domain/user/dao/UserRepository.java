@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
+    @Query("select distinct coalesce(trim(u.realOrganization), '') from User u order by coalesce(trim(u.realOrganization), '')")
+    List<String> findRealOrganizations();
+
     @Query("""
         select u from User u where
         (lower(u.userName) like lower(concat('%', :keyword, '%'))

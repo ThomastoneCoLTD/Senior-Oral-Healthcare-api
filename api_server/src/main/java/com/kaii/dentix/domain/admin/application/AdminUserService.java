@@ -182,6 +182,8 @@ public class AdminUserService {
         if (admin.isSuperAdmin()) {
             pageResult = adminUserCustomRepository.findAll(request);
         } else {
+            // The institution facet is reserved for the superadmin screen.
+            request.setRealOrganization(null);
             if (admin.getOrganization() == null) {
                 throw new BadRequestApiException("소속 기관이 없습니다.");
             }
@@ -191,6 +193,12 @@ public class AdminUserService {
 
         PagingDTO pagingDTO = modelMapper.map(pageResult, PagingDTO.class);
         return AdminUserDto.ListResponse.of(pagingDTO, pageResult.getContent());
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getRealOrganizations() {
+        accessGuard.requireSuperAdmin();
+        return userRepository.findRealOrganizations();
     }
 
     /**
@@ -552,6 +560,7 @@ public class AdminUserService {
                 .logId(apiLog.getDaeguChainApiLogId())
                 .feature(apiLog.getFeature())
                 .userLoginIdentifier(user.getUserLoginIdentifier())
+                .realOrganization(user.getRealOrganization())
                 .api(apiLog.getApi())
                 .requestPayload(apiLog.getRequestPayload())
                 .responsePayload(apiLog.getResponsePayload())
@@ -567,6 +576,7 @@ public class AdminUserService {
         return AdminUserDto.DaeguChainUsageLog.builder()
                 .feature(feature)
                 .userLoginIdentifier(user.getUserLoginIdentifier())
+                .realOrganization(user.getRealOrganization())
                 .usedAt(usedAt)
                 .build();
     }

@@ -72,6 +72,15 @@ public class AdminUserControllerTest {
     @MockBean
     private com.kaii.dentix.domain.jwt.JwtTokenUtil jwtTokenUtil;
 
+    @Test
+    void institutionOptionsUseTheDataResponseContract() throws Exception {
+        given(adminUserService.getRealOrganizations()).willReturn(List.of("", "대구1", "대구10"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/admin/user/organizations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response[0]").value(""))
+                .andExpect(jsonPath("$.response[1]").value("대구1"));
+    }
+
     /**
      * 사용자 인증
      */

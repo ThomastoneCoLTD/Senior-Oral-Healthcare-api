@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -27,6 +28,11 @@ public class AdminUserController {
     private final AdminService adminService; //토큰/권한 처리용 서비스 추가
     private final AdminUserService adminUserService;
     private final JwtTokenUtil jwtTokenUtil;
+
+    @GetMapping(value = "/organizations", name = "슈퍼관리자 가입기관 필터 목록")
+    public DataResponse<List<String>> organizations() {
+        return new DataResponse<>(adminUserService.getRealOrganizations());
+    }
     // 불필요한 Repository, JwtTokenUtil 의존성 제거 (AdminService가 담당)
 
     /**

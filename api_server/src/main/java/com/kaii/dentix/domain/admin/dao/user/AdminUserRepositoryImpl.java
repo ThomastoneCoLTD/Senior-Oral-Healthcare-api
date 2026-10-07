@@ -64,6 +64,12 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
         if (request.getOrganizationId() != null) {
             builder.and(user.organization.organizationId.eq(request.getOrganizationId()));
         }
+        if (request.getRealOrganization() != null) {
+            builder.and(user.realOrganization.trim().coalesce("").eq(request.getRealOrganization().trim()));
+        }
+
+        Long totalCount = queryFactory.select(user.count()).from(user).where(builder).fetchOne();
+        if (totalCount == null) totalCount = 0L;
 
         OrderSpecifier<?>[] orderSpecifiers = request.getOrganizationId() == null
                 ? new OrderSpecifier<?>[]{
@@ -84,7 +90,7 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                 .fetch();
 
         if (users.isEmpty()) {
-            return new PageImpl<>(Collections.emptyList(), paging, 0);
+            return new PageImpl<>(Collections.emptyList(), paging, totalCount);
         }
 
         List<Long> userIds = users.stream().map(User::getUserId).toList();
@@ -120,14 +126,6 @@ public class AdminUserRepositoryImpl implements AdminUserCustomRepository {
                                 : ""
                 ))
                 .toList();
-
-        // Count Query
-        Long totalCount = queryFactory
-                .select(user.count())
-                .from(user)
-                .where(builder)
-                .fetchOne();
-        if (totalCount == null) totalCount = 0L;
 
         return new PageImpl<>(result, paging, totalCount);
     }
