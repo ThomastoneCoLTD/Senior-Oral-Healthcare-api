@@ -73,6 +73,7 @@ public class Admin extends TimeEntity {
     @Column(length = 200)
     private String findPwdAnswer;
 
+    @Column(length = 2048)
     private String adminRefreshToken;
 
     @ManyToOne(fetch = FetchType.LAZY)

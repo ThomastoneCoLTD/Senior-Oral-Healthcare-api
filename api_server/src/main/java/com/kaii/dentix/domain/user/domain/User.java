@@ -58,6 +58,7 @@ public class User extends TimeEntity {
     @Column(nullable = false)
     private String findPwdAnswer;
 
+    @Column(length = 2048)
     private String userRefreshToken;
 
     @Column(nullable = true)
