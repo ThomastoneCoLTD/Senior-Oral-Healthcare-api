@@ -62,7 +62,7 @@ public class LoggerAspect {
 			.requestUrl(loggerDTO.getRequestUrl())
 			.header(loggerDTO.getHeader())
 			.requestBody(loggerDTO.getRequestBody())
-			.responseBody(isChainRequest() ? "[chain payload omitted]" : serializeForLog(returnObj))
+			.responseBody(serializeForLog(isChainRequest() ? "[chain payload omitted]" : returnObj))
 			.build());
 
 		log.info("::: AOP writeSuccessLog End :::");
@@ -163,7 +163,7 @@ public class LoggerAspect {
 			.requestName(requestName)
 			.requestUrl(request.getRequestURL().toString())
 			.header(serializeForLog(headers))
-			.requestBody(isChainRequest() ? "[chain payload omitted]" : serializeForLog(requestBody))
+			.requestBody(serializeForLog(isChainRequest() ? "[chain payload omitted]" : requestBody))
 			.build();
 	}
 
