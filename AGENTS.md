@@ -22,6 +22,7 @@
 - Workflow: `.github/workflows/deploy-api-prod.yml`; ASG: `soh-api-prod-asg`.
 - 배포 파일: `s3://denti-backends/soh/prod/app.jar`, `s3://denti-backends/soh/prod/.env`.
 - 배포 Secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `SOH_API_ENV_PROD`.
+- `TOKEN_SERVER_BASE_URL` GitHub Secret은 배포 env의 DID·토큰 중계 주소 두 항목을 함께 덮어씁니다. 빈 값이면 기존 주소를 유지하며 `_PROD` Secret은 사용하지 않습니다.
 - Terraform Secret: `SOH_TERRAFORM_TFVARS_PROD_HCL`; HCL만 저장하고 앱 env와 비밀값을 섞지 않습니다.
 - 실제 AWS 키, DB 비밀번호, JWT secret, 지갑/RSA 개인키, 토큰을 소스·문서·로그에 기록하지 않습니다.
 - `.env`, tfvars, state, 빌드 산출물은 커밋하지 않습니다. Terraform 입력은 파싱 전 로그 마스킹을 유지합니다.
