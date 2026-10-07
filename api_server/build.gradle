@@ -82,7 +82,7 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
 
     // --- JAXB (Java 9+ 호환성) ---
-    implementation 'org.glassfish.jaxb:jaxb-runtime:4.0.2'
+    implementation 'org.glassfish.jaxb:jaxb-runtime:4.0.9'
 
     // --- Excel Export ---
     implementation 'org.apache.poi:poi:5.5.1'
