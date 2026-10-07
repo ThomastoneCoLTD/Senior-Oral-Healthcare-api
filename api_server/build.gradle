@@ -72,7 +72,7 @@ dependencies {
 
     // --- Utils ---
     implementation 'commons-codec:commons-codec:1.22.1'
-    implementation 'org.modelmapper:modelmapper:3.1.1'
+    implementation 'org.modelmapper:modelmapper:3.2.6'
     implementation 'org.json:json:20260814'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
