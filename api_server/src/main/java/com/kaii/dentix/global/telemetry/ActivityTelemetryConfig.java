@@ -16,6 +16,9 @@ import software.amazon.awssdk.services.secretsmanager.model.GetSecretValueRespon
 
 @Configuration
 public class ActivityTelemetryConfig {
+  @Bean BusinessUsageTelemetry businessUsageTelemetry(Environment env,ActivityTelemetry activity) {
+    return new BusinessUsageTelemetry(env.getProperty("BUSINESS_USAGE_ENABLED",Boolean.class,false),activity,Clock.systemUTC());
+  }
   @Bean(destroyMethod="close") ActivityTelemetry activityTelemetry(Environment env) {
     boolean enabled=env.getProperty("ACTIVITY_ENABLED",Boolean.class,false);
     try {return new ActivityTelemetry(enabled,enabled?new AwsSink(env):null,Clock.systemUTC(),true);}
@@ -30,29 +33,10 @@ public class ActivityTelemetryConfig {
     private final SecretsManagerClient secrets;
     private String cachedDay,version;
     private byte[] dayKey,windowKey;
-    private static String producer(Environment env) {
-      String id=env.getRequiredProperty("ACTIVITY_PRODUCER_ID");
-      if(!id.equals("ec2-instance"))return id;
-      try {
-        String token=metadata("/api/token","PUT",null);
-        String instance=metadata("/meta-data/instance-id","GET",token);
-        if(!instance.matches("i-[0-9a-f]{8,17}"))throw new IllegalStateException("invalid_activity_producer");
-        return instance;
-      }catch(Exception ignored){throw new IllegalStateException("activity_producer_unavailable");}
-    }
-    private static String metadata(String path,String method,String token) throws Exception {
-      var connection=(java.net.HttpURLConnection)java.net.URI.create("http://169.254.169.254/latest"+path).toURL().openConnection();
-      connection.setConnectTimeout(100);connection.setReadTimeout(100);connection.setRequestMethod(method);
-      connection.setInstanceFollowRedirects(false);
-      if(token==null)connection.setRequestProperty("X-aws-ec2-metadata-token-ttl-seconds","60");
-      else connection.setRequestProperty("X-aws-ec2-metadata-token",token);
-      try {
-        if(connection.getResponseCode()!=200)throw new IllegalStateException("metadata_unavailable");
-        try(var input=connection.getInputStream()){return new String(input.readNBytes(1024),StandardCharsets.UTF_8).trim();}
-      }finally{connection.disconnect();}
-    }
+    private final boolean businessEnabled;
     AwsSink(Environment env) {
-      table=env.getRequiredProperty("ACTIVITY_RAW_TABLE");producer=producer(env);
+      businessEnabled=env.getProperty("BUSINESS_USAGE_ENABLED",Boolean.class,false);
+      table=env.getRequiredProperty("ACTIVITY_RAW_TABLE");producer=env.getRequiredProperty("ACTIVITY_PRODUCER_ID");
       daySecret=env.getRequiredProperty("ACTIVITY_DAY_SECRET_ID");windowSecret=env.getRequiredProperty("ACTIVITY_WINDOW_SECRET_ID");
       var region=Region.of(env.getProperty("ACTIVITY_REGION","ap-northeast-2"));
       var limits=ClientOverrideConfiguration.builder().apiCallTimeout(Duration.ofMillis(100)).apiCallAttemptTimeout(Duration.ofMillis(100)).retryPolicy(RetryPolicy.none()).build();
@@ -89,6 +73,21 @@ public class ActivityTelemetryConfig {
     @Override public void heartbeat(long at,long errorAt) {
       keys(Instant.ofEpochMilli(at));
       put(Map.of("pk",s("HEARTBEAT#"+service+"#producers"),"sk",s(producer),"producer",s(producer),"at",n(at),"errorAt",n(errorAt),"expiresAt",n(at/1000+72*3600)),"at",at);
+      if(businessEnabled) {
+        long minute=at/60000*60000;String day=ActivityTelemetry.day(Instant.ofEpochMilli(at));
+        putOnce(Map.of("pk",s("BUSINESS_META#v1#"+service+"#"+day),"sk",s("PRODUCER#"+minute+"#"+producer),"version",n(1),"serviceId",s(service),"dayKey",s(day),"producer",s(producer),"at",n(minute),"expiresAt",n(at/1000+72*3600)));
+      }
+    }
+    @Override public void business(BusinessUsageTelemetry.Event event) throws Exception {
+      if(!businessEnabled)throw new IllegalStateException("business_disabled");
+      Map<String,Object> row;
+      synchronized(this){keys(event.at());row=BusinessUsageTelemetry.event(service,event,dayKey,version);}
+      var item=new HashMap<String,AttributeValue>();row.forEach((k,v)->item.put(k,v instanceof Number number?n(number.longValue()):s((String)v)));
+      if(event.type().equals("institution"))put(item,"lastSeenAt",event.at().toEpochMilli());else putOnce(item);
+    }
+    private void putOnce(Map<String,AttributeValue> item) {
+      try{dynamo.putItem(r->r.tableName(table).item(item).conditionExpression("attribute_not_exists(pk)"));}
+      catch(ConditionalCheckFailedException duplicate){ /* Persisted result identity is stable on retry. */ }
     }
     private void put(Map<String,AttributeValue> item,String field,long at) {
       try{dynamo.putItem(r->r.tableName(table).item(item).conditionExpression("attribute_not_exists(pk) OR #at < :at").expressionAttributeNames(Map.of("#at",field)).expressionAttributeValues(Map.of(":at",n(at))));}

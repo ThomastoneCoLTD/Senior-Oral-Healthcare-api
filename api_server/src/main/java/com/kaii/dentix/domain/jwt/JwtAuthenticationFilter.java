@@ -21,6 +21,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        try(var usageContext=com.kaii.dentix.global.telemetry.BusinessUsageContext.open()){
+            filterWithUsage(request,response,filterChain);
+        }
+    }
+
+    private void filterWithUsage(HttpServletRequest request,HttpServletResponse response,FilterChain filterChain) throws ServletException,IOException {
 
         String accessToken = jwtTokenUtil.getAccessToken(request);
         if (accessToken != null) {

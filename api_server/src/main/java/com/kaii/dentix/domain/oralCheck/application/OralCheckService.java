@@ -64,6 +64,13 @@ import static com.kaii.dentix.domain.type.oral.OralCheckDivisionCommentType.*;
 @Service
 @RequiredArgsConstructor
 public class OralCheckService {
+    private com.kaii.dentix.global.telemetry.BusinessUsageTelemetry businessUsage;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void setBusinessUsage(com.kaii.dentix.global.telemetry.BusinessUsageTelemetry value){this.businessUsage=value;}
+    private void recordBusinessCompletion(String kind,com.kaii.dentix.domain.oralCheck.domain.OralCheck row){
+        if(businessUsage!=null && row!=null)businessUsage.completed(kind,row.getOralCheckId()==null?null:row.getOralCheckId().toString(),row.getCreated()==null?null:row.getCreated().toInstant());
+    }
+
 
     private final UserService userService;
     private final AWSS3Service awss3Service;
@@ -491,6 +498,7 @@ public class OralCheckService {
 
         OralCheck saved = oralCheckRepository.save(insertData);
         savePlaqueOralStatusAssignments(saved, resource.getContentsType());
+        recordBusinessCompletion("plaque",saved);
         return saved;
     }
 
@@ -565,7 +573,9 @@ public class OralCheckService {
                 .oralCheckDownLeftScoreType(downScoreType)
                 .build();
 
-        return oralCheckRepository.save(insertData);
+        OralCheck saved=oralCheckRepository.save(insertData);
+        recordBusinessCompletion("gingivitis",saved);
+        return saved;
     }
 
     /**

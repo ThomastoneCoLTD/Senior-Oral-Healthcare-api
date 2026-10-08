@@ -21,11 +21,13 @@ import org.springframework.web.servlet.HandlerMapping;
 public final class ActivityTelemetryFilter extends OncePerRequestFilter {
   private final Supplier<ActivityTelemetry> writer;
   private final Supplier<BusinessApiTelemetry> apiWriter;
+  private Supplier<BusinessUsageTelemetry> usageWriter=()->null;
   private final LongSupplier monotonic;
   private final Clock clock;
   private final AntPathMatcher paths=new AntPathMatcher();
   public ActivityTelemetryFilter(Supplier<ActivityTelemetry> writer){this(writer, () -> null);}
   public ActivityTelemetryFilter(Supplier<ActivityTelemetry> writer, Supplier<BusinessApiTelemetry> apiWriter){this(writer, apiWriter, System::nanoTime, Clock.systemUTC());}
+  public ActivityTelemetryFilter(Supplier<ActivityTelemetry> writer,Supplier<BusinessApiTelemetry> apiWriter,Supplier<BusinessUsageTelemetry> usageWriter){this(writer,apiWriter);this.usageWriter=usageWriter;}
   ActivityTelemetryFilter(Supplier<ActivityTelemetry> writer, Supplier<BusinessApiTelemetry> apiWriter, LongSupplier monotonic, Clock clock) {
     this.writer=writer; this.apiWriter=apiWriter; this.monotonic=monotonic; this.clock=clock;
   }
@@ -52,6 +54,8 @@ public final class ActivityTelemetryFilter extends OncePerRequestFilter {
       if(account!=null&&(admin!=user)&&account.getUsername().matches("[1-9][0-9]*")&&!denied&&response.getStatus()!=401&&response.getStatus()!=403&&request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE) instanceof HandlerMethod) {
         double durationMs=Math.max(0,monotonic.getAsLong()-started)/1_000_000.0;
         Instant completedAt=clock.instant();
+        try{var usage=usageWriter.get();if(usage!=null&&!request.isAsyncStarted())usage.institution(BusinessUsageContext.organization(),completedAt);}
+        catch(RuntimeException ignored){ /* Keep the authorized response unchanged. */ }
         try {
           var telemetry=writer.get();
           if(telemetry!=null)telemetry.record(admin?"admin":"account",account.getUsername(),admin?"admin":"user",Instant.now());

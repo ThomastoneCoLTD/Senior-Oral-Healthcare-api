@@ -5,6 +5,7 @@ import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
 import com.kaii.dentix.global.telemetry.ActivityTelemetry;
 import com.kaii.dentix.global.telemetry.BusinessApiTelemetry;
+import com.kaii.dentix.global.telemetry.BusinessUsageTelemetry;
 import com.kaii.dentix.global.telemetry.ActivityTelemetryFilter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
@@ -63,7 +64,7 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain configure(HttpSecurity http, ObjectProvider<ActivityTelemetry> telemetry, ObjectProvider<BusinessApiTelemetry> businessApiTelemetry) throws Exception {
+    public SecurityFilterChain configure(HttpSecurity http, ObjectProvider<ActivityTelemetry> telemetry, ObjectProvider<BusinessApiTelemetry> businessApiTelemetry, ObjectProvider<BusinessUsageTelemetry> businessUsageTelemetry) throws Exception {
         http
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)

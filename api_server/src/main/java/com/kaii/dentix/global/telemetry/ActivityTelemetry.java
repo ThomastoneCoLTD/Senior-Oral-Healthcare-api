@@ -16,11 +16,13 @@ public final class ActivityTelemetry implements AutoCloseable {
   interface Sink {
     void write(Identity identity) throws Exception;
     void heartbeat(long at,long errorAt) throws Exception;
+    default void business(BusinessUsageTelemetry.Event event) throws Exception { throw new IllegalStateException("business_writer_unavailable"); }
   }
   private final boolean enabled;
   private final Sink sink;
   private final Clock clock;
-  private final ArrayBlockingQueue<Identity> queue=new ArrayBlockingQueue<>(256);
+  private interface PendingWrite { void run() throws Exception; }
+  private final ArrayBlockingQueue<PendingWrite> queue=new ArrayBlockingQueue<>(256);
   private final ScheduledThreadPoolExecutor executor=new ScheduledThreadPoolExecutor(2,r->{var t=new Thread(r,"activity-telemetry");t.setDaemon(true);return t;});
   private final AtomicLong errorAt=new AtomicLong();
   private final AtomicLong lastWarning=new AtomicLong();
@@ -35,27 +37,29 @@ public final class ActivityTelemetry implements AutoCloseable {
   public void record(String cohort,String principal,String role,Instant at) {
     if(!enabled)return;
     if(principal==null||principal.isBlank()||principal.length()>1024||!Set.of("admin","user").contains(role)||!Set.of("account","admin","hospital","embed").contains(cohort)||at==null) { failed();return; }
-    if(!queue.offer(new Identity(cohort,principal,role,at)))failed();
+    if(!queue.offer(()->sink.write(new Identity(cohort,principal,role,at))))failed();
+  }
+  void recordBusiness(BusinessUsageTelemetry.Event event) {
+    if(enabled&&!queue.offer(()->sink.business(event)))failed();
   }
   int pending(){return queue.size();}
   void flush() {
     for(int n=0;n<256;n++) {
       var identity=queue.poll();if(identity==null)return;
-      try {sink.write(identity);}catch(Exception ignored){failed();}
+      try {identity.run();}catch(Exception ignored){failed();}
     }
   }
   public void heartbeat() {
     if(!enabled)return;
     try {sink.heartbeat(clock.millis(),errorAt.get());}catch(Exception ignored){failed();}
   }
-  public void reportCollectionFailure() { failed(); }
-
   private void failed() {
     long now=clock.millis();errorAt.accumulateAndGet(now,Math::max);
     long previous=lastWarning.get();
     if(now-previous>=60000&&lastWarning.compareAndSet(previous,now))
       LoggerFactory.getLogger(ActivityTelemetry.class).warn("Activity telemetry unavailable; collection marked incomplete");
   }
+  public void reportCollectionFailure() { failed(); }
   static String day(Instant at){return at.atZone(ZoneId.of("Asia/Seoul")).toLocalDate().toString();}
   static Map<String,Object> event(String service,Identity identity,byte[] dayKey,byte[] windowKey,String version) throws Exception {
     String day=day(identity.at());
@@ -67,7 +71,7 @@ public final class ActivityTelemetry implements AutoCloseable {
     row.put("pk","ACTIVITY#"+service+"#"+day);row.put("sk","SUBJECT#"+subject);
     return row;
   }
-  private static String hash(byte[] key,List<Object> parts) throws Exception {
+  static String hash(byte[] key,List<Object> parts) throws Exception {
     if(key.length!=32)throw new IllegalArgumentException("invalid_activity_key");
     var mac=Mac.getInstance("HmacSHA256");mac.init(new SecretKeySpec(key,"HmacSHA256"));
     return HexFormat.of().formatHex(mac.doFinal(new ObjectMapper().writeValueAsString(parts).getBytes(StandardCharsets.UTF_8)));

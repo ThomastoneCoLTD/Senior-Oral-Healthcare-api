@@ -178,11 +178,11 @@ public class JwtTokenUtil {
         UserRole role = getRoles(token, tokenType);
 
         if (role == UserRole.ROLE_USER) {
-            return userRepository.findById(id).map(user -> !validSession(token, tokenType, user.getUserRefreshToken(), user.getUserLastLoginDate())).orElse(true);
+            return userRepository.findById(id).map(user -> {com.kaii.dentix.global.telemetry.BusinessUsageContext.capture(()->user.getOrganization()==null?null:String.valueOf(user.getOrganization().getOrganizationId()));return !validSession(token, tokenType, user.getUserRefreshToken(), user.getUserLastLoginDate());}).orElse(true);
         }
         if (role == UserRole.ROLE_ADMIN) {
-            return adminRepository.findById(id).map(admin -> !admin.isApproved()
-                    || !validSession(token, tokenType, admin.getAdminRefreshToken(), admin.getAdminLastLoginDate())).orElse(true);
+            return adminRepository.findById(id).map(admin -> {com.kaii.dentix.global.telemetry.BusinessUsageContext.capture(()->admin.getOrganization()==null?null:String.valueOf(admin.getOrganization().getOrganizationId()));return !admin.isApproved()
+                    || !validSession(token, tokenType, admin.getAdminRefreshToken(), admin.getAdminLastLoginDate());}).orElse(true);
         }
 
         return true;
