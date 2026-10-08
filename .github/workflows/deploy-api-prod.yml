@@ -129,6 +129,14 @@ jobs:
           upsert_env "DADAEGU_LOGIN_RSA_PRIVATE_KEY" "${DADAEGU_LOGIN_RSA_PRIVATE_KEY_OVERRIDE}"
           upsert_env "DADAEGU_LOGIN_REQUIRED_VC" "${DADAEGU_LOGIN_REQUIRED_VC_OVERRIDE}"
 
+          # Non-secret telemetry settings; instance identity is resolved with bounded IMDSv2 at startup.
+          upsert_env "ACTIVITY_ENABLED" "true"
+          upsert_env "ACTIVITY_REGION" "ap-northeast-2"
+          upsert_env "ACTIVITY_PRODUCER_ID" "ec2-instance"
+          upsert_env "ACTIVITY_RAW_TABLE" "denti-service-activity-raw"
+          upsert_env "ACTIVITY_DAY_SECRET_ID" "denti/service-activity/soh/day-key"
+          upsert_env "ACTIVITY_WINDOW_SECRET_ID" "denti/service-activity/soh/window-key"
+
           if [ "${DADAEGU_LOGIN_ENABLED_OVERRIDE}" = "true" ]; then
             grep -Eq '^DADAEGU_LOGIN_SITE_ID=.+' "${ENV_FILE}" \
               || (echo "DADAEGU_LOGIN_SITE_ID is required when DaDaegu login is enabled" && exit 1)

@@ -3,6 +3,10 @@ package com.kaii.dentix.global.config;
 import com.kaii.dentix.domain.jwt.JwtAuthenticationFilter;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import lombok.RequiredArgsConstructor;
+import com.kaii.dentix.global.telemetry.ActivityTelemetry;
+import com.kaii.dentix.global.telemetry.ActivityTelemetryFilter;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -58,7 +62,7 @@ public class WebSecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain configure(HttpSecurity http) throws Exception {
+    public SecurityFilterChain configure(HttpSecurity http, ObjectProvider<ActivityTelemetry> telemetry) throws Exception {
         http
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .csrf(AbstractHttpConfigurer::disable)
@@ -155,6 +159,7 @@ public class WebSecurityConfig {
                 );
 
         http.addFilterAfter(new com.kaii.dentix.global.security.RequestRateLimitFilter(), JwtAuthenticationFilter.class);
+        http.addFilterAfter(new ActivityTelemetryFilter(telemetry::getIfAvailable), AuthorizationFilter.class);
         return http.build();
     }
 
