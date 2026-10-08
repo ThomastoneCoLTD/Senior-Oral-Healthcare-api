@@ -131,6 +131,7 @@ jobs:
 
           # Non-secret telemetry settings; instance identity is resolved with bounded IMDSv2 at startup.
           upsert_env "ACTIVITY_ENABLED" "true"
+          upsert_env "BUSINESS_API_ENABLED" "true"
           upsert_env "ACTIVITY_REGION" "ap-northeast-2"
           upsert_env "ACTIVITY_PRODUCER_ID" "ec2-instance"
           upsert_env "ACTIVITY_RAW_TABLE" "denti-service-activity-raw"

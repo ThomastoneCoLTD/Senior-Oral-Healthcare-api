@@ -48,6 +48,8 @@ public final class ActivityTelemetry implements AutoCloseable {
     if(!enabled)return;
     try {sink.heartbeat(clock.millis(),errorAt.get());}catch(Exception ignored){failed();}
   }
+  public void reportCollectionFailure() { failed(); }
+
   private void failed() {
     long now=clock.millis();errorAt.accumulateAndGet(now,Math::max);
     long previous=lastWarning.get();
