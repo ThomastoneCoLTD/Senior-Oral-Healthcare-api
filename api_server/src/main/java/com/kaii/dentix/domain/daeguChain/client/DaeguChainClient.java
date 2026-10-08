@@ -31,6 +31,8 @@ public class DaeguChainClient {
 
     private final DaeguChainProperties properties;
     private final RestTemplate restTemplate;
+    private final RestTemplateBuilder restTemplateBuilder;
+    private volatile RestTemplate walletBalanceTemplate;
     private final DaeguChainApiAuditService auditService;
 
     public DaeguChainClient(DaeguChainProperties properties, RestTemplateBuilder restTemplateBuilder) {
@@ -44,6 +46,7 @@ public class DaeguChainClient {
             DaeguChainApiAuditService auditService
     ) {
         this.properties = properties;
+        this.restTemplateBuilder = restTemplateBuilder;
         this.restTemplate = restTemplateBuilder.connectTimeout(java.time.Duration.ofSeconds(10))
                 .readTimeout(java.time.Duration.ofSeconds(25)).build();
         this.auditService = auditService;
@@ -343,14 +346,33 @@ public class DaeguChainClient {
         );
     }
 
+    public DaeguChainDto.ApiResponse<JsonNode> getWalletTokenBalance(DaeguChainDto.TokenBalanceApiRequest request) {
+        if (walletBalanceTemplate == null) {
+            synchronized (this) {
+                if (walletBalanceTemplate == null) {
+                    walletBalanceTemplate = restTemplateBuilder.connectTimeout(java.time.Duration.ofSeconds(3))
+                            .readTimeout(java.time.Duration.ofSeconds(5)).build();
+                }
+            }
+        }
+        return post(walletBalanceTemplate, "/mitum/token/balance", request, new ParameterizedTypeReference<>() {});
+    }
+
     private <T> DaeguChainDto.ApiResponse<T> post(
             String path,
             Object request,
             ParameterizedTypeReference<DaeguChainDto.ApiResponse<T>> responseType
     ) {
+        return post(restTemplate, path, request, responseType);
+    }
+
+    private <T> DaeguChainDto.ApiResponse<T> post(
+            RestTemplate template, String path, Object request,
+            ParameterizedTypeReference<DaeguChainDto.ApiResponse<T>> responseType
+    ) {
         String api = getApiUrl(path);
         try {
-            ResponseEntity<DaeguChainDto.ApiResponse<T>> response = restTemplate.exchange(
+            ResponseEntity<DaeguChainDto.ApiResponse<T>> response = template.exchange(
                     api,
                     HttpMethod.POST,
                     new HttpEntity<>(request),

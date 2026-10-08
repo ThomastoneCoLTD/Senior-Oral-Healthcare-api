@@ -1,6 +1,7 @@
 package com.kaii.dentix.domain.reward.controller;
 
 import com.kaii.dentix.domain.reward.application.UserRewardService;
+import com.kaii.dentix.domain.reward.application.UserWalletTokenBalanceService;
 import com.kaii.dentix.domain.reward.dto.UserRewardDto;
 import com.kaii.dentix.global.common.response.DataResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserRewardController {
 
     private final UserRewardService userRewardService;
+    private final UserWalletTokenBalanceService walletTokenBalanceService;
+
+    @GetMapping("/wallet/token-balances")
+    public DataResponse<UserWalletTokenBalanceService.BalanceResponse> getTokenBalances(HttpServletRequest request) {
+        return new DataResponse<>(walletTokenBalanceService.getBalances(request));
+    }
 
     @GetMapping("/wallet")
     public DataResponse<UserRewardDto.WalletResponse> getWallet(HttpServletRequest request) {
