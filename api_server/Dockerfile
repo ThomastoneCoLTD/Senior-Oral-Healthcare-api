@@ -1,4 +1,4 @@
-FROM amazoncorretto:17-alpine-jdk
+FROM amazoncorretto:27-alpine-jdk
 LABEL maintainer="hana0142@thomastone.co.kr"
 
 # 빌드 타임 ARG (기본값 dev)
