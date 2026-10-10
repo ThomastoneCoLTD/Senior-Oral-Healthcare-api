@@ -146,7 +146,7 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/admin/account/reset-password").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/admin/account/list").hasRole("SUPER_ADMIN")
                         .requestMatchers("/daegu-chain/**").hasRole("SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/user/rewards/wallet/token-balances").hasRole("USER")
+                        .requestMatchers("/user/rewards", "/user/rewards/**").hasRole("USER")
                         .requestMatchers("/user/intake-survey", "/user/intake-survey/**").hasRole("USER")
                         .requestMatchers("/admin/intake-surveys", "/admin/intake-surveys/**").hasRole("SUPER_ADMIN")
                         .requestMatchers("/admin/oral-exercise-history/**").hasRole("SUPER_ADMIN")

@@ -31,6 +31,7 @@ class UserWalletTokenBalanceServiceTest {
         properties.getRewardTokenContracts().put("ESSENTIAL_VIDEO_1", "contract-two");
         properties.getRewardTokenContracts().put("UNRELATED", "ignored");
         when(jwt.getAccessToken(request)).thenReturn("test-access");
+        when(jwt.getRoles("test-access", TokenType.AccessToken)).thenReturn(com.kaii.dentix.domain.type.UserRole.ROLE_USER);
         when(jwt.getUserId("test-access", TokenType.AccessToken)).thenReturn(7L);
         wallet = UserRewardWallet.builder().userId(7L).walletAddress("my-wallet").pointBalance(91).build();
         when(wallets.findByUserId(7L)).thenReturn(Optional.of(wallet));
@@ -54,6 +55,15 @@ class UserWalletTokenBalanceServiceTest {
         verify(chain, times(2)).getWalletTokenBalance(any());
         verify(wallets, never()).save(any());
         verify(wallets, never()).findByUserIdForUpdate(any());
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = com.kaii.dentix.domain.type.UserRole.class, names = {"ROLE_ADMIN", "ROLE_SUPER_ADMIN"})
+    @org.junit.jupiter.params.provider.NullSource
+    void nonUserRolesCannotReadBalancesEvenWhenServiceIsCalledDirectly(com.kaii.dentix.domain.type.UserRole role) {
+        when(jwt.getRoles("test-access", TokenType.AccessToken)).thenReturn(role);
+        assertThatThrownBy(() -> service.getBalances(request)).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        verifyNoInteractions(wallets, chain);
     }
 
     @Test void absentWalletDoesNotProvisionOrQueryChain() {

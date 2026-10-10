@@ -25,6 +25,7 @@ import com.kaii.dentix.domain.reward.dto.UserRewardDto;
 import com.kaii.dentix.domain.user.dao.UserRepository;
 import com.kaii.dentix.domain.user.domain.User;
 import com.kaii.dentix.domain.user.domain.UserDaeguIdentityStatus;
+import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.global.common.error.exception.BadRequestApiException;
 import com.kaii.dentix.global.common.error.exception.NotFoundDataException;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
@@ -32,6 +33,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -336,8 +338,11 @@ public class UserRewardService {
 
     private Long getUserId(HttpServletRequest request) {
         String accessToken = jwtTokenUtil.getAccessToken(request);
-        if (accessToken == null) {
+        if (accessToken == null || accessToken.isBlank()) {
             throw new UnauthorizedException("인증 정보가 없습니다.");
+        }
+        if (jwtTokenUtil.getRoles(accessToken, TokenType.AccessToken) != UserRole.ROLE_USER) {
+            throw new AccessDeniedException("사용자만 리워드 기능을 이용할 수 있습니다.");
         }
         return jwtTokenUtil.getUserId(accessToken, TokenType.AccessToken);
     }

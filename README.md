@@ -761,6 +761,10 @@ If tests or REST Docs require external services, document the reason and use a d
 
 User registration APIs (`POST /login/signUp`, `POST /login/signUp/did`, `POST /login/dadaegu/signUp`) require `realOrganization` with one of `소화성당`, `대구1`, `대구2`, `대구3`, or `기타_천안`. The selected value is stored in nullable `user.real_organization` so pre-existing users and administrator bulk-upload records remain compatible. Deploy this API before the frontend that offers `소화성당` as the first institution; the previous `소하성당` spelling remains accepted for already-open signup clients during rollout, and existing institution records are preserved; no schema or Secret change is required.
 
+### User reward API authorization
+
+All `/user/rewards/**` endpoints require a valid `ROLE_USER` session. Administrator and super-administrator sessions receive HTTP 403, even when their numeric account ID matches a user ID. Both reward services also reject non-user token roles before wallet, transaction, or chain access. This applies to wallet lookup, wallet connection, transaction history, and wallet token balances. Normal user request/response formats are unchanged; administrative reward operations continue to use their existing `/admin/**` endpoints.
+
 ### Member deletion and token reclaim
 
 `DELETE /admin/user` completes only after all outstanding transferred rewards have been reclaimed. Current reward wallets approve the token owner's contract allowance before each reclaim, including optional-video tokens. Legacy wallets with missing or DID-only signing keys rely on the token server's existing wallet-key lookup; failed authorization or transfer preserves the member, identity mapping, and outstanding reward records. Previously successful reclaims are skipped on retry using their idempotency keys. Never clear rewards or delete a member to bypass a reclaim failure. Clients must check the response body's `rt == 200`, because API errors may also use HTTP 200.

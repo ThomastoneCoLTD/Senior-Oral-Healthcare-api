@@ -87,9 +87,23 @@ class UserRewardServiceTest {
         );
 
         when(jwtTokenUtil.getAccessToken(request)).thenReturn("access-token");
+        when(jwtTokenUtil.getRoles("access-token", TokenType.AccessToken)).thenReturn(com.kaii.dentix.domain.type.UserRole.ROLE_USER);
         when(jwtTokenUtil.getUserId("access-token", TokenType.AccessToken)).thenReturn(7L);
         when(contentRepository.findById(11L)).thenReturn(Optional.of(content()));
         when(environment.getActiveProfiles()).thenReturn(new String[]{"test"});
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = com.kaii.dentix.domain.type.UserRole.class, names = {"ROLE_ADMIN", "ROLE_SUPER_ADMIN"})
+    @org.junit.jupiter.params.provider.NullSource
+    void nonUserRolesCannotReadOrChangeRewardsEvenWhenServiceIsCalledDirectly(com.kaii.dentix.domain.type.UserRole role) {
+        when(jwtTokenUtil.getRoles("access-token", TokenType.AccessToken)).thenReturn(role);
+        assertThatThrownBy(() -> service.getWallet(request)).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThatThrownBy(() -> service.getTransactions(request)).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThatThrownBy(() -> service.connectWallet(request, null)).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThatThrownBy(() -> service.rewardOralExerciseButtonClick(request, null)).isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        verifyNoInteractions(walletRepository, transactionRepository, contentRepository, userRepository,
+                rewardWalletProvisioningService, daeguChainDidService, daeguChainPointService, externalTokenClient);
     }
 
     @Test

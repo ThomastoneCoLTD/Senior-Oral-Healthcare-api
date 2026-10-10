@@ -9,12 +9,14 @@ import com.kaii.dentix.domain.daeguChain.config.DaeguChainProperties;
 import com.kaii.dentix.domain.daeguChain.dto.DaeguChainDto;
 import com.kaii.dentix.domain.jwt.JwtTokenUtil;
 import com.kaii.dentix.domain.jwt.TokenType;
+import com.kaii.dentix.domain.type.UserRole;
 import com.kaii.dentix.domain.reward.dao.UserRewardWalletRepository;
 import com.kaii.dentix.domain.reward.domain.UserRewardWallet;
 import com.kaii.dentix.global.common.error.exception.UnauthorizedException;
 import jakarta.annotation.PreDestroy;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -52,6 +54,9 @@ public class UserWalletTokenBalanceService {
     public BalanceResponse getBalances(HttpServletRequest request) {
         String access = jwt.getAccessToken(request);
         if (access == null || access.isBlank()) throw new UnauthorizedException("인증 정보가 없습니다.");
+        if (jwt.getRoles(access, TokenType.AccessToken) != UserRole.ROLE_USER) {
+            throw new AccessDeniedException("사용자만 리워드 기능을 이용할 수 있습니다.");
+        }
         Long userId = jwt.getUserId(access, TokenType.AccessToken);
         if (userId == null) throw new UnauthorizedException("인증 정보가 없습니다.");
         String address = wallets.findByUserId(userId).map(UserRewardWallet::getWalletAddress).orElse(null);
