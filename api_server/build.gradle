@@ -89,7 +89,7 @@ dependencies {
     implementation 'org.apache.poi:poi-ooxml:5.5.1'
 
     // --- AWS SDK v2 (BOM 사용하여 버전 통일) ---
-    implementation platform('software.amazon.awssdk:bom:2.29.0') // 최신 안정화 버전
+    implementation platform('software.amazon.awssdk:bom:2.55.11') // 최신 안정화 버전
     implementation 'software.amazon.awssdk:dynamodb'
     implementation 'software.amazon.awssdk:secretsmanager'
     implementation 'software.amazon.awssdk:s3'
